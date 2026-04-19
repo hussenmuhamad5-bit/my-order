@@ -6,54 +6,12 @@
     <title>فۆرمی داواکاری</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        /* بەکارهێنانی ڕەنگە بنەڕەتییەکانی تێلیگرام بۆ ئەوەی وەک بەشێک لە بەرنامەکە دەرکەوێت */
-        body {
-            font-family: Tahoma, Arial, sans-serif;
-            background-color: var(--tg-theme-bg-color, #ffffff);
-            color: var(--tg-theme-text-color, #000000);
-            padding: 20px;
-            margin: 0;
-        }
-        .container {
-            max-width: 400px;
-            margin: 0 auto;
-        }
-        label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: bold;
-            font-size: 14px;
-            color: var(--tg-theme-hint-color, #999999);
-        }
-        input, select {
-            width: 100%;
-            padding: 12px;
-            margin-bottom: 20px;
-            border: 1px solid var(--tg-theme-hint-color, #cccccc);
-            border-radius: 8px;
-            background-color: var(--tg-theme-secondary-bg-color, #f4f4f5);
-            color: var(--tg-theme-text-color, #000000);
-            font-size: 16px;
-            box-sizing: border-box;
-        }
-        input:focus, select:focus {
-            outline: none;
-            border-color: var(--tg-theme-button-color, #2481cc);
-        }
-        button {
-            width: 100%;
-            padding: 14px;
-            background-color: var(--tg-theme-button-color, #2481cc);
-            color: var(--tg-theme-button-text-color, #ffffff);
-            border: none;
-            border-radius: 8px;
-            font-size: 16px;
-            font-weight: bold;
-            cursor: pointer;
-        }
-        button:active {
-            opacity: 0.8;
-        }
+        body { font-family: Tahoma, Arial, sans-serif; background-color: var(--tg-theme-bg-color, #ffffff); color: var(--tg-theme-text-color, #000000); padding: 20px; margin: 0; }
+        .container { max-width: 400px; margin: 0 auto; }
+        label { display: block; margin-bottom: 8px; font-weight: bold; font-size: 14px; color: var(--tg-theme-hint-color, #999999); }
+        input, select { width: 100%; padding: 12px; margin-bottom: 20px; border: 1px solid var(--tg-theme-hint-color, #cccccc); border-radius: 8px; background-color: var(--tg-theme-secondary-bg-color, #f4f4f5); color: var(--tg-theme-text-color, #000000); font-size: 16px; box-sizing: border-box; }
+        input:focus, select:focus { outline: none; border-color: var(--tg-theme-button-color, #2481cc); }
+        button { width: 100%; padding: 14px; background-color: var(--tg-theme-button-color, #2481cc); color: var(--tg-theme-button-text-color, #ffffff); border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; }
     </style>
 </head>
 <body>
@@ -62,7 +20,7 @@
     <h2 style="text-align: center; margin-bottom: 20px;">تۆمارکردنی داواکاری</h2>
 
     <label for="customerName">ناوی کڕیار</label>
-    <input type="text" id="customerName" placeholder="ناوی سیانی کڕیار بنووسە" required>
+    <input type="text" id="customerName" placeholder="ناوی سیانی" required>
 
     <label for="city">شار</label>
     <select id="city">
@@ -74,30 +32,54 @@
 
     <label for="item">کاڵا</label>
     <select id="item">
-        <option value="قەڵەم">قەڵەم</option>
-        <option value="کاتژمێر">کاتژمێر</option>
-        <option value="پێڵاو">پێڵاو</option>
+        <option value="">⏳ چاوەڕێ بکە، کاڵاکان دەهێنرێن...</option>
     </select>
 
     <label for="price">نرخی کۆتایی (بە دینار)</label>
     <input type="number" id="price" placeholder="نموونە: 25000" required>
 
     <label for="phone1">ژمارە مۆبایل ١</label>
-    <input type="tel" id="phone1" placeholder="07XXXXXXXXX" maxlength="11" required>
+    <input type="tel" id="phone1" value="0" maxlength="11" oninput="enforcePhone(this)" required>
 
     <label for="phone2">ژمارە مۆبایل ٢ (ئارەزوومەندانە)</label>
-    <input type="tel" id="phone2" placeholder="07XXXXXXXXX" maxlength="11">
+    <input type="tel" id="phone2" placeholder="بۆ نموونە: 0750..." maxlength="11" oninput="enforcePhone(this)">
 
     <button onclick="submitData()">ناردنی داواکاری</button>
 </div>
 
 <script>
-    // ئامادەکردنی Web App ـەکەی تێلیگرام
     let tg = window.Telegram.WebApp;
-    tg.expand(); // بۆ ئەوەی فۆرمەکە شاشەکە پڕ بکاتەوە
+    tg.expand();
+
+    // !!! ئەو لینکەی لە Apps Script وەرتگرت لێرە دایبنێ !!!
+    const APPS_SCRIPT_URL = "لینکەکەی_گوگڵ_ئەپس_سکریپت_لێرە_دابنێ";
+
+    // هێنانی ناوی کاڵاکان لە گۆگڵ شیتسەوە
+    fetch(APPS_SCRIPT_URL, { redirect: "follow" })
+        .then(response => response.json())
+        .then(data => {
+            let select = document.getElementById("item");
+            select.innerHTML = ""; // لابردنی نوسراوی چاوەڕێکردنەکە
+            data.forEach(item => {
+                let option = document.createElement("option");
+                option.value = item;
+                option.text = item;
+                select.appendChild(option);
+            });
+        })
+        .catch(error => {
+            document.getElementById("item").innerHTML = "<option value='هەڵە'>هەڵەیەک هەیە لە هێنانی کاڵاکان</option>";
+        });
+
+    // کۆنترۆڵکردنی ژمارە مۆبایل (تەنها ژمارە، وە بە سفر دەست پێبکات)
+    function enforcePhone(input) {
+        input.value = input.value.replace(/[^0-9]/g, ''); // ڕێگری لە پیت
+        if (input.value.length > 0 && input.value[0] !== '0') {
+            input.value = '0' + input.value.substring(1); // دەبێت بە سفر دەست پێبکات
+        }
+    }
 
     function submitData() {
-        // وەرگرتنی زانیارییەکان لە فۆرمەکەوە
         let customerName = document.getElementById('customerName').value.trim();
         let city = document.getElementById('city').value;
         let item = document.getElementById('item').value;
@@ -105,25 +87,11 @@
         let phone1 = document.getElementById('phone1').value.trim();
         let phone2 = document.getElementById('phone2').value.trim();
 
-        // پشکنینی پڕکردنەوەی خانە سەرەکییەکان
-        if (!customerName || !price || !phone1) {
-            tg.showAlert("تکایە هەموو خانە پێویستەکان پڕ بکەرەوە.");
+        if (!customerName || !price || phone1.length < 11) {
+            tg.showAlert("تکایە دڵنیابەرەوە کە خانەکان پڕن و ژمارە مۆبایلەکە ١١ ژمارەی تەواوە.");
             return;
         }
 
-        // پشکنینی مەرجەکانی ژمارە مۆبایل (١١ ژمارە، بە سفر دەست پێبکات، تەنها ژمارە بێت)
-        let phoneRegex = /^0\d{10}$/;
-        if (!phoneRegex.test(phone1)) {
-            tg.showAlert("ژمارە مۆبایلی یەکەم هەڵەیە! دەبێت 11 ژمارە بێت و بە 0 دەست پێبکات.");
-            return;
-        }
-
-        if (phone2 && !phoneRegex.test(phone2)) {
-            tg.showAlert("ژمارە مۆبایلی دووەم هەڵەیە! دەبێت 11 ژمارە بێت و بە 0 دەست پێبکات.");
-            return;
-        }
-
-        // کۆکردنەوەی داتاکان لە یەک پاکێجدا
         let data = {
             customerName: customerName,
             city: city,
@@ -133,7 +101,6 @@
             phone2: phone2
         };
 
-        // ناردنی داتاکە بۆ بۆتی پایتۆن و داخستنی فۆرمەکە
         tg.sendData(JSON.stringify(data));
         tg.close();
     }
