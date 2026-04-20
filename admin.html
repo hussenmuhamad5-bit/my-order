@@ -13,15 +13,18 @@
         .input-group { display: flex; gap: 8px; margin-bottom: 10px; align-items: center;}
         input, select { flex-grow: 1; padding: 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; box-sizing: border-box; transition: 0.3s;}
         
-        /* دیزاینی دوگمەکانی هەیە و نییە */
         .btn-toggle { padding: 10px 15px; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: bold; color: white; width: 80px;}
         .btn-green { background-color: #28a745; }
         .btn-red { background-color: #dc3545; }
         
-        button.action-btn { width: 100%; padding: 12px; background-color: #2481cc; color: #fff; border: none; border-radius: 6px; font-size: 15px; font-weight: bold; cursor: pointer; margin-top: 10px; }
-        button.update-btn { background-color: #ffc107; color: #000; }
-        button.delete-btn { background-color: #dc3545; color: #fff; margin-top: 5px;}
+        .action-btn { flex-grow: 1; padding: 12px; color: #fff; border: none; border-radius: 6px; font-size: 14px; font-weight: bold; cursor: pointer; margin-top: 5px; }
+        .btn-telegram { background-color: #2481cc; } /* شین */
+        .btn-standard { background-color: #28a745; } /* سەوز */
+        .btn-update { background-color: #ffc107; color: #000; }
+        .btn-delete { background-color: #dc3545; width: 100%; margin-top: 10px; }
         
+        .btn-row { display: flex; gap: 10px; margin-top: 15px; }
+
         .result-box { display: none; background: #e9ecef; padding: 15px; border-radius: 8px; text-align: center; border: 2px dashed #2481cc; margin-top: 15px; }
         .code-display { font-size: 24px; font-weight: bold; letter-spacing: 3px; color: #2481cc; margin: 10px 0; }
         .edit-section { display: none; margin-top: 15px; border-top: 1px dashed #ccc; padding-top: 15px; }
@@ -60,12 +63,15 @@
         <input type="text" id="u-consultant" placeholder="ناوی ڕاوێژکار" style="display: none;">
     </div>
 
-    <button class="action-btn" style="background-color:#28a745;" onclick="generateCode()" id="gen-btn">دروستکردنی کۆد ⚙️</button>
+    <div class="btn-row">
+        <button class="action-btn btn-standard" onclick="generateCode(false)" id="gen-btn-norm">دروستکردنی کۆد ⚙️</button>
+        <button class="action-btn btn-telegram" onclick="generateCode(true)" id="gen-btn-bot">دروستکردنی کۆدی بۆت 🤖</button>
+    </div>
 
     <div class="result-box" id="result">
-        <p style="margin:0; color:#333;">کۆدە نوێیەکە دروستکرا:</p>
+        <p style="margin:0; color:#333;" id="result-text">کۆدە نوێیەکە دروستکرا:</p>
         <div class="code-display" id="final-code"></div>
-        <button class="action-btn" style="width:auto; padding:8px 20px;" onclick="copyCode()">کۆپیکردن 📋</button>
+        <button class="action-btn btn-telegram" style="width:auto; padding:8px 20px;" onclick="copyCode()">کۆپیکردن 📋</button>
     </div>
 </div>
 
@@ -74,7 +80,7 @@
     <label>کۆدەکە لێرە بنووسە بۆ گەڕان:</label>
     <div class="input-group">
         <input type="text" id="search-code-input" placeholder="نموونە: A1b2C">
-        <button class="action-btn" style="margin:0; width:auto; padding:0 20px;" onclick="searchCode()" id="search-btn">گەڕان</button>
+        <button class="action-btn btn-telegram" style="margin:0; width:auto; padding:0 20px;" onclick="searchCode()" id="search-btn">گەڕان</button>
     </div>
 
     <div id="edit-section" class="edit-section">
@@ -106,8 +112,11 @@
             <input type="text" id="e-consultant" style="display: none;">
         </div>
 
-        <button class="action-btn update-btn" onclick="updateCode()" id="update-btn">نوێکردنەوەی زانیارییەکان 💾</button>
-        <button class="action-btn delete-btn" onclick="deleteCode()" id="delete-btn">سڕینەوەی ئەم کۆدەی 🗑️</button>
+        <div class="btn-row">
+            <button class="action-btn btn-update" onclick="updateCode(false)" id="upd-btn-norm">نوێکردنەوەی زانیاری کۆد 💾</button>
+            <button class="action-btn btn-telegram" onclick="updateCode(true)" id="upd-btn-bot">نوێکردنەوەی کۆدی بۆت 🤖</button>
+        </div>
+        <button class="action-btn btn-delete" onclick="deleteCode()" id="delete-btn">سڕینەوەی ئەم کۆدەی 🗑️</button>
     </div>
 </div>
 
@@ -118,28 +127,24 @@
     // !!! لینکەکەی گۆگڵ ئەپس سکریپت لێرە دابنێ !!!
     const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwtKMGXHm2XEA499c8HT9GDaSsMPQsMpTiZT56ju4LlfWw2_cOgZ-vvSOvvpXYc4nlcZQ/exec";
 
-    // فەنکشنی دەرکەوتن و شاردنەوەی بۆکسەکان (هەیە / نییە)
     function toggleState(inputId) {
         let input = document.getElementById(inputId);
         let btn = document.getElementById('btn-' + inputId);
-        
         if (input.style.display === 'none') {
             input.style.display = 'block';
             btn.innerText = 'نییە ➖';
             btn.className = 'btn-toggle btn-red';
         } else {
             input.style.display = 'none';
-            input.value = ''; // سڕینەوەی ناوەکە ئەگەر کردی بە نییە
+            input.value = ''; 
             btn.innerText = 'هەیە ➕';
             btn.className = 'btn-toggle btn-green';
         }
     }
 
-    // فەنکشنی ڕێکخستنی شێوەی بۆکسەکان کاتێک لە گەڕانەوە زانیاری دێت
     function applyEditState(inputId, value) {
         let input = document.getElementById(inputId);
         let btn = document.getElementById('btn-' + inputId);
-        
         if (value && value.trim() !== "") {
             input.style.display = 'block';
             input.value = value;
@@ -153,29 +158,22 @@
         }
     }
 
-    // فەنکشنی دروستکردنی کۆدی ئاڵۆز (دڵنیابوون لە هەبوونی کەپیتەڵ، سمۆڵ و ژمارە)
     function getSecureCode() {
         let upper = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
         let lower = 'abcdefghijklmnopqrstuvwxyz';
         let nums = '0123456789';
-        
-        // یەکەمجار لانیکەم دانەیەک لە هەریەکەیان هەڵدەبژێرین
         let codeArr = [
             upper[Math.floor(Math.random() * upper.length)],
             lower[Math.floor(Math.random() * lower.length)],
             nums[Math.floor(Math.random() * nums.length)]
         ];
-        
-        // دوو پیتی تریش بە هەڕەمەکی لە هەموویان زیاد دەکەین تا ببێتە ٥ دانە
         let all = upper + lower + nums;
         codeArr.push(all[Math.floor(Math.random() * all.length)]);
         codeArr.push(all[Math.floor(Math.random() * all.length)]);
-        
-        // تێکدانی ڕیزبەندییەکەیان بۆ ئەوەی شێوەیەکی دیاریکراویان نەبێت
         return codeArr.sort(() => 0.5 - Math.random()).join('');
     }
 
-    function generateCode() {
+    function generateCode(isBot) {
         let name = document.getElementById('u-name').value.trim();
         let role = document.getElementById('u-role').value;
         let manager = document.getElementById('u-manager').value.trim();
@@ -184,26 +182,24 @@
 
         if (!name) { tg.showAlert("تکایە ناوی سیانی بنووسە!"); return; }
 
-        document.getElementById('gen-btn').innerText = "⏳ چاوەڕێ بکە...";
-        document.getElementById('gen-btn').disabled = true;
+        document.getElementById('gen-btn-norm').disabled = true;
+        document.getElementById('gen-btn-bot').disabled = true;
 
-        let code = getSecureCode(); // بانگکردنی فەنکشنە پارێزراوەکە
+        let code = getSecureCode(); 
+        let url = `${APPS_SCRIPT_URL}?action=addCode&isBot=${isBot}&code=${code}&name=${encodeURIComponent(name)}&role=${encodeURIComponent(role)}&manager=${encodeURIComponent(manager)}&admin=${encodeURIComponent(admin)}&consultant=${encodeURIComponent(consultant)}`;
 
-        let url = `${APPS_SCRIPT_URL}?action=addCode&code=${code}&name=${encodeURIComponent(name)}&role=${encodeURIComponent(role)}&manager=${encodeURIComponent(manager)}&admin=${encodeURIComponent(admin)}&consultant=${encodeURIComponent(consultant)}`;
-
-        fetch(url)
-            .then(response => response.json())
-            .then(data => {
-                document.getElementById('gen-btn').style.display = 'none';
-                document.getElementById('result').style.display = 'block';
-                document.getElementById('final-code').innerText = code;
-                tg.showAlert("✅ کۆدەکە دروستکرا و چووە ناو خشتەکەوە.");
-            })
-            .catch(err => {
-                tg.showAlert("❌ هەڵەیەک ڕوویدا لە دروستکردندا.");
-                document.getElementById('gen-btn').innerText = "دروستکردنی کۆد ⚙️";
-                document.getElementById('gen-btn').disabled = false;
-            });
+        fetch(url).then(response => response.json()).then(data => {
+            document.getElementById('gen-btn-norm').disabled = false;
+            document.getElementById('gen-btn-bot').disabled = false;
+            document.getElementById('result').style.display = 'block';
+            document.getElementById('final-code').innerText = code;
+            document.getElementById('result-text').innerText = isBot ? "🤖 کۆدی بۆت دروستکرا:" : "✅ کۆدی ئاسایی دروستکرا:";
+            tg.showAlert("✅ کۆدەکە چووە ناو خشتەکەوە.");
+        }).catch(err => {
+            document.getElementById('gen-btn-norm').disabled = false;
+            document.getElementById('gen-btn-bot').disabled = false;
+            tg.showAlert("❌ هەڵەیەک ڕوویدا لە دروستکردندا.");
+        });
     }
 
     function copyCode() {
@@ -214,37 +210,27 @@
     function searchCode() {
         let codeToSearch = document.getElementById('search-code-input').value.trim();
         if (!codeToSearch) { tg.showAlert("تکایە کۆدێک بنووسە بۆ گەڕان"); return; }
-
-        document.getElementById('search-btn').innerText = "⏳...";
         
+        document.getElementById('search-btn').innerText = "⏳...";
         let url = `${APPS_SCRIPT_URL}?action=searchCode&code=${encodeURIComponent(codeToSearch)}`;
         
-        fetch(url)
-            .then(response => response.json())
-            .then(data => {
-                document.getElementById('search-btn').innerText = "گەڕان";
-                if (data.status === "success") {
-                    document.getElementById('e-name').value = data.name;
-                    document.getElementById('e-role').value = data.role;
-                    
-                    // ڕێکخستنی دوگمەکان بەپێی زانیارییەکان
-                    applyEditState('e-manager', data.manager);
-                    applyEditState('e-admin', data.admin);
-                    applyEditState('e-consultant', data.consultant);
-                    
-                    document.getElementById('edit-section').style.display = "block";
-                } else {
-                    tg.showAlert("❌ هیچ زانیارییەک بەم کۆدە نەدۆزرایەوە!");
-                    document.getElementById('edit-section').style.display = "none";
-                }
-            })
-            .catch(err => {
-                document.getElementById('search-btn').innerText = "گەڕان";
-                tg.showAlert("❌ کێشە لە هێڵی ئینتەرنێت هەیە.");
-            });
+        fetch(url).then(res => res.json()).then(data => {
+            document.getElementById('search-btn').innerText = "گەڕان";
+            if (data.status === "success") {
+                document.getElementById('e-name').value = data.name;
+                document.getElementById('e-role').value = data.role;
+                applyEditState('e-manager', data.manager);
+                applyEditState('e-admin', data.admin);
+                applyEditState('e-consultant', data.consultant);
+                document.getElementById('edit-section').style.display = "block";
+            } else {
+                tg.showAlert("❌ هیچ زانیارییەک بەم کۆدە نەدۆزرایەوە!");
+                document.getElementById('edit-section').style.display = "none";
+            }
+        });
     }
 
-    function updateCode() {
+    function updateCode(isBot) {
         let code = document.getElementById('search-code-input').value.trim();
         let name = document.getElementById('e-name').value.trim();
         let role = document.getElementById('e-role').value;
@@ -254,12 +240,14 @@
 
         if (!name) { tg.showAlert("ناوی سیانی نابێت بەتاڵ بێت!"); return; }
 
-        document.getElementById('update-btn').innerText = "⏳ نوێ دەکرێتەوە...";
+        document.getElementById('upd-btn-norm').disabled = true;
+        document.getElementById('upd-btn-bot').disabled = true;
         
-        let url = `${APPS_SCRIPT_URL}?action=updateCode&code=${encodeURIComponent(code)}&name=${encodeURIComponent(name)}&role=${encodeURIComponent(role)}&manager=${encodeURIComponent(manager)}&admin=${encodeURIComponent(admin)}&consultant=${encodeURIComponent(consultant)}`;
+        let url = `${APPS_SCRIPT_URL}?action=updateCode&isBot=${isBot}&code=${encodeURIComponent(code)}&name=${encodeURIComponent(name)}&role=${encodeURIComponent(role)}&manager=${encodeURIComponent(manager)}&admin=${encodeURIComponent(admin)}&consultant=${encodeURIComponent(consultant)}`;
 
         fetch(url).then(res => res.json()).then(data => {
-            document.getElementById('update-btn').innerText = "نوێکردنەوەی زانیارییەکان 💾";
+            document.getElementById('upd-btn-norm').disabled = false;
+            document.getElementById('upd-btn-bot').disabled = false;
             if (data.status === "success") {
                 tg.showAlert("✅ زانیارییەکان بە سەرکەوتوویی نوێکرانەوە!");
                 document.getElementById('edit-section').style.display = "none";
@@ -268,28 +256,16 @@
         });
     }
 
-    // فەنکشنی نوێ بۆ سڕینەوەی کۆد
     function deleteCode() {
         let code = document.getElementById('search-code-input').value.trim();
-        
-        if(confirm("⚠️ دڵنیایت لە سڕینەوەی ئەم کۆدەکە و هەموو زانیارییەکانی؟\n(ئەم کارە ناگەڕێتەوە)")) {
-            document.getElementById('delete-btn').innerText = "⏳ دەسڕێتەوە...";
-            
+        if(confirm("⚠️ دڵنیایت لە سڕینەوەی ئەم کۆدەکە؟")) {
             let url = `${APPS_SCRIPT_URL}?action=deleteCode&code=${encodeURIComponent(code)}`;
-            
             fetch(url).then(res => res.json()).then(data => {
                 if(data.status === 'success') {
-                    tg.showAlert("🗑️ کۆدەکە بە سەرکەوتوویی سڕایەوە!");
+                    tg.showAlert("🗑️ کۆدەکە سڕایەوە!");
                     document.getElementById('edit-section').style.display = "none";
                     document.getElementById('search-code-input').value = "";
-                    document.getElementById('delete-btn').innerText = "سڕینەوەی ئەم کۆدەی 🗑️";
-                } else {
-                    tg.showAlert("❌ هەڵەیەک ڕوویدا لە سڕینەوەدا!");
-                    document.getElementById('delete-btn').innerText = "سڕینەوەی ئەم کۆدەی 🗑️";
                 }
-            }).catch(err => {
-                tg.showAlert("❌ کێشە لە هێڵی ئینتەرنێت هەیە.");
-                document.getElementById('delete-btn').innerText = "سڕینەوەی ئەم کۆدەی 🗑️";
             });
         }
     }
