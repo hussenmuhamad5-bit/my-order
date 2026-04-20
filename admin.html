@@ -121,6 +121,8 @@
 </div>
 
 <script>
+    const urlParams = new URLSearchParams(window.location.search);
+    const creatorCode = urlParams.get('creator') || "ئەدمین";
     let tg = window.Telegram.WebApp;
     tg.expand();
 
@@ -186,7 +188,7 @@
         document.getElementById('gen-btn-bot').disabled = true;
 
         let code = getSecureCode(); 
-        let url = `${APPS_SCRIPT_URL}?action=addCode&isBot=${isBot}&code=${code}&name=${encodeURIComponent(name)}&role=${encodeURIComponent(role)}&manager=${encodeURIComponent(manager)}&admin=${encodeURIComponent(admin)}&consultant=${encodeURIComponent(consultant)}`;
+        let url = `${APPS_SCRIPT_URL}?action=addCode&isBot=${isBot}&code=${code}&name=${encodeURIComponent(name)}&role=${encodeURIComponent(role)}&manager=${encodeURIComponent(manager)}&admin=${encodeURIComponent(admin)}&consultant=${encodeURIComponent(consultant)}&creator=${encodeURIComponent(creatorCode)}`;
 
         fetch(url).then(response => response.json()).then(data => {
             document.getElementById('gen-btn-norm').disabled = false;
