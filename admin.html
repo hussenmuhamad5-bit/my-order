@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="ckb">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>پەڕەی بەڕێوەبەر - دروستکردنی کۆد</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        body { font-family: Tahoma, Arial, sans-serif; background-color: #f4f4f5; padding: 20px; margin: 0; }
+        .container { max-width: 400px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        label { display: block; margin-bottom: 5px; font-weight: bold; font-size: 14px; color: #555; }
+        input, select { width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 8px; font-size: 15px; box-sizing: border-box; }
+        button { width: 100%; padding: 14px; background-color: #28a745; color: #fff; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; margin-bottom: 15px; }
+        .result-box { display: none; background: #e9ecef; padding: 15px; border-radius: 8px; text-align: center; border: 2px dashed #2481cc; }
+        .code-display { font-size: 24px; font-weight: bold; letter-spacing: 3px; color: #2481cc; margin: 10px 0; }
+        .copy-btn { background-color: #2481cc; padding: 10px; width: auto; display: inline-block; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2 style="text-align: center; color: #333;">دروستکردنی کۆدی کارمەند</h2>
+
+    <label>ناوی سیانی</label>
+    <input type="text" id="u-name" placeholder="ناوی تەواو بنووسە" required>
+
+    <label>ڕۆڵ / پلە</label>
+    <select id="u-role">
+        <option value="بەڕێوەبەر">بەڕێوەبەر</option>
+        <option value="ئەدمین">ئەدمین</option>
+        <option value="ئەندام">ئەندام</option>
+    </select>
+
+    <label>بەڕێوەبەری کێیە؟</label>
+    <input type="text" id="u-manager" placeholder="ناوی بەڕێوەبەرەکەی">
+
+    <label>ئەدمینی کێیە؟</label>
+    <input type="text" id="u-admin" placeholder="ناوی ئەدمینەکەی">
+
+    <label>ڕاوێژکاری کێیە؟</label>
+    <input type="text" id="u-consultant" placeholder="ناوی ڕاوێژکارەکەی">
+
+    <button onclick="generateCode()" id="gen-btn">دروستکردنی کۆد ⚙️</button>
+
+    <div class="result-box" id="result">
+        <p style="margin:0; color:#333;">کۆدە نوێیەکە دروستکرا:</p>
+        <div class="code-display" id="final-code"></div>
+        <button class="copy-btn" onclick="copyCode()">کۆپیکردن 📋</button>
+    </div>
+</div>
+
+<script>
+    let tg = window.Telegram.WebApp;
+    tg.expand();
+
+    // !!! هەمان ئەو لینکەی گۆگڵ ئەپس سکریپت کە لە فۆرمەکە بەکارت هێنا لێرەش دایبنێ !!!
+    const APPS_SCRIPT_URL = "لینکەکەی_گۆگڵ_ئەپس_سکریپت_لێرە_دابنێ";
+
+    function generateCode() {
+        let name = document.getElementById('u-name').value.trim();
+        let role = document.getElementById('u-role').value;
+        let manager = document.getElementById('u-manager').value.trim() || "-";
+        let admin = document.getElementById('u-admin').value.trim() || "-";
+        let consultant = document.getElementById('u-consultant').value.trim() || "-";
+
+        if (!name) { tg.showAlert("تکایە ناوی سیانی بنووسە!"); return; }
+
+        document.getElementById('gen-btn').innerText = "⏳ چاوەڕێ بکە...";
+        document.getElementById('gen-btn').disabled = true;
+
+        // دروستکردنی کۆدێکی ٥ پیتی ئاڵۆز (پیت و ژمارە)
+        let chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+        let code = '';
+        for (let i = 0; i < 5; i++) { code += chars.charAt(Math.floor(Math.random() * chars.length)); }
+
+        // ناردنی داتاکە بۆ گۆگڵ شیتس
+        let url = `${APPS_SCRIPT_URL}?action=addCode&code=${code}&name=${encodeURIComponent(name)}&role=${encodeURIComponent(role)}&manager=${encodeURIComponent(manager)}&admin=${encodeURIComponent(admin)}&consultant=${encodeURIComponent(consultant)}`;
+
+        fetch(url)
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('gen-btn').style.display = 'none';
+                document.getElementById('result').style.display = 'block';
+                document.getElementById('final-code').innerText = code;
+            })
+            .catch(err => {
+                tg.showAlert("هەڵەیەک ڕوویدا لە پەیوەندیکردن بە سێرڤەرەوە.");
+                document.getElementById('gen-btn').innerText = "دروستکردنی کۆد ⚙️";
+                document.getElementById('gen-btn').disabled = false;
+            });
+    }
+
+    function copyCode() {
+        let codeText = document.getElementById('final-code').innerText;
+        navigator.clipboard.writeText(codeText).then(() => {
+            tg.showAlert("کۆدەکە کۆپی کرا!");
+        });
+    }
+</script>
+</body>
+</html>
