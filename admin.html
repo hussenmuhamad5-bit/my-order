@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>داشبۆردی بەڕێوەبەر</title>
+    <title id="page-title">داشبۆرد</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         body { font-family: Tahoma, Arial, sans-serif; background-color: #f4f4f5; padding: 15px; margin: 0; }
@@ -12,19 +12,15 @@
         label { display: block; margin-bottom: 5px; font-weight: bold; font-size: 13px; color: #555; margin-top: 10px;}
         .input-group { display: flex; gap: 8px; margin-bottom: 10px; align-items: center;}
         input, select { flex-grow: 1; padding: 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; box-sizing: border-box; transition: 0.3s;}
-        
         .btn-toggle { padding: 10px 15px; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: bold; color: white; width: 80px;}
         .btn-green { background-color: #28a745; }
         .btn-red { background-color: #dc3545; }
-        
         .action-btn { flex-grow: 1; padding: 12px; color: #fff; border: none; border-radius: 6px; font-size: 14px; font-weight: bold; cursor: pointer; margin-top: 5px; }
-        .btn-telegram { background-color: #2481cc; } /* شین */
-        .btn-standard { background-color: #28a745; } /* سەوز */
+        .btn-telegram { background-color: #2481cc; }
+        .btn-standard { background-color: #28a745; }
         .btn-update { background-color: #ffc107; color: #000; }
         .btn-delete { background-color: #dc3545; width: 100%; margin-top: 10px; }
-        
         .btn-row { display: flex; gap: 10px; margin-top: 15px; }
-
         .result-box { display: none; background: #e9ecef; padding: 15px; border-radius: 8px; text-align: center; border: 2px dashed #2481cc; margin-top: 15px; }
         .code-display { font-size: 24px; font-weight: bold; letter-spacing: 3px; color: #2481cc; margin: 10px 0; }
         .edit-section { display: none; margin-top: 15px; border-top: 1px dashed #ccc; padding-top: 15px; }
@@ -33,22 +29,26 @@
 <body>
 
 <div class="container">
-    <h2>➕ دروستکردنی کۆدی کارمەند</h2>
+    <h2 id="header-title">➕ دروستکردنی کۆدی کارمەند</h2>
 
     <label>ناوی سیانی</label>
     <input type="text" id="u-name" placeholder="ناوی تەواو بنووسە">
 
-    <label>ڕۆڵ / پلە</label>
-    <select id="u-role">
-        <option value="بەڕێوەبەر">بەڕێوەبەر</option>
-        <option value="ئەدمین">ئەدمین</option>
-        <option value="ئەندام">ئەندام</option>
-    </select>
+    <div id="wrapper-role">
+        <label>ڕۆڵ / پلە</label>
+        <select id="u-role">
+            <option value="بەڕێوەبەر">بەڕێوەبەر</option>
+            <option value="ئەدمین">ئەدمین</option>
+            <option value="ئەندام">ئەندام</option>
+        </select>
+    </div>
 
-    <label>بەڕێوەبەری کێیە؟</label>
-    <div class="input-group">
-        <button class="btn-toggle btn-green" id="btn-u-manager" onclick="toggleState('u-manager')">هەیە ➕</button>
-        <input type="text" id="u-manager" placeholder="ناوی بەڕێوەبەر" style="display: none;">
+    <div id="wrapper-manager">
+        <label>بەڕێوەبەری کێیە؟</label>
+        <div class="input-group">
+            <button class="btn-toggle btn-green" id="btn-u-manager" onclick="toggleState('u-manager')">هەیە ➕</button>
+            <input type="text" id="u-manager" placeholder="ناوی بەڕێوەبەر" style="display: none;">
+        </div>
     </div>
 
     <label>ئەدمینی کێیە؟</label>
@@ -69,7 +69,7 @@
     </div>
 
     <div class="result-box" id="result">
-        <p style="margin:0; color:#333;" id="result-text">کۆدە نوێیەکە دروستکرا:</p>
+        <p style="margin:0; color:#333;" id="result-text"></p>
         <div class="code-display" id="final-code"></div>
         <button class="action-btn btn-telegram" style="width:auto; padding:8px 20px;" onclick="copyCode()">کۆپیکردن 📋</button>
     </div>
@@ -77,7 +77,7 @@
 
 <div class="container">
     <h2>🔍 گەڕان و چاکسازی کۆد</h2>
-    <label>کۆدەکە لێرە بنووسە بۆ گەڕان:</label>
+    <label>کۆدەکە بنووسە بۆ گەڕان:</label>
     <div class="input-group">
         <input type="text" id="search-code-input" placeholder="نموونە: A1b2C">
         <button class="action-btn btn-telegram" style="margin:0; width:auto; padding:0 20px;" onclick="searchCode()" id="search-btn">گەڕان</button>
@@ -87,17 +87,21 @@
         <label>ناوی سیانی</label>
         <input type="text" id="e-name">
 
-        <label>ڕۆڵ / پلە</label>
-        <select id="e-role">
-            <option value="بەڕێوەبەر">بەڕێوەبەر</option>
-            <option value="ئەدمین">ئەدمین</option>
-            <option value="ئەندام">ئەندام</option>
-        </select>
+        <div id="wrapper-e-role">
+            <label>ڕۆڵ / پلە</label>
+            <select id="e-role">
+                <option value="بەڕێوەبەر">بەڕێوەبەر</option>
+                <option value="ئەدمین">ئەدمین</option>
+                <option value="ئەندام">ئەندام</option>
+            </select>
+        </div>
 
-        <label>بەڕێوەبەری کێیە؟</label>
-        <div class="input-group">
-            <button class="btn-toggle btn-green" id="btn-e-manager" onclick="toggleState('e-manager')">هەیە ➕</button>
-            <input type="text" id="e-manager" style="display: none;">
+        <div id="wrapper-e-manager">
+            <label>بەڕێوەبەری کێیە؟</label>
+            <div class="input-group">
+                <button class="btn-toggle btn-green" id="btn-e-manager" onclick="toggleState('e-manager')">هەیە ➕</button>
+                <input type="text" id="e-manager" style="display: none;">
+            </div>
         </div>
 
         <label>ئەدمینی کێیە؟</label>
@@ -113,34 +117,48 @@
         </div>
 
         <div class="btn-row">
-            <button class="action-btn btn-update" onclick="updateCode(false)" id="upd-btn-norm">نوێکردنەوەی زانیاری کۆد 💾</button>
-            <button class="action-btn btn-telegram" onclick="updateCode(true)" id="upd-btn-bot">نوێکردنەوەی کۆدی بۆت 🤖</button>
+            <button class="action-btn btn-update" onclick="updateCode(false)" id="upd-btn-norm">زانیاری کۆد 💾</button>
+            <button class="action-btn btn-telegram" onclick="updateCode(true)" id="upd-btn-bot">کۆدی بۆت 🤖</button>
         </div>
         <button class="action-btn btn-delete" onclick="deleteCode()" id="delete-btn">سڕینەوەی ئەم کۆدەی 🗑️</button>
     </div>
 </div>
 
 <script>
-    const urlParams = new URLSearchParams(window.location.search);
-    const creatorCode = urlParams.get('creator') || "ئەدمین";
     let tg = window.Telegram.WebApp;
     tg.expand();
 
     // !!! لینکەکەی گۆگڵ ئەپس سکریپت لێرە دابنێ !!!
     const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwtKMGXHm2XEA499c8HT9GDaSsMPQsMpTiZT56ju4LlfWw2_cOgZ-vvSOvvpXYc4nlcZQ/exec";
 
+    const urlParams = new URLSearchParams(window.location.search);
+    const creatorCode = urlParams.get('creator') || "نەناسراو";
+    const userRole = urlParams.get('role') || "بەڕێوەبەر";
+    const userName = urlParams.get('name') || "";
+
+    // شاردنەوەی شتەکان ئەگەر ئەدمین بوو
+    window.onload = function() {
+        if(userRole === "ئەدمین") {
+            document.getElementById('page-title').innerText = "داشبۆردی ئەدمین";
+            document.getElementById('header-title').innerText = "➕ دروستکردنی کۆدی ئەندام";
+            
+            document.getElementById('wrapper-role').style.display = 'none';
+            document.getElementById('u-role').value = "ئەندام";
+            
+            document.getElementById('wrapper-manager').style.display = 'none';
+            
+            document.getElementById('wrapper-e-role').style.display = 'none';
+            document.getElementById('wrapper-e-manager').style.display = 'none';
+        }
+    }
+
     function toggleState(inputId) {
         let input = document.getElementById(inputId);
         let btn = document.getElementById('btn-' + inputId);
         if (input.style.display === 'none') {
-            input.style.display = 'block';
-            btn.innerText = 'نییە ➖';
-            btn.className = 'btn-toggle btn-red';
+            input.style.display = 'block'; btn.innerText = 'نییە ➖'; btn.className = 'btn-toggle btn-red';
         } else {
-            input.style.display = 'none';
-            input.value = ''; 
-            btn.innerText = 'هەیە ➕';
-            btn.className = 'btn-toggle btn-green';
+            input.style.display = 'none'; input.value = ''; btn.innerText = 'هەیە ➕'; btn.className = 'btn-toggle btn-green';
         }
     }
 
@@ -148,86 +166,59 @@
         let input = document.getElementById(inputId);
         let btn = document.getElementById('btn-' + inputId);
         if (value && value.trim() !== "") {
-            input.style.display = 'block';
-            input.value = value;
-            btn.innerText = 'نییە ➖';
-            btn.className = 'btn-toggle btn-red';
+            input.style.display = 'block'; input.value = value; btn.innerText = 'نییە ➖'; btn.className = 'btn-toggle btn-red';
         } else {
-            input.style.display = 'none';
-            input.value = '';
-            btn.innerText = 'هەیە ➕';
-            btn.className = 'btn-toggle btn-green';
+            input.style.display = 'none'; input.value = ''; btn.innerText = 'هەیە ➕'; btn.className = 'btn-toggle btn-green';
         }
     }
 
     function getSecureCode() {
-        let upper = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-        let lower = 'abcdefghijklmnopqrstuvwxyz';
-        let nums = '0123456789';
-        let codeArr = [
-            upper[Math.floor(Math.random() * upper.length)],
-            lower[Math.floor(Math.random() * lower.length)],
-            nums[Math.floor(Math.random() * nums.length)]
-        ];
+        let upper = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'; let lower = 'abcdefghijklmnopqrstuvwxyz'; let nums = '0123456789';
+        let codeArr = [upper[Math.floor(Math.random() * upper.length)], lower[Math.floor(Math.random() * lower.length)], nums[Math.floor(Math.random() * nums.length)]];
         let all = upper + lower + nums;
-        codeArr.push(all[Math.floor(Math.random() * all.length)]);
-        codeArr.push(all[Math.floor(Math.random() * all.length)]);
+        codeArr.push(all[Math.floor(Math.random() * all.length)], all[Math.floor(Math.random() * all.length)]);
         return codeArr.sort(() => 0.5 - Math.random()).join('');
     }
 
     function generateCode(isBot) {
         let name = document.getElementById('u-name').value.trim();
-        let role = document.getElementById('u-role').value;
-        let manager = document.getElementById('u-manager').value.trim();
+        let role = userRole === "ئەدمین" ? "ئەندام" : document.getElementById('u-role').value;
+        let manager = userRole === "ئەدمین" ? userName : document.getElementById('u-manager').value.trim();
         let admin = document.getElementById('u-admin').value.trim();
         let consultant = document.getElementById('u-consultant').value.trim();
 
         if (!name) { tg.showAlert("تکایە ناوی سیانی بنووسە!"); return; }
 
-        document.getElementById('gen-btn-norm').disabled = true;
-        document.getElementById('gen-btn-bot').disabled = true;
-
         let code = getSecureCode(); 
         let url = `${APPS_SCRIPT_URL}?action=addCode&isBot=${isBot}&code=${code}&name=${encodeURIComponent(name)}&role=${encodeURIComponent(role)}&manager=${encodeURIComponent(manager)}&admin=${encodeURIComponent(admin)}&consultant=${encodeURIComponent(consultant)}&creator=${encodeURIComponent(creatorCode)}`;
 
-        fetch(url).then(response => response.json()).then(data => {
-            document.getElementById('gen-btn-norm').disabled = false;
-            document.getElementById('gen-btn-bot').disabled = false;
+        fetch(url).then(r => r.json()).then(data => {
             document.getElementById('result').style.display = 'block';
             document.getElementById('final-code').innerText = code;
-            document.getElementById('result-text').innerText = isBot ? "🤖 کۆدی بۆت دروستکرا:" : "✅ کۆدی ئاسایی دروستکرا:";
-            tg.showAlert("✅ کۆدەکە چووە ناو خشتەکەوە.");
-        }).catch(err => {
-            document.getElementById('gen-btn-norm').disabled = false;
-            document.getElementById('gen-btn-bot').disabled = false;
-            tg.showAlert("❌ هەڵەیەک ڕوویدا لە دروستکردندا.");
+            document.getElementById('result-text').innerText = isBot ? "🤖 کۆدی بۆت:" : "✅ کۆدی ئاسایی:";
         });
     }
 
-    function copyCode() {
-        let codeText = document.getElementById('final-code').innerText;
-        navigator.clipboard.writeText(codeText).then(() => { tg.showAlert("کۆدەکە کۆپی کرا!"); });
-    }
+    function copyCode() { navigator.clipboard.writeText(document.getElementById('final-code').innerText).then(() => { tg.showAlert("کۆپی کرا!"); }); }
 
     function searchCode() {
         let codeToSearch = document.getElementById('search-code-input').value.trim();
-        if (!codeToSearch) { tg.showAlert("تکایە کۆدێک بنووسە بۆ گەڕان"); return; }
+        if (!codeToSearch) return;
+        let url = `${APPS_SCRIPT_URL}?action=searchCode&code=${encodeURIComponent(codeToSearch)}&reqRole=${encodeURIComponent(userRole)}&reqCode=${encodeURIComponent(creatorCode)}`;
         
-        document.getElementById('search-btn').innerText = "⏳...";
-        let url = `${APPS_SCRIPT_URL}?action=searchCode&code=${encodeURIComponent(codeToSearch)}`;
-        
-        fetch(url).then(res => res.json()).then(data => {
-            document.getElementById('search-btn').innerText = "گەڕان";
-            if (data.status === "success") {
+        fetch(url).then(r => r.json()).then(data => {
+            if (data.status === "unauthorized") {
+                tg.showAlert("⛔ تۆ دەسەڵاتی دەستکاریکردنی ئەم کۆدەت نییە چونکە تۆ دروستت نەکردووە!");
+                document.getElementById('edit-section').style.display = "none";
+            } else if (data.status === "success") {
                 document.getElementById('e-name').value = data.name;
-                document.getElementById('e-role').value = data.role;
+                document.getElementById('e-role').value = userRole === "ئەدمین" ? "ئەندام" : data.role;
                 applyEditState('e-manager', data.manager);
                 applyEditState('e-admin', data.admin);
                 applyEditState('e-consultant', data.consultant);
                 document.getElementById('edit-section').style.display = "block";
             } else {
-                tg.showAlert("❌ هیچ زانیارییەک بەم کۆدە نەدۆزرایەوە!");
-                document.getElementById('edit-section').style.display = "none";
+                tg.showAlert("❌ کۆد نەدۆزرایەوە!");
             }
         });
     }
@@ -235,25 +226,18 @@
     function updateCode(isBot) {
         let code = document.getElementById('search-code-input').value.trim();
         let name = document.getElementById('e-name').value.trim();
-        let role = document.getElementById('e-role').value;
-        let manager = document.getElementById('e-manager').value.trim();
+        let role = userRole === "ئەدمین" ? "ئەندام" : document.getElementById('e-role').value;
+        let manager = userRole === "ئەدمین" ? userName : document.getElementById('e-manager').value.trim();
         let admin = document.getElementById('e-admin').value.trim();
         let consultant = document.getElementById('e-consultant').value.trim();
 
-        if (!name) { tg.showAlert("ناوی سیانی نابێت بەتاڵ بێت!"); return; }
+        let url = `${APPS_SCRIPT_URL}?action=updateCode&isBot=${isBot}&code=${encodeURIComponent(code)}&name=${encodeURIComponent(name)}&role=${encodeURIComponent(role)}&manager=${encodeURIComponent(manager)}&admin=${encodeURIComponent(admin)}&consultant=${encodeURIComponent(consultant)}&reqRole=${encodeURIComponent(userRole)}&reqCode=${encodeURIComponent(creatorCode)}`;
 
-        document.getElementById('upd-btn-norm').disabled = true;
-        document.getElementById('upd-btn-bot').disabled = true;
-        
-        let url = `${APPS_SCRIPT_URL}?action=updateCode&isBot=${isBot}&code=${encodeURIComponent(code)}&name=${encodeURIComponent(name)}&role=${encodeURIComponent(role)}&manager=${encodeURIComponent(manager)}&admin=${encodeURIComponent(admin)}&consultant=${encodeURIComponent(consultant)}`;
-
-        fetch(url).then(res => res.json()).then(data => {
-            document.getElementById('upd-btn-norm').disabled = false;
-            document.getElementById('upd-btn-bot').disabled = false;
-            if (data.status === "success") {
-                tg.showAlert("✅ زانیارییەکان بە سەرکەوتوویی نوێکرانەوە!");
+        fetch(url).then(r => r.json()).then(data => {
+            if (data.status === "unauthorized") tg.showAlert("⛔ دەسەڵاتت نییە!");
+            else if (data.status === "success") {
+                tg.showAlert("✅ نوێکرایەوە!");
                 document.getElementById('edit-section').style.display = "none";
-                document.getElementById('search-code-input').value = "";
             }
         });
     }
@@ -261,12 +245,12 @@
     function deleteCode() {
         let code = document.getElementById('search-code-input').value.trim();
         if(confirm("⚠️ دڵنیایت لە سڕینەوەی ئەم کۆدەکە؟")) {
-            let url = `${APPS_SCRIPT_URL}?action=deleteCode&code=${encodeURIComponent(code)}`;
-            fetch(url).then(res => res.json()).then(data => {
-                if(data.status === 'success') {
+            let url = `${APPS_SCRIPT_URL}?action=deleteCode&code=${encodeURIComponent(code)}&reqRole=${encodeURIComponent(userRole)}&reqCode=${encodeURIComponent(creatorCode)}`;
+            fetch(url).then(r => r.json()).then(data => {
+                if (data.status === "unauthorized") tg.showAlert("⛔ دەسەڵاتت نییە!");
+                else if(data.status === 'success') {
                     tg.showAlert("🗑️ کۆدەکە سڕایەوە!");
                     document.getElementById('edit-section').style.display = "none";
-                    document.getElementById('search-code-input').value = "";
                 }
             });
         }
