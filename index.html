@@ -9,20 +9,33 @@
         body { font-family: Tahoma, Arial, sans-serif; background-color: var(--tg-theme-bg-color, #ffffff); color: var(--tg-theme-text-color, #000000); padding: 20px; margin: 0; }
         .container { max-width: 400px; margin: 0 auto; }
         label { display: block; margin-bottom: 8px; font-weight: bold; font-size: 14px; color: var(--tg-theme-hint-color, #999999); }
-        input, select { width: 100%; padding: 12px; margin-bottom: 20px; border: 1px solid var(--tg-theme-hint-color, #cccccc); border-radius: 8px; background-color: var(--tg-theme-secondary-bg-color, #f4f4f5); color: var(--tg-theme-text-color, #000000); font-size: 16px; box-sizing: border-box; }
-        input:focus, select:focus { outline: none; border-color: var(--tg-theme-button-color, #2481cc); }
-        button { width: 100%; padding: 14px; background-color: var(--tg-theme-button-color, #2481cc); color: var(--tg-theme-button-text-color, #ffffff); border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; }
+        input, select { width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid var(--tg-theme-hint-color, #cccccc); border-radius: 8px; background-color: var(--tg-theme-secondary-bg-color, #f4f4f5); color: var(--tg-theme-text-color, #000000); font-size: 15px; box-sizing: border-box; }
+        input:focus, select:focus { outline: none; border-color: #2481cc; }
+        button { width: 100%; padding: 14px; background-color: #28a745; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; }
+        
+        /* دیزاینی بەشی سەبەتە بە شێوازی دەستی */
+        .cart-wrapper { background: #eef2f5; padding: 15px; border-radius: 10px; border: 1px dashed #2481cc; margin-bottom: 15px; }
+        .cart-row-flex { display: flex; gap: 10px; margin-bottom: 10px; }
+        .cart-row-flex input { margin-bottom: 0; }
+        .btn-add { background-color: #2481cc; padding: 12px; margin-top: 5px; }
+        
+        .cart-list { list-style: none; padding: 0; margin: 0 0 20px 0; border: 1px solid #ddd; border-radius: 8px; display: none; background: #fafafa;}
+        .cart-list li { display: flex; justify-content: space-between; padding: 10px; border-bottom: 1px solid #eee; font-size: 14px; align-items: center;}
+        .cart-list li:last-child { border-bottom: none; }
+        .cart-list li span { color: #d9534f; cursor: pointer; font-weight: bold; padding: 5px; font-size: 16px; }
+        .item-details { display: flex; flex-direction: column; }
+        .item-price-calc { font-size: 12px; color: #666; margin-top: 3px; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h2 style="text-align: center; margin-bottom: 20px;">تۆمارکردنی داواکاری</h2>
+    <h2 style="text-align: center; margin-bottom: 20px; color: #2481cc;">تۆمارکردنی داواکاری</h2>
 
-    <label for="customerName">ناوی کڕیار</label>
-    <input type="text" id="customerName" placeholder="ناوی سیانی" required>
+    <label>ناوی کڕیار</label>
+    <input type="text" id="customerName" placeholder="ناوی سیانی کڕیار" required>
 
-    <label for="city">شار</label>
+    <label>شار</label>
     <select id="city">
         <option value="هەولێر">هەولێر</option>
         <option value="سلێمانی">سلێمانی</option>
@@ -30,72 +43,115 @@
         <option value="کەرکوک">کەرکوک</option>
     </select>
 
-    <label for="item">کاڵا</label>
-    <select id="item">
-        <option value="">⏳ چاوەڕێ بکە، کاڵاکان دەهێنرێن...</option>
-    </select>
+    <div class="cart-wrapper">
+        <label>زیادکردنی کاڵا بۆ سەبەتە</label>
+        <input type="text" id="item-name" placeholder="ناوی کاڵا بنووسە (نموونە: قەڵەم)">
+        
+        <div class="cart-row-flex">
+            <input type="number" id="item-price" placeholder="نرخی ١ دانە" style="flex-grow: 1;">
+            <input type="number" id="item-qty" value="1" min="1" style="width: 80px; text-align: center;">
+        </div>
+        <button class="btn-add" onclick="addToCart()">زیادکردنی ئەم کاڵایە 🛒</button>
+    </div>
+    
+    <ul id="cart-list" class="cart-list"></ul>
 
-    <label for="price">نرخی کۆتایی (بە دینار)</label>
-    <input type="number" id="price" placeholder="نموونە: 25000" required>
+    <label>کۆی نرخی فرۆشتن (خۆی حیسابی دەکات دەتوانیت دەستکاریشی بکەیت)</label>
+    <input type="number" id="price" placeholder="کۆی پارەی هەموو کاڵاکان" required>
 
-    <label for="phone1">ژمارە مۆبایل ١</label>
-    <input type="tel" id="phone1" placeholder="07XXXXXXXXX" maxlength="11" oninput="enforcePhone(this)" required>
+    <label>ژمارە مۆبایل ١</label>
+    <input type="tel" id="phone1" value="0" maxlength="11" oninput="enforcePhone(this)" required>
 
-    <label for="phone2">ژمارە مۆبایل ٢ (ئارەزوومەندانە)</label>
-    <input type="tel" id="phone2" placeholder="07XXXXXXXXX" maxlength="11" oninput="enforcePhone(this)">
+    <label>ژمارە مۆبایل ٢ (ئارەزوومەندانە)</label>
+    <input type="tel" id="phone2" placeholder="بۆ نموونە: 0750..." maxlength="11" oninput="enforcePhone(this)">
 
-    <button onclick="submitData()">ناردنی داواکاری</button>
+    <button onclick="submitData()">ناردنی داواکاری 🚀</button>
 </div>
 
 <script>
     let tg = window.Telegram.WebApp;
     tg.expand();
 
-    // !!! ئەو لینکەی لە Apps Script وەرتگرت لێرە دایبنێ !!!
-    const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwtKMGXHm2XEA499c8HT9GDaSsMPQsMpTiZT56ju4LlfWw2_cOgZ-vvSOvvpXYc4nlcZQ/exec";
+    let cart = []; // سەبەتەی کاڵاکان
 
-    // هێنانی ناوی کاڵاکان لە گۆگڵ شیتسەوە
-    fetch(APPS_SCRIPT_URL, { redirect: "follow" })
-        .then(response => response.json())
-        .then(data => {
-            let select = document.getElementById("item");
-            select.innerHTML = ""; // لابردنی نوسراوی چاوەڕێکردنەکە
-            data.forEach(item => {
-                let option = document.createElement("option");
-                option.value = item;
-                option.text = item;
-                select.appendChild(option);
-            });
-        })
-        .catch(error => {
-            document.getElementById("item").innerHTML = "<option value='هەڵە'>هەڵەیەک هەیە لە هێنانی کاڵاکان</option>";
-        });
-
-    // کۆنترۆڵکردنی ژمارە مۆبایل (تەنها ژمارە، وە بە سفر دەست پێبکات)
     function enforcePhone(input) {
-        input.value = input.value.replace(/[^0-9]/g, ''); // ڕێگری لە پیت
-        if (input.value.length > 0 && input.value[0] !== '0') {
-            input.value = '0' + input.value.substring(1); // دەبێت بە سفر دەست پێبکات
+        input.value = input.value.replace(/[^0-9]/g, '');
+        if (input.value.length > 0 && input.value[0] !== '0') input.value = '0' + input.value.substring(1);
+    }
+
+    // زیادکردنی کاڵا بۆ سەبەتە
+    function addToCart() {
+        let name = document.getElementById('item-name').value.trim();
+        let price = parseInt(document.getElementById('item-price').value);
+        let qty = parseInt(document.getElementById('item-qty').value);
+
+        if(!name || isNaN(price) || isNaN(qty) || qty < 1) {
+            tg.showAlert("تکایە ناوی کاڵا و نرخی دانەیەک بە دروستی بنووسە!");
+            return;
         }
+
+        // زیادکردن بۆ سەبەتە
+        cart.push({name: name, unitPrice: price, qty: qty});
+        
+        // خاڵیکردنەوەی بۆکسەکان بۆ کاڵای دواتر
+        document.getElementById('item-name').value = '';
+        document.getElementById('item-price').value = '';
+        document.getElementById('item-qty').value = 1;
+        
+        updateCartUI();
+    }
+
+    // سڕینەوەی کاڵا لە سەبەتە
+    function removeFromCart(index) {
+        cart.splice(index, 1);
+        updateCartUI();
+    }
+
+    // نوێکردنەوەی شاشەی سەبەتەکە و حیسابکردنی کۆی پارەکە
+    function updateCartUI() {
+        let list = document.getElementById('cart-list');
+        list.innerHTML = "";
+        let grandTotal = 0;
+
+        if(cart.length > 0) {
+            list.style.display = "block";
+            cart.forEach((item, index) => {
+                let totalItemPrice = item.qty * item.unitPrice;
+                grandTotal += totalItemPrice;
+                
+                let li = document.createElement("li");
+                li.innerHTML = `
+                    <div class="item-details">
+                        <strong>${item.qty}x ${item.name}</strong>
+                        <span class="item-price-calc">(دانەیەک: ${item.unitPrice.toLocaleString('en-US')}) = ${totalItemPrice.toLocaleString('en-US')} دینار</span>
+                    </div>
+                    <span onclick="removeFromCart(${index})">❌</span>
+                `;
+                list.appendChild(li);
+            });
+        } else {
+            list.style.display = "none";
+        }
+        
+        // دانانی کۆی گشتی پارەکە بە ئۆتۆماتیکی
+        document.getElementById('price').value = grandTotal || "https://script.google.com/macros/s/AKfycbwtKMGXHm2XEA499c8HT9GDaSsMPQsMpTiZT56ju4LlfWw2_cOgZ-vvSOvvpXYc4nlcZQ/exec";
+
     }
 
     function submitData() {
         let customerName = document.getElementById('customerName').value.trim();
         let city = document.getElementById('city').value;
-        let item = document.getElementById('item').value;
         let price = document.getElementById('price').value.trim();
         let phone1 = document.getElementById('phone1').value.trim();
         let phone2 = document.getElementById('phone2').value.trim();
 
-        if (!customerName || !price || phone1.length < 11) {
-            tg.showAlert("تکایە دڵنیابەرەوە کە خانەکان پڕن و ژمارە مۆبایلەکە ١١ ژمارەی تەواوە.");
-            return;
-        }
+        if (cart.length === 0) { tg.showAlert("تکایە لانی کەم کاڵایەک بخەرە سەبەتەکەوە!"); return; }
+        if (!customerName || !price || phone1.length < 11) { tg.showAlert("خانەکان بە دروستی پڕ بکەرەوە."); return; }
 
         let data = {
             customerName: customerName,
             city: city,
-            item: item,
+            cart: cart, // ناردنی تەواوی سەبەتەکە
             price: price,
             phone1: phone1,
             phone2: phone2
@@ -105,6 +161,5 @@
         tg.close();
     }
 </script>
-
 </body>
 </html>
