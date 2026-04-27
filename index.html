@@ -3,163 +3,183 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>فۆرمی داواکاری</title>
+    <title>چوونەژوورەوە</title>
+    <link rel="stylesheet" href="style.css">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <style>
-        body { font-family: Tahoma, Arial, sans-serif; background-color: var(--tg-theme-bg-color, #ffffff); color: var(--tg-theme-text-color, #000000); padding: 20px; margin: 0; }
-        .container { max-width: 400px; margin: 0 auto; }
-        label { display: block; margin-bottom: 8px; font-weight: bold; font-size: 14px; color: var(--tg-theme-hint-color, #999999); }
-        input, select { width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid var(--tg-theme-hint-color, #cccccc); border-radius: 8px; background-color: var(--tg-theme-secondary-bg-color, #f4f4f5); color: var(--tg-theme-text-color, #000000); font-size: 15px; box-sizing: border-box; }
-        input:focus, select:focus { outline: none; border-color: #2481cc; }
-        button { width: 100%; padding: 14px; background-color: #28a745; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; }
-        
-        /* دیزاینی بەشی سەبەتە بە شێوازی دەستی */
-        .cart-wrapper { background: #eef2f5; padding: 15px; border-radius: 10px; border: 1px dashed #2481cc; margin-bottom: 15px; }
-        .cart-row-flex { display: flex; gap: 10px; margin-bottom: 10px; }
-        .cart-row-flex input { margin-bottom: 0; }
-        .btn-add { background-color: #2481cc; padding: 12px; margin-top: 5px; }
-        
-        .cart-list { list-style: none; padding: 0; margin: 0 0 20px 0; border: 1px solid #ddd; border-radius: 8px; display: none; background: #fafafa;}
-        .cart-list li { display: flex; justify-content: space-between; padding: 10px; border-bottom: 1px solid #eee; font-size: 14px; align-items: center;}
-        .cart-list li:last-child { border-bottom: none; }
-        .cart-list li span { color: #d9534f; cursor: pointer; font-weight: bold; padding: 5px; font-size: 16px; }
-        .item-details { display: flex; flex-direction: column; }
-        .item-price-calc { font-size: 12px; color: #666; margin-top: 3px; }
-    </style>
 </head>
 <body>
-
-<div class="container">
-    <h2 style="text-align: center; margin-bottom: 20px; color: #2481cc;">تۆمارکردنی داواکاری</h2>
-
-    <label>ناوی کڕیار</label>
-    <input type="text" id="customerName" placeholder="ناوی سیانی کڕیار" required>
-
-    <label>شار</label>
-    <select id="city">
-        <option value="هەولێر">هەولێر</option>
-        <option value="سلێمانی">سلێمانی</option>
-        <option value="دهۆک">دهۆک</option>
-        <option value="کەرکوک">کەرکوک</option>
-    </select>
-
-    <div class="cart-wrapper">
-        <label>زیادکردنی کاڵا بۆ سەبەتە</label>
-        <input type="text" id="item-name" placeholder="ناوی کاڵا بنووسە (نموونە: قەڵەم)">
-        
-        <div class="cart-row-flex">
-            <input type="number" id="item-price" placeholder="نرخی ١ دانە" style="flex-grow: 1;">
-            <input type="number" id="item-qty" value="1" min="1" style="width: 80px; text-align: center;">
-        </div>
-        <button class="btn-add" onclick="addToCart()">زیادکردنی ئەم کاڵایە 🛒</button>
-    </div>
-    
-    <ul id="cart-list" class="cart-list"></ul>
-
-    <label>کۆی نرخی فرۆشتن (خۆی حیسابی دەکات دەتوانیت دەستکاریشی بکەیت)</label>
-    <input type="number" id="price" placeholder="کۆی پارەی هەموو کاڵاکان" required>
-
-    <label>ژمارە مۆبایل ١</label>
-    <input type="tel" id="phone1" value="0" maxlength="11" oninput="enforcePhone(this)" required>
-
-    <label>ژمارە مۆبایل ٢ (ئارەزوومەندانە)</label>
-    <input type="tel" id="phone2" placeholder="بۆ نموونە: 0750..." maxlength="11" oninput="enforcePhone(this)">
-
-    <button onclick="submitData()">ناردنی داواکاری 🚀</button>
-</div>
-
-<script>
-    let tg = window.Telegram.WebApp;
-    tg.expand();
-
-    let cart = []; // سەبەتەی کاڵاکان
-
-    function enforcePhone(input) {
-        input.value = input.value.replace(/[^0-9]/g, '');
-        if (input.value.length > 0 && input.value[0] !== '0') input.value = '0' + input.value.substring(1);
-    }
-
-    // زیادکردنی کاڵا بۆ سەبەتە
-    function addToCart() {
-        let name = document.getElementById('item-name').value.trim();
-        let price = parseInt(document.getElementById('item-price').value);
-        let qty = parseInt(document.getElementById('item-qty').value);
-
-        if(!name || isNaN(price) || isNaN(qty) || qty < 1) {
-            tg.showAlert("تکایە ناوی کاڵا و نرخی دانەیەک بە دروستی بنووسە!");
-            return;
-        }
-
-        // زیادکردن بۆ سەبەتە
-        cart.push({name: name, unitPrice: price, qty: qty});
-        
-        // خاڵیکردنەوەی بۆکسەکان بۆ کاڵای دواتر
-        document.getElementById('item-name').value = '';
-        document.getElementById('item-price').value = '';
-        document.getElementById('item-qty').value = 1;
-        
-        updateCartUI();
-    }
-
-    // سڕینەوەی کاڵا لە سەبەتە
-    function removeFromCart(index) {
-        cart.splice(index, 1);
-        updateCartUI();
-    }
-
-    // نوێکردنەوەی شاشەی سەبەتەکە و حیسابکردنی کۆی پارەکە
-    function updateCartUI() {
-        let list = document.getElementById('cart-list');
-        list.innerHTML = "";
-        let grandTotal = 0;
-
-        if(cart.length > 0) {
-            list.style.display = "block";
-            cart.forEach((item, index) => {
-                let totalItemPrice = item.qty * item.unitPrice;
-                grandTotal += totalItemPrice;
-                
-                let li = document.createElement("li");
-                li.innerHTML = `
-                    <div class="item-details">
-                        <strong>${item.qty}x ${item.name}</strong>
-                        <span class="item-price-calc">(دانەیەک: ${item.unitPrice.toLocaleString('en-US')}) = ${totalItemPrice.toLocaleString('en-US')} دینار</span>
+    <div class="login-container">
+        <div class="modern-form">
+            <div class="form-title">چوونە ژوورەوە</div>
+            <div class="form-body">
+                <div class="input-group">
+                    <div class="input-wrapper">
+                        <svg fill="none" viewBox="0 0 24 24" class="input-icon"><circle stroke-width="1.5" stroke="currentColor" r="4" cy="8" cx="12"></circle><path stroke-linecap="round" stroke-width="1.5" stroke="currentColor" d="M5 20C5 17.2386 8.13401 15 12 15C15.866 15 19 17.2386 19 20"></path></svg>
+                        <input id="login-code" placeholder="کۆدی کارمەند" class="form-input" type="text" autocomplete="off" />
                     </div>
-                    <span onclick="removeFromCart(${index})">❌</span>
-                `;
-                list.appendChild(li);
-            });
-        } else {
-            list.style.display = "none";
+                </div>
+                <div class="input-group">
+                    <div class="input-wrapper">
+                        <svg fill="none" viewBox="0 0 24 24" class="input-icon"><path stroke-width="1.5" stroke="currentColor" d="M12 10V14M8 6H16C17.1046 6 18 6.89543 18 8V16C18 17.1046 17.1046 18 16 18H8C6.89543 18 6 17.1046 6 16V8C6 6.89543 6.89543 6 8 6Z"></path></svg>
+                        <input id="login-pass" placeholder="وشەی نهێنی" class="form-input" type="password" />
+                        <button class="password-toggle" type="button" onclick="togglePassword()">
+                            <svg fill="none" viewBox="0 0 24 24" class="eye-icon"><path stroke-width="1.5" stroke="currentColor" d="M2 12C2 12 5 5 12 5C19 5 22 12 22 12C22 12 19 19 12 19C5 19 2 12 2 12Z"></path><circle stroke-width="1.5" stroke="currentColor" r="3" cy="12" cx="12"></circle></svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <button class="submit-button" id="login-btn" onclick="performLogin()"><span class="button-text">چوونە ژوورەوە</span><div class="button-glow"></div></button>
+        </div>
+    </div>
+
+    <script src="config.js"></script>
+    <script>
+        async function ensureSupabaseLoaded() {
+            try {
+                if (!window.supabase) {
+                    await loadSupabaseScript();
+                }
+                if (!supabase || typeof supabase.from !== 'function') {
+                    initializeSupabase();
+                }
+            } catch (error) {
+                console.log(error);
+            }
         }
         
-        // دانانی کۆی گشتی پارەکە بە ئۆتۆماتیکی
-        document.getElementById('price').value = grandTotal || "https://script.google.com/macros/s/AKfycbwtKMGXHm2XEA499c8HT9GDaSsMPQsMpTiZT56ju4LlfWw2_cOgZ-vvSOvvpXYc4nlcZQ/exec";
+        document.addEventListener('DOMContentLoaded', async () => {
+            await ensureSupabaseLoaded();
+            
+            let tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
+            
+            if (tgUser && tgUser.id) {
+                try {
+                    const { data, error } = await supabase
+                        .from('employees')
+                        .select('*')
+                        .eq('telegram_id', String(tgUser.id));
+                    
+                    if (data && data.length > 0) {
+                        localStorage.setItem('myAppUser', JSON.stringify(data[0]));
+                        window.location.replace("app.html");
+                        return;
+                    }
+                } catch (e) {}
+            }
 
-    }
+            if (localStorage.getItem('myAppUser')) { 
+                window.location.replace("app.html"); 
+            }
+        });
 
-    function submitData() {
-        let customerName = document.getElementById('customerName').value.trim();
-        let city = document.getElementById('city').value;
-        let price = document.getElementById('price').value.trim();
-        let phone1 = document.getElementById('phone1').value.trim();
-        let phone2 = document.getElementById('phone2').value.trim();
+        function showMsg(text) {
+            alert(text); 
+        }
+        
+        function togglePassword() {
+            let passInput = document.getElementById("login-pass");
+            passInput.type = passInput.type === "password" ? "text" : "password";
+        }
 
-        if (cart.length === 0) { tg.showAlert("تکایە لانی کەم کاڵایەک بخەرە سەبەتەکەوە!"); return; }
-        if (!customerName || !price || phone1.length < 11) { tg.showAlert("خانەکان بە دروستی پڕ بکەرەوە."); return; }
+        async function performLogin() {
+            let code = document.getElementById('login-code').value.trim();
+            let pass = document.getElementById('login-pass').value.trim();
+            if(!code || !pass) { showMsg("تکایە هەردوو خانەکە پڕبکەرەوە"); return; }
 
-        let data = {
-            customerName: customerName,
-            city: city,
-            cart: cart, // ناردنی تەواوی سەبەتەکە
-            price: price,
-            phone1: phone1,
-            phone2: phone2
-        };
+            let btn = document.getElementById('login-btn');
+            btn.innerHTML = "⏳ چاوەڕێ بکە..."; btn.disabled = true;
 
-        tg.sendData(JSON.stringify(data));
-        tg.close();
-    }
-</script>
+            try {
+                await ensureSupabaseLoaded();
+                
+                if (!supabase || typeof supabase.from !== 'function') {
+                    btn.innerHTML = "<span class='button-text'>چوونە ژوورەوە</span><div class='button-glow'></div>";
+                    btn.disabled = false;
+                    showMsg("❌ هێشتا پەیوەندی داتابەیس دروست نەبووە. تکایە چەند چرکەیەک چاوەڕێ بکە.");
+                    return;
+                }
+            } catch (error) {
+                btn.innerHTML = "<span class='button-text'>چوونە ژوورەوە</span><div class='button-glow'></div>";
+                btn.disabled = false;
+                showMsg("❌ کێشە لە هێنانی داتابەیس هەیە.");
+                return;
+            }
+
+            try {
+                const { data: users, error } = await supabase
+                    .from('employees')
+                    .select('*')
+                    .eq('code', code);
+
+                if (error || !users || users.length === 0) {
+                    btn.innerHTML = "<span class='button-text'>چوونە ژوورەوە</span><div class='button-glow'></div>"; 
+                    btn.disabled = false;
+                    showMsg("❌ ئەم کۆدە بوونی نییە!");
+                    return;
+                }
+
+                let user = users[0];
+                let tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
+                let tgId = tgUser ? String(tgUser.id) : null;
+                let tgUsername = tgUser ? (tgUser.username || "") : "";
+                let tgName = tgUser ? (tgUser.first_name + (tgUser.last_name ? " " + tgUser.last_name : "")) : "";
+
+                if (!user.password || user.password.trim() === "") {
+                    if (pass.length < 6 || pass.length > 15) {
+                        btn.innerHTML = "<span class='button-text'>چوونە ژوورەوە</span><div class='button-glow'></div>"; 
+                        btn.disabled = false;
+                        showMsg("⚠️ وشەی نهێنی دەبێت لە نێوان ٦ بۆ ١٥ پیت یان ژمارە بێت!");
+                        return;
+                    }
+
+                    let updateData = { password: pass };
+                    if (tgId) {
+                        updateData.telegram_id = tgId;
+                        updateData.telegram_username = tgUsername;
+                        updateData.telegram_name = tgName;
+                    }
+
+                    const { error: updateError } = await supabase
+                        .from('employees')
+                        .update(updateData)
+                        .eq('code', code);
+
+                    if (!updateError) {
+                        user.password = pass;
+                        if(tgId) user.telegram_id = tgId;
+                        localStorage.setItem('myAppUser', JSON.stringify(user));
+                        showMsg("✅ وشەی نهێنیت بۆ دانرا! لەمەودوا بەم وشەیە دەچیتە ژوورەوە.");
+                        window.location.replace("app.html");
+                    } else {
+                        btn.innerHTML = "<span class='button-text'>چوونە ژوورەوە</span><div class='button-glow'></div>"; 
+                        btn.disabled = false;
+                        showMsg("❌ کێشەیەک ڕوویدا لە خەزنکردنی وشەی نهێنی!");
+                    }
+                } 
+                else if (user.password === pass) {
+                    if (tgId && user.telegram_id !== tgId) {
+                        await supabase.from('employees').update({
+                            telegram_id: tgId,
+                            telegram_username: tgUsername,
+                            telegram_name: tgName
+                        }).eq('code', code);
+                        user.telegram_id = tgId;
+                    }
+                    localStorage.setItem('myAppUser', JSON.stringify(user));
+                    window.location.replace("app.html");
+                } 
+                else {
+                    btn.innerHTML = "<span class='button-text'>چوونە ژوورەوە</span><div class='button-glow'></div>"; 
+                    btn.disabled = false;
+                    showMsg("❌ وشەی نهێنییەکە هەڵەیە!");
+                }
+
+            } catch (err) {
+                btn.innerHTML = "<span class='button-text'>چوونە ژوورەوە</span><div class='button-glow'></div>"; 
+                btn.disabled = false;
+                showMsg("❌ کێشە لە پەیوەندی ئینتەرنێت هەیە.");
+            }
+        }
+    </script>
 </body>
 </html>
