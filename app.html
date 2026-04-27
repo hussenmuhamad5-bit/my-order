@@ -2549,48 +2549,34 @@ function showToast(message, type = 'info') {
         }
     }
 
-// چارەسەری کۆتایی و فەرمی لەڕێگەی API خودی تێلیگرامەوە
+// چارەسەری کۆتایی و بنبڕکەر بۆ کیبۆرد بە بەکارهێنانی Focusin
     document.addEventListener('DOMContentLoaded', () => {
-        const tg = window.Telegram?.WebApp;
-        
-        if (tg) {
-            tg.expand(); // دڵنیابوونەوە لە فول سکرین
-            
-            const bottomNav = document.querySelector('.bottom-nav'); 
+        if (window.Telegram && window.Telegram.WebApp) {
+            window.Telegram.WebApp.expand();
+        }
+    });
+
+    // ئەمە (focusin)ە نەک focus، واتە گوێ دەگرێت بۆ هەر پەنجەلێدانێک لەسەر تەواوی شاشەکە
+    document.addEventListener('focusin', function(e) {
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') {
+            const bottomNav = document.querySelector('.bottom-nav');
             const fabButton = document.querySelector('.fab-container');
+            
+            if (bottomNav) bottomNav.style.display = 'none';
+            if (fabButton) fabButton.style.display = 'none';
+        }
+    });
 
-            // بەکارهێنانی سێنسەری تایبەتی تێلیگرام (viewportChanged)
-            tg.onEvent('viewportChanged', function() {
-                // tg.viewportStableHeight = درێژی ئەسڵی شاشەکە
-                // tg.viewportHeight = درێژی شاشەکە لەم ساتەدا
-                // ئەگەر درێژی ئێستا بچووکتر بوو، واتە کیبۆرد کراوەتەوە!
-                if (tg.viewportHeight < tg.viewportStableHeight - 50) {
-                    if (bottomNav) bottomNav.style.display = 'none';
-                    if (fabButton) fabButton.style.display = 'none';
-                } else {
-                    if (bottomNav) bottomNav.style.display = 'flex';
-                    if (fabButton) fabButton.style.display = 'block';
-                }
-            });
-
-            // وەک دڵنیایی زیاتر (بەکارهێنانی Focus بۆ ئەو مۆبایلانەی زۆر خاون)
-            const inputs = document.querySelectorAll('input, textarea, select');
-            inputs.forEach(input => {
-                input.addEventListener('focus', () => {
-                    if (bottomNav) bottomNav.style.display = 'none';
-                    if (fabButton) fabButton.style.display = 'none';
-                });
+    document.addEventListener('focusout', function(e) {
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') {
+            // کەمێک چاوەڕێ دەکات تا کیبۆردەکە بەتەواوی دادەخرێت
+            setTimeout(() => {
+                const bottomNav = document.querySelector('.bottom-nav');
+                const fabButton = document.querySelector('.fab-container');
                 
-                input.addEventListener('blur', () => {
-                    setTimeout(() => {
-                        // تەنها ئەگەر دڵنیا بووین کیبۆردەکە داخراوە ئەوکات دەگەڕێنەوە
-                        if (tg.viewportHeight >= tg.viewportStableHeight - 50) {
-                            if (bottomNav) bottomNav.style.display = 'flex';
-                            if (fabButton) fabButton.style.display = 'block';
-                        }
-                    }, 200);
-                });
-            });
+                if (bottomNav) bottomNav.style.display = 'flex';
+                if (fabButton) fabButton.style.display = 'block';
+            }, 150);
         }
     });
 
