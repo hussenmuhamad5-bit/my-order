@@ -2549,6 +2549,37 @@ function showToast(message, type = 'info') {
         }
     }
 
+        // چارەسەری کێشەی کیبۆرد و هاتنە سەرەوەی نەیڤبار + دوگمەی زیادکردن (FAB)
+    document.addEventListener('DOMContentLoaded', () => {
+        // ١. دڵنیابوونەوە لەوەی ئەپەکە فول سکرینە لەناو تێلیگرام
+        if (window.Telegram && window.Telegram.WebApp) {
+            window.Telegram.WebApp.expand();
+        }
+
+        // ٢. هەڵبژاردنی نەیڤبار و دوگمەی سەرئاوکەوتوو
+        const bottomNav = document.querySelector('.bottom-nav'); 
+        
+        // تێبینی: تکایە دڵنیابە لەوەی کلاسی دوگمەکەت چۆن نووسراوە
+        // ئەگەر ناوی کلاسەکەی شتێکی ترە، لێرەدا بیگۆڕە (بۆ نموونە '.fab-wrapper' یان '#fab-button')
+        const fabButton = document.querySelector('.fab-container'); 
+        
+        if (bottomNav || fabButton) {
+            const originalHeight = window.innerHeight;
+            
+            window.addEventListener('resize', () => {
+                // ئەگەر درێژی شاشەکە کورت بووەوە (کیبۆرد کرایەوە)
+                if (window.innerHeight < originalHeight - 100) {
+                    if (bottomNav) bottomNav.style.display = 'none';
+                    if (fabButton) fabButton.style.display = 'none';
+                } else {
+                    // ئەگەر کیبۆرد داخراوەتەوە
+                    if (bottomNav) bottomNav.style.display = 'flex'; 
+                    if (fabButton) fabButton.style.display = 'block'; // ئەگەر دیزاینەکەی flexـە، بیگەڕێنە بۆ flex
+                }
+            });
+        }
+    });
+
     
     </script>
 </body>
