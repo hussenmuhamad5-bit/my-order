@@ -2549,34 +2549,33 @@ function showToast(message, type = 'info') {
         }
     }
 
-// چارەسەری کۆتایی و بنبڕکەر بۆ کیبۆرد بە بەکارهێنانی Focusin
-// چارەسەری کۆتایی و ئەتۆمی بۆ کێشەی کیبۆرد (The Watcher Method)
+// چارەسەری کیبۆرد بەبێ تێکدانی تابەکان و دوگمەی زیادکردن (FAB)
     document.addEventListener('DOMContentLoaded', () => {
         if (window.Telegram && window.Telegram.WebApp) {
             window.Telegram.WebApp.expand();
         }
-
-        const bottomNav = document.querySelector('.bottom-nav'); 
-        const fabButton = document.querySelector('.fab-container');
-
-        // ئەم فەنکشنە هەموو 100 میللی چرکەیەک (واتە زۆر خێرا) سەیری شاشەکە دەکات
-        setInterval(() => {
-            // سەیری دەکات بزانێت ئایا لەم ساتەدا هیچ بۆکسێکی نووسین چالاکە؟
-            let activeElem = document.activeElement;
-            let isInputActive = activeElem && (activeElem.tagName === 'INPUT' || activeElem.tagName === 'TEXTAREA' || activeElem.tagName === 'SELECT');
-            
-            if (isInputActive) {
-                // ئەگەر پەنجەت لەناو نووسین بێت، یەکسەر دەیانشارێتەوە
-                if (bottomNav) bottomNav.style.display = 'none';
-                if (fabButton) fabButton.style.display = 'none';
-            } else {
-                // ئەگەر پەنجەت لە دەرەوەی نووسین بوو (واتە کیبۆرد داخرا)، دەیانهێنێتەوە
-                if (bottomNav) bottomNav.style.display = 'flex';
-                if (fabButton) fabButton.style.display = 'block';
-            }
-        }, 100);
     });
 
+    // کاتێک پەنجە دەچێتە ناو بۆکسی نووسین (جگە لە چێکبۆکس)، کلاسێک دەدات بە شاشەکە
+    document.addEventListener('focusin', function(e) {
+        let tag = e.target.tagName;
+        let type = e.target.type;
+        // لێرەدا چێکبۆکس و فایل و ڕادیۆمان جیاکردووەتەوە
+        if (tag === 'TEXTAREA' || tag === 'SELECT' || (tag === 'INPUT' && type !== 'checkbox' && type !== 'radio' && type !== 'file')) {
+            document.body.classList.add('keyboard-open');
+        }
+    });
+
+    // کاتێک کیبۆرد دادەخرێت، کلاسەکە لادەبات
+    document.addEventListener('focusout', function(e) {
+        let tag = e.target.tagName;
+        let type = e.target.type;
+        if (tag === 'TEXTAREA' || tag === 'SELECT' || (tag === 'INPUT' && type !== 'checkbox' && type !== 'radio' && type !== 'file')) {
+            setTimeout(() => {
+                document.body.classList.remove('keyboard-open');
+            }, 150);
+        }
+    });
     
     </script>
 </body>
