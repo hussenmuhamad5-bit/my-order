@@ -2549,32 +2549,44 @@ function showToast(message, type = 'info') {
         }
     }
 
-        // چارەسەری کێشەی کیبۆرد و هاتنە سەرەوەی نەیڤبار + دوگمەی زیادکردن (FAB)
+// چارەسەری کۆتایی و سەدا سەد بۆ کێشەی کیبۆرد لەناو تێلیگرام
     document.addEventListener('DOMContentLoaded', () => {
-        // ١. دڵنیابوونەوە لەوەی ئەپەکە فول سکرینە لەناو تێلیگرام
         if (window.Telegram && window.Telegram.WebApp) {
             window.Telegram.WebApp.expand();
         }
 
-        // ٢. هەڵبژاردنی نەیڤبار و دوگمەی سەرئاوکەوتوو
         const bottomNav = document.querySelector('.bottom-nav'); 
-        
-        // تێبینی: تکایە دڵنیابە لەوەی کلاسی دوگمەکەت چۆن نووسراوە
-        // ئەگەر ناوی کلاسەکەی شتێکی ترە، لێرەدا بیگۆڕە (بۆ نموونە '.fab-wrapper' یان '#fab-button')
-        const fabButton = document.querySelector('.fab-container'); 
-        
-        if (bottomNav || fabButton) {
-            const originalHeight = window.innerHeight;
+        const fabButton = document.querySelector('.fab-container'); // ئەگەر ناوی دوگمەکە جیاوازە لێرە بیگۆڕە
+
+        // ڕێگای یەکەم: کاتێک پەنجە دەنێیت بە بۆکسی نووسیندا
+        const inputs = document.querySelectorAll('input, textarea, select');
+        inputs.forEach(input => {
+            input.addEventListener('focus', () => {
+                if (bottomNav) bottomNav.style.display = 'none';
+                if (fabButton) fabButton.style.display = 'none';
+            });
             
-            window.addEventListener('resize', () => {
-                // ئەگەر درێژی شاشەکە کورت بووەوە (کیبۆرد کرایەوە)
-                if (window.innerHeight < originalHeight - 100) {
+            input.addEventListener('blur', () => {
+                // کەمێک چاوەڕێ دەکات تا دڵنیا دەبێتەوە کیبۆردەکە داخراوە
+                setTimeout(() => {
+                    if (bottomNav) bottomNav.style.display = 'flex';
+                    if (fabButton) fabButton.style.display = 'block';
+                }, 150);
+            });
+        });
+
+        // ڕێگای دووەم: ناسینەوەی درێژی شاشەی بینراو (Visual Viewport)
+        if (window.visualViewport) {
+            const initialHeight = window.visualViewport.height;
+            window.visualViewport.addEventListener('resize', () => {
+                if (window.visualViewport.height < initialHeight - 100) {
+                    // کیبۆرد کراوەتەوە
                     if (bottomNav) bottomNav.style.display = 'none';
                     if (fabButton) fabButton.style.display = 'none';
                 } else {
-                    // ئەگەر کیبۆرد داخراوەتەوە
-                    if (bottomNav) bottomNav.style.display = 'flex'; 
-                    if (fabButton) fabButton.style.display = 'block'; // ئەگەر دیزاینەکەی flexـە، بیگەڕێنە بۆ flex
+                    // کیبۆرد داخراوەتەوە
+                    if (bottomNav) bottomNav.style.display = 'flex';
+                    if (fabButton) fabButton.style.display = 'block';
                 }
             });
         }
