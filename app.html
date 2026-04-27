@@ -2550,34 +2550,31 @@ function showToast(message, type = 'info') {
     }
 
 // چارەسەری کۆتایی و بنبڕکەر بۆ کیبۆرد بە بەکارهێنانی Focusin
+// چارەسەری کۆتایی و ئەتۆمی بۆ کێشەی کیبۆرد (The Watcher Method)
     document.addEventListener('DOMContentLoaded', () => {
         if (window.Telegram && window.Telegram.WebApp) {
             window.Telegram.WebApp.expand();
         }
-    });
 
-    // ئەمە (focusin)ە نەک focus، واتە گوێ دەگرێت بۆ هەر پەنجەلێدانێک لەسەر تەواوی شاشەکە
-    document.addEventListener('focusin', function(e) {
-        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') {
-            const bottomNav = document.querySelector('.bottom-nav');
-            const fabButton = document.querySelector('.fab-container');
+        const bottomNav = document.querySelector('.bottom-nav'); 
+        const fabButton = document.querySelector('.fab-container');
+
+        // ئەم فەنکشنە هەموو 100 میللی چرکەیەک (واتە زۆر خێرا) سەیری شاشەکە دەکات
+        setInterval(() => {
+            // سەیری دەکات بزانێت ئایا لەم ساتەدا هیچ بۆکسێکی نووسین چالاکە؟
+            let activeElem = document.activeElement;
+            let isInputActive = activeElem && (activeElem.tagName === 'INPUT' || activeElem.tagName === 'TEXTAREA' || activeElem.tagName === 'SELECT');
             
-            if (bottomNav) bottomNav.style.display = 'none';
-            if (fabButton) fabButton.style.display = 'none';
-        }
-    });
-
-    document.addEventListener('focusout', function(e) {
-        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') {
-            // کەمێک چاوەڕێ دەکات تا کیبۆردەکە بەتەواوی دادەخرێت
-            setTimeout(() => {
-                const bottomNav = document.querySelector('.bottom-nav');
-                const fabButton = document.querySelector('.fab-container');
-                
+            if (isInputActive) {
+                // ئەگەر پەنجەت لەناو نووسین بێت، یەکسەر دەیانشارێتەوە
+                if (bottomNav) bottomNav.style.display = 'none';
+                if (fabButton) fabButton.style.display = 'none';
+            } else {
+                // ئەگەر پەنجەت لە دەرەوەی نووسین بوو (واتە کیبۆرد داخرا)، دەیانهێنێتەوە
                 if (bottomNav) bottomNav.style.display = 'flex';
                 if (fabButton) fabButton.style.display = 'block';
-            }, 150);
-        }
+            }
+        }, 100);
     });
 
     
