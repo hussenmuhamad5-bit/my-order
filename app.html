@@ -2549,45 +2549,47 @@ function showToast(message, type = 'info') {
         }
     }
 
-// چارەسەری کۆتایی و سەدا سەد بۆ کێشەی کیبۆرد لەناو تێلیگرام
+// چارەسەری کۆتایی و فەرمی لەڕێگەی API خودی تێلیگرامەوە
     document.addEventListener('DOMContentLoaded', () => {
-        if (window.Telegram && window.Telegram.WebApp) {
-            window.Telegram.WebApp.expand();
-        }
-
-        const bottomNav = document.querySelector('.bottom-nav'); 
-        const fabButton = document.querySelector('.fab-container'); // ئەگەر ناوی دوگمەکە جیاوازە لێرە بیگۆڕە
-
-        // ڕێگای یەکەم: کاتێک پەنجە دەنێیت بە بۆکسی نووسیندا
-        const inputs = document.querySelectorAll('input, textarea, select');
-        inputs.forEach(input => {
-            input.addEventListener('focus', () => {
-                if (bottomNav) bottomNav.style.display = 'none';
-                if (fabButton) fabButton.style.display = 'none';
-            });
+        const tg = window.Telegram?.WebApp;
+        
+        if (tg) {
+            tg.expand(); // دڵنیابوونەوە لە فول سکرین
             
-            input.addEventListener('blur', () => {
-                // کەمێک چاوەڕێ دەکات تا دڵنیا دەبێتەوە کیبۆردەکە داخراوە
-                setTimeout(() => {
-                    if (bottomNav) bottomNav.style.display = 'flex';
-                    if (fabButton) fabButton.style.display = 'block';
-                }, 150);
-            });
-        });
+            const bottomNav = document.querySelector('.bottom-nav'); 
+            const fabButton = document.querySelector('.fab-container');
 
-        // ڕێگای دووەم: ناسینەوەی درێژی شاشەی بینراو (Visual Viewport)
-        if (window.visualViewport) {
-            const initialHeight = window.visualViewport.height;
-            window.visualViewport.addEventListener('resize', () => {
-                if (window.visualViewport.height < initialHeight - 100) {
-                    // کیبۆرد کراوەتەوە
+            // بەکارهێنانی سێنسەری تایبەتی تێلیگرام (viewportChanged)
+            tg.onEvent('viewportChanged', function() {
+                // tg.viewportStableHeight = درێژی ئەسڵی شاشەکە
+                // tg.viewportHeight = درێژی شاشەکە لەم ساتەدا
+                // ئەگەر درێژی ئێستا بچووکتر بوو، واتە کیبۆرد کراوەتەوە!
+                if (tg.viewportHeight < tg.viewportStableHeight - 50) {
                     if (bottomNav) bottomNav.style.display = 'none';
                     if (fabButton) fabButton.style.display = 'none';
                 } else {
-                    // کیبۆرد داخراوەتەوە
                     if (bottomNav) bottomNav.style.display = 'flex';
                     if (fabButton) fabButton.style.display = 'block';
                 }
+            });
+
+            // وەک دڵنیایی زیاتر (بەکارهێنانی Focus بۆ ئەو مۆبایلانەی زۆر خاون)
+            const inputs = document.querySelectorAll('input, textarea, select');
+            inputs.forEach(input => {
+                input.addEventListener('focus', () => {
+                    if (bottomNav) bottomNav.style.display = 'none';
+                    if (fabButton) fabButton.style.display = 'none';
+                });
+                
+                input.addEventListener('blur', () => {
+                    setTimeout(() => {
+                        // تەنها ئەگەر دڵنیا بووین کیبۆردەکە داخراوە ئەوکات دەگەڕێنەوە
+                        if (tg.viewportHeight >= tg.viewportStableHeight - 50) {
+                            if (bottomNav) bottomNav.style.display = 'flex';
+                            if (fabButton) fabButton.style.display = 'block';
+                        }
+                    }, 200);
+                });
             });
         }
     });
