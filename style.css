@@ -27,13 +27,20 @@
   --icon-md: 22px; /* بۆ ناو دوگمەکان */
   --icon-lg: 28px; /* بۆ ناونیشان و داشبۆرد */
 }
-body { font-family: "Noto Kufi Arabic", sans-serif;
-    font-size: var(--text-md); 
-    color: var(--text-main); 
-    background-color: var(--bg);
-    margin: 0; 
-    padding: 20px; 
-    padding-bottom: 80px; }
+body {
+  font-family: "Noto Kufi Arabic", sans-serif;
+  font-size: var(--text-md);
+  color: var(--text-main);
+  background-color: var(--bg);
+  margin: 0 auto; /* center on larger screens */
+  padding: 1.5rem 0.5rem; /* fluid spacing */
+  padding-bottom: 8rem; /* space for FAB & bottom nav */
+  width: 100%;
+  max-width: 45rem; /* ~720px, allows desktop centering */
+  min-height: 100dvh;
+  position: relative;
+  overflow-x: hidden;
+}
 * { box-sizing: border-box; }
 
 h2, .form-title, #header-title { 
@@ -107,7 +114,24 @@ input::placeholder {
 .nav-item.active { color: var(--primary); }
 .nav-icon { display: block; font-size: 22px; margin-bottom: 3px; }
 
-.fab { position: fixed; bottom: 80px; left: 20px; width: 55px; height: 55px; background: var(--primary); color: #fff; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 28px; box-shadow: 0 4px 15px rgba(36, 129, 204, 0.4); border: none; cursor: pointer; z-index: 101;}
+.fab {
+  position: fixed;
+  bottom: 6rem; /* keep above bottom nav */
+  left: 5%;
+  width: 3.5rem;
+  height: 3.5rem;
+  background: var(--primary);
+  color: #fff;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 1.75rem;
+  box-shadow: 0 0.25rem 0.94rem rgba(36,129,204,0.4);
+  border: none;
+  cursor: pointer;
+  z-index: 101;
+}
 
 .cart-wrapper { background: #eef2f5; padding: 15px; border-radius: 10px; margin-bottom: 15px; }
 .cart-row-flex { display: flex; gap: 10px; }
@@ -366,22 +390,20 @@ h2 i, .form-title i {
 
 .button-container {
   display: flex;
-  /* background-color: var(--primary); */
-  width: 280px; /* پانکردنەوەی کەمێک بۆ ئەوەی جێگای پەنجە ببێتەوە */
-  height: 60px;
+  width: 90%;
+  max-width: 20rem;
+  height: 3.75rem;
   align-items: center;
   justify-content: space-around;
-  border-radius: 40px; /* شێوەی حەب (Pill) */
+  border-radius: 2.5rem;
   background: linear-gradient(135deg, rgba(66, 135, 247, 0.1), rgba(40, 104, 241, 0.02));
   background-color: rgba(255, 255, 255, 0.2);
-  backdrop-filter: blur(10px); /* درەوشانەوەی شینەکەی پشت */
+  backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
   border: 1px solid rgba(226, 232, 240, 0.15);
   border-top: 1px solid rgba(255, 255, 255, 0.3);
   border-left: 1px solid rgba(255, 255, 255, 0.3);
-  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.05);
-  box-shadow: 0 10px 25px -5px rgba(0, 13, 29, 0.1), 0 8px 10px -6px rgba(0, 9, 22, 0.1);
- /* box-shadow: rgba(0, 0, 0, 0.35) 0px 5px 15px, rgba(36, 129, 204, 0.4) 0px 7px 20px; */
+  box-shadow: 0 0.25rem 1.875rem rgba(0,0,0,0.05), 0 0.625rem 1.5625rem rgba(0,13,29,0.1), 0 0.5rem 0.625rem rgba(0,9,22,0.1);
 }
 
 .nav-item {
@@ -1634,14 +1656,60 @@ h2 i, .form-title i {
 
 
 
-/* شاردنەوەی دوگمەکان کاتێک شاشەکە کورت دەبێتەوە (واتە کیبۆرد کراوەتەوە) */
-/* شاردنەوەی ڕاستەوخۆ بەبێ چاوەڕێکردن (جادووی CSS :has) */
-body:has(input:focus) .bottom-nav,
-body:has(input:focus) .fab-container,
-body:has(textarea:focus) .bottom-nav,
-body:has(textarea:focus) .fab-container {
+/* شاردنەوەی دوگمەکان کاتی کیبۆرد بەبێ تێکدانی دوگمەی زیادکردن (FAB) */
+body:has(input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):focus) #bottom-nav,
+body:has(input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):focus) #main-fab,
+body:has(textarea:focus) #bottom-nav,
+body:has(textarea:focus) #main-fab,
+body.keyboard-open #bottom-nav,
+body.keyboard-open #main-fab {
     display: none !important;
-    opacity: 0 !important;
-    visibility: hidden !important;
-    z-index: -100 !important;
+}
+
+/* Responsive adjustments */
+@media (max-width: 480px) {
+  body {
+    padding: 1.5rem 0.5rem;
+    padding-bottom: 6rem;
+  }
+  .fab {
+    bottom: 5rem;
+    left: 2%;
+    width: 3rem;
+    height: 3rem;
+    font-size: 1.5rem;
+  }
+  .bottom-nav {
+    padding: 0.5rem 0;
+  }
+  .button-container {
+    height: 3rem;
+    border-radius: 1.5rem;
+  }
+  .nav-item {
+    font-size: 10px;
+  }
+  .nav-icon {
+    font-size: 1.5rem;
+  }
+}
+
+@media (min-width: 768px) {
+  /* Center the app on larger screens */
+  body {
+    max-width: 45rem;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  .fab {
+    left: calc(50% - 1.75rem);
+  }
+  .bottom-nav {
+    max-width: 45rem;
+    margin: 0 auto;
+  }
+  .button-container {
+    max-width: 20rem;
+    margin: 0 auto;
+  }
 }
