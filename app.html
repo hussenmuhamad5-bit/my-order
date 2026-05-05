@@ -72,16 +72,18 @@
         <input type="text" id="customerName" placeholder="ناوی سیانی کڕیار" style="display: none;">
 
         <label>شار</label>
-        <input list="cities-list" id="city-input" placeholder="شارێک هەڵبژێرە یان بنووسە..."
-            oninput="checkCityWarning()" class="form-input"
-            style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; height:45px; width:100%; padding:0 16px; margin-bottom:15px; font-family:inherit; font-size:15px;">
-        <datalist id="cities-list">
-            <option value="هەولێر"></option>
-            <option value="سلێمانی"></option>
-            <option value="دهۆک"></option>
-            <option value="کەرکوک"></option>
-            <option value="هەڵەبجە"></option>
-        </datalist>
+        <div id="city-input-wrapper" style="position: relative; margin-bottom: 15px;">
+            <input type="text" id="city-input" placeholder="شارێک هەڵبژێرە یان بنووسە..." autocomplete="off"
+                oninput="checkCityWarning(); filterCities()" onclick="showCityDropdown()" class="form-input"
+                style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; height:45px; width:100%; padding:0 16px; font-family:inherit; font-size:15px;">
+
+            <i class='bx bx-chevron-down'
+                style="position: absolute; left: 15px; top: 12px; font-size: 22px; color: #94a3b8; pointer-events: none;"></i>
+
+            <div id="city-dropdown"
+                style="position:absolute; top:50px; left:0; right:0; background:#ffffff; border:1px solid #cbd5e1; border-radius:10px; max-height:220px; overflow-y:auto; box-shadow:0 10px 25px rgba(0,0,0,0.08); z-index:9999; display:none;">
+            </div>
+        </div>
 
         <div id="city-warning"
             style="display:none; color:#d9534f; font-size:12px; margin-top:-5px; margin-bottom:15px; background:#fdf2f2; padding:10px; border-radius:8px; border:1px solid #f5c6cb;">
@@ -134,8 +136,23 @@
             <input type="text" id="item-name" placeholder="ناوی کاڵا (نموونە: قەڵەم)">
             <div class="cart-row-flex">
                 <input type="number" id="item-price" placeholder="نرخی ١ دانە (دینار)">
-                <input type="number" id="item-qty" value="1" min="1" style="width: 80px; text-align: center;"
-                    placeholder="دانە">
+                <div class="qty-input-group">
+                    <button type="button" class="qty-btn plus-btn" onclick="updateQty(1)">
+                        <svg class="qty-icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none"
+                            viewBox="0 0 18 18">
+                            <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M9 1v16M1 9h16"></path>
+                        </svg>
+                    </button>
+                    <input type="number" id="item-qty" value="1" min="1" class="qty-input" placeholder="دانە">
+                    <button type="button" class="qty-btn minus-btn" onclick="updateQty(-1)">
+                        <svg class="qty-icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none"
+                            viewBox="0 0 18 2">
+                            <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M1 1h16"></path>
+                        </svg>
+                    </button>
+                </div>
             </div>
             <button class="btn" style="padding:10px; font-size:14px; background:#1d6fa5;" onclick="addToCart()">زیادکردن
                 بۆ سەبەتە <i class='bx bx-plus'></i></button>
@@ -144,50 +161,29 @@
         <ul id="cart-list" class="cart-list"></ul>
 
 
-        <label>وێنەی کاڵا (ئارەزوومەندانە)</label>
-        <div class="img-upload-container">
-
-            <div class="img-upload-header" id="upload-box" onclick="document.getElementById('file').click()">
-                <img id="image-preview" src="">
-                <svg id="upload-icon-svg" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <g id="SVGRepo_bgCarrier" stroke-width="0"></g>
-                    <g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g>
-                    <g id="SVGRepo_iconCarrier">
+        <label>وێنەی کاڵاکان (دەتوانیت چەندین وێنە هەڵبژێریت)</label>
+        <div class="img-upload-container" style="height: auto; min-height: 150px;">
+            <div class="img-upload-header" id="upload-box" onclick="document.getElementById('file').click()"
+                style="padding: 20px 10px;">
+                <svg id="upload-icon-svg" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"
+                    style="height: 60px; margin-bottom: 10px;">
+                    <g stroke-width="0"></g>
+                    <g stroke-linecap="round" stroke-linejoin="round"></g>
+                    <g>
                         <path
                             d="M7 10V9C7 6.23858 9.23858 4 12 4C14.7614 4 17 6.23858 17 9V10C19.2091 10 21 11.7909 21 14C21 15.4806 20.1956 16.8084 19 17.5M7 10C4.79086 10 3 11.7909 3 14C3 15.4806 3.8044 16.8084 5 17.5M7 10C7.43285 10 7.84965 10.0688 8.24006 10.1959M12 12V21M12 12L15 15M12 12L9 15"
-                            stroke="#000000" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path>
+                            stroke="#2481cc" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path>
                     </g>
                 </svg>
-                <p id="upload-status">کلیک لێرە بکە بۆ دانانی وێنە</p>
+                <p id="upload-status" style="margin: 0; color: #1e293b; font-weight: bold; font-size: 13px;">کلیک بکە بۆ
+                    دانانی وێنەکان</p>
+
+                <div id="image-previews-container"
+                    style="display: flex; flex-wrap: wrap; gap: 10px; margin-top: 15px; width: 100%; justify-content: center;">
+                </div>
             </div>
 
-            <div class="img-upload-footer">
-                <svg fill="#000000" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
-                    <g id="SVGRepo_bgCarrier" stroke-width="0"></g>
-                    <g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g>
-                    <g id="SVGRepo_iconCarrier">
-                        <path d="M15.331 6H8.5v20h15V14.154h-8.169z"></path>
-                        <path d="M18.153 6h-.009v5.342H23.5v-.002z"></path>
-                    </g>
-                </svg>
-
-                <p id="file-name-text">هیچ فایلێک هەڵنەبژێردراوە</p>
-
-                <svg onclick="removeImage()" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <g id="SVGRepo_bgCarrier" stroke-width="0"></g>
-                    <g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g>
-                    <g id="SVGRepo_iconCarrier">
-                        <path
-                            d="M5.16565 10.1534C5.07629 8.99181 5.99473 8 7.15975 8H16.8402C18.0053 8 18.9237 8.9918 18.8344 10.1534L18.142 19.1534C18.0619 20.1954 17.193 21 16.1479 21H7.85206C6.80699 21 5.93811 20.1954 5.85795 19.1534L5.16565 10.1534Z"
-                            stroke="#000000" stroke-width="2"></path>
-                        <path d="M19.5 5H4.5" stroke="#000000" stroke-width="2" stroke-linecap="round"></path>
-                        <path d="M10 3C10 2.44772 10.4477 2 11 2H13C13.5523 2 14 2.44772 14 3V5H10V3Z" stroke="#000000"
-                            stroke-width="2"></path>
-                    </g>
-                </svg>
-            </div>
-
-            <input id="file" type="file" accept="image/*" onchange="uploadImageToImgBB(this)">
+            <input id="file" type="file" accept="image/*" multiple onchange="handleMultipleImages(this)">
         </div>
 
         <label>تێبینی زیاتر</label>
@@ -502,19 +498,46 @@
             </div>
 
             <div class="filter-grid">
-                <select id="filter-status" onchange="applyOrderFilters()">
-                    <option value="all">هەموو حاڵەتەکان</option>
-                    <option value="ئامادە">ئامادە دەکرێت</option>
-                    <option value="ڕێگا">لە ڕێگایە</option>
-                    <option value="گەیشت">گەیشتووە</option>
-                    <option value="گەڕا">گەڕاوەتەوە / کەنسەڵ</option>
-                </select>
-                <select id="filter-date-type" onchange="toggleCustomDateFilters(); applyOrderFilters()">
-                    <option value="all">هەموو کاتێک</option>
-                    <option value="week">هەفتەی ڕابردوو</option>
-                    <option value="month">مانگی ڕابردوو</option>
-                    <option value="custom">دیاریکردنی بەروار</option>
-                </select>
+                <!-- فلتەری حاڵەت -->
+                <div class="custom-dropdown-wrapper" id="status-dropdown-wrapper">
+                    <div class="custom-dropdown-header" onclick="toggleFilterDropdown('status-list')">
+                        <span id="status-display-text">هەموو حاڵەتەکان</span>
+                        <i class='bx bx-chevron-down'></i>
+                    </div>
+                    <div class="custom-dropdown-list" id="status-list" style="display: none;">
+                        <div class="custom-dropdown-item active"
+                            onclick="selectFilter('status', 'all', 'هەموو حاڵەتەکان', event)">هەموو حاڵەتەکان</div>
+                        <div class="custom-dropdown-item"
+                            onclick="selectFilter('status', 'ئامادە', 'ئامادە دەکرێت', event)">ئامادە دەکرێت</div>
+                        <div class="custom-dropdown-item" onclick="selectFilter('status', 'ڕێگا', 'لە ڕێگایە', event)">
+                            لە ڕێگایە</div>
+                        <div class="custom-dropdown-item" onclick="selectFilter('status', 'گەیشت', 'گەیشتووە', event)">
+                            گەیشتووە</div>
+                        <div class="custom-dropdown-item" onclick="selectFilter('status', 'گەڕا', 'گەڕاوەتەوە', event)">
+                            گەڕاوەتەوە
+                        </div>
+                    </div>
+                    <input type="hidden" id="filter-status" value="all">
+                </div>
+
+                <!-- فلتەری کات -->
+                <div class="custom-dropdown-wrapper" id="date-dropdown-wrapper">
+                    <div class="custom-dropdown-header" onclick="toggleFilterDropdown('date-list')">
+                        <span id="date-display-text">هەموو کاتێک</span>
+                        <i class='bx bx-chevron-down'></i>
+                    </div>
+                    <div class="custom-dropdown-list" id="date-list" style="display: none;">
+                        <div class="custom-dropdown-item active"
+                            onclick="selectFilter('date', 'all', 'هەموو کاتێک', event)">هەموو کاتێک</div>
+                        <div class="custom-dropdown-item"
+                            onclick="selectFilter('date', 'week', 'هەفتەی ڕابردوو', event)">هەفتەی ڕابردوو</div>
+                        <div class="custom-dropdown-item"
+                            onclick="selectFilter('date', 'month', 'مانگی ڕابردوو', event)">مانگی ڕابردوو</div>
+                        <div class="custom-dropdown-item"
+                            onclick="selectFilter('date', 'custom', 'دیاریکردنی بەروار', event)">دیاریکردنی بەروار</div>
+                    </div>
+                    <input type="hidden" id="filter-date-type" value="all">
+                </div>
             </div>
 
             <div class="filter-grid" id="custom-date-row" style="display: none;">
@@ -537,16 +560,7 @@
         </div>
     </div>
 
-    <div id="order-details-modal" class="modal-overlay" onclick="closeModal(event, 'order-details-modal')">
-        <div class="modal-content" onclick="event.stopPropagation()">
-            <div class="modal-header">
-                <h3 class="modal-title"><i class='bx bx-receipt'></i> زانیاری داواکاری</h3>
-                <button class="modal-close" onclick="closeModal(null, 'order-details-modal')"><i
-                        class='bx bx-x'></i></button>
-            </div>
-            <div id="modal-details-body"></div>
-        </div>
-    </div>
+    <!-- مۆدێلی دووەمی زانیاری داواکاری کە دووبارە بوو، سڕایەوە -->
 
     <div id="image-zoom-modal" class="modal-overlay" onclick="closeModal(event, 'image-zoom-modal')"
         style="z-index: 2100; background: rgba(0,0,0,0.9);">
@@ -555,21 +569,10 @@
         <img id="zoomed-image" class="image-zoom-content" src="" onclick="event.stopPropagation()">
     </div>
 
-    <!-- <div class="custom-spinner">
-        <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-            <g class="spin-arrows">
-            <path d="M33.52,68.12 C35.02,62.8 39.03,58.52 44.24,56.69 C49.26,54.93 54.68,55.61 59.04,58.4 C59.04,58.4 56.24,60.53 56.24,60.53 C55.45,61.13 55.68,62.37 56.63,62.64 C56.63,62.64 67.21,65.66 67.21,65.66 C67.98,65.88 68.75,65.3 68.74,64.5 C68.74,64.5 68.68,53.5 68.68,53.5 C68.67,52.51 67.54,51.95 66.75,52.55 C66.75,52.55 64.04,54.61 64.04,54.61 C57.88,49.79 49.73,48.4 42.25,51.03 C35.2,53.51 29.78,59.29 27.74,66.49 C27.29,68.08 28.22,69.74 29.81,70.19 C30.09,70.27 30.36,70.31 30.63,70.31 C31.94,70.31 33.14,69.44 33.52,68.12Z"></path>
-            <path d="M69.95,74.85 C68.35,74.4 66.7,75.32 66.25,76.92 C64.74,82.24 60.73,86.51 55.52,88.35 C50.51,90.11 45.09,89.43 40.73,86.63 C40.73,86.63 43.53,84.51 43.53,84.51 C44.31,83.91 44.08,82.67 43.13,82.4 C43.13,82.4 32.55,79.38 32.55,79.38 C31.78,79.16 31.02,79.74 31.02,80.54 C31.02,80.54 31.09,91.54 31.09,91.54 C31.09,92.53 32.22,93.09 33.01,92.49 C33.01,92.49 35.72,90.43 35.72,90.43 C39.81,93.63 44.77,95.32 49.84,95.32 C52.41,95.32 55,94.89 57.51,94.01 C64.56,91.53 69.99,85.75 72.02,78.55 C72.47,76.95 71.54,75.3 69.95,74.85Z"></path>
-            </g>
-        </svg>
-        </div> -->
-
-
     <script src="config.js"></script>
     <script>
 
         // تەنها بۆ تاقیکردنەوە: هەرکە ئەپەکە کرایەوە نامەیەک دەنێرێت و پانییەکەت پێ دەڵێت
-                // تەنها بۆ تاقیکردنەوە: هەرکە ئەپەکە کرایەوە نامەیەک دەنێرێت و پانییەکەت پێ دەڵێت
         alert("پانی شاشەکەت ئێستا: " + window.innerWidth + "X" + window.innerHeight + "PX");
         // Load Supabase script dynamically
         async function ensureSupabaseLoaded() {
@@ -616,7 +619,7 @@
         let creatorCode = currentUser ? currentUser.code : "";
         let userRole = currentUser ? currentUser.role : "";
         let userName = currentUser ? (currentUser.full_name || currentUser.name || "بێ ناو") : "";
-        let uploadedImageUrl = "";
+        let uploadedImageUrls = [];
         let searchTimeout = null;
         let availableManagers = [];
         let availableAdmins = [];
@@ -831,6 +834,22 @@
                 if (screenId === 'dashboard-screen') document.getElementById('nav-dashboard').classList.add('active');
             }
 
+            // --- جێگیرکردنی شەیپەکەی تابی ئەدمین بێ ئەنیمەیشن ---
+            if (screenId === 'admin-screen') {
+                let activeTab = document.querySelector('#admin-screen .magic-tab.active');
+                let slider = document.getElementById('admin-tab-slider');
+                if (activeTab && slider) {
+                    slider.style.transition = 'none'; // ڕاگرتنی خلیسکێنە (ئەنیمەیشن) کاتی کردنەوە
+                    slider.style.width = activeTab.offsetWidth + 'px';
+                    slider.style.left = activeTab.offsetLeft + 'px';
+
+                    void slider.offsetWidth; // ناچارکردنی وێبگەڕەکە بۆ جێبەجێکرد لەو چرکەیەدا
+
+                    slider.style.transition = ''; // گەڕاندنەوەی ئەنیمەیشن بۆ کاتی کلیککردنەکانی دواتر
+                }
+            }
+            // ----------------------------------------------------
+
             // تەنها کاتێک داتاکان دەهێنێت کە پێشتر نەیهێنابن
             if (screenId === 'dashboard-screen' && !isDashboardDataLoaded) fetchOrders();
             if (screenId === 'orders-management-screen' && !isManagementDataLoaded) loadManagementOrders();
@@ -848,9 +867,29 @@
         }
 
         function goToFilteredOrders(statusWord) {
-            document.getElementById('filter-status').value = statusWord;
+            // گۆڕینی داتای شاردراوە
+            let hiddenInput = document.getElementById('filter-status');
+            if (hiddenInput) hiddenInput.value = statusWord;
+
+            // گۆڕینی تێکستی سەر شاشەکەش بۆ ئەوەی ڕێک بێت لەگەڵ کلیکەکە
+            let displayText = document.getElementById('status-display-text');
+            if (displayText) {
+                if (statusWord === 'ئامادە') displayText.innerText = 'ئامادە دەکرێت';
+                else if (statusWord === 'ڕێگا') displayText.innerText = 'لە ڕێگایە';
+                else if (statusWord === 'گەیشت') displayText.innerText = 'گەیشتووە';
+                else if (statusWord === 'گەڕا') displayText.innerText = 'گەڕاوەتەوە / کەنسەڵ';
+                else displayText.innerText = 'هەموو حاڵەتەکان';
+            }
+
+            // گۆڕینی کلاسی ئەکتیڤیش لەناو لیستە نوێیەکە
+            document.querySelectorAll('#status-list .custom-dropdown-item').forEach(item => {
+                item.classList.remove('active');
+                if (item.getAttribute('onclick').includes("'" + statusWord + "'")) {
+                    item.classList.add('active');
+                }
+            });
+
             switchScreen('orders-management-screen', document.getElementById('nav-orders-management'));
-            // ئەگەر داتاکە پێشتر لۆد بووبوو، ڕاستەوخۆ فلتەرەکە جێبەجێ بکە بێ ڕیفرێشکردن
             if (isManagementDataLoaded) {
                 applyOrderFilters();
             }
@@ -1185,16 +1224,43 @@
 
         async function loadManagementOrders() {
             let list = document.getElementById('management-orders-list');
+            let tabsWrap = document.getElementById('orders-magic-tabs');
+            let filterSection = document.getElementById('orders-filter-section');
 
+            filterSection.style.display = "block";
+
+            let myRole = String(userRole || "").trim();
+            let myCode = String(currentUser.code || "").trim();
+            let myName = String(userName || "").trim();
+
+            // بڕیاردان لەسەر پیشاندان یان شاردنەوەی تابەکان
+            if (myRole === "پاشا" || myRole === "بەڕێوەبەر") {
+                tabsWrap.style.display = 'flex';
+
+                // جێگیرکردنی شەیپەکە ڕاستەوخۆ پێش هێنانی داتاکان، وە بێ ئەنیمەیشن
+                setTimeout(() => {
+                    let activeTab = tabsWrap.querySelector('.magic-tab.active');
+                    let slider = tabsWrap.querySelector('.magic-slider');
+                    if (activeTab && slider) {
+                        slider.style.transition = 'none'; // ڕاگرتنی ئەنیمەیشن بۆ ئەوەی خلیسکێنە نەکات
+                        slider.style.width = activeTab.offsetWidth + 'px';
+                        slider.style.left = activeTab.offsetLeft + 'px';
+
+                        void slider.offsetWidth; // ناچارکردنی وێبگەڕەکە بۆ جێبەجێکردن یەکسەر
+
+                        slider.style.transition = ''; // گەڕاندنەوەی ئەنیمەیشن بۆ کاتی کلیککردنی دواتر
+                    }
+                }, 10);
+            } else {
+                tabsWrap.style.display = 'none';
+            }
+
+            // پیشاندانی لۆدینگ تەنها بۆ لیستەکە پێش هێنانی داتاکان
             if (!isManagementDataLoaded) {
-                list.innerHTML = loadingSpinnerHTML; // پیشاندانی ئایکۆنەکە
+                list.innerHTML = loadingSpinnerHTML;
             }
 
             try {
-                let myRole = String(userRole || "").trim();
-                let myCode = String(currentUser.code || "").trim();
-                let myName = String(userName || "").trim();
-
                 let allowedCodes = [myCode];
                 teamMembersData = [];
 
@@ -1226,23 +1292,6 @@
 
                 allManagementOrdersArray = orders;
                 orders.forEach(o => allGlobalOrdersData[o.id] = o);
-
-                let tabsWrap = document.getElementById('orders-magic-tabs');
-                if (myRole === "پاشا" || myRole === "بەڕێوەبەر") {
-                    tabsWrap.style.display = 'flex';
-                    if (!isManagementDataLoaded) {
-                        setTimeout(() => {
-                            let activeTab = tabsWrap.querySelector('.magic-tab.active');
-                            if (activeTab) {
-                                let slider = tabsWrap.querySelector('.magic-slider');
-                                slider.style.width = activeTab.offsetWidth + 'px';
-                                slider.style.left = activeTab.offsetLeft + 'px';
-                            }
-                        }, 50);
-                    }
-                } else {
-                    tabsWrap.style.display = 'none';
-                }
 
                 isManagementDataLoaded = true;
                 applyOrderFilters();
@@ -1298,7 +1347,8 @@
 
             cart = [];
             updateCartUI();
-            if (typeof removeImage === 'function') removeImage();
+            uploadedImageUrls = [];
+            renderImagePreviews();
         }
 
         function openOrderDetails(orderId) {
@@ -1307,14 +1357,27 @@
 
             let b = document.getElementById('modal-details-body');
 
+            // --- گۆڕانکاری سەرەکی لێرەدایە (چارەسەری وێنەکان بە زیرەکی) ---
             let imgHtml = "";
-            if (o.image_url && o.image_url.trim() !== "") {
-                imgHtml = `
-            <div class="detail-row" style="flex-direction: row; justify-content: space-between; align-items: center;">
-                <span class="detail-label"><i class='bx bx-image'></i> وێنەی کاڵا</span>
-                <img src="${o.image_url}" class="order-img-thumb" onclick="openImageZoom('${o.image_url}')">
-            </div>`;
+            let safeImageUrl = o.image_url ? String(o.image_url) : "";
+
+            if (safeImageUrl.trim() !== "" && safeImageUrl !== "null" && safeImageUrl !== "undefined") {
+                // پاککردنەوەی لینکەکان و دڵنیابوونەوە لەوەی تەنها لینکی دروستن
+                let urls = safeImageUrl.split(',').map(u => u.trim()).filter(u => u.startsWith('http'));
+
+                if (urls.length > 0) {
+                    let thumbHtml = urls.map(u => `<img src="${u}" style="width: 75px; height: 75px; object-fit: cover; border-radius: 10px; margin: 4px; cursor: pointer; border: 2px solid #cbd5e1; box-shadow: 0 2px 5px rgba(0,0,0,0.1);" onclick="openImageZoom('${u}')">`).join('');
+
+                    imgHtml = `
+                    <div class="detail-row" style="flex-direction: column; background: rgba(36, 129, 204, 0.05); padding: 12px; border-radius: 12px; border: 1px dashed rgba(36, 129, 204, 0.4); margin-bottom: 15px;">
+                        <span class="detail-label" style="color: var(--primary); font-size: 13px;"><i class='bx bx-images'></i> وێنەی کاڵاکان (${urls.length} وێنە)</span>
+                        <div style="display: flex; flex-wrap: wrap; margin-top: 8px;">
+                            ${thumbHtml}
+                        </div>
+                    </div>`;
+                }
             }
+            // -----------------------------------------------------------
 
             let socialsObj = { "1": "ڤایبەر", "2": "واتسئاپ", "3": "تێلیگرام" };
             let sNames = (o.socials || "").split('').map(n => socialsObj[n]).filter(Boolean).join(' - ') || "نییە";
@@ -1594,15 +1657,11 @@
             document.getElementById('order-notes').value = o.notes || "";
 
             if (o.image_url) {
-                uploadedImageUrl = o.image_url;
-                document.getElementById('image-preview').src = uploadedImageUrl;
-                document.getElementById('image-preview').style.display = "block";
-                document.getElementById('upload-icon-svg').style.display = "none";
-                document.getElementById('upload-status').innerHTML = "";
-                document.getElementById('upload-box').style.borderColor = "var(--primary)";
+                uploadedImageUrls = o.image_url.split(',');
             } else {
-                if (typeof removeImage === 'function') removeImage();
+                uploadedImageUrls = [];
             }
+            renderImagePreviews();
 
             let submitBtn = document.querySelector('#order-screen .btn[onclick="submitOrder()"]');
             if (submitBtn) {
@@ -1677,7 +1736,7 @@
                         item_names: itemNames,
                         item_qtys: itemQtys,
                         item_prices: itemPrices,
-                        image_url: uploadedImageUrl || "",
+                        image_url: uploadedImageUrls.join(',') || "",
                         items_total: itemsTotal,
                         delivery_price: deliveryPrice,
                         grand_total: grandTotal,
@@ -1714,7 +1773,7 @@
                         item_names: itemNames,
                         item_qtys: itemQtys,
                         item_prices: itemPrices,
-                        image_url: uploadedImageUrl || "",
+                        image_url: uploadedImageUrls.join(',') || "",
                         items_total: itemsTotal,
                         delivery_price: deliveryPrice,
                         grand_total: grandTotal,
@@ -1894,22 +1953,25 @@
             document.getElementById('count-returned').innerText = ret;
         }
 
-        function checkCityWarning() {
-            let cityInput = document.getElementById('city-input').value.trim();
-            let warning = document.getElementById('city-warning');
-            let mainCities = ["هەولێر", "سلێمانی", "دهۆک", "کەرکوک", "هەڵەبجە"];
-            if (cityInput.length > 0 && !mainCities.includes(cityInput)) {
-                warning.style.display = 'block';
-            } else {
-                warning.style.display = 'none';
-            }
-        }
+
 
         function formatPhone(input) {
             let val = input.value.replace(/\D/g, '');
             if (!val.startsWith('07')) val = '07' + val.substring(2);
             if (val.length > 11) val = val.substring(0, 11);
             input.value = val;
+        }
+
+        // فەنکشنی زیادکردن و کەمکردنەوەی دانە بۆ ئۆردەر
+        function updateQty(change) {
+            let qtyInput = document.getElementById('item-qty');
+            let currentVal = parseInt(qtyInput.value) || 1;
+            let newVal = currentVal + change;
+
+            // ڕێگە نادات ژمارەی دانەکان لە 1 کەمتر بێت
+            if (newVal < 1) newVal = 1;
+
+            qtyInput.value = newVal;
         }
 
         function addToCart() {
@@ -1950,58 +2012,120 @@
         }
 
 
-        function uploadImageToImgBB(input) {
-            let file = input.files[0];
-            if (!file) return;
-            let statusText = document.getElementById('upload-status');
-            let previewImg = document.getElementById('image-preview');
-            let uploadBox = document.getElementById('upload-box');
-            let uploadIconSvg = document.getElementById('upload-icon-svg');
-            let fileNameText = document.getElementById('file-name-text');
-            fileNameText.innerText = file.name;
-            statusText.innerHTML = "⏳ چاوەڕێ بکە...";
-            statusText.style.color = "#f39c12";
-            uploadIconSvg.style.display = "none";
-            previewImg.style.display = "none";
-            uploadBox.style.borderColor = "#f39c12";
-            let formData = new FormData();
-            formData.append("image", file);
-            formData.append("key", "D46aeed04460f87292aa90c209ae88d5");
-            fetch("https://api.imgbb.com/1/upload", {
-                method: "POST",
-                body: formData
-            })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        uploadedImageUrl = data.data.url;
-                        statusText.innerHTML = "";
-                        uploadBox.style.borderColor = "var(--primary)";
-                        previewImg.src = uploadedImageUrl;
-                        previewImg.style.display = "block";
-                    } else {
-                        statusText.innerHTML = "❌ هەڵە ڕوویدا!";
-                        statusText.style.color = "#dc3545";
-                        uploadBox.style.borderColor = "#dc3545";
-                    }
-                })
-                .catch(error => {
-                    statusText.innerHTML = "❌ کێشەی ئینتەرنێت!";
-                    statusText.style.color = "#dc3545";
-                    uploadBox.style.borderColor = "#dc3545";
-                });
+        // ==========================================
+        // سیستەمی کۆمپرێس کردن و ئاپلۆدکردنی چەند وێنەیەک
+        // ==========================================
+
+        // ١. فەنکشنی کۆمپرێس کردن (قەبارە بچووک دەکاتەوە بێ لەدەستدانی کواڵێتی زۆر)
+        function compressImage(file, maxWidth = 1200, quality = 0.7) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = event => {
+                    const img = new Image();
+                    img.src = event.target.result;
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        let width = img.width;
+                        let height = img.height;
+
+                        if (width > maxWidth) {
+                            height = Math.round((height * maxWidth) / width);
+                            width = maxWidth;
+                        }
+
+                        canvas.width = width;
+                        canvas.height = height;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, width, height);
+
+                        canvas.toBlob(blob => {
+                            resolve(new File([blob], file.name, { type: 'image/jpeg', lastModified: Date.now() }));
+                        }, 'image/jpeg', quality);
+                    };
+                    img.onerror = error => reject(error);
+                };
+                reader.onerror = error => reject(error);
+            });
         }
 
-        function removeImage() {
-            uploadedImageUrl = "";
-            document.getElementById('file').value = "";
-            document.getElementById('file-name-text').innerText = "هیچ فایلێک هەڵنەبژێردراوە";
-            document.getElementById('upload-status').innerHTML = "کلیک لێرە بکە بۆ دانانی وێنە";
-            document.getElementById('upload-status').style.color = "var(--text-main)";
-            document.getElementById('image-preview').style.display = "none";
-            document.getElementById('image-preview').src = "";
-            document.getElementById('upload-icon-svg').style.display = "block";
-            document.getElementById('upload-box').style.borderColor = "var(--primary)";
+        // ٢. فەنکشنی ئاپلۆدکردنی وێنەکان بۆ ImgBB
+        async function handleMultipleImages(input) {
+            let files = Array.from(input.files);
+            if (files.length === 0) return;
+
+            let statusText = document.getElementById('upload-status');
+            let uploadBox = document.getElementById('upload-box');
+            let uploadIcon = document.getElementById('upload-icon-svg');
+
+            uploadBox.style.borderColor = "#f39c12";
+            uploadIcon.style.display = "none";
+
+            for (let i = 0; i < files.length; i++) {
+                try {
+                    statusText.innerHTML = `⏳ خەریکی کۆمپرێس و ئاپلۆدی وێنەی ${i + 1} لە ${files.length}...`;
+                    statusText.style.color = "#f39c12";
+
+                    // بچووککردنەوەی قەبارەی وێنەکە
+                    let compressedFile = await compressImage(files[i]);
+
+                    let formData = new FormData();
+                    formData.append("image", compressedFile);
+                    formData.append("key", "D46aeed04460f87292aa90c209ae88d5");
+
+                    let response = await fetch("https://api.imgbb.com/1/upload", { method: "POST", body: formData });
+                    let data = await response.json();
+
+                    if (data.success) {
+                        uploadedImageUrls.push(data.data.url);
+                    }
+                } catch (err) {
+                    console.log("Error uploading image: ", err);
+                    showToast("❌ هەڵەیەک لە ئاپلۆدکردنی یەکێک لە وێنەکان ڕوویدا", "error");
+                }
+            }
+
+            // کۆتایی هاتن
+            input.value = "";
+            uploadBox.style.borderColor = "var(--primary)";
+            renderImagePreviews();
+        }
+
+        // ٣. پیشاندانی وێنە ئاپلۆدکراوەکان لەناو بۆکسەکە
+        function renderImagePreviews() {
+            let container = document.getElementById('image-previews-container');
+            let statusText = document.getElementById('upload-status');
+            let uploadIcon = document.getElementById('upload-icon-svg');
+
+            container.innerHTML = "";
+
+            if (uploadedImageUrls.length === 0) {
+                statusText.innerHTML = "کلیک بکە بۆ دانانی وێنەکان";
+                statusText.style.color = "var(--text-main)";
+                uploadIcon.style.display = "block";
+                return;
+            }
+
+            statusText.innerHTML = `✅ ${uploadedImageUrls.length} وێنە ئاپلۆد کران (کلیک بکە بۆ وێنەی تر)`;
+            statusText.style.color = "#28a745";
+            uploadIcon.style.display = "none";
+
+            uploadedImageUrls.forEach((url, index) => {
+                container.innerHTML += `
+                    <div style="position: relative; display: inline-block;">
+                        <img src="${url}" style="width: 70px; height: 70px; object-fit: cover; border-radius: 8px; border: 2px solid #e2e8f0; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
+                        <div onclick="event.stopPropagation(); removeUploadedImage(${index})" style="position: absolute; top: -5px; right: -5px; background: #dc3545; color: white; width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">
+                            <i class='bx bx-x'></i>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        // ٤. سڕینەوەی یەک وێنە بە دیاریکراوی
+        function removeUploadedImage(index) {
+            uploadedImageUrls.splice(index, 1);
+            renderImagePreviews();
         }
 
         function toggleInput(inputId, isChecked) {
@@ -2244,13 +2368,13 @@
             cart = backupOrderState.cart;
             updateCartUI();
 
-            uploadedImageUrl = backupOrderState.uploadedImageUrl;
-            if (uploadedImageUrl) {
-                document.getElementById('image-preview').src = uploadedImageUrl;
-                document.getElementById('image-preview').style.display = "block";
-                document.getElementById('upload-status').innerHTML = "";
-                document.getElementById('upload-icon-svg').style.display = "none";
+            if (backupOrderState.uploadedImageUrl) {
+                uploadedImageUrls = backupOrderState.uploadedImageUrl.split(',');
+            } else {
+                uploadedImageUrls = [];
             }
+            renderImagePreviews();
+
 
             switchScreen('order-screen');
             document.getElementById('fab-checkbox').checked = true;
@@ -2747,6 +2871,130 @@
                 }
             });
         }
+
+        // ==========================================
+        // سیستەمی لیستی شارەکان (Dropdown)
+        // ==========================================
+        const mainCitiesList = ["هەولێر", "سلێمانی", "دهۆک", "کەرکوک", "هەڵەبجە", "زاخۆ", "سۆران", "ڕانیە", "کەلار", "چەمچەماڵ", "هەڵەبجەی تازە"];
+
+        function showCityDropdown() {
+            renderCityDropdown(mainCitiesList);
+        }
+
+        function filterCities() {
+            let val = document.getElementById('city-input').value.trim();
+            let filtered = mainCitiesList.filter(c => c.includes(val));
+            renderCityDropdown(filtered);
+        }
+
+        function renderCityDropdown(list) {
+            let box = document.getElementById('city-dropdown');
+            box.innerHTML = '';
+
+            if (list.length === 0) {
+                box.style.display = 'none';
+                return;
+            }
+
+            list.forEach(city => {
+                let div = document.createElement('div');
+                div.style.cssText = 'padding:12px 16px; border-bottom:1px solid #f1f5f9; cursor:pointer; font-size:14px; font-weight:600; color:#334155; transition:all 0.2s; display:flex; align-items:center; gap:8px;';
+
+                div.innerHTML = `<i class='bx bx-map' style="color:var(--primary); font-size:18px;"></i> ${city}`;
+
+                div.onmouseover = () => div.style.background = '#f8fafc';
+                div.onmouseout = () => div.style.background = '#ffffff';
+
+                div.onmousedown = function (e) {
+                    e.preventDefault();
+                    document.getElementById('city-input').value = city;
+                    box.style.display = 'none';
+                    checkCityWarning();
+                };
+
+                box.appendChild(div);
+            });
+            box.style.display = 'block';
+        }
+
+        // داخستنی لیستەکە کاتێک کلیک لە دەرەوەی دەکرێت
+        document.addEventListener('click', function (e) {
+            let wrapper = document.getElementById('city-input-wrapper');
+            let box = document.getElementById('city-dropdown');
+            if (wrapper && !wrapper.contains(e.target)) {
+                if (box) box.style.display = 'none';
+            }
+        });
+
+        function checkCityWarning() {
+            let cityInput = document.getElementById('city-input').value.trim();
+            let warning = document.getElementById('city-warning');
+
+            let mainCities = ["هەولێر", "سلێمانی", "دهۆک", "کەرکوک", "هەڵەبجە", "زاخۆ", "سۆران", "ڕانیە", "کەلار", "چەمچەماڵ", "هەڵەبجەی تازە"];
+
+            if (cityInput.length > 0 && !mainCities.includes(cityInput)) {
+                warning.style.display = 'block';
+            } else {
+                warning.style.display = 'none';
+            }
+        }
+
+        // ==========================================
+        // سیستەمی لیستی فلتەرەکانی ئۆردەر (Custom Select)
+        // ==========================================
+        function toggleFilterDropdown(listId) {
+            let list = document.getElementById(listId);
+            let wrapper = list.parentElement;
+
+            // داخستنی هەموو لیستەکانی تر پێش کردنەوەی ئەمەیان
+            document.querySelectorAll('.custom-dropdown-list').forEach(l => {
+                if (l.id !== listId) {
+                    l.style.display = 'none';
+                    l.parentElement.classList.remove('open');
+                }
+            });
+
+            if (list.style.display === 'none' || list.style.display === '') {
+                list.style.display = 'block';
+                wrapper.classList.add('open');
+            } else {
+                list.style.display = 'none';
+                wrapper.classList.remove('open');
+            }
+        }
+
+        function selectFilter(type, value, text, event) {
+            // گۆڕینی تێکستەکە لەسەر شاشەکە
+            document.getElementById(type + '-display-text').innerText = text;
+
+            // گۆڕینی بەهای شاردراوە (input hidden) بۆ ئەوەی فلتەرەکە بزانێت چییە
+            let hiddenInput = document.getElementById('filter-' + (type === 'status' ? 'status' : 'date-type'));
+            hiddenInput.value = value;
+
+            // ڕەنگکردنی ئەو بژاردەیەی کە کلیکی لێ کراوە
+            let listItems = document.getElementById(type + '-list').querySelectorAll('.custom-dropdown-item');
+            listItems.forEach(item => item.classList.remove('active'));
+            event.target.classList.add('active');
+
+            // داخستنی لیستەکە
+            document.getElementById(type + '-list').style.display = 'none';
+            document.getElementById(type + '-dropdown-wrapper').classList.remove('open');
+
+            // جێبەجێکردنی فلتەرەکان
+            if (type === 'date') {
+                toggleCustomDateFilters();
+            }
+            applyOrderFilters();
+        }
+
+        // داخستنی لیستەکان کاتێک کلیک لە دەرەوەیان دەکرێت
+        document.addEventListener('click', function (e) {
+            if (!e.target.closest('.custom-dropdown-wrapper')) {
+                document.querySelectorAll('.custom-dropdown-list').forEach(l => l.style.display = 'none');
+                document.querySelectorAll('.custom-dropdown-wrapper').forEach(w => w.classList.remove('open'));
+            }
+        });
+
     </script>
 </body>
 
