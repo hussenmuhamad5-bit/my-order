@@ -1243,9 +1243,27 @@ h2 i,
 
 .magic-tabs-wrapper {
   display: flex;
-  justify-content: center;
+  justify-content: flex-start;
   margin-bottom: 20px;
   width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+}
+
+.magic-tabs-wrapper::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
+}
+
+#orders-magic-tabs {
+  justify-content: center;
+}
+
+@media (max-width: 600px) {
+  .magic-tabs-wrapper {
+    padding: 0 16px;
+  }
 }
 
 .magic-tabs {
@@ -1255,6 +1273,7 @@ h2 i,
   border-radius: 20px;
   padding: 4px;
   gap: 4px;
+  flex-shrink: 0;
 }
 
 .magic-slider {
@@ -1743,28 +1762,115 @@ h2 i,
 }
 
 /* =========================================
+   قوفڵکردنی جزدان و چارەسەری سێبەرەکان
+   ========================================= */
+#wallet-screen.active {
+  display: flex !important;
+  flex-direction: column;
+  position: fixed;
+  top: 20px;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 0 20px;
+  overflow: hidden !important;
+}
+
+#wallet-screen>*:not(#my-transactions-list) {
+  flex-shrink: 0;
+}
+
+#my-transactions-list {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-top: 5px;
+  padding-bottom: 185px;
+
+  /* ١. چارەسەری بڕانی سێبەری ڕاست و چەپ (دروستکردنی جێگا بۆ سێبەرەکە) */
+  margin-right: -25px;
+  margin-left: -25px;
+  padding-right: 25px;
+  padding-left: 25px;
+
+  -webkit-overflow-scrolling: touch;
+
+  /* ٢. جادووی خوارەوە: توانەوەی نەرمی ئۆردەرەکان لەژێر بۆتن ناڤ بێ هیچ کێشەیەک */
+  -webkit-mask-image: linear-gradient(to bottom, black calc(100% - 80px), transparent 100%);
+  mask-image: linear-gradient(to bottom, black calc(100% - 80px), transparent 100%);
+}
+
+#my-transactions-list::-webkit-scrollbar {
+  display: none;
+}
+
+/* =========================================
    دیزاینی مۆدێرنی ئۆردەرەکان (Glassmorphism)
    ========================================= */
 .modern-order-card {
-  background: rgba(255, 255, 255, 0.45);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   border-radius: 16px;
   padding: 16px;
   margin-bottom: 12px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
-  transition: all 0.3s ease;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   cursor: pointer;
-}
-
-.modern-order-card:hover {
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
-  transform: translateY(-2px);
 }
 
 .modern-order-card:active {
   transform: scale(0.98);
+}
+
+/* Preparing Status (Blue) */
+.modern-order-card.status-preparing {
+  background: rgba(59, 130, 246, 0.05);
+  border: 1px solid rgba(59, 130, 246, 0.25);
+  box-shadow: 0 8px 32px rgba(59, 130, 246, 0.05), 0 0 10px rgba(59, 130, 246, 0.03);
+}
+.modern-order-card.status-preparing:hover {
+  background: rgba(59, 130, 246, 0.08);
+  border-color: rgba(59, 130, 246, 0.5);
+  box-shadow: 0 12px 38px rgba(59, 130, 246, 0.12), 0 0 15px rgba(59, 130, 246, 0.06);
+  transform: translateY(-2px);
+}
+
+/* On Way Status (Orange) */
+.modern-order-card.status-onway {
+  background: rgba(245, 158, 11, 0.05);
+  border: 1px solid rgba(245, 158, 11, 0.25);
+  box-shadow: 0 8px 32px rgba(245, 158, 11, 0.05), 0 0 10px rgba(245, 158, 11, 0.03);
+}
+.modern-order-card.status-onway:hover {
+  background: rgba(245, 158, 11, 0.08);
+  border-color: rgba(245, 158, 11, 0.5);
+  box-shadow: 0 12px 38px rgba(245, 158, 11, 0.12), 0 0 15px rgba(245, 158, 11, 0.06);
+  transform: translateY(-2px);
+}
+
+/* Delivered Status (Green) */
+.modern-order-card.status-delivered {
+  background: rgba(16, 185, 129, 0.05);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  box-shadow: 0 8px 32px rgba(16, 185, 129, 0.05), 0 0 10px rgba(16, 185, 129, 0.03);
+}
+.modern-order-card.status-delivered:hover {
+  background: rgba(16, 185, 129, 0.08);
+  border-color: rgba(16, 185, 129, 0.5);
+  box-shadow: 0 12px 38px rgba(16, 185, 129, 0.12), 0 0 15px rgba(16, 185, 129, 0.06);
+  transform: translateY(-2px);
+}
+
+/* Returned Status (Red) */
+.modern-order-card.status-returned {
+  background: rgba(239, 68, 68, 0.05);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  box-shadow: 0 8px 32px rgba(239, 68, 68, 0.05), 0 0 10px rgba(239, 68, 68, 0.03);
+}
+.modern-order-card.status-returned:hover {
+  background: rgba(239, 68, 68, 0.08);
+  border-color: rgba(239, 68, 68, 0.5);
+  box-shadow: 0 12px 38px rgba(239, 68, 68, 0.12), 0 0 15px rgba(239, 68, 68, 0.06);
+  transform: translateY(-2px);
 }
 
 .moc-header {
@@ -2299,6 +2405,7 @@ body.keyboard-open #main-fab {
   padding: 0;
   margin: 0;
   -moz-appearance: textfield;
+  appearance: textfield;
   /* شاردنەوەی تیری زیادە لە فایەرفۆکس */
 }
 
@@ -2312,6 +2419,7 @@ body.keyboard-open #main-fab {
 .qty-input::-webkit-outer-spin-button,
 .qty-input::-webkit-inner-spin-button {
   -webkit-appearance: none;
+  appearance: none;
   margin: 0;
 }
 
@@ -2396,6 +2504,158 @@ body.keyboard-open #main-fab {
 .custom-dropdown-item.active {
   background: rgba(36, 129, 204, 0.1);
   color: var(--primary);
+}
+
+
+/* زیادکراوەکانی جزدان و قازانج */
+.wallet-card {
+  background: linear-gradient(135deg, #1d6fa5, #2481cc);
+  border-radius: 16px;
+  padding: 20px;
+  color: white;
+  margin-bottom: 15px;
+  box-shadow: 0 10px 20px rgba(36, 129, 204, 0.2);
+  position: relative;
+  overflow: hidden;
+}
+
+.wallet-card.savings {
+  background: linear-gradient(135deg, #10b981, #059669);
+  box-shadow: 0 10px 20px rgba(16, 185, 129, 0.2);
+}
+
+.wallet-card h3 {
+  font-size: 14px;
+  font-weight: normal;
+  margin: 0 0 5px 0;
+  opacity: 0.9;
+}
+
+.wallet-card h1 {
+  font-size: 28px;
+  margin: 0;
+  font-weight: 800;
+  direction: ltr;
+  text-align: left;
+}
+
+.transaction-item {
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-radius: 12px;
+  padding: 15px;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.transaction-item.plus {
+  background: rgba(16, 185, 129, 0.05);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  box-shadow: 0 4px 15px rgba(16, 185, 129, 0.04);
+}
+
+.transaction-item.minus {
+  background: rgba(239, 68, 68, 0.05);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  box-shadow: 0 4px 15px rgba(239, 68, 68, 0.04);
+}
+
+.transaction-item.plus:hover {
+  background: rgba(16, 185, 129, 0.08);
+  border-color: rgba(16, 185, 129, 0.5);
+  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.08);
+  transform: translateY(-1px);
+}
+
+.transaction-item.minus:hover {
+  background: rgba(239, 68, 68, 0.08);
+  border-color: rgba(239, 68, 68, 0.5);
+  box-shadow: 0 6px 20px rgba(239, 68, 68, 0.08);
+  transform: translateY(-1px);
+}
+
+.tx-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.tx-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.tx-icon.plus {
+  background: #dcfce7;
+  color: #10b981;
+}
+
+.tx-icon.minus {
+  background: #fee2e2;
+  color: #ef4444;
+}
+
+.tx-details h4 {
+  margin: 0;
+  font-size: 13px;
+  color: #1e293b;
+}
+
+.tx-details p {
+  margin: 0;
+  font-size: 11px;
+  color: #64748b;
+  margin-top: 2px;
+}
+
+.tx-amount {
+  font-size: 15px;
+  font-weight: 800;
+  direction: ltr;
+}
+
+.tx-amount.plus {
+  color: #10b981;
+}
+
+.tx-amount.minus {
+  color: #ef4444;
+}
+
+.dist-input-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #f8fafc;
+  padding: 10px 15px;
+  border-radius: 10px;
+  margin-bottom: 8px;
+  border: 1px solid #e2e8f0;
+}
+
+.dist-input-row label {
+  margin: 0;
+  font-size: 13px;
+  color: #334155;
+}
+
+.dist-input-row input {
+  width: 100px;
+  height: 35px;
+  margin: 0;
+  text-align: left;
+  direction: ltr;
+  font-weight: bold;
+  border-color: #cbd5e1;
 }
 
 
@@ -2589,4 +2849,223 @@ body.keyboard-open #main-fab {
     /* کارتەکان زۆر لەیەک نزیک دەبنەوە */
     gap: 6px;
   }
+}
+
+/* ==========================================================================
+   زیادکراوەکان بۆ دابەشکردنی پارە و شاردنەوەی سکرۆڵ باڕ
+   ========================================================================== */
+
+.modal-content {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none;  /* IE and Edge */
+}
+.modal-content::-webkit-scrollbar {
+  display: none; /* Chrome, Safari and Opera */
+}
+
+.dist-input-group {
+  display: flex;
+  align-items: center;
+  width: 120px;
+  height: 32px;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  overflow: hidden;
+  transition: all 0.2s ease;
+}
+
+.dist-input-group:focus-within {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(36, 129, 204, 0.15);
+}
+
+.dist-input-group .qty-btn {
+  width: 26px;
+  height: 100%;
+  background: #f1f5f9;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.2s;
+  padding: 0;
+  margin: 0;
+  min-height: auto;
+}
+
+.dist-input-group .qty-btn:hover:not(:disabled) {
+  background: #e2e8f0;
+}
+
+.dist-input-group .qty-btn:active:not(:disabled) {
+  background: #cbd5e1;
+}
+
+.dist-input-group .qty-btn:disabled {
+  background: #f8fafc;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.dist-input-group .plus-btn {
+  border-left: 1px solid #cbd5e1;
+}
+
+.dist-input-group .minus-btn {
+  border-right: 1px solid #cbd5e1;
+}
+
+.dist-input-group .qty-input {
+  flex: 1;
+  width: 100%;
+  height: 100%;
+  border: none;
+  background: transparent;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-main);
+  padding: 0 5px;
+  margin: 0;
+  -moz-appearance: textfield;
+  appearance: textfield;
+  direction: ltr;
+}
+
+.dist-input-group .qty-input:focus {
+  outline: none;
+  border: none;
+  box-shadow: none;
+}
+
+.dist-input-group .qty-input:disabled {
+  background: #f8fafc;
+  color: #94a3b8;
+  cursor: not-allowed;
+}
+
+/* =========================================
+   ڕێکخستنی نوێی سکڕۆڵ و دیزاینی ئەدمین
+   ========================================= */
+#admin-screen.active {
+  display: flex !important;
+  flex-direction: column;
+  position: fixed;
+  top: 20px;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 0 20px;
+  overflow: hidden !important;
+}
+
+/* تابەکانی سەرەوە جێگیرن */
+#admin-screen-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-height: 0;
+}
+
+#admin-screen-content > .magic-tabs-wrapper {
+  flex-shrink: 0;
+}
+
+/* بەشی دروستکردن و چاکسازی: سکڕۆڵ دەکەن */
+#section-create-code,
+#section-edit-code {
+  flex: 1;
+  overflow-y: auto;
+  padding-bottom: 120px;
+}
+
+/* سێ تابی سەرەکی: تەنها نیشان دەدرێن کاتێک flex */
+#section-wallets,
+#section-profits,
+#section-cities {
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* کۆنتێنەرەکانی ناوی تابەکان */
+#profits-container,
+#wallets-container,
+#cities-container {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  height: 100%;
+}
+
+/* بەشەکانی سەرەوەی هەر تابێک جێگیر دەبن */
+#profits-container > *:not(#profit-users-list):not(#profit-edit-section),
+#wallets-container > *:not(#wallet-users-list):not(#wallet-edit-section),
+#cities-container > *:not(#admin-cities-list) {
+  flex-shrink: 0;
+}
+
+/* لیستەکانی سکڕۆڵدەکەن */
+#wallet-users-list,
+#profit-users-list,
+#admin-cities-list {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-bottom: 150px;
+  -webkit-overflow-scrolling: touch;
+}
+
+#wallet-users-list::-webkit-scrollbar,
+#profit-users-list::-webkit-scrollbar,
+#admin-cities-list::-webkit-scrollbar {
+  display: none;
+}
+
+#wallet-edit-section {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  margin-top: -10px;
+
+  /* هەمان دیزاینی پەڕەی هۆم: هەموو بەشەکە سکڕۆڵ دەکات */
+  overflow-y: auto;
+  overflow-x: hidden;
+  /* بۆشایی زۆر لە خوارەوە تا کۆتا جوڵە دارایی بەتەواوی لەسەر ناڤ باڕ دەربکەوێت */
+  padding-bottom: 240px;
+  margin-right: -10px;
+  margin-left: -10px;
+  padding-right: 10px;
+  padding-left: 10px;
+
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+#wallet-edit-section::-webkit-scrollbar {
+  display: none;
+}
+
+#profit-edit-section {
+  overflow: hidden;
+  flex-shrink: 0;
+  margin-top: -10px;
+}
+
+#wallet-edit-section > *:not(#w-user-transactions-list) {
+  flex-shrink: 0;
+}
+
+#w-user-transactions-list {
+  flex-shrink: 0;
+  overflow: visible !important;
+  max-height: none !important;
 }

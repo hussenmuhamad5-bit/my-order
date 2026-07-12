@@ -147,9 +147,9 @@
                     <input type="number" id="item-qty" value="1" min="1" class="qty-input" placeholder="دانە">
                     <button type="button" class="qty-btn minus-btn" onclick="updateQty(-1)">
                         <svg class="qty-icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none"
-                            viewBox="0 0 18 2">
+                            viewBox="0 0 18 18">
                             <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M1 1h16"></path>
+                                d="M1 9h16"></path>
                         </svg>
                     </button>
                 </div>
@@ -214,119 +214,259 @@
     </div>
 
     <div id="admin-screen" class="screen">
-
-        <div class="magic-tabs-wrapper">
-            <div class="magic-tabs">
-                <div class="magic-slider" id="admin-tab-slider"></div>
-                <button class="magic-tab active" onclick="switchAdminTab('create', this)">دروستکردن</button>
-                <button class="magic-tab" onclick="switchAdminTab('edit', this)">چاکسازی</button>
-            </div>
+        <div id="admin-loading-spinner"
+            style="display: none; align-items: center; justify-content: center; height: 60vh; flex-direction: column;">
+            <svg viewBox="0 0 100 100"
+                style="width:45px; height:45px; fill: var(--primary); transform: translateY(-27.11%) scale(1.5);">
+                <g style="transform-origin: 50% 72.8938%; animation: spinner-rotate 1s linear infinite;">
+                    <path
+                        d="M33.52,68.12 C35.02,62.8 39.03,58.52 44.24,56.69 C49.26,54.93 54.68,55.61 59.04,58.4 C59.04,58.4 56.24,60.53 56.24,60.53 C55.45,61.13 55.68,62.37 56.63,62.64 C56.63,62.64 67.21,65.66 67.21,65.66 C67.98,65.88 68.75,65.3 68.74,64.5 C68.74,64.5 68.68,53.5 68.68,53.5 C68.67,52.51 67.54,51.95 66.75,52.55 C66.75,52.55 64.04,54.61 64.04,54.61 C57.88,49.79 49.73,48.4 42.25,51.03 C35.2,53.51 29.78,59.29 27.74,66.49 C27.29,68.08 28.22,69.74 29.81,70.19 C30.09,70.27 30.36,70.31 30.63,70.31 C31.94,70.31 33.14,69.44 33.52,68.12Z">
+                    </path>
+                    <path
+                        d="M69.95,74.85 C68.35,74.4 66.7,75.32 66.25,76.92 C64.74,82.24 60.73,86.51 55.52,88.35 C50.51,90.11 45.09,89.43 40.73,86.63 C40.73,86.63 43.53,84.51 43.53,84.51 C44.31,83.91 44.08,82.67 43.13,82.4 C43.13,82.4 32.55,79.38 32.55,79.38 C31.78,79.16 31.02,79.74 31.02,80.54 C31.02,80.54 31.09,91.54 31.09,91.54 C31.09,92.53 32.22,93.09 33.01,92.49 C33.01,92.49 35.72,90.43 35.72,90.43 C39.81,93.63 44.77,95.32 49.84,95.32 C52.41,95.32 55,94.89 57.51,94.01 C64.56,91.53 69.99,85.75 72.02,78.55 C72.47,76.95 71.54,75.3 69.95,74.85Z">
+                    </path>
+                </g>
+            </svg>
         </div>
-
-        <div id="section-create-code">
-            <div class="container">
-                <label>ناوی سیانی</label>
-                <input type="text" id="u-name" placeholder="ناوی تەواو بنووسە">
-
-                <div id="wrapper-telegram">
-                    <label>خاوەنی تێلیگرامە؟ (بۆ بەکارهێنانی بۆت)</label>
-                    <div class="segmented-control">
-                        <label><input type="radio" name="u_telegram" value="بەڵێ"><span>بەڵێ</span></label>
-                        <label><input type="radio" name="u_telegram" value="نەخێر"><span>نەخێر</span></label>
-                    </div>
-                </div>
-
-                <div id="wrapper-u-role">
-                    <label>ڕۆڵ / پلە</label>
-                    <div class="segmented-control" id="role-options-create">
-                    </div>
-                </div>
-
-                <div id="wrapper-u-manager">
-                    <div class="switch-group">
-                        <label>بەڕێوەبەری هەیە؟</label>
-                        <label class="switch"><input type="checkbox" id="switch-u-manager"
-                                onchange="toggleInput('u-manager', this.checked)">
-                            <div class="slider">
-                                <div class="circle"><svg class="cross" viewBox="0 0 24 24" fill="none"
-                                        stroke="currentColor" stroke-width="4">
-                                        <line x1="18" y1="6" x2="6" y2="18"></line>
-                                        <line x1="6" y1="6" x2="18" y2="18"></line>
-                                    </svg><svg class="checkmark" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                        stroke-width="4">
-                                        <polyline points="20 6 9 17 4 12"></polyline>
-                                    </svg></div>
-                            </div>
-                        </label>
-                    </div>
-                    <input type="text" id="u-manager" list="datalist-u-manager" class="form-input"
-                        placeholder="چەند پیتێک بنووسە..." style="display: none; width:100%; margin-bottom:15px;">
-                    <datalist id="datalist-u-manager"></datalist>
-                </div>
-
-                <div id="wrapper-u-admin">
-                    <div class="switch-group">
-                        <label>ئەدمینی هەیە؟</label>
-                        <label class="switch"><input type="checkbox" id="switch-u-admin"
-                                onchange="toggleInput('u-admin', this.checked)">
-                            <div class="slider">
-                                <div class="circle"><svg class="cross" viewBox="0 0 24 24" fill="none"
-                                        stroke="currentColor" stroke-width="4">
-                                        <line x1="18" y1="6" x2="6" y2="18"></line>
-                                        <line x1="6" y1="6" x2="18" y2="18"></line>
-                                    </svg><svg class="checkmark" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                        stroke-width="4">
-                                        <polyline points="20 6 9 17 4 12"></polyline>
-                                    </svg></div>
-                            </div>
-                        </label>
-                    </div>
-                    <input type="text" id="u-admin" list="datalist-u-admin" class="form-input"
-                        placeholder="چەند پیتێک بنووسە..." style="display: none; width:100%; margin-bottom:15px;">
-                    <datalist id="datalist-u-admin"></datalist>
-                </div>
-
-                <div id="wrapper-u-consultant">
-                    <div class="switch-group">
-                        <label>ڕاوێژکاری هەیە؟</label>
-                        <label class="switch"><input type="checkbox" id="switch-u-consultant"
-                                onchange="toggleInput('u-consultant', this.checked)">
-                            <div class="slider">
-                                <div class="circle"><svg class="cross" viewBox="0 0 24 24" fill="none"
-                                        stroke="currentColor" stroke-width="4">
-                                        <line x1="18" y1="6" x2="6" y2="18"></line>
-                                        <line x1="6" y1="6" x2="18" y2="18"></line>
-                                    </svg><svg class="checkmark" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                        stroke-width="4">
-                                        <polyline points="20 6 9 17 4 12"></polyline>
-                                    </svg></div>
-                            </div>
-                        </label>
-                    </div>
-                    <input type="text" id="u-consultant" list="datalist-u-consultant" class="form-input"
-                        placeholder="چەند پیتێک بنووسە..." style="display: none; width:100%; margin-bottom:15px;">
-                    <datalist id="datalist-u-consultant"></datalist>
-                </div>
-
-                <button class="btn" style="background:var(--primary); margin-top:20px; font-size:16px;"
-                    onclick="generateCode()"><i class='bx bx-user-plus'></i> دروستکردنی کۆدی نوێ</button>
-
-                <div class="result-box" id="result" style="display: none;">
-                    <p style="margin:0; color:#333;" id="result-text"></p>
-                    <div class="code-display" id="final-code"></div>
-                    <button class="action-btn btn-telegram" style="width:auto; padding:8px 20px; margin-top:0;"
-                        onclick="copyCode()"><i class='bx bx-copy'></i> کۆپیکردن</button>
+        <div id="admin-screen-content">
+            <div class="magic-tabs-wrapper">
+                <div class="magic-tabs">
+                    <div class="magic-slider" id="admin-tab-slider"></div>
+                    <button class="magic-tab active" onclick="switchAdminTab('create', this)">دروستکردن</button>
+                    <button class="magic-tab" onclick="switchAdminTab('edit', this)">چاکسازی</button>
+                    <button class="magic-tab" onclick="switchAdminTab('profits', this)" id="tab-profits"
+                        style="display:none;">قازانجەکان</button>
+                    <button class="magic-tab" onclick="switchAdminTab('wallets', this)" id="tab-wallets"
+                        style="display:none;">جزدانەکان</button>
+                    <button class="magic-tab" onclick="switchAdminTab('cities', this)" id="tab-cities"
+                        style="display:none;">شارەکان</button>
                 </div>
             </div>
-        </div>
 
-        <div id="section-edit-code" style="display: none;">
-            <div class="container">
-                <label>کۆدەکە بنووسە بۆ گەڕان:</label>
-                <div style="display: flex; gap: 8px; margin-bottom: 15px; align-items: center;">
-                    <div class="search-group">
-                        <input class="search-input" type="search" id="search-code-input" list="codes-list"
-                            placeholder="نموونە: ab..." oninput="autoSearchCode()" />
+            <div id="section-create-code">
+                <div class="container">
+                    <label>ناوی سیانی</label>
+                    <input type="text" id="u-name" placeholder="ناوی تەواو بنووسە">
+
+                    <div id="wrapper-telegram">
+                        <label>خاوەنی تێلیگرامە؟ (بۆ بەکارهێنانی بۆت)</label>
+                        <div class="segmented-control">
+                            <label><input type="radio" name="u_telegram" value="بەڵێ"><span>بەڵێ</span></label>
+                            <label><input type="radio" name="u_telegram" value="نەخێر"><span>نەخێر</span></label>
+                        </div>
+                    </div>
+
+                    <div id="wrapper-u-role">
+                        <label>ڕۆڵ / پلە</label>
+                        <div class="segmented-control" id="role-options-create">
+                        </div>
+                    </div>
+
+                    <div id="wrapper-u-manager">
+                        <div class="switch-group">
+                            <label>بەڕێوەبەری هەیە؟</label>
+                            <label class="switch"><input type="checkbox" id="switch-u-manager"
+                                    onchange="toggleInput('u-manager', this.checked)">
+                                <div class="slider">
+                                    <div class="circle"><svg class="cross" viewBox="0 0 24 24" fill="none"
+                                            stroke="currentColor" stroke-width="4">
+                                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                                        </svg><svg class="checkmark" viewBox="0 0 24 24" fill="none"
+                                            stroke="currentColor" stroke-width="4">
+                                            <polyline points="20 6 9 17 4 12"></polyline>
+                                        </svg></div>
+                                </div>
+                            </label>
+                        </div>
+                        <input type="text" id="u-manager" list="datalist-u-manager" class="form-input"
+                            placeholder="چەند پیتێک بنووسە..." style="display: none; width:100%; margin-bottom:15px;">
+                        <datalist id="datalist-u-manager"></datalist>
+                    </div>
+
+                    <div id="wrapper-u-admin">
+                        <div class="switch-group">
+                            <label>ئەدمینی هەیە؟</label>
+                            <label class="switch"><input type="checkbox" id="switch-u-admin"
+                                    onchange="toggleInput('u-admin', this.checked)">
+                                <div class="slider">
+                                    <div class="circle"><svg class="cross" viewBox="0 0 24 24" fill="none"
+                                            stroke="currentColor" stroke-width="4">
+                                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                                        </svg><svg class="checkmark" viewBox="0 0 24 24" fill="none"
+                                            stroke="currentColor" stroke-width="4">
+                                            <polyline points="20 6 9 17 4 12"></polyline>
+                                        </svg></div>
+                                </div>
+                            </label>
+                        </div>
+                        <input type="text" id="u-admin" list="datalist-u-admin" class="form-input"
+                            placeholder="چەند پیتێک بنووسە..." style="display: none; width:100%; margin-bottom:15px;">
+                        <datalist id="datalist-u-admin"></datalist>
+                    </div>
+
+                    <div id="wrapper-u-consultant">
+                        <div class="switch-group">
+                            <label>ڕاوێژکاری هەیە؟</label>
+                            <label class="switch"><input type="checkbox" id="switch-u-consultant"
+                                    onchange="toggleInput('u-consultant', this.checked)">
+                                <div class="slider">
+                                    <div class="circle"><svg class="cross" viewBox="0 0 24 24" fill="none"
+                                            stroke="currentColor" stroke-width="4">
+                                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                                        </svg><svg class="checkmark" viewBox="0 0 24 24" fill="none"
+                                            stroke="currentColor" stroke-width="4">
+                                            <polyline points="20 6 9 17 4 12"></polyline>
+                                        </svg></div>
+                                </div>
+                            </label>
+                        </div>
+                        <input type="text" id="u-consultant" list="datalist-u-consultant" class="form-input"
+                            placeholder="چەند پیتێک بنووسە..." style="display: none; width:100%; margin-bottom:15px;">
+                        <datalist id="datalist-u-consultant"></datalist>
+                    </div>
+
+                    <button class="btn" style="background:var(--primary); margin-top:20px; font-size:16px;"
+                        onclick="generateCode()"><i class='bx bx-user-plus'></i> دروستکردنی کۆدی نوێ</button>
+
+                    <div class="result-box" id="result" style="display: none;">
+                        <p style="margin:0; color:#333;" id="result-text"></p>
+                        <div class="code-display" id="final-code"></div>
+                        <button class="action-btn btn-telegram" style="width:auto; padding:8px 20px; margin-top:0;"
+                            onclick="copyCode()"><i class='bx bx-copy'></i> کۆپیکردن</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="section-edit-code" style="display: none;">
+                <div class="container">
+                    <label>کۆدەکە بنووسە بۆ گەڕان:</label>
+                    <div style="display: flex; gap: 8px; margin-bottom: 15px; align-items: center;">
+                        <div class="search-group">
+                            <input class="search-input" type="search" id="search-code-input" list="codes-list"
+                                placeholder="نموونە: ab..." oninput="autoSearchCode()" />
+                            <svg viewBox="0 0 24 24" aria-hidden="true" class="search-icon">
+                                <g>
+                                    <path
+                                        d="M21.53 20.47l-3.66-3.66C19.195 15.24 20 13.214 20 11c0-4.97-4.03-9-9-9s-9 4.03-9 9 4.03 9 9 9c2.215 0 4.24-.804 5.808-2.13l3.66 3.66c.147.146.34.22.53.22s.385-.073.53-.22c.295-.293.295-.767.002-1.06zM3.5 11c0-4.135 3.365-7.5 7.5-7.5s7.5 3.365 7.5 7.5-3.365 7.5-7.5 7.5-7.5-3.365-7.5-7.5z">
+                                    </path>
+                                </g>
+                            </svg>
+                            <datalist id="codes-list"></datalist>
+                        </div>
+                    </div>
+
+                    <div id="edit-section" class="edit-section">
+                        <label>ناوی سیانی</label>
+                        <input type="text" id="e-name">
+
+                        <div id="wrapper-e-telegram">
+                            <label>خاوەنی تێلیگرامە؟</label>
+                            <div class="segmented-control">
+                                <label><input type="radio" name="e_telegram" value="بەڵێ"><span>بەڵێ</span></label>
+                                <label><input type="radio" name="e_telegram" value="نەخێر"><span>نەخێر</span></label>
+                            </div>
+                        </div>
+
+                        <div id="wrapper-e-role">
+                            <label>ڕۆڵ / پلە</label>
+                            <div class="segmented-control" id="role-options-edit">
+                            </div>
+                        </div>
+
+                        <div id="wrapper-e-manager">
+                            <div class="switch-group">
+                                <label>بەڕێوەبەری هەیە؟</label>
+                                <label class="switch"><input type="checkbox" id="switch-e-manager"
+                                        onchange="toggleInput('e-manager', this.checked)">
+                                    <div class="slider">
+                                        <div class="circle"><svg class="cross" viewBox="0 0 24 24" fill="none"
+                                                stroke="currentColor" stroke-width="4">
+                                                <line x1="18" y1="6" x2="6" y2="18"></line>
+                                                <line x1="6" y1="6" x2="18" y2="18"></line>
+                                            </svg><svg class="checkmark" viewBox="0 0 24 24" fill="none"
+                                                stroke="currentColor" stroke-width="4">
+                                                <polyline points="20 6 9 17 4 12"></polyline>
+                                            </svg></div>
+                                    </div>
+                                </label>
+                            </div>
+                            <input type="text" id="e-manager" list="datalist-e-manager" class="form-input"
+                                style="display: none; width:100%; margin-bottom:15px;">
+                            <datalist id="datalist-e-manager"></datalist>
+                        </div>
+
+                        <div id="wrapper-e-admin">
+                            <div class="switch-group">
+                                <label>ئەدمینی هەیە؟</label>
+                                <label class="switch"><input type="checkbox" id="switch-e-admin"
+                                        onchange="toggleInput('e-admin', this.checked)">
+                                    <div class="slider">
+                                        <div class="circle"><svg class="cross" viewBox="0 0 24 24" fill="none"
+                                                stroke="currentColor" stroke-width="4">
+                                                <line x1="18" y1="6" x2="6" y2="18"></line>
+                                                <line x1="6" y1="6" x2="18" y2="18"></line>
+                                            </svg><svg class="checkmark" viewBox="0 0 24 24" fill="none"
+                                                stroke="currentColor" stroke-width="4">
+                                                <polyline points="20 6 9 17 4 12"></polyline>
+                                            </svg></div>
+                                    </div>
+                                </label>
+                            </div>
+                            <input type="text" id="e-admin" list="datalist-e-admin" class="form-input"
+                                style="display: none; width:100%; margin-bottom:15px;">
+                            <datalist id="datalist-e-admin"></datalist>
+                        </div>
+
+                        <div id="wrapper-e-consultant">
+                            <div class="switch-group">
+                                <label>ڕاوێژکاری هەیە؟</label>
+                                <label class="switch"><input type="checkbox" id="switch-e-consultant"
+                                        onchange="toggleInput('e-consultant', this.checked)">
+                                    <div class="slider">
+                                        <div class="circle"><svg class="cross" viewBox="0 0 24 24" fill="none"
+                                                stroke="currentColor" stroke-width="4">
+                                                <line x1="18" y1="6" x2="6" y2="18"></line>
+                                                <line x1="6" y1="6" x2="18" y2="18"></line>
+                                            </svg><svg class="checkmark" viewBox="0 0 24 24" fill="none"
+                                                stroke="currentColor" stroke-width="4">
+                                                <polyline points="20 6 9 17 4 12"></polyline>
+                                            </svg></div>
+                                    </div>
+                                </label>
+                            </div>
+                            <input type="text" id="e-consultant" list="datalist-e-consultant" class="form-input"
+                                style="display: none; width:100%; margin-bottom:15px;">
+                            <datalist id="datalist-e-consultant"></datalist>
+                        </div>
+
+
+
+                        <button class="btn" style="background:#28a745; margin-top:20px; font-size:16px;"
+                            onclick="updateCode()"><i class='bx bx-save'></i> پاشەکەوتکردنی گۆڕانکاری</button>
+                        <button class="action-btn btn-delete" onclick="deleteCode()" id="delete-btn"
+                            style="margin-top: 10px;"><i class='bx bx-trash'></i> سڕینەوەی ئەم کۆدە</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="section-profits" style="display: none;">
+                <div class="container" id="profits-container">
+
+                    <div class="segmented-control" style="margin-bottom: 15px;">
+                        <label><input type="radio" name="profit_role_filter" value="بەڕێوەبەر" checked
+                                onchange="filterProfitUsers()"><span>بەڕێوەبەر</span></label>
+                        <label><input type="radio" name="profit_role_filter" value="ئەدمین"
+                                onchange="filterProfitUsers()"><span>ئەدمین</span></label>
+                        <label><input type="radio" name="profit_role_filter" value="ڕاوێژکار"
+                                onchange="filterProfitUsers()"><span>ڕاوێژکار</span></label>
+                    </div>
+
+                    <div class="search-group" id="profit-search-container">
+                        <input class="search-input" type="search" id="search-profit-input"
+                            placeholder="گەڕان بە ناو یان کۆد..." oninput="filterProfitUsers()" autocomplete="off" />
                         <svg viewBox="0 0 24 24" aria-hidden="true" class="search-icon">
                             <g>
                                 <path
@@ -334,100 +474,152 @@
                                 </path>
                             </g>
                         </svg>
-                        <datalist id="codes-list"></datalist>
+                    </div>
+
+                    <div id="profit-users-list" style="margin-bottom: 20px;"></div>
+
+                    <div id="profit-edit-section" class="edit-section"
+                        style="border-top: none; padding-top: 0; display: none; background: #f8fafc; padding: 15px; border-radius: 12px; border: 1px solid #e2e8f0;">
+                        <div
+                            style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                            <label style="margin:0; font-size:14px; color:var(--text-main);">دیاریکردنی قازانجی: <span
+                                    id="p-name" style="color:var(--primary);">...</span></label>
+                            <button class="btn"
+                                style="background:#e2e8f0; color:#475569; width:auto; height:32px; padding:0 12px; margin:0; font-size:20px;"
+                                onclick="cancelProfitEdit()"><i class='bx bx-x'></i></button>
+                        </div>
+                        <input type="hidden" id="p-hidden-code">
+                        <label>بڕی قازانج (بە دینار)</label>
+                        <div class="dist-input-group"
+                            style="width: 100%; max-width: 220px; height: 38px; margin-bottom: 15px; background: #fff; border-radius: 8px;">
+                            <button type="button" class="qty-btn plus-btn" onclick="adjustProfitRate(1000)"
+                                style="width: 40px;">
+                                <svg class="qty-icon" style="width: 14px; height: 14px;" aria-hidden="true"
+                                    xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 18 18">
+                                    <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
+                                        stroke-width="2" d="M9 1v16M1 9h16"></path>
+                                </svg>
+                            </button>
+                            <input type="number" id="p-rate" placeholder="نموونە: 2000" class="qty-input"
+                                style="text-align: center; font-size: 15px; font-weight: 700;">
+                            <button type="button" class="qty-btn minus-btn" onclick="adjustProfitRate(-1000)"
+                                style="width: 40px;">
+                                <svg class="qty-icon" style="width: 14px; height: 14px;" aria-hidden="true"
+                                    xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 18 18">
+                                    <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
+                                        stroke-width="2" d="M1 9h16"></path>
+                                </svg>
+                            </button>
+                        </div>
+                        <p style="font-size: 11px; color:#888; margin-top:-8px; margin-bottom:15px;" id="p-hint"></p>
+                        <button class="btn" style="background:var(--primary); margin-top:0;"
+                            onclick="saveProfitRate()"><i class='bx bx-save'></i> سەیڤکردن</button>
                     </div>
                 </div>
+            </div>
 
-                <div id="edit-section" class="edit-section">
-                    <label>ناوی سیانی</label>
-                    <input type="text" id="e-name">
-
-                    <div id="wrapper-e-telegram">
-                        <label>خاوەنی تێلیگرامە؟</label>
-                        <div class="segmented-control">
-                            <label><input type="radio" name="e_telegram" value="بەڵێ"><span>بەڵێ</span></label>
-                            <label><input type="radio" name="e_telegram" value="نەخێر"><span>نەخێر</span></label>
-                        </div>
+            <div id="section-wallets" style="display: none;">
+                <div class="container" id="wallets-container">
+                    <div class="segmented-control" style="margin-bottom: 15px;" id="wallet-role-tabs-container">
+                        <label><input type="radio" name="wallet_role_filter" value="بەڕێوەبەر" checked
+                                onchange="filterWalletUsers()"><span>بەڕێوەبەر</span></label>
+                        <label><input type="radio" name="wallet_role_filter" value="ئەدمین"
+                                onchange="filterWalletUsers()"><span>ئەدمین</span></label>
+                        <label><input type="radio" name="wallet_role_filter" value="ڕاوێژکار"
+                                onchange="filterWalletUsers()"><span>ڕاوێژکار</span></label>
+                        <label><input type="radio" name="wallet_role_filter" value="ئەندام"
+                                onchange="filterWalletUsers()"><span>ئەندام</span></label>
                     </div>
 
-                    <div id="wrapper-e-role">
-                        <label>ڕۆڵ / پلە</label>
-                        <div class="segmented-control" id="role-options-edit">
-                        </div>
+                    <div class="search-group" id="wallet-search-container">
+                        <input class="search-input" type="search" id="search-wallet-input"
+                            placeholder="گەڕان بە ناو یان کۆد..." oninput="filterWalletUsers()" autocomplete="off" />
+                        <svg viewBox="0 0 24 24" aria-hidden="true" class="search-icon">
+                            <g>
+                                <path
+                                    d="M21.53 20.47l-3.66-3.66C19.195 15.24 20 13.214 20 11c0-4.97-4.03-9-9-9s-9 4.03-9 9 4.03 9 9 9c2.215 0 4.24-.804 5.808-2.13l3.66 3.66c.147.146.34.22.53.22s.385-.073.53-.22c.295-.293.295-.767.002-1.06zM3.5 11c0-4.135 3.365-7.5 7.5-7.5s7.5 3.365 7.5 7.5-3.365 7.5-7.5 7.5-7.5-3.365-7.5-7.5z">
+                                </path>
+                            </g>
+                        </svg>
                     </div>
 
-                    <div id="wrapper-e-manager">
-                        <div class="switch-group">
-                            <label>بەڕێوەبەری هەیە؟</label>
-                            <label class="switch"><input type="checkbox" id="switch-e-manager"
-                                    onchange="toggleInput('e-manager', this.checked)">
-                                <div class="slider">
-                                    <div class="circle"><svg class="cross" viewBox="0 0 24 24" fill="none"
-                                            stroke="currentColor" stroke-width="4">
-                                            <line x1="18" y1="6" x2="6" y2="18"></line>
-                                            <line x1="6" y1="6" x2="18" y2="18"></line>
-                                        </svg><svg class="checkmark" viewBox="0 0 24 24" fill="none"
-                                            stroke="currentColor" stroke-width="4">
-                                            <polyline points="20 6 9 17 4 12"></polyline>
-                                        </svg></div>
+                    <div id="wallet-users-list" style="margin-bottom: 20px;"></div>
+
+                    <div id="wallet-edit-section" class="edit-section"
+                        style="border-top: none; padding-top: 0; display: none; background: #f8fafc; padding: 15px; border-radius: 12px; border: 1px solid #e2e8f0;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                            <label style="margin:0; font-size:14px; color:var(--text-main);">بەڕێوەبردنی جزدانی: <span
+                                    id="w-name" style="color:var(--primary); font-weight: bold;">...</span> (<span id="w-code" style="font-family: monospace; font-size: 12px; color: #64748b;">...</span>)</label>
+                            <button class="btn"
+                                style="background:#e2e8f0; color:#475569; width:auto; height:32px; padding:0 12px; margin:0; font-size:20px;"
+                                onclick="cancelWalletEdit()"><i class='bx bx-x'></i></button>
+                        </div>
+                        
+                        <!-- باڵانس و پاشەکەوتی ئێستا -->
+                        <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                            <div style="flex: 1; background: #fff; border: 1px solid #e2e8f0; padding: 10px; border-radius: 8px; text-align: center;">
+                                <span style="font-size: 11px; color: #64748b; display: block; margin-bottom: 4px;">باڵانسی ئێستا</span>
+                                <strong id="w-balance-display" style="font-size: 14px; color: var(--primary);" dir="ltr">0 د.ع</strong>
+                            </div>
+                            <div style="flex: 1; background: #fff; border: 1px solid #e2e8f0; padding: 10px; border-radius: 8px; text-align: center;">
+                                <span style="font-size: 11px; color: #64748b; display: block; margin-bottom: 4px;">پاشەکەوتی ئێستا</span>
+                                <strong id="w-savings-display" style="font-size: 14px; color: #10b981;" dir="ltr">0 د.ع</strong>
+                            </div>
+                        </div>
+
+                        <!-- دەستکاری ڕاستەوخۆ -->
+                        <div style="background: #fff; border: 1px solid #e2e8f0; padding: 12px; border-radius: 8px; margin-bottom: 15px;">
+                            <span style="font-size: 12px; font-weight: bold; color: #475569; display: block; margin-bottom: 10px;"><i class='bx bx-edit-alt'></i> دەستکاری ڕاستەوخۆ (تەنها بۆ پاشا)</span>
+                            <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                                <div style="flex: 1;">
+                                    <label style="font-size: 11px; color: #64748b; margin-bottom: 4px; display: block;">باڵانسی نوێ</label>
+                                    <input type="number" id="w-direct-balance" placeholder="باڵانسی نوێ" style="margin: 0; padding: 8px; font-size: 13px; height: auto;">
                                 </div>
-                            </label>
-                        </div>
-                        <input type="text" id="e-manager" list="datalist-e-manager" class="form-input"
-                            style="display: none; width:100%; margin-bottom:15px;">
-                        <datalist id="datalist-e-manager"></datalist>
-                    </div>
-
-                    <div id="wrapper-e-admin">
-                        <div class="switch-group">
-                            <label>ئەدمینی هەیە؟</label>
-                            <label class="switch"><input type="checkbox" id="switch-e-admin"
-                                    onchange="toggleInput('e-admin', this.checked)">
-                                <div class="slider">
-                                    <div class="circle"><svg class="cross" viewBox="0 0 24 24" fill="none"
-                                            stroke="currentColor" stroke-width="4">
-                                            <line x1="18" y1="6" x2="6" y2="18"></line>
-                                            <line x1="6" y1="6" x2="18" y2="18"></line>
-                                        </svg><svg class="checkmark" viewBox="0 0 24 24" fill="none"
-                                            stroke="currentColor" stroke-width="4">
-                                            <polyline points="20 6 9 17 4 12"></polyline>
-                                        </svg></div>
+                                <div style="flex: 1;">
+                                    <label style="font-size: 11px; color: #64748b; margin-bottom: 4px; display: block;">پاشەکەوتی نوێ</label>
+                                    <input type="number" id="w-direct-savings" placeholder="پاشەکەوتی نوێ" style="margin: 0; padding: 8px; font-size: 13px; height: auto;">
                                 </div>
-                            </label>
+                            </div>
+                            <button class="btn" style="background: var(--primary); margin: 0; height: 35px; font-size: 13px;" onclick="saveDirectWallet()"><i class='bx bx-check'></i> سەیڤکردنی ڕاستەوخۆ</button>
                         </div>
-                        <input type="text" id="e-admin" list="datalist-e-admin" class="form-input"
-                            style="display: none; width:100%; margin-bottom:15px;">
-                        <datalist id="datalist-e-admin"></datalist>
-                    </div>
 
-                    <div id="wrapper-e-consultant">
-                        <div class="switch-group">
-                            <label>ڕاوێژکاری هەیە؟</label>
-                            <label class="switch"><input type="checkbox" id="switch-e-consultant"
-                                    onchange="toggleInput('e-consultant', this.checked)">
-                                <div class="slider">
-                                    <div class="circle"><svg class="cross" viewBox="0 0 24 24" fill="none"
-                                            stroke="currentColor" stroke-width="4">
-                                            <line x1="18" y1="6" x2="6" y2="18"></line>
-                                            <line x1="6" y1="6" x2="18" y2="18"></line>
-                                        </svg><svg class="checkmark" viewBox="0 0 24 24" fill="none"
-                                            stroke="currentColor" stroke-width="4">
-                                            <polyline points="20 6 9 17 4 12"></polyline>
-                                        </svg></div>
-                                </div>
-                            </label>
+                        <!-- کردارە خێراکان -->
+                        <span style="font-size: 12px; font-weight: bold; color: #475569; display: block; margin-bottom: 10px;"><i class='bx bx-bolt-circle'></i> کردارە خێراکان</span>
+                        <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px;">
+                            <button class="action-btn btn-standard" style="flex:1; font-size:13px; padding:10px; height: 38px; display: flex; align-items: center; justify-content: center; gap: 5px;"
+                                onclick="openWalletAction('add')"><i class='bx bx-plus-circle'></i> پاداشت</button>
+                            <button class="action-btn btn-delete"
+                                style="flex:1; margin-top:0; font-size:13px; padding:10px; height: 38px; display: flex; align-items: center; justify-content: center; gap: 5px;"
+                                onclick="openWalletAction('deduct')"><i class='bx bx-minus-circle'></i> سزا/بڕین</button>
                         </div>
-                        <input type="text" id="e-consultant" list="datalist-e-consultant" class="form-input"
-                            style="display: none; width:100%; margin-bottom:15px;">
-                        <datalist id="datalist-e-consultant"></datalist>
+                        <button class="btn" style="background:#f59e0b; margin-top:0; height: 38px; font-size: 13px; display: flex; align-items: center; justify-content: center; gap: 5px;"
+                            onclick="openWalletAction('salary')"><i class='bx bx-money-withdraw'></i> پێدانی مووچە (سفرکردنەوە)</button>
+
+                        <!-- دواین جوڵە داراییەکان -->
+                        <span style="font-size: 12px; font-weight: bold; color: #475569; display: block; margin-top: 20px; margin-bottom: 10px;"><i class='bx bx-history'></i> دواین جوڵە داراییەکان</span>
+                        <div id="w-user-transactions-list" style="padding: 2px;">
+                            <p style="text-align:center; color:#888; font-size:12px; margin: 15px 0;">لە لۆدکاردندایە...</p>
+                        </div>
                     </div>
+                </div>
+            </div>
 
-
-
-                    <button class="btn" style="background:#28a745; margin-top:20px; font-size:16px;"
-                        onclick="updateCode()"><i class='bx bx-save'></i> پاشەکەوتکردنی گۆڕانکاری</button>
-                    <button class="action-btn btn-delete" onclick="deleteCode()" id="delete-btn"
-                        style="margin-top: 10px;"><i class='bx bx-trash'></i> سڕینەوەی ئەم کۆدە</button>
+            <div id="section-cities" style="display: none;">
+                <div class="container" id="cities-container">
+                    <div
+                        style="background:rgba(36,129,204,0.05); border:1px solid rgba(36,129,204,0.2); padding:15px; border-radius:12px; margin-bottom:20px;">
+                        <h4 style="margin:0 0 10px 0; color:var(--primary);"><i class='bx bx-map-pin'></i> زیادکردنی شار
+                        </h4>
+                        <input type="text" id="c-name" placeholder="ناوی شار (نموونە: هەولێر)">
+                        <div style="display:flex; gap:10px;">
+                            <input type="number" id="c-real" placeholder="نرخی شۆفێر">
+                            <input type="number" id="c-display" placeholder="نرخی لای ئەندام">
+                        </div>
+                        <button class="btn" style="margin-top:0;" onclick="addCity()"><i class='bx bx-plus'></i>
+                            زیادکردن</button>
+                    </div>
+                    <h4 style="margin:0 0 10px 0; color:#333;">لیستی شارەکان</h4>
+                    <div id="admin-cities-list"></div>
                 </div>
             </div>
         </div>
@@ -463,6 +655,9 @@
                 onclick="switchScreen('orders-management-screen', this)">
                 <i class='bx bx-package'></i>
             </button>
+
+            <button class="nav-item" id="nav-wallet" onclick="switchScreen('wallet-screen', this)"><i
+                    class='bx bx-wallet'></i></button>
 
             <button class="nav-item" id="nav-admin" style="display:none;" onclick="switchScreen('admin-screen', this)">
                 <i class='bx bx-shield-quarter'></i>
@@ -569,11 +764,81 @@
         <img id="zoomed-image" class="image-zoom-content" src="" onclick="event.stopPropagation()">
     </div>
 
+
+    <!-- جوزدان -->
+
+    <div id="profit-distribution-modal" class="modal-overlay" onclick="closeModal(event, 'profit-distribution-modal')">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h3 class="modal-title" style="color: #10b981;"><i class='bx bx-pie-chart-alt-2'></i> دابەشکردنی پارە
+                </h3>
+                <button class="modal-close" onclick="closeModal(null, 'profit-distribution-modal')"><i
+                        class='bx bx-x'></i></button>
+            </div>
+            <div id="profit-modal-body"></div>
+        </div>
+    </div>
+
+    <div id="wallet-action-modal" class="modal-overlay" onclick="closeModal(event, 'wallet-action-modal')">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h3 class="modal-title" id="wa-title"><i class='bx bx-wallet-alt'></i> بەڕێوەبردنی جزدان</h3>
+                <button class="modal-close" onclick="closeModal(null, 'wallet-action-modal')"><i
+                        class='bx bx-x'></i></button>
+            </div>
+            <div>
+                <input type="hidden" id="wa-user-code">
+                <input type="hidden" id="wa-action">
+                <label>بڕی پارە (دینار)</label>
+                <input type="number" id="wa-amount" placeholder="نموونە: 5000">
+                <label>هۆکار یان تێبینی</label>
+                <input type="text" id="wa-reason" placeholder="بۆچی ئەم پارەیە کەم/زیاد دەکەیت؟">
+                <button class="btn" id="wa-btn" onclick="submitWalletAction()">جێبەجێکردن</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="edit-city-modal" class="modal-overlay" onclick="closeModal(event, 'edit-city-modal')">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h3 class="modal-title"><i class='bx bx-map-pin'></i> چاکسازی شار</h3>
+                <button class="modal-close" onclick="closeModal(null, 'edit-city-modal')"><i
+                        class='bx bx-x'></i></button>
+            </div>
+            <div>
+                <input type="hidden" id="edit-c-id">
+                <label>ناوی شار</label>
+                <input type="text" id="edit-c-name" placeholder="ناوی شار (نموونە: هەولێر)">
+                <label>نرخی شۆفێر</label>
+                <input type="number" id="edit-c-real" placeholder="نرخی شۆفێر">
+                <label>نرخی لای ئەندام</label>
+                <input type="number" id="edit-c-display" placeholder="نرخی لای ئەندام">
+                <button class="btn" style="background:var(--primary);" onclick="updateCity()">نوێکردنەوە</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="wallet-screen" class="screen">
+        <h2 style="text-align: center; margin-bottom: 25px;"><i class='bx bx-wallet'></i> جزدانەکەم</h2>
+        <div class="wallet-card">
+            <h3>پارەی بەردەست (باڵانس)</h3>
+            <h1 id="my-wallet-balance">0 د.ع</h1>
+        </div>
+        <div class="wallet-card savings" id="my-wallet-savings-container" style="display: none;">
+            <h3>پاشەکەوت</h3>
+            <h1 id="my-wallet-savings">0 د.ع</h1>
+        </div>
+        <h3
+            style="margin-top: 25px; font-size: 15px; color:#1e293b; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px;">
+            دوایین جووڵە داراییەکان</h3>
+        <div id="my-transactions-list">
+            <p style="text-align:center; color:#888; margin-top:20px;">هێشتا هیچ جووڵەیەک نییە.</p>
+        </div>
+    </div>
+
     <script src="config.js"></script>
     <script>
 
-        // تەنها بۆ تاقیکردنەوە: هەرکە ئەپەکە کرایەوە نامەیەک دەنێرێت و پانییەکەت پێ دەڵێت
-        alert("پانی شاشەکەت ئێستا: " + window.innerWidth + "X" + window.innerHeight + "PX");
         // Load Supabase script dynamically
         async function ensureSupabaseLoaded() {
             try {
@@ -624,6 +889,7 @@
         let availableManagers = [];
         let availableAdmins = [];
         let availableConsultants = [];
+        let globalKingCode = null;
 
         // single async onload that waits for Supabase client to be ready
         window.onload = async function () {
@@ -647,10 +913,22 @@
                 applyUserPermissions();
             }
 
+
+            await fetchKingCode();
+            await loadDBCities();
+
             try { if (typeof setupSmartSearch === 'function') setupSmartSearch(); } catch (e) { }
 
             switchScreen('dashboard-screen');
         };
+
+
+        async function fetchKingCode() {
+            try {
+                const { data } = await supabase.from('employees').select('code').eq('role', 'پاشا').limit(1);
+                if (data && data.length > 0) globalKingCode = data[0].code;
+            } catch (e) { console.error("Error finding King code", e); }
+        }
 
 
         function applyUserPermissions() {
@@ -664,6 +942,16 @@
                 if (isKing || isManager) {
                     adminNavBtn.style.display = "flex";
                     setupAdminRolesUI(isKing);
+
+                    if (isKing) {
+                        // تەنها بۆ پاشا ئەم تابانە دەردەکەون
+                        let tabProfits = document.getElementById('tab-profits');
+                        let tabWallets = document.getElementById('tab-wallets');
+                        let tabCities = document.getElementById('tab-cities');
+                        if (tabProfits) tabProfits.style.display = 'inline-block';
+                        if (tabWallets) tabWallets.style.display = 'inline-block';
+                        if (tabCities) tabCities.style.display = 'inline-block';
+                    }
                 } else {
                     adminNavBtn.style.display = "none";
                 }
@@ -801,6 +1089,8 @@
         let isDashboardDataLoaded = false;
         let isManagementDataLoaded = false;
 
+        let isWalletDataLoaded = false;
+
         function switchScreen(screenId, navElement = null) {
             document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
             document.getElementById(screenId).classList.add('active');
@@ -834,34 +1124,44 @@
                 if (screenId === 'dashboard-screen') document.getElementById('nav-dashboard').classList.add('active');
             }
 
-            // --- جێگیرکردنی شەیپەکەی تابی ئەدمین بێ ئەنیمەیشن ---
             if (screenId === 'admin-screen') {
                 let activeTab = document.querySelector('#admin-screen .magic-tab.active');
                 let slider = document.getElementById('admin-tab-slider');
                 if (activeTab && slider) {
-                    slider.style.transition = 'none'; // ڕاگرتنی خلیسکێنە (ئەنیمەیشن) کاتی کردنەوە
+                    slider.style.transition = 'none';
                     slider.style.width = activeTab.offsetWidth + 'px';
                     slider.style.left = activeTab.offsetLeft + 'px';
-
-                    void slider.offsetWidth; // ناچارکردنی وێبگەڕەکە بۆ جێبەجێکرد لەو چرکەیەدا
-
-                    slider.style.transition = ''; // گەڕاندنەوەی ئەنیمەیشن بۆ کاتی کلیککردنەکانی دواتر
+                    void slider.offsetWidth;
+                    slider.style.transition = '';
                 }
             }
-            // ----------------------------------------------------
 
-            // تەنها کاتێک داتاکان دەهێنێت کە پێشتر نەیهێنابن
             if (screenId === 'dashboard-screen' && !isDashboardDataLoaded) fetchOrders();
             if (screenId === 'orders-management-screen' && !isManagementDataLoaded) loadManagementOrders();
 
+            // === ئەم دێڕە کێشەی جزدان چارەسەر دەکات ===
+            if (screenId === 'wallet-screen') loadMyWalletData();
+
             if (screenId === 'admin-screen' && !isAdminDataLoaded) {
-                let adminNavBtn = document.getElementById('nav-admin');
-                let btnOriginalHtml = adminNavBtn.innerHTML;
-                adminNavBtn.innerHTML = "<i class='bx bx-loader-alt bx-spin'></i>";
+                document.getElementById('admin-screen-content').style.display = 'none';
+                document.getElementById('admin-loading-spinner').style.display = 'flex';
 
                 loadHierarchyUsers().then(() => {
                     isAdminDataLoaded = true;
-                    adminNavBtn.innerHTML = btnOriginalHtml;
+                    document.getElementById('admin-loading-spinner').style.display = 'none';
+                    document.getElementById('admin-screen-content').style.display = 'flex';
+                    if (userRole === "پاشا" && typeof renderAdminCities === "function") renderAdminCities();
+
+                    // Reposition admin slider once content is displayed
+                    let activeTab = document.querySelector('#admin-screen .magic-tab.active');
+                    let slider = document.getElementById('admin-tab-slider');
+                    if (activeTab && slider) {
+                        slider.style.transition = 'none';
+                        slider.style.width = activeTab.offsetWidth + 'px';
+                        slider.style.left = activeTab.offsetLeft + 'px';
+                        void slider.offsetWidth; // force reflow
+                        slider.style.transition = '';
+                    }
                 });
             }
         }
@@ -952,6 +1252,11 @@
                     else if (status.includes("گەیشت")) { statusBg = "rgba(16, 185, 129, 0.12)"; statusColor = "#059669"; }
                     else if (status.includes("گەڕا") || status.includes("کەنسەڵ")) { statusBg = "rgba(239, 68, 68, 0.12)"; statusColor = "#dc2626"; }
 
+                    let statusClass = "status-preparing";
+                    if (status.includes("ڕێگا")) { statusClass = "status-onway"; }
+                    else if (status.includes("گەیشت")) { statusClass = "status-delivered"; }
+                    else if (status.includes("گەڕا") || status.includes("کەنسەڵ")) { statusClass = "status-returned"; }
+
                     let orderCodeStr = o.order_code || o.id || "00";
                     let custName = o.customer_name || "بێ ناو";
                     let items = o.item_names ? String(o.item_names).replace(/\n/g, ' - ') : "دیاری نەکراوە";
@@ -964,7 +1269,7 @@
                     let relativeTime = getRelativeTime(o.date);
 
                     newListHTML += `
-                    <div class="modern-order-card" onclick="openOrderDetails('${o.id}')">
+                    <div class="modern-order-card ${statusClass}" onclick="openOrderDetails('${o.id}')">
                         <div class="moc-header">
                             <h3 class="moc-title" style="display: flex; align-items: center; gap: 6px;">
                                 <div style="background: rgba(36, 129, 204, 0.1); padding: 5px; border-radius: 50%; display: flex;">
@@ -1174,6 +1479,11 @@
                 else if (status.includes("گەیشت")) { statusBg = "rgba(16, 185, 129, 0.12)"; statusColor = "#059669"; }
                 else if (status.includes("گەڕا") || status.includes("کەنسەڵ")) { statusBg = "rgba(239, 68, 68, 0.12)"; statusColor = "#dc2626"; }
 
+                let statusClass = "status-preparing";
+                if (status.includes("ڕێگا")) { statusClass = "status-onway"; }
+                else if (status.includes("گەیشت")) { statusClass = "status-delivered"; }
+                else if (status.includes("گەڕا") || status.includes("کەنسەڵ")) { statusClass = "status-returned"; }
+
                 let orderCodeStr = o.order_code || o.id || "00";
                 let custName = o.customer_name || "بێ ناو";
                 let total = Number(o.grand_total || 0).toLocaleString('en-US');
@@ -1183,7 +1493,7 @@
 
                 // هێڵە شینەکە لێرەش سڕایەوە
                 newListHTML += `
-                <div class="modern-order-card" style="margin-bottom:15px;" onclick="openOrderDetails('${o.id}')">
+                <div class="modern-order-card ${statusClass}" style="margin-bottom:15px;" onclick="openOrderDetails('${o.id}')">
                     <div class="moc-header">
                         <h3 class="moc-title" style="display: flex; align-items: center; gap: 6px;">
                             <div style="background: rgba(36, 129, 204, 0.1); padding: 5px; border-radius: 50%; display: flex;">
@@ -1351,9 +1661,24 @@
             renderImagePreviews();
         }
 
-        function openOrderDetails(orderId) {
+        async function openOrderDetails(orderId) {
             let o = allGlobalOrdersData[orderId];
-            if (!o) return;
+            if (!o) {
+                showToast("لۆدکردنی زانیاری ئۆردەر...", "loading");
+                try {
+                    const { data: fetchedOrder, error } = await supabase.from('orders').select('*').eq('id', orderId).single();
+                    if (error || !fetchedOrder) {
+                        showToast("ئۆردەرەکە نەدۆزرایەوە!", "error");
+                        return;
+                    }
+                    o = fetchedOrder;
+                    allGlobalOrdersData[orderId] = o;
+                    showToast("لۆد کرا", "success");
+                } catch (e) {
+                    showToast("هەڵەیەک لە هێنانەوەی ئۆردەردا ڕوویدا", "error");
+                    return;
+                }
+            }
 
             let b = document.getElementById('modal-details-body');
 
@@ -1419,7 +1744,7 @@
             }
 
             let canChangeStatus = false;
-            if (userRole === "پاشا") {
+            if (userRole === "پاشا" || userRole === "ئەدمین" || userRole === "ڕاوێژکار") {
                 canChangeStatus = true;
             } else if (userRole === "بەڕێوەبەر") {
                 let isTeam = teamMembersData.some(m => m.code === o.seller_code);
@@ -1430,15 +1755,25 @@
 
             let statusChangerHtml = "";
             if (canChangeStatus) {
+                let showDeliveredOption = (userRole === "ئەدمین" || userRole === "ڕاوێژکار" || userRole === "پاشا" || userRole === "بەڕێوەبەر");
                 statusChangerHtml = `
             <div style="margin-top: 20px; border-top: 1px dashed #cbd5e1; padding-top: 15px; background: rgba(36, 129, 204, 0.03); border-radius: 12px; padding: 15px;">
                 <label style="font-size:13px; color:var(--primary); font-weight:700; margin-bottom:10px; display:block;"><i class='bx bx-refresh'></i> گۆڕینی حاڵەتی داواکاری</label>
-                <select id="new-order-status" style="width:100%; height:42px; border:1px solid #e2e8f0; border-radius:10px; background:#fff; font-family:inherit; font-size:13px; padding:0 10px; margin-bottom:10px; outline:none; color:#1e293b;" onchange="toggleReturnReason(this.value)">
-                    <option value="ئامادە دەکرێت" ${o.status === 'ئامادە دەکرێت' ? 'selected' : ''}>ئامادە دەکرێت</option>
-                    <option value="لە ڕێگایە" ${o.status === 'لە ڕێگایە' ? 'selected' : ''}>لە ڕێگایە</option>
-                    <option value="گەیشتووە" ${o.status === 'گەیشتووە' ? 'selected' : ''}>گەیشتووە</option>
-                    <option value="گەڕاوەتەوە" ${o.status === 'گەڕاوەتەوە' ? 'selected' : ''}>گەڕاوەتەوە</option>
-                </select>
+                
+                <div class="custom-dropdown-wrapper" id="new-status-dropdown-wrapper" style="margin-bottom: 10px;">
+                    <div class="custom-dropdown-header" onclick="toggleFilterDropdown('new-status-list')">
+                        <span id="new-status-display-text">${o.status || 'ئامادە دەکرێت'}</span>
+                        <i class='bx bx-chevron-down'></i>
+                    </div>
+                    <div class="custom-dropdown-list" id="new-status-list" style="display: none;">
+                        <div class="custom-dropdown-item ${o.status === 'ئامادە دەکرێت' ? 'active' : ''}" onclick="selectNewStatus('ئامادە دەکرێت', event)">ئامادە دەکرێت</div>
+                        <div class="custom-dropdown-item ${o.status === 'لە ڕێگایە' ? 'active' : ''}" onclick="selectNewStatus('لە ڕێگایە', event)">لە ڕێگایە</div>
+                        ${showDeliveredOption ? `<div class="custom-dropdown-item ${o.status === 'گەیشتووە' ? 'active' : ''}" onclick="selectNewStatus('گەیشتووە', event)">گەیشتووە</div>` : ''}
+                        <div class="custom-dropdown-item ${o.status === 'گەڕاوەتەوە' ? 'active' : ''}" onclick="selectNewStatus('گەڕاوەتەوە', event)">گەڕاوەتەوە</div>
+                    </div>
+                    <input type="hidden" id="new-order-status" value="${o.status || 'ئامادە دەکرێت'}">
+                </div>
+
                 <input type="text" id="return-reason-input" placeholder="هۆکاری گەڕانەوە بنووسە بە ڕوونی..." value="${o.return_reason || ''}" style="width:100%; height:42px; border:1px solid #fecaca; border-radius:10px; background:#fff; font-family:inherit; font-size:13px; padding:0 10px; margin-bottom:10px; outline:none; color:#b91c1c; display: ${(o.status === 'گەڕاوەتەوە') ? 'block' : 'none'};">
                 <button class="btn" style="background:#2481cc; padding:10px; font-size:14px; width:100%;" onclick="updateOrderStatus('${o.id}')"><i class='bx bx-save'></i> پاشەکەوتکردنی حاڵەت</button>
             </div>
@@ -1528,42 +1863,94 @@
 
         async function updateOrderStatus(orderId) {
             let newStatus = document.getElementById('new-order-status').value;
-            let reason = "";
+            let reason = document.getElementById('return-reason-input').value.trim();
+            let o = allGlobalOrdersData[orderId];
 
-            if (newStatus === "گەڕاوەتەوە") {
-                reason = document.getElementById('return-reason-input').value.trim();
-                if (!reason) {
-                    showToast("تکایە هۆکاری گەڕانەوە بە ڕوونی بنووسە!", "error");
-                    return;
-                }
+            if (newStatus === "گەیشتووە" && userRole !== "ئەدمین" && userRole !== "ڕاوێژکار" && userRole !== "پاشا" && userRole !== "بەڕێوەبەر") {
+                showToast("تەنها ئەدمین، ڕاوێژکار، پاشا و بەڕێوەبەر دەتوانن داواکاری بە گەیشتوو دیاری بکەن!", "error");
+                return;
             }
 
-            showToast("خەریکی نوێکردنەوە...", "loading");
+            // کاتێک دەیکات بە گەیشتووە، با پۆپ-ئەپی دابەشکردنی پارە بکرێتەوە
+            if (newStatus === "گەیشتووە" && o.status !== "گەیشتووە") {
+                openDistributionModal(orderId);
+                return;
+            }
 
-            try {
-                const { error } = await supabase.from('orders').update({
-                    status: newStatus,
-                    return_reason: reason,
-                    status_changed_by: userName
-                }).eq('id', orderId);
-
-                if (error) throw error;
-
-                showToast("حاڵەتی داواکاری بە سەرکەوتوویی گۆڕدرا!", "success");
+            // کاتێک دەیکات بە گەڕاوەتەوە، با پارەکان ببڕێتەوە
+            if (newStatus === "گەڕاوەتەوە" && o.status === "گەیشتووە") {
+                if (!reason) { showToast("تکایە هۆکاری گەڕانەوە بە ڕوونی بنووسە!", "error"); return; }
+                showToast("گەڕاندنەوەی پارەکان...", "loading");
                 closeModal(null, 'order-details-modal');
 
-                isDashboardDataLoaded = false;
-                isManagementDataLoaded = false;
+                try {
+                    const { data: txs } = await supabase.from('transactions').select('*').eq('order_id', o.id);
+                    if (txs && txs.length > 0) {
+                        let posTxs = txs.filter(tx => parseFloat(tx.amount) > 0 && tx.type !== "گەڕانەوەی ئۆردەر");
+                        let negTxs = txs.filter(tx => parseFloat(tx.amount) < 0 || tx.type === "گەڕانەوەی ئۆردەر");
 
-                if (document.getElementById('dashboard-screen').classList.contains('active')) {
-                    fetchOrders();
-                } else if (document.getElementById('orders-management-screen').classList.contains('active')) {
-                    loadManagementOrders();
-                }
-            } catch (err) {
-                console.log(err);
-                showToast("❌ هەڵەیەک ڕوویدا لە کاتی گۆڕیندا", "error");
+                        let consumedIds = new Set();
+                        for (let neg of negTxs) {
+                            let match = posTxs.find(pos =>
+                                !consumedIds.has(pos.id) &&
+                                pos.user_code === neg.user_code &&
+                                Math.abs(parseFloat(pos.amount) + parseFloat(neg.amount)) < 0.01
+                            );
+                            if (match) {
+                                consumedIds.add(match.id);
+                            } else {
+                                let fallbackMatch = posTxs.find(pos =>
+                                    !consumedIds.has(pos.id) &&
+                                    pos.user_code === neg.user_code
+                                );
+                                if (fallbackMatch) {
+                                    consumedIds.add(fallbackMatch.id);
+                                }
+                            }
+                        }
+
+                        let unrevertedTxs = posTxs.filter(pos => !consumedIds.has(pos.id));
+
+                        let revertTxs = [];
+                        for (let tx of unrevertedTxs) {
+                            const { data: u } = await supabase.from('employees').select('balance, savings').eq('code', tx.user_code).single();
+                            if (u) {
+                                let oldBal = parseFloat(u.balance || 0); let oldSav = parseFloat(u.savings || 0);
+                                let newBal = oldBal; let newSav = oldSav;
+                                let isSavings = (tx.type === "پاشەکەوتی ئۆردەر");
+                                if (isSavings) newSav -= parseFloat(tx.amount); else newBal -= parseFloat(tx.amount);
+                                await supabase.from('employees').update({ balance: newBal, savings: newSav }).eq('code', tx.user_code);
+                                revertTxs.push({
+                                    user_code: tx.user_code,
+                                    order_id: o.id,
+                                    amount: -parseFloat(tx.amount),
+                                    type: "گەڕانەوەی ئۆردەر",
+                                    description: `بڕین بەهۆی گەڕانەوەی ئۆردەری ${o.order_code}. هۆکار: ${reason}`,
+                                    created_by: userName,
+                                    wallet_type: isSavings ? "savings" : "balance",
+                                    old_balance: isSavings ? oldSav : oldBal,
+                                    new_balance: isSavings ? newSav : newBal
+                                });
+                            }
+                        }
+                        if (revertTxs.length > 0) await supabase.from('transactions').insert(revertTxs);
+                    }
+                    await supabase.from('orders').update({ status: newStatus, return_reason: reason, status_changed_by: userName }).eq('id', orderId);
+                    showToast("حاڵەت گۆڕدرا و پارەکان بڕدران!", "success");
+                    if (document.getElementById('orders-management-screen').classList.contains('active')) loadManagementOrders(); else fetchOrders();
+                } catch (e) { showToast("هەڵە لە گەڕانەوەدا ڕوویدا", "error"); }
+                return;
             }
+
+            // گۆڕینی ئاسایی وەک (ڕێگا -> ئامادە)
+            if (newStatus === "گەڕاوەتەوە" && !reason) { showToast("هۆکار بنووسە!", "error"); return; }
+            showToast("خەریکی نوێکردنەوە...", "loading");
+            try {
+                await supabase.from('orders').update({ status: newStatus, return_reason: reason, status_changed_by: userName }).eq('id', orderId);
+                showToast("حاڵەت گۆڕدرا!", "success");
+                closeModal(null, 'order-details-modal');
+                if (document.getElementById('orders-management-screen').classList.contains('active')) loadManagementOrders(); else fetchOrders();
+            } catch (e) { showToast("هەڵەیەک ڕوویدا", "error"); }
         }
 
         async function deleteOrder(orderId) {
@@ -2159,16 +2546,32 @@
             let parent = clickedElement.parentElement;
             let tabs = parent.querySelectorAll('.magic-tab');
             let slider = parent.querySelector('.magic-slider');
+
             tabs.forEach(tab => tab.classList.remove('active'));
             clickedElement.classList.add('active');
+
             slider.style.width = clickedElement.offsetWidth + 'px';
             slider.style.left = clickedElement.offsetLeft + 'px';
+
+            document.getElementById('section-create-code').style.display = 'none';
+            document.getElementById('section-edit-code').style.display = 'none';
+            document.getElementById('section-profits').style.display = 'none';
+            document.getElementById('section-wallets').style.display = 'none';
+            document.getElementById('section-cities').style.display = 'none';
+
             if (tabName === 'create') {
                 document.getElementById('section-create-code').style.display = 'block';
-                document.getElementById('section-edit-code').style.display = 'none';
             } else if (tabName === 'edit') {
-                document.getElementById('section-create-code').style.display = 'none';
                 document.getElementById('section-edit-code').style.display = 'block';
+            } else if (tabName === 'profits') {
+                document.getElementById('section-profits').style.display = 'flex';
+                // ئەم دێڕە وا دەکات هەرکە چوویتە قازانجەکان، لیستەکە لۆد ببێت
+                filterProfitUsers();
+            } else if (tabName === 'wallets') {
+                document.getElementById('section-wallets').style.display = 'flex';
+                filterWalletUsers();
+            } else if (tabName === 'cities') {
+                document.getElementById('section-cities').style.display = 'flex';
             }
         }
 
@@ -2197,85 +2600,90 @@
         let backupOrderState = null;
 
         function showToast(message, type = 'info') {
-            let toast = document.getElementById('app-toast');
-            if (!toast) {
-                toast = document.createElement('div');
-                toast.id = 'app-toast';
-                toast.style.touchAction = 'none';
-                toast.style.userSelect = 'none';
-                document.body.appendChild(toast);
+            if (window.toastTimer) clearTimeout(window.toastTimer);
 
-                let startX = 0, startY = 0, currentX = 0, currentY = 0;
-                let lockAxis = null;
-
-                toast.addEventListener('touchstart', (e) => {
-                    if (window.toastTimer) clearTimeout(window.toastTimer);
-                    startX = e.touches[0].clientX;
-                    startY = e.touches[0].clientY;
-                    lockAxis = null;
-                    toast.style.transition = 'none';
-                }, { passive: true });
-
-                toast.addEventListener('touchmove', (e) => {
-                    if (!startX || !startY) return;
-
-                    let moveX = e.touches[0].clientX - startX;
-                    let moveY = e.touches[0].clientY - startY;
-
-                    if (!lockAxis) {
-                        if (Math.abs(moveX) > 5 && Math.abs(moveX) > Math.abs(moveY)) {
-                            lockAxis = 'x';
-                        } else if (Math.abs(moveY) > 5 && Math.abs(moveY) > Math.abs(moveX)) {
-                            lockAxis = 'y';
-                        }
-                        return;
-                    }
-
-                    if (lockAxis === 'x') {
-                        currentX = moveX;
-                        currentY = 0;
-                    } else if (lockAxis === 'y') {
-                        currentX = 0;
-                        currentY = moveY > 0 ? 0 : moveY;
-                    }
-
-                    toast.style.transform = `translate(calc(-50% + ${currentX}px), ${currentY}px)`;
-                }, { passive: true });
-
-                toast.addEventListener('touchend', (e) => {
-                    let shouldDismiss = false;
-                    if (lockAxis === 'x' && Math.abs(currentX) > 50) shouldDismiss = true;
-                    if (lockAxis === 'y' && currentY < -30) shouldDismiss = true;
-
-                    if (shouldDismiss) {
-                        toast.style.transition = 'transform 0.3s ease, opacity 0.3s ease';
-                        toast.style.opacity = '0';
-
-                        let exitX = lockAxis === 'x' ? currentX * 1.5 : 0;
-                        let exitY = lockAxis === 'y' ? currentY - 50 : 0;
-
-                        toast.style.transform = `translate(calc(-50% + ${exitX}px), ${exitY}px)`;
-
-                        setTimeout(() => {
-                            toast.style.transition = 'none';
-                            toast.classList.remove('show');
-                            toast.style.transform = 'translate(-50%, 0)';
-                        }, 300);
-                    } else {
-                        toast.style.transition = 'transform 0.3s ease';
-                        toast.style.transform = 'translate(-50%, 0)';
-
-                        if (!toast.classList.contains('theme-loading')) {
-                            window.toastTimer = setTimeout(() => {
-                                toast.style.transition = 'top 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55), transform 0.3s ease, opacity 0.3s ease';
-                                toast.classList.remove('show');
-                            }, 3000);
-                        }
-                    }
-
-                    startX = 0; startY = 0; currentX = 0; currentY = 0; lockAxis = null;
-                }, { passive: true });
+            let oldToast = document.getElementById('app-toast');
+            if (oldToast) {
+                oldToast.remove();
             }
+
+            let toast = document.createElement('div');
+            toast.id = 'app-toast';
+            toast.style.touchAction = 'none';
+            toast.style.userSelect = 'none';
+            document.body.appendChild(toast);
+
+            let startX = 0, startY = 0, currentX = 0, currentY = 0;
+            let lockAxis = null;
+
+            toast.addEventListener('touchstart', (e) => {
+                if (window.toastTimer) clearTimeout(window.toastTimer);
+                startX = e.touches[0].clientX;
+                startY = e.touches[0].clientY;
+                lockAxis = null;
+                toast.style.transition = 'none';
+            }, { passive: true });
+
+            toast.addEventListener('touchmove', (e) => {
+                if (!startX || !startY) return;
+
+                let moveX = e.touches[0].clientX - startX;
+                let moveY = e.touches[0].clientY - startY;
+
+                if (!lockAxis) {
+                    if (Math.abs(moveX) > 5 && Math.abs(moveX) > Math.abs(moveY)) {
+                        lockAxis = 'x';
+                    } else if (Math.abs(moveY) > 5 && Math.abs(moveY) > Math.abs(moveX)) {
+                        lockAxis = 'y';
+                    }
+                    return;
+                }
+
+                if (lockAxis === 'x') {
+                    currentX = moveX;
+                    currentY = 0;
+                } else if (lockAxis === 'y') {
+                    currentX = 0;
+                    currentY = moveY > 0 ? 0 : moveY;
+                }
+
+                toast.style.transform = `translate(calc(-50% + ${currentX}px), ${currentY}px)`;
+            }, { passive: true });
+
+            toast.addEventListener('touchend', (e) => {
+                let shouldDismiss = false;
+                if (lockAxis === 'x' && Math.abs(currentX) > 50) shouldDismiss = true;
+                if (lockAxis === 'y' && currentY < -30) shouldDismiss = true;
+
+                if (shouldDismiss) {
+                    toast.style.transition = 'transform 0.3s ease, opacity 0.3s ease';
+                    toast.style.opacity = '0';
+
+                    let exitX = lockAxis === 'x' ? currentX * 1.5 : 0;
+                    let exitY = lockAxis === 'y' ? currentY - 50 : 0;
+
+                    toast.style.transform = `translate(calc(-50% + ${exitX}px), ${exitY}px)`;
+
+                    setTimeout(() => {
+                        toast.remove();
+                    }, 300);
+                } else {
+                    toast.style.transition = 'transform 0.3s ease';
+                    toast.style.transform = 'translate(-50%, 0)';
+
+                    if (!toast.classList.contains('theme-loading')) {
+                        window.toastTimer = setTimeout(() => {
+                            toast.style.transition = 'top 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55), transform 0.3s ease, opacity 0.3s ease';
+                            toast.classList.remove('show');
+                            setTimeout(() => {
+                                toast.remove();
+                            }, 500);
+                        }, 3000);
+                    }
+                }
+
+                startX = 0; startY = 0; currentX = 0; currentY = 0; lockAxis = null;
+            }, { passive: true });
 
             toast.style.transition = 'top 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55), transform 0.3s ease, opacity 0.3s ease';
             toast.style.transform = 'translate(-50%, 0)';
@@ -2325,12 +2733,13 @@
 
             setTimeout(() => { toast.classList.add('show'); }, 10);
 
-            if (window.toastTimer) clearTimeout(window.toastTimer);
-
             if (type !== 'loading') {
                 window.toastTimer = setTimeout(() => {
                     toast.style.transition = 'top 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55), transform 0.3s ease, opacity 0.3s ease';
                     toast.classList.remove('show');
+                    setTimeout(() => {
+                        toast.remove();
+                    }, 500);
                 }, 4000);
             }
         }
@@ -2749,11 +3158,11 @@
                 document.querySelectorAll('input[name="u_role"]').forEach(r => r.checked = false);
                 updateFormByRole('create');
 
-                let adminNavBtn = document.getElementById('nav-admin');
-                let btnOriginalHtml = adminNavBtn.innerHTML;
-                adminNavBtn.innerHTML = "<i class='bx bx-loader-alt bx-spin'></i>";
+                document.getElementById('admin-screen-content').style.display = 'none';
+                document.getElementById('admin-loading-spinner').style.display = 'flex';
                 await loadHierarchyUsers();
-                adminNavBtn.innerHTML = btnOriginalHtml;
+                document.getElementById('admin-loading-spinner').style.display = 'none';
+                document.getElementById('admin-screen-content').style.display = 'flex';
             } catch (err) {
                 showToast("کێشەیەک ڕوویدا لە دروستکردندا", "error");
             }
@@ -2807,11 +3216,11 @@
                 document.getElementById('search-code-input').value = "";
                 document.getElementById('search-code-input').removeAttribute('data-code');
 
-                let adminNavBtn = document.getElementById('nav-admin');
-                let btnOriginalHtml = adminNavBtn.innerHTML;
-                adminNavBtn.innerHTML = "<i class='bx bx-loader-alt bx-spin'></i>";
+                document.getElementById('admin-screen-content').style.display = 'none';
+                document.getElementById('admin-loading-spinner').style.display = 'flex';
                 await loadHierarchyUsers();
-                adminNavBtn.innerHTML = btnOriginalHtml;
+                document.getElementById('admin-loading-spinner').style.display = 'none';
+                document.getElementById('admin-screen-content').style.display = 'flex';
             } catch (err) {
                 showToast("کێشەیەک لە نوێکردنەوەدا ڕوویدا", "error");
             }
@@ -2832,11 +3241,11 @@
                     document.getElementById('search-code-input').value = "";
                     document.getElementById('search-code-input').removeAttribute('data-code');
 
-                    let adminNavBtn = document.getElementById('nav-admin');
-                    let btnOriginalHtml = adminNavBtn.innerHTML;
-                    adminNavBtn.innerHTML = "<i class='bx bx-loader-alt bx-spin'></i>";
+                    document.getElementById('admin-screen-content').style.display = 'none';
+                    document.getElementById('admin-loading-spinner').style.display = 'flex';
                     await loadHierarchyUsers();
-                    adminNavBtn.innerHTML = btnOriginalHtml;
+                    document.getElementById('admin-loading-spinner').style.display = 'none';
+                    document.getElementById('admin-screen-content').style.display = 'flex';
                 } catch (err) {
                     showToast("هەڵەیەک ڕوویدا لە سڕینەوەدا", "error");
                 }
@@ -2875,7 +3284,7 @@
         // ==========================================
         // سیستەمی لیستی شارەکان (Dropdown)
         // ==========================================
-        const mainCitiesList = ["هەولێر", "سلێمانی", "دهۆک", "کەرکوک", "هەڵەبجە", "زاخۆ", "سۆران", "ڕانیە", "کەلار", "چەمچەماڵ", "هەڵەبجەی تازە"];
+        let mainCitiesList = ["هەولێر", "سلێمانی", "دهۆک", "کەرکوک", "هەڵەبجە", "زاخۆ", "سۆران", "ڕانیە", "کەلار", "چەمچەماڵ", "هەڵەبجەی تازە"];
 
         function showCityDropdown() {
             renderCityDropdown(mainCitiesList);
@@ -2926,17 +3335,48 @@
             }
         });
 
-        function checkCityWarning() {
+        let cityWarningTimeout = null;
+        async function checkCityWarning() {
             let cityInput = document.getElementById('city-input').value.trim();
             let warning = document.getElementById('city-warning');
 
-            let mainCities = ["هەولێر", "سلێمانی", "دهۆک", "کەرکوک", "هەڵەبجە", "زاخۆ", "سۆران", "ڕانیە", "کەلار", "چەمچەماڵ", "هەڵەبجەی تازە"];
-
-            if (cityInput.length > 0 && !mainCities.includes(cityInput)) {
-                warning.style.display = 'block';
-            } else {
+            if (!cityInput) {
                 warning.style.display = 'none';
+                return;
             }
+
+            // 1. Instant check against local list in memory
+            if (mainCitiesList.includes(cityInput)) {
+                warning.style.display = 'none';
+                return;
+            }
+
+            // 2. Debounce the query to prevent overloading the database on every keystroke
+            if (cityWarningTimeout) clearTimeout(cityWarningTimeout);
+
+            cityWarningTimeout = setTimeout(async () => {
+                try {
+                    let currentVal = document.getElementById('city-input').value.trim();
+                    if (currentVal !== cityInput) return;
+
+                    const { data, error } = await supabase
+                        .from('cities')
+                        .select('id')
+                        .eq('name', cityInput)
+                        .limit(1);
+
+                    if (data && data.length > 0) {
+                        warning.style.display = 'none';
+                        if (!mainCitiesList.includes(cityInput)) {
+                            mainCitiesList.push(cityInput);
+                        }
+                    } else {
+                        warning.style.display = 'block';
+                    }
+                } catch (e) {
+                    warning.style.display = 'block';
+                }
+            }, 300);
         }
 
         // ==========================================
@@ -2987,6 +3427,17 @@
             applyOrderFilters();
         }
 
+        function selectNewStatus(value, event) {
+            document.getElementById('new-status-display-text').innerText = value;
+            document.getElementById('new-order-status').value = value;
+            let listItems = document.getElementById('new-status-list').querySelectorAll('.custom-dropdown-item');
+            listItems.forEach(item => item.classList.remove('active'));
+            event.currentTarget.classList.add('active');
+            document.getElementById('new-status-list').style.display = 'none';
+            document.getElementById('new-status-dropdown-wrapper').classList.remove('open');
+            toggleReturnReason(value);
+        }
+
         // داخستنی لیستەکان کاتێک کلیک لە دەرەوەیان دەکرێت
         document.addEventListener('click', function (e) {
             if (!e.target.closest('.custom-dropdown-wrapper')) {
@@ -2994,6 +3445,706 @@
                 document.querySelectorAll('.custom-dropdown-wrapper').forEach(w => w.classList.remove('open'));
             }
         });
+
+
+        // ==========================================
+        // سیستەمی دارایی (جزدان، شارەکان، قازانجەکان)
+        // ==========================================
+        let dbCitiesList = [];
+
+        // هێنانی شارەکان کاتی لۆدبوون
+        async function loadDBCities() {
+            try {
+                const { data } = await supabase.from('cities').select('*');
+                if (data) { dbCitiesList = data; mainCitiesList = data.map(c => c.name); }
+            } catch (e) { }
+        }
+
+        // لەناو window.onload ـی خۆتدا پێویستە ئەمە زیاد بکەیت: loadDBCities(); 
+
+        async function loadMyWalletData() {
+            let list = document.getElementById('my-transactions-list');
+            if (!isWalletDataLoaded) {
+                list.innerHTML = loadingSpinnerHTML;
+            }
+            try {
+                const { data: me } = await supabase.from('employees').select('balance, savings').eq('code', currentUser.code).single();
+                if (me) {
+                    document.getElementById('my-wallet-balance').innerText = Number(me.balance || 0).toLocaleString() + " د.ع";
+                    document.getElementById('my-wallet-savings').innerText = Number(me.savings || 0).toLocaleString() + " د.ع";
+                }
+                const { data: txs } = await supabase.from('transactions').select('*').eq('user_code', currentUser.code).order('created_at', { ascending: false }).limit(50);
+                if (txs && txs.length > 0) {
+                    let html = "";
+                    txs.forEach(tx => {
+                        let isPlus = parseFloat(tx.amount) > 0;
+                        let iconClass = isPlus ? "plus" : "minus";
+                        let amountClass = isPlus ? "plus" : "minus";
+                        let iconSign = isPlus ? "<i class='bx bx-up-arrow-alt'></i>" : "<i class='bx bx-down-arrow-alt'></i>";
+                        let amountSign = isPlus ? "+" : "";
+                        let dateStr = tx.created_at ? tx.created_at.split('T')[0] : "";
+                        let clickAttr = "";
+                        let cursorStyle = "";
+                        let orderBadge = "";
+                        if (tx.order_id) {
+                            clickAttr = `onclick="openOrderDetails('${tx.order_id}')"`;
+                            cursorStyle = "cursor: pointer;";
+                            orderBadge = `<span style="font-size:9px; color:#2481cc; background:rgba(36,129,204,0.08); padding:1px 5px; border-radius:4px; margin-top:4px; display:inline-block;"><i class='bx bx-show-alt'></i> زانیاری ئۆردەر</span>`;
+                        }
+                        html += `<div class="transaction-item ${iconClass}" ${clickAttr} style="${cursorStyle}"><div class="tx-info"><div class="tx-icon ${iconClass}">${iconSign}</div><div class="tx-details"><h4>${tx.type}</h4><p>${tx.description} ${orderBadge}<br><i class='bx bx-calendar'></i> ${dateStr}</p></div></div><div class="tx-amount ${amountClass}">${amountSign}${Number(tx.amount).toLocaleString()}</div></div>`;
+                    });
+                    list.innerHTML = html;
+                } else { list.innerHTML = `<p style="text-align:center; color:#888;">هێشتا هیچ جووڵەیەکی دارایی نییە.</p>`; }
+                isWalletDataLoaded = true;
+            } catch (err) {
+                if (!isWalletDataLoaded) {
+                    list.innerHTML = `<p style="text-align:center; color:red;">❌ کێشەیەک ڕوویدا.</p>`;
+                }
+            }
+        }
+
+        function filterWalletUsers() {
+            let roleFilter = document.querySelector('input[name="wallet_role_filter"]:checked').value;
+            let searchVal = document.getElementById('search-wallet-input').value.trim().toLowerCase();
+            let listContainer = document.getElementById('wallet-users-list');
+            let editSection = document.getElementById('wallet-edit-section');
+
+            if (editSection.style.display === 'block' && !document.getElementById('wa-user-code').value) {
+                editSection.style.display = 'none';
+            }
+
+            let filteredUsers = allEditableUsers.filter(u => {
+                if (u.data.role !== roleFilter) return false;
+                if (searchVal) {
+                    if (!u.name.toLowerCase().includes(searchVal) && !u.code.toLowerCase().includes(searchVal)) {
+                        return false;
+                    }
+                }
+                return true;
+            });
+
+            let html = "";
+            if (filteredUsers.length === 0) {
+                html = `<p style="text-align:center; color:#94a3b8; font-size:13px; margin-top:20px;">هیچ کارمەندێک نەدۆزرایەوە.</p>`;
+            } else {
+                filteredUsers.forEach(u => {
+                    let bal = u.data.balance || 0;
+                    let sav = u.data.savings || 0;
+                    let role = u.data.role || "ئەندام";
+                    let roleBg = "rgba(16, 185, 129, 0.1)"; let roleColor = "#059669";
+                    if (role === "بەڕێوەبەر") { roleBg = "rgba(59, 130, 246, 0.1)"; roleColor = "#2563eb"; }
+                    else if (role === "ئەدمین") { roleBg = "rgba(245, 158, 11, 0.1)"; roleColor = "#d97706"; }
+                    else if (role === "ڕاوێژکار") { roleBg = "rgba(124, 58, 237, 0.1)"; roleColor = "#7c3aed"; }
+
+                    html += `
+                    <div class="modern-order-card" style="background:#fff; border:1px solid #e2e8f0; padding:12px; border-radius:12px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; cursor:pointer;" onclick="openWalletEdit('${u.code}')">
+                        <div>
+                            <strong style="color:#1e293b; font-size:14px;">${u.name}</strong>
+                            <span style="font-size:10px; padding:2px 6px; border-radius:4px; margin-right:5px; background:${roleBg}; color:${roleColor}; font-weight:bold;">${role}</span><br>
+                            <span style="font-size:11px; color:#64748b; font-family:monospace;">${u.code}</span>
+                        </div>
+                        <div style="text-align:left;">
+                            <span style="display:block; font-size:12px; font-weight:700; color:var(--primary);" dir="ltr">باڵانس: ${Number(bal).toLocaleString()} د.ع</span>
+                            <span style="display:block; font-size:12px; font-weight:700; color:#10b981;" dir="ltr">پاشەکەوت: ${Number(sav).toLocaleString()} د.ع</span>
+                        </div>
+                    </div>`;
+                });
+            }
+            listContainer.innerHTML = html;
+        }
+
+        function openWalletEdit(code) {
+            let u = allEditableUsers.find(x => x.code === code);
+            if (!u) return;
+
+            document.getElementById('w-name').innerText = u.name;
+            document.getElementById('w-code').innerText = u.code;
+            document.getElementById('w-balance-display').innerText = Number(u.data.balance || 0).toLocaleString() + " د.ع";
+            document.getElementById('w-savings-display').innerText = Number(u.data.savings || 0).toLocaleString() + " د.ع";
+            document.getElementById('w-direct-balance').value = u.data.balance || 0;
+            document.getElementById('w-direct-savings').value = u.data.savings || 0;
+            document.getElementById('wa-user-code').value = u.code;
+
+            document.getElementById('wallet-users-list').style.display = 'none';
+            document.getElementById('wallet-search-container').style.display = 'none';
+            document.getElementById('wallet-role-tabs-container').style.display = 'none';
+            document.getElementById('wallet-edit-section').style.display = 'flex';
+            loadUserWalletTransactions(u.code);
+        }
+
+        async function loadUserWalletTransactions(code) {
+            let list = document.getElementById('w-user-transactions-list');
+            list.innerHTML = `<p style="text-align:center; color:#888; font-size:12px; margin: 15px 0;">لە لۆدکاردندایە...</p>`;
+            try {
+                const { data: txs } = await supabase.from('transactions').select('*').eq('user_code', code).order('created_at', { ascending: false }).limit(4);
+                if (txs && txs.length > 0) {
+                    let html = "";
+                    txs.forEach(tx => {
+                        let isPlus = parseFloat(tx.amount) > 0;
+                        let iconClass = isPlus ? "plus" : "minus";
+                        let amountClass = isPlus ? "plus" : "minus";
+                        let iconSign = isPlus ? "<i class='bx bx-up-arrow-alt'></i>" : "<i class='bx bx-down-arrow-alt'></i>";
+                        let amountSign = isPlus ? "+" : "";
+                        let dateStr = tx.created_at ? tx.created_at.split('T')[0] : "";
+                        let clickAttr = "";
+                        let cursorStyle = "";
+                        let orderBadge = "";
+                        if (tx.order_id) {
+                            clickAttr = `onclick="openOrderDetails('${tx.order_id}')"`;
+                            cursorStyle = "cursor: pointer;";
+                            orderBadge = `<span style="font-size:9px; color:#2481cc; background:rgba(36,129,204,0.08); padding:1px 5px; border-radius:4px; margin-top:4px; display:inline-block;"><i class='bx bx-show-alt'></i> زانیاری ئۆردەر</span>`;
+                        }
+                        html += `<div class="transaction-item ${iconClass}" ${clickAttr} style="${cursorStyle}"><div class="tx-info"><div class="tx-icon ${iconClass}">${iconSign}</div><div class="tx-details"><h4>${tx.type}</h4><p>${tx.description} ${orderBadge}<br><i class='bx bx-calendar'></i> ${dateStr}</p></div></div><div class="tx-amount ${amountClass}">${amountSign}${Number(tx.amount).toLocaleString()}</div></div>`;
+                    });
+                    list.innerHTML = html;
+                } else {
+                    list.innerHTML = `<p style="text-align:center; color:#888; font-size:12px; margin: 15px 0;">هیچ جووڵەیەکی دارایی نییە.</p>`;
+                }
+            } catch (err) {
+                list.innerHTML = `<p style="text-align:center; color:red; font-size:12px; margin: 15px 0;">❌ کێشەیەک لە لۆدکردنی جووڵەکان ڕوویدا.</p>`;
+            }
+        }
+
+        function cancelWalletEdit() {
+            document.getElementById('wallet-edit-section').style.display = 'none';
+            document.getElementById('wa-user-code').value = "";
+            document.getElementById('wallet-users-list').style.display = 'block';
+            document.getElementById('wallet-search-container').style.display = 'flex';
+            document.getElementById('wallet-role-tabs-container').style.display = 'flex';
+        }
+
+        async function saveDirectWallet() {
+            let code = document.getElementById('wa-user-code').value;
+            let newBal = parseFloat(document.getElementById('w-direct-balance').value || 0);
+            let newSav = parseFloat(document.getElementById('w-direct-savings').value || 0);
+            if (!code) return;
+
+            showToast("خەریکی نوێکردنەوە...", "loading");
+            try {
+                const { data: oldData } = await supabase.from('employees').select('balance, savings').eq('code', code).single();
+                let oldBal = parseFloat(oldData.balance || 0);
+                let oldSav = parseFloat(oldData.savings || 0);
+
+                await supabase.from('employees').update({ balance: newBal, savings: newSav }).eq('code', code);
+
+                if (newBal !== oldBal) {
+                    await supabase.from('transactions').insert({
+                        user_code: code,
+                        amount: newBal - oldBal,
+                        type: "دەستکاری دەستی (باڵانس)",
+                        description: `پاشا باڵانسی لە ${oldBal.toLocaleString()} گۆڕی بۆ ${newBal.toLocaleString()}`,
+                        created_by: userName,
+                        wallet_type: 'balance',
+                        old_balance: oldBal,
+                        new_balance: newBal
+                    });
+                }
+                if (newSav !== oldSav) {
+                    await supabase.from('transactions').insert({
+                        user_code: code,
+                        amount: newSav - oldSav,
+                        type: "دەستکاری دەستی (پاشەکەوت)",
+                        description: `پاشا پاشەکەوتی لە ${oldSav.toLocaleString()} گۆڕی بۆ ${newSav.toLocaleString()}`,
+                        created_by: userName,
+                        wallet_type: 'savings',
+                        old_balance: oldSav,
+                        new_balance: newSav
+                    });
+                }
+
+                showToast("بە سەرکەوتوویی جێبەجێ کرا!", "success");
+
+                let userIndex = allEditableUsers.findIndex(x => x.code === code);
+                if (userIndex !== -1) {
+                    allEditableUsers[userIndex].data.balance = newBal;
+                    allEditableUsers[userIndex].data.savings = newSav;
+                }
+
+                await loadHierarchyUsers();
+                filterWalletUsers();
+                cancelWalletEdit();
+            } catch (e) {
+                showToast("هەڵەیەک ڕوویدا لە نوێکردنەوەی جزدان", "error");
+            }
+        }
+
+        // ----------------------------------------
+        // سیستەمی نوێی لیستی قازانجەکان
+        // ----------------------------------------
+        function filterProfitUsers() {
+            let roleFilter = document.querySelector('input[name="profit_role_filter"]:checked').value;
+            let searchVal = document.getElementById('search-profit-input').value.trim().toLowerCase();
+            let listContainer = document.getElementById('profit-users-list');
+            let editSection = document.getElementById('profit-edit-section');
+
+            // شاردنەوەی بەشی دەستکاری ئەگەر کراوە بێت لەکاتی گۆڕینی تابەکان
+            if (editSection.style.display === 'block' && !document.getElementById('p-hidden-code').value) {
+                editSection.style.display = 'none';
+            }
+
+            // فلتەرکردنی کارمەندان بەپێی پلە و بۆکسی گەڕان
+            let filteredUsers = allEditableUsers.filter(u => {
+                if (u.data.role !== roleFilter) return false;
+                if (searchVal) {
+                    if (!u.name.toLowerCase().includes(searchVal) && !u.code.toLowerCase().includes(searchVal)) {
+                        return false;
+                    }
+                }
+                return true;
+            });
+
+            // دروستکردنی دیزاینی لیستەکە
+            let html = "";
+            if (filteredUsers.length === 0) {
+                html = `<p style="text-align:center; color:#94a3b8; font-size:13px; margin-top:20px;">هیچ کارمەندێک نەدۆزرایەوە.</p>`;
+            } else {
+                filteredUsers.forEach(u => {
+                    let rate = u.data.profit_rate || 0;
+                    html += `
+                    <div style="background:#fff; border:1px solid #e2e8f0; padding:12px; border-radius:10px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; cursor:pointer; transition:0.2s;" onclick="openProfitEdit('${u.code}')">
+                        <div>
+                            <strong style="color:#1e293b; font-size:14px;">${u.name}</strong><br>
+                            <span style="font-size:11px; color:#64748b; font-family:monospace;">${u.code}</span>
+                        </div>
+                        <div style="text-align:left;">
+                            <span style="display:block; font-size:13px; font-weight:bold; color:var(--primary);" dir="ltr">${rate} د.ع</span>
+                            <span style="font-size:10px; color:#94a3b8;">دەستکاری <i class='bx bx-edit'></i></span>
+                        </div>
+                    </div>`;
+                });
+            }
+            listContainer.innerHTML = html;
+        }
+
+        // کردنەوەی بەشی سەیڤکردنی قازانج کاتێک کلیک لە ناوێک دەکات
+        function openProfitEdit(code) {
+            let u = allEditableUsers.find(x => x.code === code);
+            if (!u) return;
+
+            document.getElementById('profit-users-list').style.display = 'none';
+            document.getElementById('profit-search-container').style.display = 'none';
+
+            document.getElementById('p-hidden-code').value = u.code;
+            document.getElementById('p-name').innerText = u.name;
+            document.getElementById('p-rate').value = u.data.profit_rate || 0;
+
+            let hint = document.getElementById('p-hint');
+            if (u.data.role === "ڕاوێژکار") {
+                hint.innerHTML = "* قازانجی ڕاوێژکار بۆ هەر <b>ئۆردەرێک</b> حیساب دەکرێت.";
+            } else {
+                hint.innerHTML = "* قازانجی بەڕێوەبەر یان ئەدمین بۆ هەر <b>کاڵایەک</b> حیساب دەکرێت.";
+            }
+
+            document.getElementById('profit-edit-section').style.display = 'block';
+        }
+
+        // گەڕانەوە بۆ لیستەکە
+        function cancelProfitEdit() {
+            document.getElementById('profit-edit-section').style.display = 'none';
+            document.getElementById('p-hidden-code').value = "";
+            document.getElementById('profit-users-list').style.display = 'block';
+            document.getElementById('profit-search-container').style.display = 'flex';
+        }
+
+        function adjustProfitRate(change) {
+            let input = document.getElementById('p-rate');
+            let current = parseFloat(input.value) || 0;
+            let newVal = Math.max(0, current + change);
+            input.value = newVal;
+        }
+
+        // سەیڤکردن بۆ ناو داتابەیس
+        async function saveProfitRate() {
+            let code = document.getElementById('p-hidden-code').value;
+            let rate = document.getElementById('p-rate').value;
+            if (!code || !rate) { showToast("تکایە بڕەکە بنووسە", "error"); return; }
+
+            showToast("خەریکی سەیڤکردن...", "loading");
+            try {
+                await supabase.from('employees').update({ profit_rate: parseFloat(rate) }).eq('code', code);
+                showToast("بە سەرکەوتوویی سەیڤ کرا!", "success");
+
+                // نوێکردنەوەی نرخەکە لەناو مێشکی ئەپەکەدا بێ ئەوەی ڕیفرێش بکەین
+                let userIndex = allEditableUsers.findIndex(x => x.code === code);
+                if (userIndex !== -1) {
+                    allEditableUsers[userIndex].data.profit_rate = parseFloat(rate);
+                }
+
+                cancelProfitEdit();
+                filterProfitUsers(); // نوێکردنەوەی لیستەکە
+            } catch (e) { showToast("هەڵەیەک ڕوویدا لە سەیڤکردندا", "error"); }
+        }
+
+        function openWalletAction(actionType) {
+            let modal = document.getElementById('wallet-action-modal');
+            let title = document.getElementById('wa-title');
+            document.getElementById('wa-action').value = actionType;
+            if (actionType === 'add') { title.innerHTML = "<i class='bx bx-plus-circle'></i> زیادکردنی پاداشت"; }
+            if (actionType === 'deduct') { title.innerHTML = "<i class='bx bx-minus-circle'></i> کەمکردنەوە/سزا"; }
+            if (actionType === 'salary') { title.innerHTML = "<i class='bx bx-money-withdraw'></i> پێدانی مووچە"; document.getElementById('wa-amount').value = ""; }
+            modal.classList.add('show');
+        }
+
+        async function submitWalletAction() {
+            let userCode = document.getElementById('wa-user-code').value;
+            let action = document.getElementById('wa-action').value;
+            let amount = parseFloat(document.getElementById('wa-amount').value || 0);
+            let reason = document.getElementById('wa-reason').value.trim();
+            if (!reason) { showToast("تکایە هۆکارەکەی بنووسە!", "error"); return; }
+            if (action !== 'salary' && amount <= 0) { showToast("بڕی پارەکە نادروستە!", "error"); return; }
+
+            showToast("جێبەجێکردن...", "loading");
+            try {
+                const { data: u } = await supabase.from('employees').select('balance').eq('code', userCode).single();
+                let currentBal = parseFloat(u.balance || 0); let finalAmount = amount; let newBal = currentBal; let typeText = "";
+                if (action === 'add') { newBal += finalAmount; typeText = "زیادکردنی دەستی"; }
+                if (action === 'deduct') { finalAmount = -finalAmount; newBal += finalAmount; typeText = "کەمکردنەوەی دەستی"; }
+                if (action === 'salary') { finalAmount = -currentBal; newBal = 0; typeText = "پێدانی مووچە"; }
+
+                await supabase.from('employees').update({ balance: newBal }).eq('code', userCode);
+                await supabase.from('transactions').insert({
+                    user_code: userCode,
+                    amount: finalAmount,
+                    type: typeText,
+                    description: reason,
+                    created_by: userName,
+                    wallet_type: 'balance',
+                    old_balance: currentBal,
+                    new_balance: newBal
+                });
+
+                showToast("جێبەجێ کرا!", "success");
+                closeModal(null, 'wallet-action-modal'); document.getElementById('wa-amount').value = ""; document.getElementById('wa-reason').value = "";
+                await loadHierarchyUsers();
+                filterWalletUsers();
+                if (userCode) {
+                    openWalletEdit(userCode);
+                }
+            } catch (e) { showToast("کێشەیەک ڕوویدا", "error"); }
+        }
+
+        async function addCity() {
+            let name = document.getElementById('c-name').value.trim(); let realP = document.getElementById('c-real').value; let dispP = document.getElementById('c-display').value;
+            if (!name || !realP || !dispP) return showToast("هەموو خانەکان پڕبکەرەوە", "error");
+            showToast("زیادکردن...", "loading");
+            try {
+                await supabase.from('cities').insert([{ name: name, real_price: parseFloat(realP), display_price: parseFloat(dispP) }]);
+                showToast("سەرکەوتوو بوو", "success"); document.getElementById('c-name').value = ""; document.getElementById('c-real').value = ""; document.getElementById('c-display').value = "";
+                await loadDBCities(); renderAdminCities();
+            } catch (e) { showToast("هەڵە هەیە", "error"); }
+        }
+
+        async function deleteCity(id) {
+            if (!confirm("دڵنیایت؟")) return;
+            showToast("سڕینەوە...", "loading");
+            try {
+                await supabase.from('cities').delete().eq('id', id);
+                showToast("سڕایەوە", "success");
+                await loadDBCities();
+                renderAdminCities();
+            } catch (e) { showToast("هەڵە هەیە", "error"); }
+        }
+
+        function openEditCityModal(id) {
+            let city = dbCitiesList.find(c => String(c.id) === String(id));
+            if (!city) return;
+            document.getElementById('edit-c-id').value = city.id;
+            document.getElementById('edit-c-name').value = city.name;
+            document.getElementById('edit-c-real').value = city.real_price;
+            document.getElementById('edit-c-display').value = city.display_price;
+            document.getElementById('edit-city-modal').classList.add('show');
+        }
+
+        async function updateCity() {
+            let id = document.getElementById('edit-c-id').value;
+            let name = document.getElementById('edit-c-name').value.trim();
+            let realP = document.getElementById('edit-c-real').value;
+            let dispP = document.getElementById('edit-c-display').value;
+            if (!name || !realP || !dispP) return showToast("هەموو خانەکان پڕبکەرەوە", "error");
+            showToast("پاشەکەوتکردن...", "loading");
+            try {
+                await supabase.from('cities').update({ name: name, real_price: parseFloat(realP), display_price: parseFloat(dispP) }).eq('id', id);
+                showToast("سەرکەوتوو بوو", "success");
+                closeModal(null, 'edit-city-modal');
+                await loadDBCities();
+                renderAdminCities();
+            } catch (e) { showToast("هەڵە هەیە", "error"); }
+        }
+
+        function renderAdminCities() {
+            let list = document.getElementById('admin-cities-list'); let html = "";
+            dbCitiesList.forEach(c => {
+                html += `<div style="background:#fff; border:1px solid #e2e8f0; padding:10px 15px; border-radius:10px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
+                    <div>
+                        <strong style="color:var(--primary);">${c.name}</strong><br>
+                        <span style="font-size:11px; color:#64748b;">شۆفێر: ${Number(c.real_price || 0).toLocaleString()} | ئەندام: ${Number(c.display_price || 0).toLocaleString()}</span>
+                    </div>
+                    <div style="display:flex; gap:8px;">
+                        <button onclick="openEditCityModal('${c.id}')" style="background: rgba(2, 132, 199, 0.1); color: #0284c7; border: 1px solid rgba(2, 132, 199, 0.2); width: 34px; height: 34px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 16px; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='rgba(2, 132, 199, 0.2)'" onmouseout="this.style.background='rgba(2, 132, 199, 0.1)'"><i class='bx bx-edit-alt'></i></button>
+                        <button onclick="deleteCity('${c.id}')" style="background: rgba(220, 53, 69, 0.1); color: #dc3545; border: 1px solid rgba(220, 53, 69, 0.2); width: 34px; height: 34px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 16px; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='rgba(220, 53, 69, 0.2)'" onmouseout="this.style.background='rgba(220, 53, 69, 0.1)'"><i class='bx bx-trash'></i></button>
+                    </div>
+                </div>`;
+            });
+            list.innerHTML = html;
+        }
+
+        let distributingOrder = null; let distData = {}; let isDistKingOrder = false;
+        async function openDistributionModal(orderId) {
+            closeModal(null, 'order-details-modal');
+            distributingOrder = allGlobalOrdersData[orderId]; let o = distributingOrder;
+            let oldToast = document.getElementById('app-toast');
+            if (oldToast) oldToast.remove();
+            try {
+                const { data: memberData } = await supabase.from('employees').select('*').eq('code', o.seller_code).single();
+                let codesToFetch = [o.seller_code, memberData.manager, memberData.admin, memberData.consultant].filter(Boolean);
+                const { data: usersData } = await supabase.from('employees').select('code, full_name, profit_rate, role').in('code', codesToFetch);
+                let uMap = {}; usersData.forEach(u => uMap[u.code] = u);
+
+                let itemsCount = (o.item_qtys || "").split('\n').reduce((sum, q) => sum + (parseInt(q) || 1), 0);
+
+                distData.member = { code: o.seller_code, name: uMap[o.seller_code]?.full_name || "ئەندام" };
+                distData.manager = { code: memberData.manager, name: uMap[memberData.manager]?.full_name || "نییە", profit: (uMap[memberData.manager]?.profit_rate || 0) * itemsCount };
+                distData.admin = { code: memberData.admin, name: uMap[memberData.admin]?.full_name || "نییە", profit: (uMap[memberData.admin]?.profit_rate || 0) * itemsCount };
+                distData.consultant = { code: memberData.consultant, name: uMap[memberData.consultant]?.full_name || "نییە", profit: (uMap[memberData.consultant]?.profit_rate || 0) * 1 };
+
+                let cityName = o.address ? o.address.split('-')[0].trim() : ""; let cityObj = dbCitiesList.find(c => c.name === cityName);
+                distData.deliveryCost = cityObj ? cityObj.real_price : 4000; distData.grandTotal = parseFloat(o.grand_total);
+
+                isDistKingOrder = (memberData && memberData.role === "پاشا");
+                let isAuthorized = (userRole === "ئەدمین" || userRole === "ڕاوێژکار" || userRole === "بەڕێوەبەر" || userRole === "پاشا");
+                let displayStyle = (isDistKingOrder || !isAuthorized) ? 'display: none;' : '';
+
+                let showManagerStyle = (isDistKingOrder || !isAuthorized || !memberData.manager) ? 'display: none;' : '';
+                let showAdminStyle = (isDistKingOrder || !isAuthorized || !memberData.admin) ? 'display: none;' : '';
+                let showConsultantStyle = (isDistKingOrder || !isAuthorized || !memberData.consultant) ? 'display: none;' : '';
+
+                let b = document.getElementById('profit-modal-body');
+                b.innerHTML = `<div style="background:#f8fafc; padding:15px; border-radius:12px; border:1px dashed #cbd5e1; margin-bottom:15px; text-align:center;"><span style="font-size:12px; color:#64748b;">کۆی گشتی وەرگیراو لە کڕیار</span><h2 style="margin:5px 0 0 0; color:#10b981;" dir="ltr">${distData.grandTotal.toLocaleString()} د.ع</h2></div>
+                <div class="dist-input-row">
+                    <label><i class='bx bx-car'></i> نرخی گەیاندن (شۆفێر)</label>
+                    <div class="dist-input-group">
+                        <button type="button" class="qty-btn plus-btn" onclick="adjustDistValue('dist-delivery', 1000)">
+                            <svg class="qty-icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 18 18">
+                                <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 1v16M1 9h16"></path>
+                            </svg>
+                        </button>
+                        <input type="number" id="dist-delivery" value="${distData.deliveryCost}" oninput="calcKingProfit()" class="qty-input">
+                        <button type="button" class="qty-btn minus-btn" onclick="adjustDistValue('dist-delivery', -1000)">
+                            <svg class="qty-icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 18 18">
+                                <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M1 9h16"></path>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                <div class="dist-input-row" style="${showManagerStyle}">
+                    <label><i class='bx bx-user'></i> بەڕێوەبەر (${distData.manager.name})</label>
+                    <div class="dist-input-group">
+                        <button type="button" class="qty-btn plus-btn" onclick="adjustDistValue('dist-manager', 1000)" ${!distData.manager.code ? 'disabled' : ''}>
+                            <svg class="qty-icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 18 18">
+                                <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 1v16M1 9h16"></path>
+                            </svg>
+                        </button>
+                        <input type="number" id="dist-manager" value="${distData.manager.code ? distData.manager.profit : 0}" ${!distData.manager.code ? 'disabled' : ''} oninput="calcKingProfit()" class="qty-input">
+                        <button type="button" class="qty-btn minus-btn" onclick="adjustDistValue('dist-manager', -1000)" ${!distData.manager.code ? 'disabled' : ''}>
+                            <svg class="qty-icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 18 18">
+                                <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M1 9h16"></path>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                <div class="dist-input-row" style="${showAdminStyle}">
+                    <label><i class='bx bx-shield'></i> ئەدمین (${distData.admin.name})</label>
+                    <div class="dist-input-group">
+                        <button type="button" class="qty-btn plus-btn" onclick="adjustDistValue('dist-admin', 1000)" ${!distData.admin.code ? 'disabled' : ''}>
+                            <svg class="qty-icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 18 18">
+                                <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 1v16M1 9h16"></path>
+                            </svg>
+                        </button>
+                        <input type="number" id="dist-admin" value="${distData.admin.code ? distData.admin.profit : 0}" ${!distData.admin.code ? 'disabled' : ''} oninput="calcKingProfit()" class="qty-input">
+                        <button type="button" class="qty-btn minus-btn" onclick="adjustDistValue('dist-admin', -1000)" ${!distData.admin.code ? 'disabled' : ''}>
+                            <svg class="qty-icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 18 18">
+                                <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M1 9h16"></path>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                <div class="dist-input-row" style="${showConsultantStyle}">
+                    <label><i class='bx bx-glasses'></i> ڕاوێژکار (${distData.consultant.name})</label>
+                    <div class="dist-input-group">
+                        <button type="button" class="qty-btn plus-btn" onclick="adjustDistValue('dist-consultant', 1000)" ${!distData.consultant.code ? 'disabled' : ''}>
+                            <svg class="qty-icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 18 18">
+                                <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 1v16M1 9h16"></path>
+                            </svg>
+                        </button>
+                        <input type="number" id="dist-consultant" value="${distData.consultant.code ? distData.consultant.profit : 0}" ${!distData.consultant.code ? 'disabled' : ''} oninput="calcKingProfit()" class="qty-input">
+                        <button type="button" class="qty-btn minus-btn" onclick="adjustDistValue('dist-consultant', -1000)" ${!distData.consultant.code ? 'disabled' : ''}>
+                            <svg class="qty-icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 18 18">
+                                <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M1 9h16"></path>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                <div class="dist-input-row" style="background:#eff6ff; border-color:#bfdbfe; ${displayStyle}">
+                    <label style="color:#1d4ed8; font-weight:bold;"><i class='bx bx-wallet'></i> قازانجی ئەندام</label>
+                    <div class="dist-input-group" style="border-color: #93c5fd;">
+                        <button type="button" class="qty-btn plus-btn" onclick="adjustDistValue('dist-member', 1000)" style="border-left-color: #93c5fd;">
+                            <svg class="qty-icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 18 18">
+                                <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 1v16M1 9h16"></path>
+                            </svg>
+                        </button>
+                        <input type="number" id="dist-member" value="0" oninput="calcKingProfit()" class="qty-input">
+                        <button type="button" class="qty-btn minus-btn" onclick="adjustDistValue('dist-member', -1000)" style="border-right-color: #93c5fd;">
+                            <svg class="qty-icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 18 18">
+                                <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M1 9h16"></path>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                <div class="dist-input-row" style="background:#ecfdf5; border-color:#a7f3d0; ${displayStyle}">
+                    <label style="color:#047857; font-weight:bold;"><i class='bx bx-save'></i> پاشەکەوتی ئەندام</label>
+                    <div class="dist-input-group" style="border-color: #6ee7b7;">
+                        <button type="button" class="qty-btn plus-btn" onclick="adjustDistValue('dist-savings', 500)" style="border-left-color: #6ee7b7;">
+                            <svg class="qty-icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 18 18">
+                                <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 1v16M1 9h16"></path>
+                            </svg>
+                        </button>
+                        <input type="number" id="dist-savings" value="0" oninput="calcKingProfit()" class="qty-input">
+                        <button type="button" class="qty-btn minus-btn" onclick="adjustDistValue('dist-savings', -500)" style="border-right-color: #6ee7b7;">
+                            <svg class="qty-icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 18 18">
+                                <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M1 9h16"></path>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                <hr style="border:0; border-top:2px dashed #e2e8f0; margin:15px 0;"><div style="display:flex; justify-content:space-between; align-items:center;"><strong style="color:var(--primary); font-size:16px;">ئەوەی دەمێنێتەوە (پاشا):</strong><strong id="dist-king" style="font-size:20px; color:#1e293b; background:#f1f5f9; padding:5px 15px; border-radius:8px;" dir="ltr">0 د.ع</strong></div><button class="btn" style="background:#10b981; margin-top:20px;" onclick="confirmDistribution()"><i class='bx bx-check-circle'></i> تەسدیقکردن و تۆمارکردن</button>`;
+
+                document.getElementById('profit-distribution-modal').classList.add('show'); calcKingProfit();
+            } catch (e) { showToast("هەڵەیەک ڕوویدا لە هێنانی داتا", "error"); }
+        }
+
+        function calcKingProfit() {
+            let isAuthorized = (userRole === "ئەدمین" || userRole === "ڕاوێژکار" || userRole === "بەڕێوەبەر" || userRole === "پاشا");
+            let delivery = parseFloat(document.getElementById('dist-delivery').value || 0);
+            let manager = (isDistKingOrder || !isAuthorized || !distData.manager.code) ? 0 : parseFloat(document.getElementById('dist-manager').value || 0);
+            let admin = (isDistKingOrder || !isAuthorized || !distData.admin.code) ? 0 : parseFloat(document.getElementById('dist-admin').value || 0);
+            let consultant = (isDistKingOrder || !isAuthorized || !distData.consultant.code) ? 0 : parseFloat(document.getElementById('dist-consultant').value || 0);
+            let member = (isDistKingOrder || !isAuthorized) ? 0 : parseFloat(document.getElementById('dist-member').value || 0);
+            let savings = (isDistKingOrder || !isAuthorized) ? 0 : parseFloat(document.getElementById('dist-savings').value || 0);
+            let king = distData.grandTotal - (delivery + manager + admin + consultant + member + savings);
+            document.getElementById('dist-king').innerText = king.toLocaleString() + " د.ع";
+        }
+
+        function adjustDistValue(inputId, delta) {
+            let input = document.getElementById(inputId);
+            if (!input || input.disabled) return;
+            let val = parseFloat(input.value) || 0;
+            val += delta;
+            if (val < 0) val = 0;
+            input.value = val;
+            calcKingProfit();
+        }
+
+        async function confirmDistribution() {
+            // ڕێگریکردن لە دووجار کلیک کردن
+            let confirmBtn = document.querySelector('#profit-distribution-modal .btn');
+            if (confirmBtn) {
+                confirmBtn.disabled = true;
+                confirmBtn.innerHTML = "<i class='bx bx-loader-alt bx-spin'></i> تکایە چاوەڕێ بکە...";
+            }
+
+            let isAuthorized = (userRole === "ئەدمین" || userRole === "ڕاوێژکار" || userRole === "بەڕێوەبەر" || userRole === "پاشا");
+            let delivery = parseFloat(document.getElementById('dist-delivery').value || 0);
+            let managerP = (isDistKingOrder || !isAuthorized || !distData.manager.code) ? 0 : parseFloat(document.getElementById('dist-manager').value || 0);
+            let adminP = (isDistKingOrder || !isAuthorized || !distData.admin.code) ? 0 : parseFloat(document.getElementById('dist-admin').value || 0);
+            let consultantP = (isDistKingOrder || !isAuthorized || !distData.consultant.code) ? 0 : parseFloat(document.getElementById('dist-consultant').value || 0);
+            let memberP = (isDistKingOrder || !isAuthorized) ? 0 : parseFloat(document.getElementById('dist-member').value || 0);
+            let savingsP = (isDistKingOrder || !isAuthorized) ? 0 : parseFloat(document.getElementById('dist-savings').value || 0);
+
+            let o = distributingOrder;
+            let oCode = o.order_code;
+
+            showToast("خەریکی دابەشکردن...", "loading");
+
+            try {
+                let txList = [];
+                let updateBalances = {};
+
+                const addTx = (uCode, amount, type, desc, isSavings = false) => {
+                    if (amount !== 0 && uCode) {
+                        txList.push({ user_code: uCode, order_id: String(o.id), amount: amount, type: type, description: desc });
+                        if (!updateBalances[uCode]) updateBalances[uCode] = { bal: 0, sav: 0 };
+                        if (isSavings) updateBalances[uCode].sav += amount; else updateBalances[uCode].bal += amount;
+                    }
+                };
+
+                // تۆمارکردنی کارمەندان
+                if (!isDistKingOrder && isAuthorized) {
+                    addTx(distData.member.code, memberP, "قازانجی ئۆردەر", `قازانج لە ئۆردەری ${oCode} (گەیشت)`);
+                    addTx(distData.member.code, savingsP, "پاشەکەوتی ئۆردەر", `پاشەکەوت لە ئۆردەری ${oCode}`, true);
+                    addTx(distData.manager.code, managerP, "قازانجی ئۆردەر", `قازانجی بەڕێوەبەر لە ئۆردەری ${oCode}`);
+                    addTx(distData.admin.code, adminP, "قازانجی ئۆردەر", `قازانجی ئەدمین لە ئۆردەری ${oCode}`);
+                    addTx(distData.consultant.code, consultantP, "قازانجی ئۆردەر", `قازانجی ڕاوێژکار لە ئۆردەری ${oCode}`);
+                }
+
+                // تۆمارکردنی قازانجی پاشا (ئەوەی دەمێنێتەوە)
+                let kingP = distData.grandTotal - (delivery + managerP + adminP + consultantP + memberP + savingsP);
+                if (kingP !== 0 && globalKingCode) {
+                    addTx(globalKingCode, kingP, "قازانجی ئۆردەر", `قازانجی پاشا لە ئۆردەری ${oCode}`);
+                }
+
+                // زیادکردنی پارەکان بۆ جزدانەکان لە Supabase
+                for (let code in updateBalances) {
+                    const { data: uData } = await supabase.from('employees').select('balance, savings').eq('code', code).single();
+                    if (uData) {
+                        let oldB = parseFloat(uData.balance || 0);
+                        let oldS = parseFloat(uData.savings || 0);
+                        let newB = oldB + updateBalances[code].bal;
+                        let newS = oldS + updateBalances[code].sav;
+                        await supabase.from('employees').update({ balance: newB, savings: newS }).eq('code', code);
+
+                        txList.forEach(tx => {
+                            if (tx.user_code === code) {
+                                tx.created_by = userName;
+                                if (tx.type === "پاشەکەوتی ئۆردەر") {
+                                    tx.wallet_type = 'savings';
+                                    tx.old_balance = oldS;
+                                    tx.new_balance = newS;
+                                } else {
+                                    tx.wallet_type = 'balance';
+                                    tx.old_balance = oldB;
+                                    tx.new_balance = newB;
+                                }
+                            }
+                        });
+                    }
+                }
+
+                // ناردنی جووڵە داراییەکان (Transactions)
+                if (txList.length > 0) {
+                    const { error: txErr } = await supabase.from('transactions').insert(txList);
+                    if (txErr) {
+                        console.error(txErr);
+                        showToast("کێشە لە داتابەیس هەیە!", "error");
+                        if (confirmBtn) { confirmBtn.disabled = false; confirmBtn.innerHTML = "<i class='bx bx-check-circle'></i> تەسدیقکردن و تۆمارکردن"; }
+                        return;
+                    }
+                }
+
+                await supabase.from('orders').update({ status: "گەیشتووە", status_changed_by: userName }).eq('id', o.id);
+
+                showToast("بە سەرکەوتوویی دابەشکرا!", "success");
+                closeModal(null, 'profit-distribution-modal');
+
+                // ڕیفرێشکردنی شاشەکان
+                isDashboardDataLoaded = false; isManagementDataLoaded = false;
+                if (document.getElementById('orders-management-screen').classList.contains('active')) loadManagementOrders(); else fetchOrders();
+
+            } catch (e) {
+                console.error(e);
+                showToast("کێشەیەک ڕوویدا لە تۆمارکردندا", "error");
+                if (confirmBtn) { confirmBtn.disabled = false; confirmBtn.innerHTML = "<i class='bx bx-check-circle'></i> تەسدیقکردن و تۆمارکردن"; }
+            }
+        }
 
     </script>
 </body>
