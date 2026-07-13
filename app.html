@@ -744,7 +744,7 @@
         <div id="management-orders-list"></div>
 
     </div>
-    <div id="order-details-modal" class="modal-overlay" onclick="closeModal(event, 'order-details-modal')">
+    <div id="order-details-modal" class="modal-overlay" style="z-index: 2050;" onclick="closeModal(event, 'order-details-modal')">
         <div class="modal-content" onclick="event.stopPropagation()">
             <div class="modal-header">
                 <h3 class="modal-title"><i class='bx bx-receipt'></i> زانیاری داواکاری</h3>
@@ -1680,24 +1680,33 @@
 
         async function openOrderDetails(orderId) {
             let o = allGlobalOrdersData[orderId];
+            let b = document.getElementById('modal-details-body');
+
             if (!o) {
-                showToast("لۆدکردنی زانیاری ئۆردەر...", "loading");
+                // مۆدێلەکە دەستبەجێ بکەرەوە لەگەڵ ئەنیمەیشنی لۆدینگ (بەبێ نۆتفیکەیشن)
+                b.innerHTML = `
+                <div style="display:flex; justify-content:center; align-items:center; padding:55px 0;">
+                    <svg viewBox="0 0 100 100" style="width:45px; height:45px; fill: var(--primary); transform: translateY(-27.11%) scale(1.5);">
+                        <g style="transform-origin: 50% 72.8938%; animation: spinner-rotate 1s linear infinite;">
+                            <path d="M33.52,68.12 C35.02,62.8 39.03,58.52 44.24,56.69 C49.26,54.93 54.68,55.61 59.04,58.4 C59.04,58.4 56.24,60.53 56.24,60.53 C55.45,61.13 55.68,62.37 56.63,62.64 C56.63,62.64 67.21,65.66 67.21,65.66 C67.98,65.88 68.75,65.3 68.74,64.5 C68.74,64.5 68.68,53.5 68.68,53.5 C68.67,52.51 67.54,51.95 66.75,52.55 C66.75,52.55 64.04,54.61 64.04,54.61 C57.88,49.79 49.73,48.4 42.25,51.03 C35.2,53.51 29.78,59.29 27.74,66.49 C27.29,68.08 28.22,69.74 29.81,70.19 C30.09,70.27 30.36,70.31 30.63,70.31 C31.94,70.31 33.14,69.44 33.52,68.12Z"></path>
+                            <path d="M69.95,74.85 C68.35,74.4 66.7,75.32 66.25,76.92 C64.74,82.24 60.73,86.51 55.52,88.35 C50.51,90.11 45.09,89.43 40.73,86.63 C40.73,86.63 43.53,84.51 43.53,84.51 C44.31,83.91 44.08,82.67 43.13,82.4 C43.13,82.4 32.55,79.38 32.55,79.38 C31.78,79.16 31.02,79.74 31.02,80.54 C31.02,80.54 31.09,91.54 31.09,91.54 C31.09,92.53 32.22,93.09 33.01,92.49 C33.01,92.49 35.72,90.43 35.72,90.43 C39.81,93.63 44.77,95.32 49.84,95.32 C52.41,95.32 55,94.89 57.51,94.01 C64.56,91.53 69.99,85.75 72.02,78.55 C72.47,76.95 71.54,75.3 69.95,74.85Z"></path>
+                        </g>
+                    </svg>
+                </div>`;
+                document.getElementById('order-details-modal').classList.add('show');
                 try {
                     const { data: fetchedOrder, error } = await supabase.from('orders').select('*').eq('id', orderId).single();
                     if (error || !fetchedOrder) {
-                        showToast("ئۆردەرەکە نەدۆزرایەوە!", "error");
+                        b.innerHTML = `<p style="text-align:center; color:#dc3545; padding:40px 0;">❌ ئۆردەرەکە نەدۆزرایەوە!</p>`;
                         return;
                     }
                     o = fetchedOrder;
                     allGlobalOrdersData[orderId] = o;
-                    showToast("لۆد کرا", "success");
                 } catch (e) {
-                    showToast("هەڵەیەک لە هێنانەوەی ئۆردەردا ڕوویدا", "error");
+                    b.innerHTML = `<p style="text-align:center; color:#dc3545; padding:40px 0;">❌ هەڵەیەک لە هێنانەوەی ئۆردەردا ڕوویدا</p>`;
                     return;
                 }
             }
-
-            let b = document.getElementById('modal-details-body');
 
             // --- گۆڕانکاری سەرەکی لێرەدایە (چارەسەری وێنەکان بە زیرەکی) ---
             let imgHtml = "";
@@ -3794,14 +3803,16 @@
             let list = document.getElementById('wallet-tx-modal-body');
             if (!list || !code) return;
 
-            // ئەگەر پێشتر لۆد کراوە و داوای نوێکردنەوە نەکراوە → هی جاری پێشوو پیشان بدە
-            if (!force && walletTxCache[code]) {
+            let hasCache = !!walletTxCache[code];
+
+            // ئەگەر پێشتر لۆد کراوە و داوای نوێکردنەوە نەکراوە → دەستبەجێ هی کاش پیشان بدە
+            if (hasCache && !force) {
                 renderWalletTransactions(walletTxCache[code]);
                 return;
             }
 
-            // ئەنیمەیشنی لۆدینگ (وەک بەشەکانی تر)
-            list.innerHTML = `
+            // تەنها لە یەکەم لۆددا ئەنیمەیشنی لۆدینگ؛ لە ڕیفرێشدا داتای کۆن دەمێنێتەوە (وەک پەڕەی هۆم)
+            if (!hasCache) list.innerHTML = `
                 <div style="display:flex; justify-content:center; align-items:center; padding:45px 0;">
                     <svg viewBox="0 0 100 100" style="width:42px; height:42px; fill: var(--primary); transform: translateY(-27.11%) scale(1.5);">
                         <g style="transform-origin: 50% 72.8938%; animation: spinner-rotate 1s linear infinite;">
@@ -3816,7 +3827,8 @@
                 walletTxCache[code] = txs || [];
                 renderWalletTransactions(walletTxCache[code]);
             } catch (err) {
-                list.innerHTML = `<p style="text-align:center; color:red; font-size:12px; margin: 15px 0;">❌ کێشەیەک لە لۆدکردنی جووڵەکان ڕوویدا.</p>`;
+                // ئەگەر داتای کۆن هەبوو، لێی بمێنێتەوە؛ ئەگەرنا هەڵە پیشان بدە
+                if (!hasCache) list.innerHTML = `<p style="text-align:center; color:red; font-size:12px; margin: 15px 0;">❌ کێشەیەک لە لۆدکردنی جووڵەکان ڕوویدا.</p>`;
             }
         }
 
