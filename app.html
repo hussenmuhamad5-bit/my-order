@@ -757,11 +757,15 @@
 
     <!-- مۆدێلی دووەمی زانیاری داواکاری کە دووبارە بوو، سڕایەوە -->
 
-    <div id="image-zoom-modal" class="modal-overlay" onclick="closeModal(event, 'image-zoom-modal')"
-        style="z-index: 2100; background: rgba(0,0,0,0.9);">
-        <button class="modal-close" onclick="closeModal(null, 'image-zoom-modal')"
-            style="position: absolute; top: 30px; right: 20px; z-index: 2101;"><i class='bx bx-x'></i></button>
-        <img id="zoomed-image" class="image-zoom-content" src="" onclick="event.stopPropagation()">
+    <div id="image-zoom-modal" class="modal-overlay gallery-modal" style="z-index: 2100;">
+        <button class="gallery-close" onclick="closeImageGallery()"><i class='bx bx-x'></i></button>
+        <div class="gallery-counter" id="gallery-counter">1 / 1</div>
+        <button class="gallery-nav gallery-prev" id="gallery-prev" onclick="galleryPrev()"><i class='bx bx-chevron-right'></i></button>
+        <button class="gallery-nav gallery-next" id="gallery-next" onclick="galleryNext()"><i class='bx bx-chevron-left'></i></button>
+        <div class="gallery-viewport" id="gallery-viewport">
+            <div class="gallery-track" id="gallery-track"></div>
+        </div>
+        <div class="gallery-dots" id="gallery-dots"></div>
     </div>
 
 
@@ -1691,7 +1695,8 @@
                 let urls = safeImageUrl.split(',').map(u => u.trim()).filter(u => u.startsWith('http'));
 
                 if (urls.length > 0) {
-                    let thumbHtml = urls.map(u => `<img src="${u}" style="width: 75px; height: 75px; object-fit: cover; border-radius: 10px; margin: 4px; cursor: pointer; border: 2px solid #cbd5e1; box-shadow: 0 2px 5px rgba(0,0,0,0.1);" onclick="openImageZoom('${u}')">`).join('');
+                    window.__galleryDetailImages = urls;
+                    let thumbHtml = urls.map((u, i) => `<img src="${u}" style="width: 75px; height: 75px; object-fit: cover; border-radius: 10px; margin: 4px; cursor: pointer; border: 2px solid #cbd5e1; box-shadow: 0 2px 5px rgba(0,0,0,0.1);" onclick="openImageGallery(window.__galleryDetailImages, ${i})">`).join('');
 
                     imgHtml = `
                     <div class="detail-row" style="flex-direction: column; background: rgba(36, 129, 204, 0.05); padding: 12px; border-radius: 12px; border: 1px dashed rgba(36, 129, 204, 0.4); margin-bottom: 15px;">
@@ -2320,10 +2325,169 @@
 
 
 
-        function openImageZoom(url) {
-            document.getElementById('zoomed-image').src = url;
+        /* ================= گەلەری وێنە (زووم + سلاید) ================= */
+        let galleryImages = [];
+        let galleryIndex = 0;
+        let gZoom = 1, gPanX = 0, gPanY = 0;
+
+        function openImageGallery(images, startIndex) {
+            if (typeof images === 'string') images = images.split(',').map(u => u.trim()).filter(Boolean);
+            if (!images || images.length === 0) return;
+            galleryImages = images.slice();
+            galleryIndex = Math.min(Math.max(startIndex || 0, 0), galleryImages.length - 1);
+
+            let track = document.getElementById('gallery-track');
+            track.innerHTML = galleryImages.map(u =>
+                `<div class="gallery-slide"><img src="${u}" draggable="false"></div>`
+            ).join('');
+
+            let multi = galleryImages.length > 1;
+            let dots = document.getElementById('gallery-dots');
+            dots.innerHTML = multi ? galleryImages.map((_, i) => `<div class="gallery-dot" onclick="galleryGoTo(${i})"></div>`).join('') : '';
+            document.getElementById('gallery-prev').style.display = multi ? 'flex' : 'none';
+            document.getElementById('gallery-next').style.display = multi ? 'flex' : 'none';
+            document.getElementById('gallery-counter').style.display = multi ? 'block' : 'none';
+
             document.getElementById('image-zoom-modal').classList.add('show');
+            galleryUpdate(false);
         }
+
+        // پاراستنی گونجانی کۆن
+        function openImageZoom(url) { openImageGallery([url], 0); }
+
+        function closeImageGallery() {
+            document.getElementById('image-zoom-modal').classList.remove('show');
+        }
+
+        function currentGalleryImg() {
+            let slides = document.querySelectorAll('#gallery-track .gallery-slide img');
+            return slides[galleryIndex] || null;
+        }
+
+        function applyGalleryZoom(animate) {
+            let img = currentGalleryImg();
+            if (!img) return;
+            img.style.transition = animate ? 'transform 0.2s ease' : 'none';
+            img.style.transform = `translate(${gPanX}px, ${gPanY}px) scale(${gZoom})`;
+        }
+
+        function resetGalleryZoom() {
+            gZoom = 1; gPanX = 0; gPanY = 0;
+            applyGalleryZoom(true);
+        }
+
+        function galleryUpdate(animate) {
+            let track = document.getElementById('gallery-track');
+            track.style.transition = animate ? 'transform 0.3s ease' : 'none';
+            track.style.transform = `translateX(${-galleryIndex * 100}%)`;
+            if (galleryImages.length > 1)
+                document.getElementById('gallery-counter').innerText = (galleryIndex + 1) + ' / ' + galleryImages.length;
+            document.querySelectorAll('#gallery-dots .gallery-dot').forEach((d, i) => d.classList.toggle('active', i === galleryIndex));
+            document.getElementById('gallery-prev').disabled = (galleryIndex === 0);
+            document.getElementById('gallery-next').disabled = (galleryIndex === galleryImages.length - 1);
+            resetGalleryZoom();
+        }
+
+        function galleryGoTo(i) {
+            if (i < 0 || i >= galleryImages.length || i === galleryIndex) return;
+            gZoom = 1; gPanX = 0; gPanY = 0; applyGalleryZoom(false);
+            galleryIndex = i;
+            galleryUpdate(true);
+        }
+        function galleryNext() { if (galleryIndex < galleryImages.length - 1) galleryGoTo(galleryIndex + 1); }
+        function galleryPrev() { if (galleryIndex > 0) galleryGoTo(galleryIndex - 1); }
+
+        // ڕێکخستنی جوڵەکان (سواپ، پێنچ-زووم، دووجار تەق، پان)
+        (function setupGalleryGestures() {
+            let vp = document.getElementById('gallery-viewport');
+            if (!vp) return;
+            let sx = 0, sy = 0, spx = 0, spy = 0, moved = false, active = false;
+            let pinching = false, startDist = 0, startZoom = 1, lastTap = 0;
+
+            function dist(a, b) { return Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY); }
+            function toggleZoom() {
+                if (gZoom > 1) resetGalleryZoom();
+                else { gZoom = 2.5; gPanX = 0; gPanY = 0; applyGalleryZoom(true); }
+            }
+
+            vp.addEventListener('touchstart', function (e) {
+                if (e.touches.length === 2) {
+                    pinching = true; active = false;
+                    startDist = dist(e.touches[0], e.touches[1]); startZoom = gZoom;
+                    return;
+                }
+                let t = e.touches[0];
+                sx = t.clientX; sy = t.clientY; spx = gPanX; spy = gPanY; moved = false; active = true;
+                let now = Date.now();
+                if (now - lastTap < 300) { toggleZoom(); lastTap = 0; } else { lastTap = now; }
+            }, { passive: false });
+
+            vp.addEventListener('touchmove', function (e) {
+                if (pinching && e.touches.length === 2) {
+                    e.preventDefault();
+                    let d = dist(e.touches[0], e.touches[1]);
+                    gZoom = Math.min(Math.max(startZoom * (d / startDist), 1), 4);
+                    applyGalleryZoom(false);
+                    return;
+                }
+                if (!active || e.touches.length !== 1) return;
+                let t = e.touches[0];
+                let dx = t.clientX - sx, dy = t.clientY - sy;
+                if (Math.abs(dx) > 6 || Math.abs(dy) > 6) moved = true;
+                if (gZoom > 1) {
+                    e.preventDefault();
+                    gPanX = spx + dx; gPanY = spy + dy; applyGalleryZoom(false);
+                } else if (Math.abs(dx) > Math.abs(dy)) {
+                    e.preventDefault();
+                    let track = document.getElementById('gallery-track');
+                    track.style.transition = 'none';
+                    track.style.transform = `translateX(calc(${-galleryIndex * 100}% + ${dx}px))`;
+                }
+            }, { passive: false });
+
+            vp.addEventListener('touchend', function (e) {
+                if (pinching) {
+                    if (e.touches.length < 1) {
+                        pinching = false;
+                        if (gZoom <= 1.03) resetGalleryZoom(); else applyGalleryZoom(true);
+                    }
+                    active = false; return;
+                }
+                if (!active) return;
+                active = false;
+                let ct = e.changedTouches[0];
+                let dx = ct.clientX - sx, dy = ct.clientY - sy;
+                if (gZoom <= 1) {
+                    if (moved && Math.abs(dy) > Math.abs(dx) && dy > 110) { closeImageGallery(); return; }
+                    if (moved && Math.abs(dx) > vp.clientWidth * 0.2) {
+                        if (dx < 0 && galleryIndex < galleryImages.length - 1) galleryIndex++;
+                        else if (dx > 0 && galleryIndex > 0) galleryIndex--;
+                    }
+                    galleryUpdate(true);
+                }
+            });
+
+            // دێسکتۆپ: دووجار کلیک، ویڵ، ڕاکێشان بە ماوس، کیبۆرد
+            vp.addEventListener('dblclick', toggleZoom);
+            vp.addEventListener('wheel', function (e) {
+                let m = document.getElementById('image-zoom-modal');
+                if (!m || !m.classList.contains('show')) return;
+                e.preventDefault();
+                gZoom = Math.min(Math.max(gZoom + (e.deltaY < 0 ? 0.3 : -0.3), 1), 4);
+                if (gZoom <= 1) resetGalleryZoom(); else applyGalleryZoom(true);
+            }, { passive: false });
+            let md = false, mx = 0, my = 0, mpx = 0, mpy = 0;
+            vp.addEventListener('mousedown', function (e) { if (gZoom > 1) { md = true; mx = e.clientX; my = e.clientY; mpx = gPanX; mpy = gPanY; e.preventDefault(); } });
+            window.addEventListener('mousemove', function (e) { if (md) { gPanX = mpx + (e.clientX - mx); gPanY = mpy + (e.clientY - my); applyGalleryZoom(false); } });
+            window.addEventListener('mouseup', function () { md = false; });
+            document.addEventListener('keydown', function (e) {
+                let m = document.getElementById('image-zoom-modal');
+                if (!m || !m.classList.contains('show')) return;
+                if (e.key === 'Escape') closeImageGallery();
+                else if (e.key === 'ArrowRight') galleryNext();
+                else if (e.key === 'ArrowLeft') galleryPrev();
+            });
+        })();
 
         function closeModal(event, modalId) {
             if (event && event.target.id !== modalId) return;
@@ -2500,7 +2664,7 @@
             uploadedImageUrls.forEach((url, index) => {
                 container.innerHTML += `
                     <div style="position: relative; display: inline-block;">
-                        <img src="${url}" style="width: 70px; height: 70px; object-fit: cover; border-radius: 8px; border: 2px solid #e2e8f0; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
+                        <img src="${url}" onclick="event.stopPropagation(); openImageGallery(uploadedImageUrls, ${index})" style="width: 70px; height: 70px; object-fit: cover; border-radius: 8px; border: 2px solid #e2e8f0; box-shadow: 0 2px 5px rgba(0,0,0,0.1); cursor: pointer;">
                         <div onclick="event.stopPropagation(); removeUploadedImage(${index})" style="position: absolute; top: -5px; right: -5px; background: #dc3545; color: white; width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">
                             <i class='bx bx-x'></i>
                         </div>
