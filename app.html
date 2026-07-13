@@ -2379,7 +2379,7 @@
         function galleryUpdate(animate) {
             let track = document.getElementById('gallery-track');
             track.style.transition = animate ? 'transform 0.3s ease' : 'none';
-            track.style.transform = `translateX(${-galleryIndex * 100}%)`;
+            track.style.transform = `translateX(${galleryIndex * 100}%)`;
             if (galleryImages.length > 1)
                 document.getElementById('gallery-counter').innerText = (galleryIndex + 1) + ' / ' + galleryImages.length;
             document.querySelectorAll('#gallery-dots .gallery-dot').forEach((d, i) => d.classList.toggle('active', i === galleryIndex));
@@ -2441,7 +2441,7 @@
                     e.preventDefault();
                     let track = document.getElementById('gallery-track');
                     track.style.transition = 'none';
-                    track.style.transform = `translateX(calc(${-galleryIndex * 100}% + ${dx}px))`;
+                    track.style.transform = `translateX(calc(${galleryIndex * 100}% + ${dx}px))`;
                 }
             }, { passive: false });
 
@@ -2460,8 +2460,8 @@
                 if (gZoom <= 1) {
                     if (moved && Math.abs(dy) > Math.abs(dx) && dy > 110) { closeImageGallery(); return; }
                     if (moved && Math.abs(dx) > vp.clientWidth * 0.2) {
-                        if (dx < 0 && galleryIndex < galleryImages.length - 1) galleryIndex++;
-                        else if (dx > 0 && galleryIndex > 0) galleryIndex--;
+                        if (dx > 0 && galleryIndex < galleryImages.length - 1) galleryIndex++;
+                        else if (dx < 0 && galleryIndex > 0) galleryIndex--;
                     }
                     galleryUpdate(true);
                 }
