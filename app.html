@@ -547,11 +547,11 @@
 
                     <div id="wallet-edit-section" class="edit-section"
                         style="border-top: none; padding-top: 0; display: none; background: #f8fafc; padding: 15px; border-radius: 12px; border: 1px solid #e2e8f0;">
-                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
-                            <label style="margin:0; font-size:14px; color:var(--text-main);">بەڕێوەبردنی جزدانی: <span
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; gap:8px;">
+                            <label style="margin:0; font-size:14px; color:var(--text-main); flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">بەڕێوەبردنی جزدانی: <span
                                     id="w-name" style="color:var(--primary); font-weight: bold;">...</span> (<span id="w-code" style="font-family: monospace; font-size: 12px; color: #64748b;">...</span>)</label>
                             <button class="btn"
-                                style="background:#e2e8f0; color:#475569; width:auto; height:32px; padding:0 12px; margin:0; font-size:20px;"
+                                style="background:#e2e8f0; color:#475569; width:auto; height:32px; padding:0 12px; margin:0; font-size:20px; flex-shrink:0;"
                                 onclick="cancelWalletEdit()"><i class='bx bx-x'></i></button>
                         </div>
                         
@@ -803,7 +803,7 @@
     </div>
 
     <div id="wallet-transactions-modal" class="modal-overlay" onclick="closeModal(event, 'wallet-transactions-modal')">
-        <div class="modal-content" onclick="event.stopPropagation()">
+        <div id="wallet-tx-modal-content" class="modal-content" style="position: relative;" onclick="event.stopPropagation()">
             <div class="modal-header">
                 <h3 class="modal-title"><i class='bx bx-history'></i> دواین جوڵە داراییەکان</h3>
                 <button class="modal-close" onclick="closeModal(null, 'wallet-transactions-modal')"><i
@@ -2300,6 +2300,7 @@
             setTimeout(() => {
                 setupPullToRefresh('dashboard-screen', 'orders-list', fetchOrders);
                 setupPullToRefresh('orders-management-screen', 'management-orders-list', loadManagementOrders);
+                setupPullToRefresh('wallet-tx-modal-content', 'wallet-tx-modal-body', () => loadUserWalletTransactions(window.currentWalletCode, true));
             }, 500);
         });
 
@@ -3749,42 +3750,71 @@
             window.currentWalletCode = u.code;
         }
 
+        // کاشی جوڵە داراییەکان بۆ هەر بەکارهێنەرێک (بۆ ئەوەی دووبارە لۆد نەبێتەوە)
+        let walletTxCache = {};
+
         // کردنەوەی مۆدێلی دواین جوڵە داراییەکان
         function openWalletTransactionsModal() {
             let code = window.currentWalletCode;
             if (!code) return;
             document.getElementById('wallet-transactions-modal').classList.add('show');
-            loadUserWalletTransactions(code);
+            loadUserWalletTransactions(code); // بەبێ force → ئەگەر پێشتر لۆد کرابێت لە کاش وەردەگرێت
         }
 
-        async function loadUserWalletTransactions(code) {
+        // دروستکردنی HTMLـی لیستەکە
+        function renderWalletTransactions(txs) {
             let list = document.getElementById('wallet-tx-modal-body');
-            list.innerHTML = `<p style="text-align:center; color:#888; font-size:12px; margin: 15px 0;">لە لۆدکردندایە...</p>`;
+            if (!list) return;
+            if (!txs || txs.length === 0) {
+                list.innerHTML = `<p style="text-align:center; color:#888; font-size:12px; margin: 15px 0;">هیچ جووڵەیەکی دارایی نییە.</p>`;
+                return;
+            }
+            let html = "";
+            txs.forEach(tx => {
+                let isPlus = parseFloat(tx.amount) > 0;
+                let iconClass = isPlus ? "plus" : "minus";
+                let amountClass = isPlus ? "plus" : "minus";
+                let iconSign = isPlus ? "<i class='bx bx-up-arrow-alt'></i>" : "<i class='bx bx-down-arrow-alt'></i>";
+                let amountSign = isPlus ? "+" : "";
+                let dateStr = tx.created_at ? tx.created_at.split('T')[0] : "";
+                let clickAttr = "";
+                let cursorStyle = "";
+                let orderBadge = "";
+                if (tx.order_id) {
+                    clickAttr = `onclick="openOrderDetails('${tx.order_id}')"`;
+                    cursorStyle = "cursor: pointer;";
+                    orderBadge = `<span style="font-size:9px; color:#2481cc; background:rgba(36,129,204,0.08); padding:1px 5px; border-radius:4px; margin-top:4px; display:inline-block;"><i class='bx bx-show-alt'></i> زانیاری ئۆردەر</span>`;
+                }
+                html += `<div class="transaction-item ${iconClass}" ${clickAttr} style="${cursorStyle}"><div class="tx-info"><div class="tx-icon ${iconClass}">${iconSign}</div><div class="tx-details"><h4>${tx.type}</h4><p>${tx.description} ${orderBadge}<br><i class='bx bx-calendar'></i> ${dateStr}</p></div></div><div class="tx-amount ${amountClass}">${amountSign}${Number(tx.amount).toLocaleString()}</div></div>`;
+            });
+            list.innerHTML = html;
+        }
+
+        async function loadUserWalletTransactions(code, force) {
+            let list = document.getElementById('wallet-tx-modal-body');
+            if (!list || !code) return;
+
+            // ئەگەر پێشتر لۆد کراوە و داوای نوێکردنەوە نەکراوە → هی جاری پێشوو پیشان بدە
+            if (!force && walletTxCache[code]) {
+                renderWalletTransactions(walletTxCache[code]);
+                return;
+            }
+
+            // ئەنیمەیشنی لۆدینگ (وەک بەشەکانی تر)
+            list.innerHTML = `
+                <div style="display:flex; justify-content:center; align-items:center; padding:45px 0;">
+                    <svg viewBox="0 0 100 100" style="width:42px; height:42px; fill: var(--primary); transform: translateY(-27.11%) scale(1.5);">
+                        <g style="transform-origin: 50% 72.8938%; animation: spinner-rotate 1s linear infinite;">
+                            <path d="M33.52,68.12 C35.02,62.8 39.03,58.52 44.24,56.69 C49.26,54.93 54.68,55.61 59.04,58.4 C59.04,58.4 56.24,60.53 56.24,60.53 C55.45,61.13 55.68,62.37 56.63,62.64 C56.63,62.64 67.21,65.66 67.21,65.66 C67.98,65.88 68.75,65.3 68.74,64.5 C68.74,64.5 68.68,53.5 68.68,53.5 C68.67,52.51 67.54,51.95 66.75,52.55 C66.75,52.55 64.04,54.61 64.04,54.61 C57.88,49.79 49.73,48.4 42.25,51.03 C35.2,53.51 29.78,59.29 27.74,66.49 C27.29,68.08 28.22,69.74 29.81,70.19 C30.09,70.27 30.36,70.31 30.63,70.31 C31.94,70.31 33.14,69.44 33.52,68.12Z"></path>
+                            <path d="M69.95,74.85 C68.35,74.4 66.7,75.32 66.25,76.92 C64.74,82.24 60.73,86.51 55.52,88.35 C50.51,90.11 45.09,89.43 40.73,86.63 C40.73,86.63 43.53,84.51 43.53,84.51 C44.31,83.91 44.08,82.67 43.13,82.4 C43.13,82.4 32.55,79.38 32.55,79.38 C31.78,79.16 31.02,79.74 31.02,80.54 C31.02,80.54 31.09,91.54 31.09,91.54 C31.09,92.53 32.22,93.09 33.01,92.49 C33.01,92.49 35.72,90.43 35.72,90.43 C39.81,93.63 44.77,95.32 49.84,95.32 C52.41,95.32 55,94.89 57.51,94.01 C64.56,91.53 69.99,85.75 72.02,78.55 C72.47,76.95 71.54,75.3 69.95,74.85Z"></path>
+                        </g>
+                    </svg>
+                </div>`;
+
             try {
                 const { data: txs } = await supabase.from('transactions').select('*').eq('user_code', code).order('created_at', { ascending: false }).limit(200);
-                if (txs && txs.length > 0) {
-                    let html = "";
-                    txs.forEach(tx => {
-                        let isPlus = parseFloat(tx.amount) > 0;
-                        let iconClass = isPlus ? "plus" : "minus";
-                        let amountClass = isPlus ? "plus" : "minus";
-                        let iconSign = isPlus ? "<i class='bx bx-up-arrow-alt'></i>" : "<i class='bx bx-down-arrow-alt'></i>";
-                        let amountSign = isPlus ? "+" : "";
-                        let dateStr = tx.created_at ? tx.created_at.split('T')[0] : "";
-                        let clickAttr = "";
-                        let cursorStyle = "";
-                        let orderBadge = "";
-                        if (tx.order_id) {
-                            clickAttr = `onclick="openOrderDetails('${tx.order_id}')"`;
-                            cursorStyle = "cursor: pointer;";
-                            orderBadge = `<span style="font-size:9px; color:#2481cc; background:rgba(36,129,204,0.08); padding:1px 5px; border-radius:4px; margin-top:4px; display:inline-block;"><i class='bx bx-show-alt'></i> زانیاری ئۆردەر</span>`;
-                        }
-                        html += `<div class="transaction-item ${iconClass}" ${clickAttr} style="${cursorStyle}"><div class="tx-info"><div class="tx-icon ${iconClass}">${iconSign}</div><div class="tx-details"><h4>${tx.type}</h4><p>${tx.description} ${orderBadge}<br><i class='bx bx-calendar'></i> ${dateStr}</p></div></div><div class="tx-amount ${amountClass}">${amountSign}${Number(tx.amount).toLocaleString()}</div></div>`;
-                    });
-                    list.innerHTML = html;
-                } else {
-                    list.innerHTML = `<p style="text-align:center; color:#888; font-size:12px; margin: 15px 0;">هیچ جووڵەیەکی دارایی نییە.</p>`;
-                }
+                walletTxCache[code] = txs || [];
+                renderWalletTransactions(walletTxCache[code]);
             } catch (err) {
                 list.innerHTML = `<p style="text-align:center; color:red; font-size:12px; margin: 15px 0;">❌ کێشەیەک لە لۆدکردنی جووڵەکان ڕوویدا.</p>`;
             }
@@ -3838,6 +3868,7 @@
                 }
 
                 showToast("بە سەرکەوتوویی جێبەجێ کرا!", "success");
+                delete walletTxCache[code]; // کاش پووچ بکەرەوە تا جاری داهاتوو داتای نوێ بهێنێت
 
                 let userIndex = allEditableUsers.findIndex(x => x.code === code);
                 if (userIndex !== -1) {
@@ -3999,6 +4030,7 @@
                 });
 
                 showToast("جێبەجێ کرا!", "success");
+                delete walletTxCache[userCode]; // کاش پووچ بکەرەوە تا جاری داهاتوو داتای نوێ بهێنێت
                 closeModal(null, 'wallet-action-modal'); document.getElementById('wa-amount').value = ""; document.getElementById('wa-reason').value = "";
                 await loadHierarchyUsers();
                 filterWalletUsers();
