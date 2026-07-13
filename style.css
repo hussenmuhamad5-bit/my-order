@@ -3212,10 +3212,16 @@ body.keyboard-open #main-fab {
   flex-direction: column;
   margin-top: -10px;
 
-  /* بەشەکە بەگشتی سکڕۆڵ ناکات؛ بەشە سەرەوەکان جێگیر دەمێننەوە */
-  overflow: hidden;
-  /* بۆشایی بۆ ناڤ باڕ تا لیستەکە لەسەری دەربکەوێت */
-  padding-bottom: 130px;
+  /* ناوەڕۆکەکە کورتە؛ ئەگەر پێویست بوو سکڕۆڵ دەکات */
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-bottom: 120px;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+#wallet-edit-section::-webkit-scrollbar {
+  display: none;
 }
 
 #profit-edit-section {
@@ -3224,24 +3230,50 @@ body.keyboard-open #main-fab {
   margin-top: -10px;
 }
 
-#wallet-edit-section > *:not(#w-user-transactions-list) {
+#wallet-edit-section > * {
   flex-shrink: 0;
 }
 
-#w-user-transactions-list {
-  flex: 1 1 auto;
-  min-height: 0;
-  /* لەسەر شاشە گەورەکان بەرزی زۆر نابێت، لەسەر بچووکەکان بچووک دەبێتەوە */
-  max-height: 260px;
+/* بەتنی کردنەوەی دواین جوڵە داراییەکان */
+.wallet-tx-open-btn {
+  width: 100%;
+  margin-top: 18px;
+  padding: 14px 15px;
+  background: rgba(36, 129, 204, 0.06);
+  border: 1px solid rgba(36, 129, 204, 0.25);
+  border-radius: 12px;
+  color: var(--primary);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.1s;
+}
 
-  /* سکڕۆڵی سەربەخۆ، جیا لە سکڕۆڵی بەشی بەڕێوەبردنی جزدان */
+.wallet-tx-open-btn span {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.wallet-tx-open-btn:active {
+  background: rgba(36, 129, 204, 0.12);
+  transform: scale(0.99);
+}
+
+.wallet-tx-open-btn > i {
+  font-size: 20px;
+}
+
+/* ناوەڕۆکی مۆدێلی جوڵە داراییەکان (سکڕۆڵ دەکات) */
+.wallet-tx-modal-body {
+  max-height: 65vh;
   overflow-y: auto;
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
-
-  /* شێوەی لیستی جیاکراوە */
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-radius: 10px;
-  scrollbar-width: thin;
+  margin: -4px;
+  padding: 4px;
 }

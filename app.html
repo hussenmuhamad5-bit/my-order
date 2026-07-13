@@ -595,11 +595,11 @@
                         <button class="btn" style="background:#f59e0b; margin-top:0; height: 38px; font-size: 13px; display: flex; align-items: center; justify-content: center; gap: 5px;"
                             onclick="openWalletAction('salary')"><i class='bx bx-money-withdraw'></i> پێدانی مووچە (سفرکردنەوە)</button>
 
-                        <!-- دواین جوڵە داراییەکان -->
-                        <span style="font-size: 12px; font-weight: bold; color: #475569; display: block; margin-top: 20px; margin-bottom: 10px;"><i class='bx bx-history'></i> دواین جوڵە داراییەکان</span>
-                        <div id="w-user-transactions-list" style="padding: 8px;">
-                            <p style="text-align:center; color:#888; font-size:12px; margin: 15px 0;">لە لۆدکاردندایە...</p>
-                        </div>
+                        <!-- بەتنی دواین جوڵە داراییەکان -->
+                        <button class="wallet-tx-open-btn" onclick="openWalletTransactionsModal()">
+                            <span><i class='bx bx-history'></i> دواین جوڵە داراییەکان</span>
+                            <i class='bx bx-chevron-left'></i>
+                        </button>
                     </div>
                 </div>
             </div>
@@ -798,6 +798,19 @@
                 <label>هۆکار یان تێبینی</label>
                 <input type="text" id="wa-reason" placeholder="بۆچی ئەم پارەیە کەم/زیاد دەکەیت؟">
                 <button class="btn" id="wa-btn" onclick="submitWalletAction()">جێبەجێکردن</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="wallet-transactions-modal" class="modal-overlay" onclick="closeModal(event, 'wallet-transactions-modal')">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h3 class="modal-title"><i class='bx bx-history'></i> دواین جوڵە داراییەکان</h3>
+                <button class="modal-close" onclick="closeModal(null, 'wallet-transactions-modal')"><i
+                        class='bx bx-x'></i></button>
+            </div>
+            <div id="wallet-tx-modal-body" class="wallet-tx-modal-body">
+                <p style="text-align:center; color:#888; font-size:12px; margin: 15px 0;">لە لۆدکردندایە...</p>
             </div>
         </div>
     </div>
@@ -3733,14 +3746,22 @@
             document.getElementById('wallet-search-container').style.display = 'none';
             document.getElementById('wallet-role-tabs-container').style.display = 'none';
             document.getElementById('wallet-edit-section').style.display = 'flex';
-            loadUserWalletTransactions(u.code);
+            window.currentWalletCode = u.code;
+        }
+
+        // کردنەوەی مۆدێلی دواین جوڵە داراییەکان
+        function openWalletTransactionsModal() {
+            let code = window.currentWalletCode;
+            if (!code) return;
+            document.getElementById('wallet-transactions-modal').classList.add('show');
+            loadUserWalletTransactions(code);
         }
 
         async function loadUserWalletTransactions(code) {
-            let list = document.getElementById('w-user-transactions-list');
-            list.innerHTML = `<p style="text-align:center; color:#888; font-size:12px; margin: 15px 0;">لە لۆدکاردندایە...</p>`;
+            let list = document.getElementById('wallet-tx-modal-body');
+            list.innerHTML = `<p style="text-align:center; color:#888; font-size:12px; margin: 15px 0;">لە لۆدکردندایە...</p>`;
             try {
-                const { data: txs } = await supabase.from('transactions').select('*').eq('user_code', code).order('created_at', { ascending: false }).limit(4);
+                const { data: txs } = await supabase.from('transactions').select('*').eq('user_code', code).order('created_at', { ascending: false }).limit(200);
                 if (txs && txs.length > 0) {
                     let html = "";
                     txs.forEach(tx => {
