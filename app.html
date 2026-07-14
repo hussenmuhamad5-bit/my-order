@@ -647,6 +647,37 @@
             <button class="btn" style="background:#dc3545;" onclick="logout()">دەرچوون لە هەژمار <i
                     class='bx bx-log-out'></i></button>
         </div>
+
+        <!-- کارتی زانیاری شاشە -->
+        <div style="background:#fff; padding:18px 20px; border-radius:12px; margin-top:16px; box-shadow:0 2px 10px rgba(0,0,0,0.05);">
+            <h3 style="margin:0 0 12px 0; font-size:16px; color:#1e293b; display:flex; align-items:center; gap:8px;"><i class='bx bx-devices' style="color:var(--primary);"></i> زانیاری شاشە</h3>
+            <div style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid #f1f5f9; font-size:14px;">
+                <span style="color:#64748b;">قەبارەی شاشە</span>
+                <strong id="info-screen" style="color:#0f172a;">—</strong>
+            </div>
+            <div style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid #f1f5f9; font-size:14px;">
+                <span style="color:#64748b;">قەبارەی پیشاندان</span>
+                <strong id="info-viewport" style="color:#0f172a;">—</strong>
+            </div>
+            <div style="display:flex; justify-content:space-between; padding:8px 0; font-size:14px;">
+                <span style="color:#64748b;">ڕێژەی پیکسڵ (DPR)</span>
+                <strong id="info-dpr" style="color:#0f172a;">—</strong>
+            </div>
+        </div>
+
+        <!-- کارتی ئیفێکتی شووشە (glassmorphism) -->
+        <div style="background:#fff; padding:18px 20px; border-radius:12px; margin-top:16px; box-shadow:0 2px 10px rgba(0,0,0,0.05);">
+            <div style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
+                <div style="text-align:right;">
+                    <div style="font-size:15px; font-weight:700; color:#1e293b; display:flex; align-items:center; gap:8px;"><i class='bx bx-shape-circle' style="color:var(--primary);"></i> ئیفێکتی شووشە</div>
+                    <div style="font-size:12px; color:#94a3b8; margin-top:4px;">کوژاندنەوەی گلاس/بلێر بۆ خێرایی زیاتر</div>
+                </div>
+                <label class="glass-toggle">
+                    <input type="checkbox" id="glass-effect-toggle" onchange="toggleGlassEffect(this)">
+                    <span class="slider-track"></span>
+                </label>
+            </div>
+        </div>
     </div>
 
     <div class="fab-wrapper" id="main-fab">
@@ -947,6 +978,40 @@
 
             switchScreen('dashboard-screen');
         };
+
+
+        // ============ ئیفێکتی شووشە (Glassmorphism) + زانیاری شاشە ============
+        // بیرمان دەمێنێت لە localStorage، بۆیە دوای داخستن و کردنەوەی ئەپەکە وەک خۆی دەمێنێتەوە
+        function applyGlassSetting() {
+            let disabled = localStorage.getItem('glassEffect') === 'off';
+            document.body.classList.toggle('no-glass', disabled);
+            let tgl = document.getElementById('glass-effect-toggle');
+            if (tgl) tgl.checked = !disabled; // چالاک (checked) = گلاس هەیە
+        }
+
+        function toggleGlassEffect(el) {
+            if (el.checked) {
+                localStorage.setItem('glassEffect', 'on');
+                document.body.classList.remove('no-glass');
+            } else {
+                localStorage.setItem('glassEffect', 'off');
+                document.body.classList.add('no-glass');
+            }
+        }
+
+        function updateScreenInfo() {
+            let s = document.getElementById('info-screen');
+            let v = document.getElementById('info-viewport');
+            let d = document.getElementById('info-dpr');
+            if (s) s.innerText = `${screen.width} × ${screen.height}`;
+            if (v) v.innerText = `${window.innerWidth} × ${window.innerHeight}`;
+            if (d) d.innerText = (window.devicePixelRatio || 1).toFixed(2);
+        }
+
+        applyGlassSetting();
+        updateScreenInfo();
+        window.addEventListener('resize', updateScreenInfo);
+        window.addEventListener('orientationchange', () => setTimeout(updateScreenInfo, 300));
 
 
         async function fetchKingCode() {
