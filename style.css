@@ -3310,3 +3310,66 @@ body.keyboard-open #main-fab {
 .wallet-tx-modal-body::-webkit-scrollbar {
   display: none;
 }
+
+/* ============ کوژاندنەوەی ئیفێکتی شووشە (Glassmorphism Toggle) ============ */
+/* کاتێک body.no-glass زیاد بکرێت، هەموو ئیفێکتەکانی شووشە/بلێر لە هەر شوێنێک دەکوژێنەوە بۆ باشترکردنی خێرایی */
+body.no-glass *,
+body.no-glass *::before,
+body.no-glass *::after {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/* پاراستنی دیمەنی ناوبار و دوگمەی FAB کاتێک شووشە ناکارایە (بۆ ئەوەی ڕووکەش زۆر شەفاف نەبێت) */
+body.no-glass .button-container {
+  background-color: rgba(255, 255, 255, 0.92) !important;
+}
+
+body.no-glass .fab-wrapper .btn {
+  background-color: rgba(52, 120, 246, 0.95) !important;
+}
+
+/* ============ دوگمەی گۆڕینی (Toggle Switch) ============ */
+.glass-toggle {
+  position: relative;
+  display: inline-block;
+  width: 52px;
+  height: 30px;
+  flex-shrink: 0;
+}
+
+.glass-toggle input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.glass-toggle .slider-track {
+  position: absolute;
+  cursor: pointer;
+  inset: 0;
+  background-color: #cbd5e1;
+  transition: 0.3s;
+  border-radius: 30px;
+}
+
+.glass-toggle .slider-track::before {
+  content: "";
+  position: absolute;
+  height: 24px;
+  width: 24px;
+  right: 3px;
+  top: 3px;
+  background-color: #fff;
+  transition: 0.3s;
+  border-radius: 50%;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.glass-toggle input:checked + .slider-track {
+  background-color: #22c55e;
+}
+
+.glass-toggle input:checked + .slider-track::before {
+  transform: translateX(-22px);
+}
