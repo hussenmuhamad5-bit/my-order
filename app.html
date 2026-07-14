@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=362, user-scalable=no">
     <title>ئەپڵیکەیشنی کارمەندان</title>
     <link rel="stylesheet" href="style.css">
     <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
@@ -74,7 +74,7 @@
         <label>شار</label>
         <div id="city-input-wrapper" style="position: relative; margin-bottom: 15px;">
             <input type="text" id="city-input" placeholder="شارێک هەڵبژێرە یان بنووسە..." autocomplete="off"
-                oninput="checkCityWarning(); filterCities()" onclick="showCityDropdown()" class="form-input"
+                oninput="checkCityWarning(); filterCities(); updateCartUI()" onclick="showCityDropdown()" class="form-input"
                 style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; height:45px; width:100%; padding:0 16px; font-family:inherit; font-size:15px;">
 
             <i class='bx bx-chevron-down'
@@ -201,11 +201,20 @@
                 <span>نرخی گەیاندن:</span>
                 <strong><span id="sum-delivery">0</span> دینار</strong>
             </div>
+            <div style="display:flex; justify-content:space-between; margin-bottom:8px; color:#059669;">
+                <span><i class='bx bx-trending-up'></i> قازانجی ئۆردەر:</span>
+                <strong><span id="sum-profit">0</span> دینار</strong>
+            </div>
             <hr style="border:0; border-top:1px dashed #ccc; margin:10px 0;">
             <div
                 style="display:flex; justify-content:space-between; color:var(--primary); font-size:18px; font-weight:bold;">
                 <span>کۆی گشتی:</span>
                 <span id="sum-total">0 دینار</span>
+            </div>
+            <div style="margin-top:14px; padding-top:12px; border-top:1px dashed #ccc;">
+                <label style="font-size:13px; color:#475569; font-weight:700; display:block; margin-bottom:6px;"><i class='bx bx-money'></i> پارەی وەرگیراو لە کڕیار</label>
+                <input type="number" id="amount-received" placeholder="بڕی پارەی وەرگیراو بنووسە..." oninput="updateCartUI()"
+                    style="width:100%; height:45px; padding:0 16px; font-family:inherit; font-size:15px; border:1px solid #e2e8f0; border-radius:10px; background:#f8fafc; box-sizing:border-box;">
             </div>
         </div>
 
@@ -1671,6 +1680,7 @@
 
             document.getElementById('order-notes').value = '';
             document.querySelectorAll('.social-check').forEach(cb => cb.checked = false);
+            document.getElementById('amount-received').value = '';
 
             cart = [];
             updateCartUI();
@@ -1783,6 +1793,18 @@
             let statusChangerHtml = "";
             if (canChangeStatus) {
                 let showDeliveredOption = (userRole === "ئەدمین" || userRole === "ڕاوێژکار" || userRole === "پاشا" || userRole === "بەڕێوەبەر");
+
+                // سنووردارکردنی هەڵبژاردەکان: گەیشتوو → تەنها گەڕاوە، گەڕاوە → تەنها گەیشتوو
+                let mkOpt = (val) => `<div class="custom-dropdown-item ${o.status === val ? 'active' : ''}" onclick="selectNewStatus('${val}', event)">${val}</div>`;
+                let statusOptionsHtml = "";
+                if (o.status === "گەیشتووە") {
+                    statusOptionsHtml = mkOpt('گەیشتووە') + mkOpt('گەڕاوەتەوە');
+                } else if (o.status === "گەڕاوەتەوە") {
+                    statusOptionsHtml = mkOpt('گەڕاوەتەوە') + (showDeliveredOption ? mkOpt('گەیشتووە') : '');
+                } else {
+                    statusOptionsHtml = mkOpt('ئامادە دەکرێت') + mkOpt('لە ڕێگایە') + (showDeliveredOption ? mkOpt('گەیشتووە') : '') + mkOpt('گەڕاوەتەوە');
+                }
+
                 statusChangerHtml = `
             <div style="margin-top: 20px; border-top: 1px dashed #cbd5e1; padding-top: 15px; background: rgba(36, 129, 204, 0.03); border-radius: 12px; padding: 15px;">
                 <label style="font-size:13px; color:var(--primary); font-weight:700; margin-bottom:10px; display:block;"><i class='bx bx-refresh'></i> گۆڕینی حاڵەتی داواکاری</label>
@@ -1793,10 +1815,7 @@
                         <i class='bx bx-chevron-down'></i>
                     </div>
                     <div class="custom-dropdown-list" id="new-status-list" style="display: none;">
-                        <div class="custom-dropdown-item ${o.status === 'ئامادە دەکرێت' ? 'active' : ''}" onclick="selectNewStatus('ئامادە دەکرێت', event)">ئامادە دەکرێت</div>
-                        <div class="custom-dropdown-item ${o.status === 'لە ڕێگایە' ? 'active' : ''}" onclick="selectNewStatus('لە ڕێگایە', event)">لە ڕێگایە</div>
-                        ${showDeliveredOption ? `<div class="custom-dropdown-item ${o.status === 'گەیشتووە' ? 'active' : ''}" onclick="selectNewStatus('گەیشتووە', event)">گەیشتووە</div>` : ''}
-                        <div class="custom-dropdown-item ${o.status === 'گەڕاوەتەوە' ? 'active' : ''}" onclick="selectNewStatus('گەڕاوەتەوە', event)">گەڕاوەتەوە</div>
+                        ${statusOptionsHtml}
                     </div>
                     <input type="hidden" id="new-order-status" value="${o.status || 'ئامادە دەکرێت'}">
                 </div>
@@ -1892,6 +1911,16 @@
             let newStatus = document.getElementById('new-order-status').value;
             let reason = document.getElementById('return-reason-input').value.trim();
             let o = allGlobalOrdersData[orderId];
+
+            // سنووردارکردنی گۆڕینی حاڵەت (پاراستنی دارایی): گەیشتوو ↔ گەڕاوە تەنها
+            if (o && o.status === "گەیشتووە" && newStatus !== "گەیشتووە" && newStatus !== "گەڕاوەتەوە") {
+                showToast("ئۆردەری گەیشتوو تەنها دەکرێت بگۆڕدرێت بۆ «گەڕاوەتەوە»!", "error");
+                return;
+            }
+            if (o && o.status === "گەڕاوەتەوە" && newStatus !== "گەڕاوەتەوە" && newStatus !== "گەیشتووە") {
+                showToast("ئۆردەری گەڕاوە تەنها دەکرێت بگۆڕدرێت بۆ «گەیشتووە»!", "error");
+                return;
+            }
 
             if (newStatus === "گەیشتووە" && userRole !== "ئەدمین" && userRole !== "ڕاوێژکار" && userRole !== "پاشا" && userRole !== "بەڕێوەبەر") {
                 showToast("تەنها ئەدمین، ڕاوێژکار، پاشا و بەڕێوەبەر دەتوانن داواکاری بە گەیشتوو دیاری بکەن!", "error");
@@ -2066,6 +2095,7 @@
                 let p = parseInt(prices[i]) / q || 0;
                 cart.push({ name: names[i].trim(), qty: q, unitPrice: p });
             }
+            document.getElementById('amount-received').value = (o.amount_received != null && o.amount_received !== "") ? o.amount_received : "";
             updateCartUI();
 
             document.getElementById('order-notes').value = o.notes || "";
@@ -2134,8 +2164,25 @@
             let itemQtys = cart.map(c => String(c.qty)).join('\n');
             let itemPrices = cart.map(c => String(c.qty * c.unitPrice)).join('\n');
             let itemsTotal = Number(cart.reduce((sum, item) => sum + (item.qty * item.unitPrice), 0));
-            let deliveryPrice = Number(5000);
-            let grandTotal = Number(itemsTotal + deliveryPrice);
+            let deliveryPrice = Number(getFormDeliveryPrice());
+
+            // پارەی وەرگیراو لە کڕیار
+            let amountReceived = parseFloat(document.getElementById('amount-received').value) || 0;
+
+            // پشکنین: پارەی وەرگیراو دەبێت بنووسرێت
+            if (amountReceived <= 0) {
+                showToast("تکایە بڕی پارەی وەرگیراو لە کڕیار بنووسە!", "error");
+                return;
+            }
+            // پشکنین: کۆی نرخی کاڵاکان و گەیاندن نابێت زیاتربن لە پارەی وەرگیراو
+            if ((itemsTotal + deliveryPrice) > amountReceived) {
+                showToast("⚠️ داواکاری وەرناگیرێت! کۆی نرخی کاڵاکان و گەیاندن زیاترە لە پارەی وەرگیراو لە کڕیار.", "error");
+                return;
+            }
+
+            // کۆی گشتی = پارەی وەرگیراو لە کڕیار
+            let grandTotal = Number(amountReceived);
+            let memberProfit = amountReceived - deliveryPrice - itemsTotal;
 
             showToast(editingOrderId ? "خەریکی نوێکردنەوە..." : "خەریکی ناردنی ئۆردەرەکەم...", "loading");
 
@@ -2154,6 +2201,8 @@
                         items_total: itemsTotal,
                         delivery_price: deliveryPrice,
                         grand_total: grandTotal,
+                        amount_received: amountReceived,
+                        member_profit: memberProfit,
                         notes: notes
                     }).eq('id', editingOrderId);
 
@@ -2191,6 +2240,8 @@
                         items_total: itemsTotal,
                         delivery_price: deliveryPrice,
                         grand_total: grandTotal,
+                        amount_received: amountReceived,
+                        member_profit: memberProfit,
                         notes: notes,
                         order_code: orderCode,
                         source: "سایت",
@@ -2565,6 +2616,14 @@
             updateCartUI();
         }
 
+        // نرخی گەیاندن بەپێی نرخی لای ئەندام (display_price) ی شار؛ ئەگەر شار لە لیستەکە نەبوو ٥٠٠٠
+        function getFormDeliveryPrice() {
+            let cityInput = document.getElementById('city-input');
+            let cityName = cityInput ? cityInput.value.trim() : "";
+            let cityObj = (typeof dbCitiesList !== 'undefined' && dbCitiesList) ? dbCitiesList.find(c => c.name === cityName) : null;
+            return cityObj ? Number(cityObj.display_price || 0) : 5000;
+        }
+
         function updateCartUI() {
             let list = document.getElementById('cart-list');
             if (!list) return;
@@ -2575,14 +2634,25 @@
                 itemsTotal += totalItemPrice;
                 list.innerHTML += `<li><div><b>${item.qty}x</b> ${item.name} <div style="font-size:13px;color:#28a745; margin-top:3px;">${totalItemPrice.toLocaleString()} دینار</div></div><span onclick="removeFromCart(${index})" style="cursor:pointer; color:#dc3545; font-size:20px; padding:5px;"><i class='bx bx-trash'></i></span></li>`;
             });
-            let deliveryPrice = cart.length > 0 ? 5000 : 0;
-            let grandTotal = itemsTotal + deliveryPrice;
+            let deliveryPrice = cart.length > 0 ? getFormDeliveryPrice() : 0;
+            let receivedInput = document.getElementById('amount-received');
+            let received = parseFloat(receivedInput ? receivedInput.value : '') || 0;
+            // کۆی گشتی = پارەی وەرگیراو لە کڕیار (ئەگەر نووسرابێت)، ئەگەرنا کۆی تێچوو
+            let grandTotal = received > 0 ? received : (itemsTotal + deliveryPrice);
             let sumItemsEl = document.getElementById('sum-items');
             let sumDelivEl = document.getElementById('sum-delivery');
             let sumTotalEl = document.getElementById('sum-total');
             if (sumItemsEl) sumItemsEl.innerText = itemsTotal.toLocaleString();
             if (sumDelivEl) sumDelivEl.innerText = deliveryPrice.toLocaleString();
             if (sumTotalEl) sumTotalEl.innerText = grandTotal.toLocaleString() + " دینار";
+
+            // قازانجی ئۆردەر = پارەی وەرگیراو − نرخی گەیاندن − کۆی نرخی کاڵاکان
+            let orderProfit = received > 0 ? (received - deliveryPrice - itemsTotal) : 0;
+            let sumProfitEl = document.getElementById('sum-profit');
+            if (sumProfitEl) {
+                sumProfitEl.innerText = orderProfit.toLocaleString();
+                sumProfitEl.parentElement.style.color = orderProfit < 0 ? '#dc2626' : '#059669';
+            }
         }
 
 
@@ -3506,6 +3576,7 @@
                     document.getElementById('city-input').value = city;
                     box.style.display = 'none';
                     checkCityWarning();
+                    updateCartUI();
                 };
 
                 box.appendChild(div);
@@ -4137,7 +4208,12 @@
                 distData.consultant = { code: memberData.consultant, name: uMap[memberData.consultant]?.full_name || "نییە", profit: (uMap[memberData.consultant]?.profit_rate || 0) * 1 };
 
                 let cityName = o.address ? o.address.split('-')[0].trim() : ""; let cityObj = dbCitiesList.find(c => c.name === cityName);
-                distData.deliveryCost = cityObj ? cityObj.real_price : 4000; distData.grandTotal = parseFloat(o.grand_total);
+                distData.deliveryCost = cityObj ? cityObj.real_price : 4000;
+                // کۆی گشتی وەرگیراو لە کڕیار: ئەگەر پارەی وەرگیراو تۆمارکرابێت، ئەوە بەکاردێت
+                distData.grandTotal = (o.amount_received != null && parseFloat(o.amount_received) > 0) ? parseFloat(o.amount_received) : parseFloat(o.grand_total);
+                // قازانجی ئەندام و پاشەکەوت (خۆکارانە پڕ دەکرێنەوە)
+                distData.memberProfit = (o.member_profit != null && !isNaN(parseFloat(o.member_profit)) && parseFloat(o.member_profit) > 0) ? parseFloat(o.member_profit) : 0;
+                distData.savingsDefault = 500;
 
                 isDistKingOrder = (memberData && memberData.role === "پاشا");
                 let isAuthorized = (userRole === "ئەدمین" || userRole === "ڕاوێژکار" || userRole === "بەڕێوەبەر" || userRole === "پاشا");
@@ -4221,7 +4297,7 @@
                                 <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 1v16M1 9h16"></path>
                             </svg>
                         </button>
-                        <input type="number" id="dist-member" value="0" oninput="calcKingProfit()" class="qty-input">
+                        <input type="number" id="dist-member" value="${distData.memberProfit}" oninput="calcKingProfit()" class="qty-input">
                         <button type="button" class="qty-btn minus-btn" onclick="adjustDistValue('dist-member', -1000)" style="border-right-color: #93c5fd;">
                             <svg class="qty-icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 18 18">
                                 <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M1 9h16"></path>
@@ -4237,7 +4313,7 @@
                                 <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 1v16M1 9h16"></path>
                             </svg>
                         </button>
-                        <input type="number" id="dist-savings" value="0" oninput="calcKingProfit()" class="qty-input">
+                        <input type="number" id="dist-savings" value="${distData.savingsDefault}" oninput="calcKingProfit()" class="qty-input">
                         <button type="button" class="qty-btn minus-btn" onclick="adjustDistValue('dist-savings', -500)" style="border-right-color: #6ee7b7;">
                             <svg class="qty-icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 18 18">
                                 <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M1 9h16"></path>
