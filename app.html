@@ -2005,46 +2005,38 @@
                 closeModal(null, 'order-details-modal');
 
                 try {
-                    const { data: txs } = await supabase.from('transactions').select('*').eq('order_id', o.id);
+                    // === لۆجیکی نوێ: گەڕاندنەوە بەپێی «کۆی پوخت» (net) بۆ هەر بەکارهێنەر و هەر جزدان ===
+                    // بۆ هەر (بەکارهێنەر + جزدان)، کۆی هەموو جووڵەکانی ئەم ئۆردەرە کۆدەکەینەوە، پاشان ئەو کۆیە دەبڕینەوە
+                    // تا دەگاتە 0. ئەمە idempotent ـە: دوای گەڕاندنەوە کۆی پوخت = 0، بۆیە دووبارە کلیک هیچ زیانێک ناگەیەنێت،
+                    // هەروەها ئەگەر ئۆردەرێک بە هەڵە چەند جار گەیشتوو کرابێت، تەنها جارێک بۆ 0 دەگەڕێتەوە (خۆچاککردن).
+                    const { data: txs } = await supabase.from('transactions').select('*').eq('order_id', String(o.id));
                     if (txs && txs.length > 0) {
-                        let posTxs = txs.filter(tx => parseFloat(tx.amount) > 0 && tx.type !== "گەڕانەوەی ئۆردەر");
-                        let negTxs = txs.filter(tx => parseFloat(tx.amount) < 0 || tx.type === "گەڕانەوەی ئۆردەر");
-
-                        let consumedIds = new Set();
-                        for (let neg of negTxs) {
-                            let match = posTxs.find(pos =>
-                                !consumedIds.has(pos.id) &&
-                                pos.user_code === neg.user_code &&
-                                Math.abs(parseFloat(pos.amount) + parseFloat(neg.amount)) < 0.01
-                            );
-                            if (match) {
-                                consumedIds.add(match.id);
-                            } else {
-                                let fallbackMatch = posTxs.find(pos =>
-                                    !consumedIds.has(pos.id) &&
-                                    pos.user_code === neg.user_code
-                                );
-                                if (fallbackMatch) {
-                                    consumedIds.add(fallbackMatch.id);
-                                }
-                            }
+                        let netMap = {}; // key: `${user_code}|${wallet}` -> کۆی پوخت
+                        for (let tx of txs) {
+                            let wallet = (tx.wallet_type === 'savings' || tx.type === 'پاشەکەوتی ئۆردەر') ? 'savings' : 'balance';
+                            let key = tx.user_code + '|' + wallet;
+                            netMap[key] = (netMap[key] || 0) + parseFloat(tx.amount || 0);
                         }
 
-                        let unrevertedTxs = posTxs.filter(pos => !consumedIds.has(pos.id));
-
                         let revertTxs = [];
-                        for (let tx of unrevertedTxs) {
-                            const { data: u } = await supabase.from('employees').select('balance, savings').eq('code', tx.user_code).single();
+                        for (let key in netMap) {
+                            let net = netMap[key];
+                            if (Math.abs(net) < 0.01) continue; // هیچ شتێک نەماوە بۆ گەڕاندنەوە
+
+                            let sepIdx = key.lastIndexOf('|');
+                            let uCode = key.substring(0, sepIdx);
+                            let isSavings = (key.substring(sepIdx + 1) === 'savings');
+
+                            const { data: u } = await supabase.from('employees').select('balance, savings').eq('code', uCode).single();
                             if (u) {
                                 let oldBal = parseFloat(u.balance || 0); let oldSav = parseFloat(u.savings || 0);
                                 let newBal = oldBal; let newSav = oldSav;
-                                let isSavings = (tx.type === "پاشەکەوتی ئۆردەر");
-                                if (isSavings) newSav -= parseFloat(tx.amount); else newBal -= parseFloat(tx.amount);
-                                await supabase.from('employees').update({ balance: newBal, savings: newSav }).eq('code', tx.user_code);
+                                if (isSavings) newSav -= net; else newBal -= net;
+                                await supabase.from('employees').update({ balance: newBal, savings: newSav }).eq('code', uCode);
                                 revertTxs.push({
-                                    user_code: tx.user_code,
-                                    order_id: o.id,
-                                    amount: -parseFloat(tx.amount),
+                                    user_code: uCode,
+                                    order_id: String(o.id),
+                                    amount: -net,
                                     type: "گەڕانەوەی ئۆردەر",
                                     description: `بڕین بەهۆی گەڕانەوەی ئۆردەری ${o.order_code}. هۆکار: ${reason}`,
                                     created_by: userName,
@@ -4436,6 +4428,18 @@
             showToast("خەریکی دابەشکردن...", "loading");
 
             try {
+                // پاراستن: ئەگەر ئەم ئۆردەرە پێشتر پارەی بۆ دابەشکرابێت و نەگەڕابێتەوە (کۆی پوخت > 0)،
+                // ڕێگری لە دووبارە دابەشکردن دەکات تا پارە چەند جار زیاد نەکرێت.
+                const { data: existingTxs } = await supabase.from('transactions').select('amount').eq('order_id', String(o.id));
+                if (existingTxs && existingTxs.length > 0) {
+                    let existingNet = existingTxs.reduce((s, t) => s + parseFloat(t.amount || 0), 0);
+                    if (existingNet > 0.01) {
+                        showToast("ئەم ئۆردەرە پێشتر پارەی بۆ دابەشکراوە! بۆ دابەشکردنەوە، سەرەتا بیکە بە گەڕاوە.", "error");
+                        if (confirmBtn) { confirmBtn.disabled = false; confirmBtn.innerHTML = "<i class='bx bx-check-circle'></i> تەسدیقکردن و تۆمارکردن"; }
+                        return;
+                    }
+                }
+
                 let txList = [];
                 let updateBalances = {};
 
