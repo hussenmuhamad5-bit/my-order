@@ -241,8 +241,8 @@
             <div class="magic-tabs-wrapper">
                 <div class="magic-tabs">
                     <div class="magic-slider" id="admin-tab-slider"></div>
-                    <button class="magic-tab active" onclick="switchAdminTab('create', this)">دروستکردن</button>
-                    <button class="magic-tab" onclick="switchAdminTab('edit', this)">چاکسازی</button>
+                    <button class="magic-tab active" id="tab-create" onclick="switchAdminTab('create', this)">دروستکردن</button>
+                    <button class="magic-tab" id="tab-edit" onclick="switchAdminTab('edit', this)">چاکسازی</button>
                     <button class="magic-tab" onclick="switchAdminTab('profits', this)" id="tab-profits"
                         style="display:none;">قازانجەکان</button>
                     <button class="magic-tab" onclick="switchAdminTab('wallets', this)" id="tab-wallets"
@@ -273,7 +273,7 @@
 
                     <div id="wrapper-u-manager">
                         <div class="switch-group">
-                            <label>بەڕێوەبەری هەیە؟</label>
+                            <label>ئەڵماسی هەیە؟</label>
                             <label class="switch"><input type="checkbox" id="switch-u-manager"
                                     onchange="toggleInput('u-manager', this.checked)">
                                 <div class="slider">
@@ -317,7 +317,7 @@
 
                     <div id="wrapper-u-consultant">
                         <div class="switch-group">
-                            <label>ڕاوێژکاری هەیە؟</label>
+                            <label>گۆڵدی هەیە؟</label>
                             <label class="switch"><input type="checkbox" id="switch-u-consultant"
                                     onchange="toggleInput('u-consultant', this.checked)">
                                 <div class="slider">
@@ -337,6 +337,11 @@
                         <datalist id="datalist-u-consultant"></datalist>
                     </div>
 
+                    <div id="wrapper-u-perms" style="margin-top:15px; padding-top:15px; border-top:1px dashed #cbd5e1;">
+                        <label style="font-weight:700; color:var(--primary); display:block; margin-bottom:10px;"><i class='bx bx-shield-quarter'></i> دەسەڵاتەکان (پێرمیشن)</label>
+                        <div id="perms-create"></div>
+                    </div>
+
                     <button class="btn" style="background:var(--primary); margin-top:20px; font-size:16px;"
                         onclick="generateCode()"><i class='bx bx-user-plus'></i> دروستکردنی کۆدی نوێ</button>
 
@@ -351,11 +356,22 @@
 
             <div id="section-edit-code" style="display: none;">
                 <div class="container">
-                    <label>کۆدەکە بنووسە بۆ گەڕان:</label>
-                    <div style="display: flex; gap: 8px; margin-bottom: 15px; align-items: center;">
+                    <!-- بینینی لیستی کلیلەکان (وەک بەشی قازانجەکان) -->
+                    <div id="edit-list-view">
+                        <div class="segmented-control" id="edit-role-filter" style="margin-bottom: 15px;">
+                            <label><input type="radio" name="edit_role_filter" value="سلڤەر" checked
+                                    onchange="filterEditUsers()"><span>سلڤەر</span></label>
+                            <label><input type="radio" name="edit_role_filter" value="گۆڵد"
+                                    onchange="filterEditUsers()"><span>گۆڵد</span></label>
+                            <label><input type="radio" name="edit_role_filter" value="ئەدمین"
+                                    onchange="filterEditUsers()"><span>ئەدمین</span></label>
+                            <label><input type="radio" name="edit_role_filter" value="ئەڵماس"
+                                    onchange="filterEditUsers()"><span>ئەڵماس</span></label>
+                        </div>
+
                         <div class="search-group">
-                            <input class="search-input" type="search" id="search-code-input" list="codes-list"
-                                placeholder="نموونە: ab..." oninput="autoSearchCode()" />
+                            <input class="search-input" type="search" id="edit-list-search"
+                                placeholder="گەڕان بە ناو یان کۆد..." oninput="filterEditUsers()" autocomplete="off" />
                             <svg viewBox="0 0 24 24" aria-hidden="true" class="search-icon">
                                 <g>
                                     <path
@@ -363,11 +379,18 @@
                                     </path>
                                 </g>
                             </svg>
-                            <datalist id="codes-list"></datalist>
                         </div>
+
+                        <div id="edit-users-list" style="margin-top:15px; margin-bottom: 20px;"></div>
                     </div>
 
-                    <div id="edit-section" class="edit-section">
+                    <!-- بۆ گونجاندن لەگەڵ updateCode/deleteCode (کۆدی هەڵبژێردراو) -->
+                    <input type="hidden" id="search-code-input">
+
+                    <div id="edit-section" class="edit-section" style="display:none;">
+                        <button type="button" onclick="cancelEditFromList()"
+                            style="background:none; border:none; color:var(--primary); font-family:inherit; font-size:14px; font-weight:700; cursor:pointer; padding:0 0 12px 0; display:flex; align-items:center; gap:6px;"><i class='bx bx-right-arrow-alt'></i> گەڕانەوە بۆ لیست</button>
+
                         <label>ناوی سیانی</label>
                         <input type="text" id="e-name">
 
@@ -387,7 +410,7 @@
 
                         <div id="wrapper-e-manager">
                             <div class="switch-group">
-                                <label>بەڕێوەبەری هەیە؟</label>
+                                <label>ئەڵماسی هەیە؟</label>
                                 <label class="switch"><input type="checkbox" id="switch-e-manager"
                                         onchange="toggleInput('e-manager', this.checked)">
                                     <div class="slider">
@@ -431,7 +454,7 @@
 
                         <div id="wrapper-e-consultant">
                             <div class="switch-group">
-                                <label>ڕاوێژکاری هەیە؟</label>
+                                <label>گۆڵدی هەیە؟</label>
                                 <label class="switch"><input type="checkbox" id="switch-e-consultant"
                                         onchange="toggleInput('e-consultant', this.checked)">
                                     <div class="slider">
@@ -451,7 +474,10 @@
                             <datalist id="datalist-e-consultant"></datalist>
                         </div>
 
-
+                        <div id="wrapper-e-perms" style="margin-top:15px; padding-top:15px; border-top:1px dashed #cbd5e1;">
+                            <label style="font-weight:700; color:var(--primary); display:block; margin-bottom:10px;"><i class='bx bx-shield-quarter'></i> دەسەڵاتەکان (پێرمیشن)</label>
+                            <div id="perms-edit"></div>
+                        </div>
 
                         <button class="btn" style="background:#28a745; margin-top:20px; font-size:16px;"
                             onclick="updateCode()"><i class='bx bx-save'></i> پاشەکەوتکردنی گۆڕانکاری</button>
@@ -465,12 +491,12 @@
                 <div class="container" id="profits-container">
 
                     <div class="segmented-control" style="margin-bottom: 15px;">
-                        <label><input type="radio" name="profit_role_filter" value="بەڕێوەبەر" checked
-                                onchange="filterProfitUsers()"><span>بەڕێوەبەر</span></label>
+                        <label><input type="radio" name="profit_role_filter" value="ئەڵماس" checked
+                                onchange="filterProfitUsers()"><span>ئەڵماس</span></label>
                         <label><input type="radio" name="profit_role_filter" value="ئەدمین"
                                 onchange="filterProfitUsers()"><span>ئەدمین</span></label>
-                        <label><input type="radio" name="profit_role_filter" value="ڕاوێژکار"
-                                onchange="filterProfitUsers()"><span>ڕاوێژکار</span></label>
+                        <label><input type="radio" name="profit_role_filter" value="گۆڵد"
+                                onchange="filterProfitUsers()"><span>گۆڵد</span></label>
                     </div>
 
                     <div class="search-group" id="profit-search-container">
@@ -530,14 +556,14 @@
             <div id="section-wallets" style="display: none;">
                 <div class="container" id="wallets-container">
                     <div class="segmented-control" style="margin-bottom: 15px;" id="wallet-role-tabs-container">
-                        <label><input type="radio" name="wallet_role_filter" value="بەڕێوەبەر" checked
-                                onchange="filterWalletUsers()"><span>بەڕێوەبەر</span></label>
+                        <label><input type="radio" name="wallet_role_filter" value="ئەڵماس" checked
+                                onchange="filterWalletUsers()"><span>ئەڵماس</span></label>
                         <label><input type="radio" name="wallet_role_filter" value="ئەدمین"
                                 onchange="filterWalletUsers()"><span>ئەدمین</span></label>
-                        <label><input type="radio" name="wallet_role_filter" value="ڕاوێژکار"
-                                onchange="filterWalletUsers()"><span>ڕاوێژکار</span></label>
-                        <label><input type="radio" name="wallet_role_filter" value="ئەندام"
-                                onchange="filterWalletUsers()"><span>ئەندام</span></label>
+                        <label><input type="radio" name="wallet_role_filter" value="گۆڵد"
+                                onchange="filterWalletUsers()"><span>گۆڵد</span></label>
+                        <label><input type="radio" name="wallet_role_filter" value="سلڤەر"
+                                onchange="filterWalletUsers()"><span>سلڤەر</span></label>
                     </div>
 
                     <div class="search-group" id="wallet-search-container">
@@ -622,7 +648,7 @@
                         <input type="text" id="c-name" placeholder="ناوی شار (نموونە: هەولێر)">
                         <div style="display:flex; gap:10px;">
                             <input type="number" id="c-real" placeholder="نرخی شۆفێر">
-                            <input type="number" id="c-display" placeholder="نرخی لای ئەندام">
+                            <input type="number" id="c-display" placeholder="نرخی لای سلڤەر">
                         </div>
                         <button class="btn" style="margin-top:0;" onclick="addCity()"><i class='bx bx-plus'></i>
                             زیادکردن</button>
@@ -868,8 +894,8 @@
                 <input type="text" id="edit-c-name" placeholder="ناوی شار (نموونە: هەولێر)">
                 <label>نرخی شۆفێر</label>
                 <input type="number" id="edit-c-real" placeholder="نرخی شۆفێر">
-                <label>نرخی لای ئەندام</label>
-                <input type="number" id="edit-c-display" placeholder="نرخی لای ئەندام">
+                <label>نرخی لای سلڤەر</label>
+                <input type="number" id="edit-c-display" placeholder="نرخی لای سلڤەر">
                 <button class="btn" style="background:var(--primary);" onclick="updateCity()">نوێکردنەوە</button>
             </div>
         </div>
@@ -939,9 +965,89 @@
 
         let cart = [];
         let creatorCode = currentUser ? currentUser.code : "";
+
+        // نۆرمالایزکردنی ناوی کۆنی ڕۆڵ → نوێ (بۆ گواستنەوەی بێ کێشە بۆ بەکارهێنەرە داخڵبووە کۆنەکان)
+        const ROLE_ALIASES = { 'ئەندام': 'سلڤەر', 'ڕاوێژکار': 'گۆڵد', 'بەڕێوەبەر': 'ئەڵماس' };
+        function normalizeRole(r) { return ROLE_ALIASES[r] || r; }
+        if (currentUser && currentUser.role) currentUser.role = normalizeRole(currentUser.role);
+
         let userRole = currentUser ? currentUser.role : "";
         let userName = currentUser ? (currentUser.full_name || currentUser.name || "بێ ناو") : "";
         let uploadedImageUrls = [];
+
+        // ============ سیستەمی دەسەڵات (Permissions) ============
+        const PERMISSIONS = [
+            { key: 'change_order_status', label: 'گۆڕینی حاڵەتی ئۆردەر' },
+            { key: 'mark_delivered', label: 'دیاریکردنی «گەیشتووە» (پارە دابەش دەکات)', money: true },
+            { key: 'mark_returned', label: 'دیاریکردنی «گەڕاوەتەوە» (پارە دەگەڕێنێتەوە)', money: true },
+            { key: 'edit_order', label: 'دەستکاری نرخ/وردەکاریی ئۆردەر' },
+            { key: 'delete_order', label: 'سڕینەوەی ئۆردەر' },
+            { key: 'view_all_orders', label: 'بینینی هەموو ئۆردەرەکان' },
+            { key: 'distribute_profit', label: 'دابەشکردنی قازانج', money: true },
+            { key: 'access_admin', label: 'بینینی پەڕەی بەڕێوەبردن' },
+            { key: 'manage_employees', label: 'بەڕێوەبردنی کارمەندان (کلیل)' },
+            { key: 'view_all_wallets', label: 'بینینی جزدان و قازانجی هەموان' },
+            { key: 'manage_cities', label: 'بەڕێوەبردنی شارەکان و نرخەکان' },
+        ];
+
+        // دەسەڵاتی بنەڕەتی هەر ڕۆڵێک (کاتێک کلیلێک دەسەڵاتی دیارینەکراوە — بۆ گونجاندن لەگەڵ ڕەفتاری کۆن)
+        const ROLE_DEFAULT_PERMS = {
+            'پاشا': PERMISSIONS.map(p => p.key),
+            'ئەڵماس': ['change_order_status', 'mark_delivered', 'mark_returned', 'distribute_profit', 'access_admin', 'manage_employees', 'view_all_orders'],
+            'ئەدمین': ['change_order_status', 'mark_delivered', 'mark_returned', 'distribute_profit'],
+            'گۆڵد': ['change_order_status', 'mark_delivered', 'mark_returned', 'distribute_profit'],
+            'سلڤەر': [],
+        };
+
+        function roleDefaultPerms(role) {
+            return ROLE_DEFAULT_PERMS[role] ? ROLE_DEFAULT_PERMS[role].slice() : [];
+        }
+
+        // پشکنینی دەسەڵات بۆ بەکارهێنەری ئێستا. پاشا هەمیشە هەموو دەسەڵاتی هەیە (بۆ ئەوەی قوفڵ نەبێت).
+        function can(perm) {
+            if (!currentUser) return false;
+            if (userRole === "پاشا") return true;
+            let perms = currentUser.permissions;
+            if (perms !== null && perms !== undefined) {
+                if (Array.isArray(perms)) return perms.includes(perm);
+                if (typeof perms === 'object') return perms[perm] === true;
+            }
+            return roleDefaultPerms(userRole).includes(perm);
+        }
+
+        // دروستکردنی سویچەکانی دەسەڵات لە فۆرمی (create/edit)
+        function renderPermToggles(mode) {
+            let container = document.getElementById('perms-' + mode);
+            if (!container) return;
+            let html = PERMISSIONS.map(p => `
+                <div class="switch-group">
+                    <label style="font-size:13px;">${p.money ? '⚠️ ' : ''}${p.label}</label>
+                    <label class="switch"><input type="checkbox" id="perm-${mode}-${p.key}">
+                        <div class="slider"><div class="circle">
+                            <svg class="cross" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                            <svg class="checkmark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                        </div></div>
+                    </label>
+                </div>`).join('');
+            container.innerHTML = html;
+        }
+
+        // دانانی دۆخی سویچەکان بەپێی لیستی دەسەڵاتەکان
+        function setPermToggles(mode, permsArray) {
+            let arr = Array.isArray(permsArray) ? permsArray : [];
+            PERMISSIONS.forEach(p => {
+                let el = document.getElementById(`perm-${mode}-${p.key}`);
+                if (el) el.checked = arr.includes(p.key);
+            });
+        }
+
+        // کۆکردنەوەی دەسەڵاتە هەڵبژێردراوەکان لە فۆرمەکە
+        function collectPermToggles(mode) {
+            return PERMISSIONS.filter(p => {
+                let el = document.getElementById(`perm-${mode}-${p.key}`);
+                return el && el.checked;
+            }).map(p => p.key);
+        }
         let searchTimeout = null;
         let availableManagers = [];
         let availableAdmins = [];
@@ -1027,22 +1133,26 @@
 
             let adminNavBtn = document.getElementById('nav-admin');
             let isKing = (userRole === "پاشا");
-            let isManager = (userRole === "بەڕێوەبەر");
 
             if (adminNavBtn) {
-                if (isKing || isManager) {
+                if (can('access_admin')) {
                     adminNavBtn.style.display = "flex";
                     setupAdminRolesUI(isKing);
 
-                    if (isKing) {
-                        // تەنها بۆ پاشا ئەم تابانە دەردەکەون
-                        let tabProfits = document.getElementById('tab-profits');
-                        let tabWallets = document.getElementById('tab-wallets');
-                        let tabCities = document.getElementById('tab-cities');
-                        if (tabProfits) tabProfits.style.display = 'inline-block';
-                        if (tabWallets) tabWallets.style.display = 'inline-block';
-                        if (tabCities) tabCities.style.display = 'inline-block';
-                    }
+                    // تابەکانی بەڕێوەبردنی کلیل (دروستکردن/چاکسازی) — بەپێی manage_employees
+                    let showEmp = can('manage_employees');
+                    let tabCreate = document.getElementById('tab-create');
+                    let tabEdit = document.getElementById('tab-edit');
+                    if (tabCreate) tabCreate.style.display = showEmp ? '' : 'none';
+                    if (tabEdit) tabEdit.style.display = showEmp ? '' : 'none';
+
+                    // تابەکانی قازانج/جزدان — بەپێی view_all_wallets؛ شارەکان — بەپێی manage_cities
+                    let tabProfits = document.getElementById('tab-profits');
+                    let tabWallets = document.getElementById('tab-wallets');
+                    let tabCities = document.getElementById('tab-cities');
+                    if (tabProfits) tabProfits.style.display = can('view_all_wallets') ? 'inline-block' : 'none';
+                    if (tabWallets) tabWallets.style.display = can('view_all_wallets') ? 'inline-block' : 'none';
+                    if (tabCities) tabCities.style.display = can('manage_cities') ? 'inline-block' : 'none';
                 } else {
                     adminNavBtn.style.display = "none";
                 }
@@ -1056,21 +1166,24 @@
             let rolesHTML = "";
             if (isKing) {
                 rolesHTML = `
-                <label><input type="radio" name="ROLE_NAME" value="بەڕێوەبەر" onchange="updateFormByRole('MODE')"><span>بەڕێوەبەر</span></label>
+                <label><input type="radio" name="ROLE_NAME" value="ئەڵماس" onchange="updateFormByRole('MODE')"><span>ئەڵماس</span></label>
                 <label><input type="radio" name="ROLE_NAME" value="ئەدمین" onchange="updateFormByRole('MODE')"><span>ئەدمین</span></label>
-                <label><input type="radio" name="ROLE_NAME" value="ڕاوێژکار" onchange="updateFormByRole('MODE')"><span>ڕاوێژکار</span></label>
-                <label><input type="radio" name="ROLE_NAME" value="ئەندام" onchange="updateFormByRole('MODE')"><span>ئەندام</span></label>
+                <label><input type="radio" name="ROLE_NAME" value="گۆڵد" onchange="updateFormByRole('MODE')"><span>گۆڵد</span></label>
+                <label><input type="radio" name="ROLE_NAME" value="سلڤەر" onchange="updateFormByRole('MODE')"><span>سلڤەر</span></label>
             `;
             } else {
                 rolesHTML = `
                 <label><input type="radio" name="ROLE_NAME" value="ئەدمین" onchange="updateFormByRole('MODE')"><span>ئەدمین</span></label>
-                <label><input type="radio" name="ROLE_NAME" value="ڕاوێژکار" onchange="updateFormByRole('MODE')"><span>ڕاوێژکار</span></label>
-                <label><input type="radio" name="ROLE_NAME" value="ئەندام" onchange="updateFormByRole('MODE')"><span>ئەندام</span></label>
+                <label><input type="radio" name="ROLE_NAME" value="گۆڵد" onchange="updateFormByRole('MODE')"><span>گۆڵد</span></label>
+                <label><input type="radio" name="ROLE_NAME" value="سلڤەر" onchange="updateFormByRole('MODE')"><span>سلڤەر</span></label>
             `;
             }
 
             if (roleCreate) roleCreate.innerHTML = rolesHTML.replace(/ROLE_NAME/g, 'u_role').replace(/MODE/g, 'create');
             if (roleEdit) roleEdit.innerHTML = rolesHTML.replace(/ROLE_NAME/g, 'e_role').replace(/MODE/g, 'edit');
+
+            renderPermToggles('create');
+            renderPermToggles('edit');
 
             updateFormByRole('create');
             updateFormByRole('edit');
@@ -1093,26 +1206,29 @@
             if (!selectedRole) return;
 
             if (isKing) {
-                if (selectedRole === "بەڕێوەبەر") {
+                if (selectedRole === "ئەڵماس") {
                 } else if (selectedRole === "ئەدمین") {
                     if (wrapManager) wrapManager.style.display = 'block';
-                } else if (selectedRole === "ڕاوێژکار") {
+                } else if (selectedRole === "گۆڵد") {
                     if (wrapManager) wrapManager.style.display = 'block';
                     if (wrapAdmin) wrapAdmin.style.display = 'block';
-                } else if (selectedRole === "ئەندام") {
+                } else if (selectedRole === "سلڤەر") {
                     if (wrapManager) wrapManager.style.display = 'block';
                     if (wrapAdmin) wrapAdmin.style.display = 'block';
                     if (wrapConsultant) wrapConsultant.style.display = 'block';
                 }
             } else {
                 if (selectedRole === "ئەدمین") {
-                } else if (selectedRole === "ڕاوێژکار") {
+                } else if (selectedRole === "گۆڵد") {
                     if (wrapAdmin) wrapAdmin.style.display = 'block';
-                } else if (selectedRole === "ئەندام") {
+                } else if (selectedRole === "سلڤەر") {
                     if (wrapAdmin) wrapAdmin.style.display = 'block';
                     if (wrapConsultant) wrapConsultant.style.display = 'block';
                 }
             }
+
+            // پێش‌پڕکردنەوەی سویچەکانی دەسەڵات بە بنەڕەتی ئەم ڕۆڵە (کاتێک ڕۆڵ دەگۆڕدرێت)
+            if (selectedRole) setPermToggles(mode, roleDefaultPerms(selectedRole));
         }
 
         let isAdminDataLoaded = false; // ئەم گۆڕاوە ڕێگە دەگرێت لەوەی دوو جار داتا بهێنێت
@@ -1494,7 +1610,7 @@
 
             if (currentOrdersTab === "team" && !selectedTeamMember) {
                 if (teamMembersData.length === 0) {
-                    list.innerHTML = '<p style="text-align:center; color:#888; margin-top:40px;">هیچ ئەندامێک لە تیمەکەتدا نییە.</p>';
+                    list.innerHTML = '<p style="text-align:center; color:#888; margin-top:40px;">هیچ سلڤەرێک لە تیمەکەتدا نییە.</p>';
                     return;
                 }
 
@@ -1526,7 +1642,7 @@
                                 <div class="tm-avatar"><i class='bx bx-user'></i></div>
                                 <div class="tm-details">
                                     <h4>${member.full_name || "بێ ناو"}</h4>
-                                    <p>کۆد: <span dir="ltr">${member.code}</span> | پلە: ${member.role || "ئەندام"}</p>
+                                    <p>کۆد: <span dir="ltr">${member.code}</span> | پلە: ${member.role || "سلڤەر"}</p>
                                 </div>
                             </div>
                             <div class="tm-stats">
@@ -1635,7 +1751,7 @@
             let myName = String(userName || "").trim();
 
             // بڕیاردان لەسەر پیشاندان یان شاردنەوەی تابەکان
-            if (myRole === "پاشا" || myRole === "بەڕێوەبەر") {
+            if (myRole === "پاشا" || can('view_all_orders')) {
                 tabsWrap.style.display = 'flex';
 
                 // جێگیرکردنی شەیپەکە ڕاستەوخۆ پێش هێنانی داتاکان، وە بێ ئەنیمەیشن
@@ -1665,7 +1781,7 @@
                 let allowedCodes = [myCode];
                 teamMembersData = [];
 
-                if (myRole === "بەڕێوەبەر" || myRole === "پاشا") {
+                if (myRole === "پاشا" || can('view_all_orders')) {
                     let query = supabase.from('employees').select('*');
                     if (myRole !== "پاشا") {
                         query = query.or(`creator.eq.${myCode},manager.eq.${myName},manager.eq.${myCode}`);
@@ -1836,28 +1952,31 @@
             let isPreparing = (o.status || "").includes("ئامادە");
 
             let actionButtonsHtml = "";
-            if (isOwner && isPreparing) {
-                actionButtonsHtml = `
-            <div style="display:flex; gap:10px; margin-top:20px;">
-                <button class="btn" style="background:#ffc107; color:#000; flex:1; font-size:14px; padding:10px;" onclick="editOrder('${o.id}')"><i class='bx bx-edit'></i> دەستکاریکردن</button>
-                <button class="btn" style="background:#dc3545; flex:1; font-size:14px; padding:10px;" onclick="deleteOrder('${o.id}')"><i class='bx bx-trash'></i> سڕینەوە</button>
-            </div>
-            `;
+            if (isPreparing) {
+                // خاوەن ئۆردەر هەمیشە دەتوانێت دەستکاری/سڕینەوەی هی خۆی بکات؛ ئەوانی تر بەپێی دەسەڵات
+                let canEditOrder = isOwner || can('edit_order');
+                let canDeleteOrder = isOwner || can('delete_order');
+                if (canEditOrder || canDeleteOrder) {
+                    let editBtn = canEditOrder ? `<button class="btn" style="background:#ffc107; color:#000; flex:1; font-size:14px; padding:10px;" onclick="editOrder('${o.id}')"><i class='bx bx-edit'></i> دەستکاریکردن</button>` : '';
+                    let delBtn = canDeleteOrder ? `<button class="btn" style="background:#dc3545; flex:1; font-size:14px; padding:10px;" onclick="deleteOrder('${o.id}')"><i class='bx bx-trash'></i> سڕینەوە</button>` : '';
+                    actionButtonsHtml = `<div style="display:flex; gap:10px; margin-top:20px;">${editBtn}${delBtn}</div>`;
+                }
             }
 
             let canChangeStatus = false;
-            if (userRole === "پاشا" || userRole === "ئەدمین" || userRole === "ڕاوێژکار") {
-                canChangeStatus = true;
-            } else if (userRole === "بەڕێوەبەر") {
-                let isTeam = teamMembersData.some(m => m.code === o.seller_code);
-                if (isTeam || isOwner) {
+            if (can('change_order_status')) {
+                if (userRole === "ئەڵماس") {
+                    // ئەڵماس تەنها بۆ تیمەکەی خۆی یان ئۆردەری خۆی (پاراستنی ڕەفتاری کۆن)
+                    let isTeam = teamMembersData.some(m => m.code === o.seller_code);
+                    canChangeStatus = (isTeam || isOwner);
+                } else {
                     canChangeStatus = true;
                 }
             }
 
             let statusChangerHtml = "";
             if (canChangeStatus) {
-                let showDeliveredOption = (userRole === "ئەدمین" || userRole === "ڕاوێژکار" || userRole === "پاشا" || userRole === "بەڕێوەبەر");
+                let showDeliveredOption = can('mark_delivered');
 
                 // سنووردارکردنی هەڵبژاردەکان: گەیشتوو → تەنها گەڕاوە، گەڕاوە → تەنها گەیشتوو
                 let mkOpt = (val) => `<div class="custom-dropdown-item ${o.status === val ? 'active' : ''}" onclick="selectNewStatus('${val}', event)">${val}</div>`;
@@ -1987,8 +2106,12 @@
                 return;
             }
 
-            if (newStatus === "گەیشتووە" && userRole !== "ئەدمین" && userRole !== "ڕاوێژکار" && userRole !== "پاشا" && userRole !== "بەڕێوەبەر") {
-                showToast("تەنها ئەدمین، ڕاوێژکار، پاشا و بەڕێوەبەر دەتوانن داواکاری بە گەیشتوو دیاری بکەن!", "error");
+            if (newStatus === "گەیشتووە" && !can('mark_delivered')) {
+                showToast("دەسەڵاتت نییە بۆ دیاریکردنی داواکاری بە «گەیشتووە»!", "error");
+                return;
+            }
+            if (newStatus === "گەڕاوەتەوە" && !can('mark_returned')) {
+                showToast("دەسەڵاتت نییە بۆ دیاریکردنی داواکاری بە «گەڕاوەتەوە»!", "error");
                 return;
             }
 
@@ -2673,7 +2796,7 @@
             updateCartUI();
         }
 
-        // نرخی گەیاندن بەپێی نرخی لای ئەندام (display_price) ی شار؛ ئەگەر شار لە لیستەکە نەبوو ٥٠٠٠
+        // نرخی گەیاندن بەپێی نرخی لای سلڤەر (display_price) ی شار؛ ئەگەر شار لە لیستەکە نەبوو ٥٠٠٠
         function getFormDeliveryPrice() {
             let cityInput = document.getElementById('city-input');
             let cityName = cityInput ? cityInput.value.trim() : "";
@@ -2877,6 +3000,9 @@
                 document.getElementById('section-create-code').style.display = 'block';
             } else if (tabName === 'edit') {
                 document.getElementById('section-edit-code').style.display = 'block';
+                document.getElementById('edit-section').style.display = 'none';
+                document.getElementById('edit-list-view').style.display = 'block';
+                filterEditUsers();
             } else if (tabName === 'profits') {
                 document.getElementById('section-profits').style.display = 'flex';
                 // ئەم دێڕە وا دەکات هەرکە چوویتە قازانجەکان، لیستەکە لۆد ببێت
@@ -3138,13 +3264,13 @@
 
                     let isMyUser = (myRole === "پاشا" || dbCreator === myCode || dbManager === myName || dbManager === dbCode);
 
-                    if (dbRole === "بەڕێوەبەر" && myRole === "پاشا") {
+                    if (dbRole === "ئەڵماس" && myRole === "پاشا") {
                         availableManagers.push({ name: dbName, code: dbCode });
                     }
                     if (dbRole === "ئەدمین" && isMyUser) {
                         availableAdmins.push({ name: dbName, code: dbCode });
                     }
-                    if (dbRole === "ڕاوێژکار" && isMyUser) {
+                    if (dbRole === "گۆڵد" && isMyUser) {
                         availableConsultants.push({ name: dbName, code: dbCode });
                     }
 
@@ -3261,6 +3387,8 @@
 
         // ٣. گەڕانی خێرا بۆ چاکسازی
         function setupSearchDropdown() {
+            // گەڕانی کۆن (autocomplete) نەماوە — لە جیاتی ئەوە لیستی کلیلەکان بەکاردێت (filterEditUsers)
+            return;
             let input = document.getElementById('search-code-input');
             if (!input) return;
 
@@ -3367,6 +3495,9 @@
                 if (roleRadio) roleRadio.checked = true;
             }
 
+            // بارکردنی دەسەڵاتەکان: ئەگەر دیاریکرابن ئەوان، ئەگەرنا بنەڕەتی ڕۆڵەکەی
+            setPermToggles('edit', (user.permissions !== null && user.permissions !== undefined) ? user.permissions : roleDefaultPerms(user.role));
+
             const getName = (code, arr) => {
                 if (!code) return "";
                 let found = arr.find(x => x.code === code);
@@ -3392,6 +3523,7 @@
         // ٥. دروستکردنی کارمەند
         // ٥. فەنکشنی دروستکردنی کارمەند لەگەڵ کات و بەروار
         async function generateCode() {
+            if (!can('manage_employees')) { showToast("دەسەڵاتت نییە بۆ دروستکردنی کلیل!", "error"); return; }
             let name = document.getElementById('u-name').value.trim();
             let telegramRadio = document.querySelector('input[name="u_telegram"]:checked');
             if (!telegramRadio) { showToast("تکایە دیاری بکە ئایا خاوەنی تێلیگرامە یان نا!", "error"); return; }
@@ -3409,21 +3541,21 @@
                 adminVal = document.getElementById('u-admin') ? (document.getElementById('u-admin').getAttribute('data-code') || "") : "";
                 consultantVal = document.getElementById('u-consultant') ? (document.getElementById('u-consultant').getAttribute('data-code') || "") : "";
 
-                if (role === "بەڕێوەبەر") { managerVal = ""; adminVal = ""; consultantVal = ""; }
+                if (role === "ئەڵماس") { managerVal = ""; adminVal = ""; consultantVal = ""; }
                 else if (role === "ئەدمین") { adminVal = ""; consultantVal = ""; }
-                else if (role === "ڕاوێژکار") { consultantVal = ""; }
+                else if (role === "گۆڵد") { consultantVal = ""; }
             } else {
                 managerVal = creatorCode;
                 adminVal = document.getElementById('u-admin') ? (document.getElementById('u-admin').getAttribute('data-code') || "") : "";
                 consultantVal = document.getElementById('u-consultant') ? (document.getElementById('u-consultant').getAttribute('data-code') || "") : "";
 
                 if (role === "ئەدمین") { adminVal = ""; consultantVal = ""; }
-                else if (role === "ڕاوێژکار") { consultantVal = ""; }
+                else if (role === "گۆڵد") { consultantVal = ""; }
             }
 
-            if (isKing && managerVal && !availableManagers.some(m => m.code === managerVal)) { showToast("⚠️ تکایە بەڕێوەبەرێک لە لیستەکە هەڵبژێرە.", "error"); return; }
+            if (isKing && managerVal && !availableManagers.some(m => m.code === managerVal)) { showToast("⚠️ تکایە ئەڵماسێک لە لیستەکە هەڵبژێرە.", "error"); return; }
             if (adminVal && !availableAdmins.some(a => a.code === adminVal)) { showToast("⚠️ تکایە ئەدمینێک لە لیستەکە هەڵبژێرە.", "error"); return; }
-            if (consultantVal && !availableConsultants.some(c => c.code === consultantVal)) { showToast("⚠️ تکایە ڕاوێژکارێک لە لیستەکە هەڵبژێرە.", "error"); return; }
+            if (consultantVal && !availableConsultants.some(c => c.code === consultantVal)) { showToast("⚠️ تکایە گۆڵدێک لە لیستەکە هەڵبژێرە.", "error"); return; }
             if (!name) { showToast("تکایە ناوی سیانی بنووسە!", "error"); return; }
 
             // جادووە نوێیەکە: وەرگرتنی کات و بەروار بە شێوازی 12 کاتژمێری
@@ -3457,6 +3589,7 @@
                     consultant: consultantVal,
                     creator: creatorCode,
                     telegram_status: hasTelegram,
+                    permissions: collectPermToggles('create'),
                     date: fullDateString // لێرەدا کاتەکە دەنێرین بۆ داتابەیس
                 }]);
 
@@ -3484,6 +3617,7 @@
 
         // ٦. نوێکردنەوەی کارمەند
         async function updateCode() {
+            if (!can('manage_employees')) { showToast("دەسەڵاتت نییە بۆ نوێکردنەوەی کلیل!", "error"); return; }
             let searchInput = document.getElementById('search-code-input');
             let code = searchInput.getAttribute('data-code');
             if (!code) code = searchInput.value.trim();
@@ -3507,9 +3641,9 @@
 
             if (!code || !name) { showToast("تکایە ناوی سیانی بنووسە", "error"); return; }
 
-            if (isKing && managerVal && !availableManagers.some(m => m.code === managerVal)) { showToast("⚠️ تکایە بەڕێوەبەرێک لە لیستەکە هەڵبژێرە.", "error"); return; }
+            if (isKing && managerVal && !availableManagers.some(m => m.code === managerVal)) { showToast("⚠️ تکایە ئەڵماسێک لە لیستەکە هەڵبژێرە.", "error"); return; }
             if (adminVal && !availableAdmins.some(a => a.code === adminVal)) { showToast("⚠️ تکایە ئەدمینێک لە لیستەکە هەڵبژێرە.", "error"); return; }
-            if (consultantVal && !availableConsultants.some(c => c.code === consultantVal)) { showToast("⚠️ تکایە ڕاوێژکارێک لە لیستەکە هەڵبژێرە.", "error"); return; }
+            if (consultantVal && !availableConsultants.some(c => c.code === consultantVal)) { showToast("⚠️ تکایە گۆڵدێک لە لیستەکە هەڵبژێرە.", "error"); return; }
 
             showToast("خەریکی نوێکردنەوە...", "loading");
 
@@ -3520,7 +3654,8 @@
                     manager: managerVal,
                     admin: adminVal,
                     consultant: consultantVal,
-                    telegram_status: hasTelegram
+                    telegram_status: hasTelegram,
+                    permissions: collectPermToggles('edit')
                 }).eq('code', code);
 
                 if (error) throw error;
@@ -3529,10 +3664,12 @@
                 document.getElementById('edit-section').style.display = "none";
                 document.getElementById('search-code-input').value = "";
                 document.getElementById('search-code-input').removeAttribute('data-code');
+                document.getElementById('edit-list-view').style.display = 'block';
 
                 document.getElementById('admin-screen-content').style.display = 'none';
                 document.getElementById('admin-loading-spinner').style.display = 'flex';
                 await loadHierarchyUsers();
+                filterEditUsers();
                 document.getElementById('admin-loading-spinner').style.display = 'none';
                 document.getElementById('admin-screen-content').style.display = 'flex';
             } catch (err) {
@@ -3542,6 +3679,7 @@
 
         // ٧. سڕینەوەی کارمەند
         async function deleteCode() {
+            if (!can('manage_employees')) { showToast("دەسەڵاتت نییە بۆ سڕینەوەی کلیل!", "error"); return; }
             let searchInput = document.getElementById('search-code-input');
             let code = searchInput.getAttribute('data-code');
             if (!code) code = searchInput.value.trim();
@@ -3554,10 +3692,12 @@
                     document.getElementById('edit-section').style.display = "none";
                     document.getElementById('search-code-input').value = "";
                     document.getElementById('search-code-input').removeAttribute('data-code');
+                    document.getElementById('edit-list-view').style.display = 'block';
 
                     document.getElementById('admin-screen-content').style.display = 'none';
                     document.getElementById('admin-loading-spinner').style.display = 'flex';
                     await loadHierarchyUsers();
+                    filterEditUsers();
                     document.getElementById('admin-loading-spinner').style.display = 'none';
                     document.getElementById('admin-screen-content').style.display = 'flex';
                 } catch (err) {
@@ -3845,11 +3985,11 @@
                 filteredUsers.forEach(u => {
                     let bal = u.data.balance || 0;
                     let sav = u.data.savings || 0;
-                    let role = u.data.role || "ئەندام";
+                    let role = u.data.role || "سلڤەر";
                     let roleBg = "rgba(16, 185, 129, 0.1)"; let roleColor = "#059669";
-                    if (role === "بەڕێوەبەر") { roleBg = "rgba(59, 130, 246, 0.1)"; roleColor = "#2563eb"; }
+                    if (role === "ئەڵماس") { roleBg = "rgba(59, 130, 246, 0.1)"; roleColor = "#2563eb"; }
                     else if (role === "ئەدمین") { roleBg = "rgba(245, 158, 11, 0.1)"; roleColor = "#d97706"; }
-                    else if (role === "ڕاوێژکار") { roleBg = "rgba(124, 58, 237, 0.1)"; roleColor = "#7c3aed"; }
+                    else if (role === "گۆڵد") { roleBg = "rgba(124, 58, 237, 0.1)"; roleColor = "#7c3aed"; }
 
                     html += `
                     <div class="modern-order-card" style="background:#fff; border:1px solid #e2e8f0; padding:12px; border-radius:12px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; cursor:pointer;" onclick="openWalletEdit('${u.code}')">
@@ -4085,10 +4225,10 @@
             document.getElementById('p-rate').value = u.data.profit_rate || 0;
 
             let hint = document.getElementById('p-hint');
-            if (u.data.role === "ڕاوێژکار") {
-                hint.innerHTML = "* قازانجی ڕاوێژکار بۆ هەر <b>ئۆردەرێک</b> حیساب دەکرێت.";
+            if (u.data.role === "گۆڵد") {
+                hint.innerHTML = "* قازانجی گۆڵد بۆ هەر <b>ئۆردەرێک</b> حیساب دەکرێت.";
             } else {
-                hint.innerHTML = "* قازانجی بەڕێوەبەر یان ئەدمین بۆ هەر <b>کاڵایەک</b> حیساب دەکرێت.";
+                hint.innerHTML = "* قازانجی ئەڵماس یان ئەدمین بۆ هەر <b>کاڵایەک</b> حیساب دەکرێت.";
             }
 
             document.getElementById('profit-edit-section').style.display = 'block';
@@ -4100,6 +4240,60 @@
             document.getElementById('p-hidden-code').value = "";
             document.getElementById('profit-users-list').style.display = 'block';
             document.getElementById('profit-search-container').style.display = 'flex';
+        }
+
+        // ============ لیستی کلیلەکان لە بەشی چاکسازی (وەک بەشی قازانجەکان) ============
+        function filterEditUsers() {
+            let roleEl = document.querySelector('input[name="edit_role_filter"]:checked');
+            let roleFilter = roleEl ? roleEl.value : "";
+            let searchEl = document.getElementById('edit-list-search');
+            let searchVal = searchEl ? searchEl.value.trim().toLowerCase() : "";
+            let listContainer = document.getElementById('edit-users-list');
+            if (!listContainer) return;
+
+            let filtered = allEditableUsers.filter(u => {
+                let r = normalizeRole(u.data.role);
+                if (roleFilter && r !== roleFilter) return false;
+                if (searchVal && !u.name.toLowerCase().includes(searchVal) && !u.code.toLowerCase().includes(searchVal)) return false;
+                return true;
+            });
+
+            let html = "";
+            if (filtered.length === 0) {
+                html = `<p style="text-align:center; color:#94a3b8; font-size:13px; margin-top:20px;">هیچ کلیلێک نەدۆزرایەوە.</p>`;
+            } else {
+                filtered.forEach(u => {
+                    html += `
+                    <div style="background:#fff; border:1px solid #e2e8f0; padding:12px; border-radius:10px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; cursor:pointer; transition:0.2s;" onclick="openEditFromList('${u.code}')">
+                        <div>
+                            <strong style="color:#1e293b; font-size:14px;">${u.name}</strong><br>
+                            <span style="font-size:11px; color:#64748b; font-family:monospace;">${u.code}</span>
+                        </div>
+                        <div style="text-align:left;">
+                            <span style="display:block; font-size:12px; font-weight:bold; color:var(--primary);">${normalizeRole(u.data.role)}</span>
+                            <span style="font-size:10px; color:#94a3b8;">دەستکاری <i class='bx bx-edit'></i></span>
+                        </div>
+                    </div>`;
+                });
+            }
+            listContainer.innerHTML = html;
+        }
+
+        function openEditFromList(code) {
+            let u = allEditableUsers.find(x => x.code === code);
+            if (!u) return;
+            let sc = document.getElementById('search-code-input');
+            if (sc) { sc.value = u.name; sc.setAttribute('data-code', u.code); }
+            document.getElementById('edit-list-view').style.display = 'none';
+            loadEditSectionFast(u.data);
+        }
+
+        function cancelEditFromList() {
+            document.getElementById('edit-section').style.display = 'none';
+            let sc = document.getElementById('search-code-input');
+            if (sc) { sc.value = ""; sc.removeAttribute('data-code'); }
+            document.getElementById('edit-list-view').style.display = 'block';
+            filterEditUsers();
         }
 
         function adjustProfitRate(change) {
@@ -4234,7 +4428,7 @@
                 html += `<div style="background:#fff; border:1px solid #e2e8f0; padding:10px 15px; border-radius:10px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
                     <div>
                         <strong style="color:var(--primary);">${c.name}</strong><br>
-                        <span style="font-size:11px; color:#64748b;">شۆفێر: ${Number(c.real_price || 0).toLocaleString()} | ئەندام: ${Number(c.display_price || 0).toLocaleString()}</span>
+                        <span style="font-size:11px; color:#64748b;">شۆفێر: ${Number(c.real_price || 0).toLocaleString()} | سلڤەر: ${Number(c.display_price || 0).toLocaleString()}</span>
                     </div>
                     <div style="display:flex; gap:8px;">
                         <button onclick="openEditCityModal('${c.id}')" style="background: rgba(2, 132, 199, 0.1); color: #0284c7; border: 1px solid rgba(2, 132, 199, 0.2); width: 34px; height: 34px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 16px; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='rgba(2, 132, 199, 0.2)'" onmouseout="this.style.background='rgba(2, 132, 199, 0.1)'"><i class='bx bx-edit-alt'></i></button>
@@ -4259,7 +4453,7 @@
 
                 let itemsCount = (o.item_qtys || "").split('\n').reduce((sum, q) => sum + (parseInt(q) || 1), 0);
 
-                distData.member = { code: o.seller_code, name: uMap[o.seller_code]?.full_name || "ئەندام" };
+                distData.member = { code: o.seller_code, name: uMap[o.seller_code]?.full_name || "سلڤەر" };
                 distData.manager = { code: memberData.manager, name: uMap[memberData.manager]?.full_name || "نییە", profit: (uMap[memberData.manager]?.profit_rate || 0) * itemsCount };
                 distData.admin = { code: memberData.admin, name: uMap[memberData.admin]?.full_name || "نییە", profit: (uMap[memberData.admin]?.profit_rate || 0) * itemsCount };
                 distData.consultant = { code: memberData.consultant, name: uMap[memberData.consultant]?.full_name || "نییە", profit: (uMap[memberData.consultant]?.profit_rate || 0) * 1 };
@@ -4268,12 +4462,12 @@
                 distData.deliveryCost = cityObj ? cityObj.real_price : 4000;
                 // کۆی گشتی وەرگیراو لە کڕیار: ئەگەر پارەی وەرگیراو تۆمارکرابێت، ئەوە بەکاردێت
                 distData.grandTotal = (o.amount_received != null && parseFloat(o.amount_received) > 0) ? parseFloat(o.amount_received) : parseFloat(o.grand_total);
-                // قازانجی ئەندام و پاشەکەوت (خۆکارانە پڕ دەکرێنەوە)
+                // قازانجی سلڤەر و پاشەکەوت (خۆکارانە پڕ دەکرێنەوە)
                 distData.memberProfit = (o.member_profit != null && !isNaN(parseFloat(o.member_profit)) && parseFloat(o.member_profit) > 0) ? parseFloat(o.member_profit) : 0;
                 distData.savingsDefault = 500;
 
                 isDistKingOrder = (memberData && memberData.role === "پاشا");
-                let isAuthorized = (userRole === "ئەدمین" || userRole === "ڕاوێژکار" || userRole === "بەڕێوەبەر" || userRole === "پاشا");
+                let isAuthorized = can('distribute_profit');
                 let displayStyle = (isDistKingOrder || !isAuthorized) ? 'display: none;' : '';
 
                 let showManagerStyle = (isDistKingOrder || !isAuthorized || !memberData.manager) ? 'display: none;' : '';
@@ -4299,7 +4493,7 @@
                     </div>
                 </div>
                 <div class="dist-input-row" style="${showManagerStyle}">
-                    <label><i class='bx bx-user'></i> بەڕێوەبەر (${distData.manager.name})</label>
+                    <label><i class='bx bx-user'></i> ئەڵماس (${distData.manager.name})</label>
                     <div class="dist-input-group">
                         <button type="button" class="qty-btn plus-btn" onclick="adjustDistValue('dist-manager', 1000)" ${!distData.manager.code ? 'disabled' : ''}>
                             <svg class="qty-icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 18 18">
@@ -4331,7 +4525,7 @@
                     </div>
                 </div>
                 <div class="dist-input-row" style="${showConsultantStyle}">
-                    <label><i class='bx bx-glasses'></i> ڕاوێژکار (${distData.consultant.name})</label>
+                    <label><i class='bx bx-glasses'></i> گۆڵد (${distData.consultant.name})</label>
                     <div class="dist-input-group">
                         <button type="button" class="qty-btn plus-btn" onclick="adjustDistValue('dist-consultant', 1000)" ${!distData.consultant.code ? 'disabled' : ''}>
                             <svg class="qty-icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 18 18">
@@ -4347,7 +4541,7 @@
                     </div>
                 </div>
                 <div class="dist-input-row" style="background:#eff6ff; border-color:#bfdbfe; ${displayStyle}">
-                    <label style="color:#1d4ed8; font-weight:bold;"><i class='bx bx-wallet'></i> قازانجی ئەندام</label>
+                    <label style="color:#1d4ed8; font-weight:bold;"><i class='bx bx-wallet'></i> قازانجی سلڤەر</label>
                     <div class="dist-input-group" style="border-color: #93c5fd;">
                         <button type="button" class="qty-btn plus-btn" onclick="adjustDistValue('dist-member', 1000)" style="border-left-color: #93c5fd;">
                             <svg class="qty-icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 18 18">
@@ -4363,7 +4557,7 @@
                     </div>
                 </div>
                 <div class="dist-input-row" style="background:#ecfdf5; border-color:#a7f3d0; ${displayStyle}">
-                    <label style="color:#047857; font-weight:bold;"><i class='bx bx-save'></i> پاشەکەوتی ئەندام</label>
+                    <label style="color:#047857; font-weight:bold;"><i class='bx bx-save'></i> پاشەکەوتی سلڤەر</label>
                     <div class="dist-input-group" style="border-color: #6ee7b7;">
                         <button type="button" class="qty-btn plus-btn" onclick="adjustDistValue('dist-savings', 500)" style="border-left-color: #6ee7b7;">
                             <svg class="qty-icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 18 18">
@@ -4385,7 +4579,7 @@
         }
 
         function calcKingProfit() {
-            let isAuthorized = (userRole === "ئەدمین" || userRole === "ڕاوێژکار" || userRole === "بەڕێوەبەر" || userRole === "پاشا");
+            let isAuthorized = can('distribute_profit');
             let delivery = parseFloat(document.getElementById('dist-delivery').value || 0);
             let manager = (isDistKingOrder || !isAuthorized || !distData.manager.code) ? 0 : parseFloat(document.getElementById('dist-manager').value || 0);
             let admin = (isDistKingOrder || !isAuthorized || !distData.admin.code) ? 0 : parseFloat(document.getElementById('dist-admin').value || 0);
@@ -4414,7 +4608,7 @@
                 confirmBtn.innerHTML = "<i class='bx bx-loader-alt bx-spin'></i> تکایە چاوەڕێ بکە...";
             }
 
-            let isAuthorized = (userRole === "ئەدمین" || userRole === "ڕاوێژکار" || userRole === "بەڕێوەبەر" || userRole === "پاشا");
+            let isAuthorized = can('distribute_profit');
             let delivery = parseFloat(document.getElementById('dist-delivery').value || 0);
             let managerP = (isDistKingOrder || !isAuthorized || !distData.manager.code) ? 0 : parseFloat(document.getElementById('dist-manager').value || 0);
             let adminP = (isDistKingOrder || !isAuthorized || !distData.admin.code) ? 0 : parseFloat(document.getElementById('dist-admin').value || 0);
@@ -4455,9 +4649,9 @@
                 if (!isDistKingOrder && isAuthorized) {
                     addTx(distData.member.code, memberP, "قازانجی ئۆردەر", `قازانج لە ئۆردەری ${oCode} (گەیشت)`);
                     addTx(distData.member.code, savingsP, "پاشەکەوتی ئۆردەر", `پاشەکەوت لە ئۆردەری ${oCode}`, true);
-                    addTx(distData.manager.code, managerP, "قازانجی ئۆردەر", `قازانجی بەڕێوەبەر لە ئۆردەری ${oCode}`);
+                    addTx(distData.manager.code, managerP, "قازانجی ئۆردەر", `قازانجی ئەڵماس لە ئۆردەری ${oCode}`);
                     addTx(distData.admin.code, adminP, "قازانجی ئۆردەر", `قازانجی ئەدمین لە ئۆردەری ${oCode}`);
-                    addTx(distData.consultant.code, consultantP, "قازانجی ئۆردەر", `قازانجی ڕاوێژکار لە ئۆردەری ${oCode}`);
+                    addTx(distData.consultant.code, consultantP, "قازانجی ئۆردەر", `قازانجی گۆڵد لە ئۆردەری ${oCode}`);
                 }
 
                 // تۆمارکردنی قازانجی پاشا (ئەوەی دەمێنێتەوە)
