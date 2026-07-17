@@ -273,7 +273,7 @@
 
                     <div id="wrapper-u-manager">
                         <div class="switch-group">
-                            <label>ئەڵماسی هەیە؟</label>
+                            <label>بەڕێوەبەری هەیە؟</label>
                             <label class="switch"><input type="checkbox" id="switch-u-manager"
                                     onchange="toggleInput('u-manager', this.checked)">
                                 <div class="slider">
@@ -295,7 +295,7 @@
 
                     <div id="wrapper-u-admin">
                         <div class="switch-group">
-                            <label>ئەدمینی هەیە؟</label>
+                            <label>ئەڵماسی هەیە؟</label>
                             <label class="switch"><input type="checkbox" id="switch-u-admin"
                                     onchange="toggleInput('u-admin', this.checked)">
                                 <div class="slider">
@@ -363,10 +363,10 @@
                                     onchange="filterEditUsers()"><span>سلڤەر</span></label>
                             <label><input type="radio" name="edit_role_filter" value="گۆڵد"
                                     onchange="filterEditUsers()"><span>گۆڵد</span></label>
-                            <label><input type="radio" name="edit_role_filter" value="ئەدمین"
-                                    onchange="filterEditUsers()"><span>ئەدمین</span></label>
                             <label><input type="radio" name="edit_role_filter" value="ئەڵماس"
                                     onchange="filterEditUsers()"><span>ئەڵماس</span></label>
+                            <label><input type="radio" name="edit_role_filter" value="بەڕێوەبەر"
+                                    onchange="filterEditUsers()"><span>بەڕێوەبەر</span></label>
                         </div>
 
                         <div class="search-group">
@@ -410,7 +410,7 @@
 
                         <div id="wrapper-e-manager">
                             <div class="switch-group">
-                                <label>ئەڵماسی هەیە؟</label>
+                                <label>بەڕێوەبەری هەیە؟</label>
                                 <label class="switch"><input type="checkbox" id="switch-e-manager"
                                         onchange="toggleInput('e-manager', this.checked)">
                                     <div class="slider">
@@ -432,7 +432,7 @@
 
                         <div id="wrapper-e-admin">
                             <div class="switch-group">
-                                <label>ئەدمینی هەیە؟</label>
+                                <label>ئەڵماسی هەیە؟</label>
                                 <label class="switch"><input type="checkbox" id="switch-e-admin"
                                         onchange="toggleInput('e-admin', this.checked)">
                                     <div class="slider">
@@ -491,10 +491,10 @@
                 <div class="container" id="profits-container">
 
                     <div class="segmented-control" style="margin-bottom: 15px;">
-                        <label><input type="radio" name="profit_role_filter" value="ئەڵماس" checked
+                        <label><input type="radio" name="profit_role_filter" value="بەڕێوەبەر" checked
+                                onchange="filterProfitUsers()"><span>بەڕێوەبەر</span></label>
+                        <label><input type="radio" name="profit_role_filter" value="ئەڵماس"
                                 onchange="filterProfitUsers()"><span>ئەڵماس</span></label>
-                        <label><input type="radio" name="profit_role_filter" value="ئەدمین"
-                                onchange="filterProfitUsers()"><span>ئەدمین</span></label>
                         <label><input type="radio" name="profit_role_filter" value="گۆڵد"
                                 onchange="filterProfitUsers()"><span>گۆڵد</span></label>
                     </div>
@@ -556,10 +556,10 @@
             <div id="section-wallets" style="display: none;">
                 <div class="container" id="wallets-container">
                     <div class="segmented-control" style="margin-bottom: 15px;" id="wallet-role-tabs-container">
-                        <label><input type="radio" name="wallet_role_filter" value="ئەڵماس" checked
+                        <label><input type="radio" name="wallet_role_filter" value="بەڕێوەبەر" checked
+                                onchange="filterWalletUsers()"><span>بەڕێوەبەر</span></label>
+                        <label><input type="radio" name="wallet_role_filter" value="ئەڵماس"
                                 onchange="filterWalletUsers()"><span>ئەڵماس</span></label>
-                        <label><input type="radio" name="wallet_role_filter" value="ئەدمین"
-                                onchange="filterWalletUsers()"><span>ئەدمین</span></label>
                         <label><input type="radio" name="wallet_role_filter" value="گۆڵد"
                                 onchange="filterWalletUsers()"><span>گۆڵد</span></label>
                         <label><input type="radio" name="wallet_role_filter" value="سلڤەر"
@@ -967,7 +967,7 @@
         let creatorCode = currentUser ? currentUser.code : "";
 
         // نۆرمالایزکردنی ناوی کۆنی ڕۆڵ → نوێ (بۆ گواستنەوەی بێ کێشە بۆ بەکارهێنەرە داخڵبووە کۆنەکان)
-        const ROLE_ALIASES = { 'ئەندام': 'سلڤەر', 'ڕاوێژکار': 'گۆڵد', 'بەڕێوەبەر': 'ئەڵماس' };
+        const ROLE_ALIASES = { 'ئەندام': 'سلڤەر', 'ڕاوێژکار': 'گۆڵد', 'ئەدمین': 'ئەڵماس' };
         function normalizeRole(r) { return ROLE_ALIASES[r] || r; }
         if (currentUser && currentUser.role) currentUser.role = normalizeRole(currentUser.role);
 
@@ -993,8 +993,8 @@
         // دەسەڵاتی بنەڕەتی هەر ڕۆڵێک (کاتێک کلیلێک دەسەڵاتی دیارینەکراوە — بۆ گونجاندن لەگەڵ ڕەفتاری کۆن)
         const ROLE_DEFAULT_PERMS = {
             'پاشا': PERMISSIONS.map(p => p.key),
-            'ئەڵماس': ['change_order_status', 'mark_delivered', 'mark_returned', 'distribute_profit', 'access_admin', 'manage_employees', 'view_all_orders'],
-            'ئەدمین': ['change_order_status', 'mark_delivered', 'mark_returned', 'distribute_profit'],
+            'بەڕێوەبەر': ['change_order_status', 'mark_delivered', 'mark_returned', 'distribute_profit', 'access_admin', 'manage_employees', 'view_all_orders'],
+            'ئەڵماس': ['change_order_status', 'mark_delivered', 'mark_returned', 'distribute_profit'],
             'گۆڵد': ['change_order_status', 'mark_delivered', 'mark_returned', 'distribute_profit'],
             'سلڤەر': [],
         };
@@ -1166,14 +1166,14 @@
             let rolesHTML = "";
             if (isKing) {
                 rolesHTML = `
+                <label><input type="radio" name="ROLE_NAME" value="بەڕێوەبەر" onchange="updateFormByRole('MODE')"><span>بەڕێوەبەر</span></label>
                 <label><input type="radio" name="ROLE_NAME" value="ئەڵماس" onchange="updateFormByRole('MODE')"><span>ئەڵماس</span></label>
-                <label><input type="radio" name="ROLE_NAME" value="ئەدمین" onchange="updateFormByRole('MODE')"><span>ئەدمین</span></label>
                 <label><input type="radio" name="ROLE_NAME" value="گۆڵد" onchange="updateFormByRole('MODE')"><span>گۆڵد</span></label>
                 <label><input type="radio" name="ROLE_NAME" value="سلڤەر" onchange="updateFormByRole('MODE')"><span>سلڤەر</span></label>
             `;
             } else {
                 rolesHTML = `
-                <label><input type="radio" name="ROLE_NAME" value="ئەدمین" onchange="updateFormByRole('MODE')"><span>ئەدمین</span></label>
+                <label><input type="radio" name="ROLE_NAME" value="ئەڵماس" onchange="updateFormByRole('MODE')"><span>ئەڵماس</span></label>
                 <label><input type="radio" name="ROLE_NAME" value="گۆڵد" onchange="updateFormByRole('MODE')"><span>گۆڵد</span></label>
                 <label><input type="radio" name="ROLE_NAME" value="سلڤەر" onchange="updateFormByRole('MODE')"><span>سلڤەر</span></label>
             `;
@@ -1206,8 +1206,8 @@
             if (!selectedRole) return;
 
             if (isKing) {
-                if (selectedRole === "ئەڵماس") {
-                } else if (selectedRole === "ئەدمین") {
+                if (selectedRole === "بەڕێوەبەر") {
+                } else if (selectedRole === "ئەڵماس") {
                     if (wrapManager) wrapManager.style.display = 'block';
                 } else if (selectedRole === "گۆڵد") {
                     if (wrapManager) wrapManager.style.display = 'block';
@@ -1218,7 +1218,7 @@
                     if (wrapConsultant) wrapConsultant.style.display = 'block';
                 }
             } else {
-                if (selectedRole === "ئەدمین") {
+                if (selectedRole === "ئەڵماس") {
                 } else if (selectedRole === "گۆڵد") {
                     if (wrapAdmin) wrapAdmin.style.display = 'block';
                 } else if (selectedRole === "سلڤەر") {
@@ -1965,8 +1965,8 @@
 
             let canChangeStatus = false;
             if (can('change_order_status')) {
-                if (userRole === "ئەڵماس") {
-                    // ئەڵماس تەنها بۆ تیمەکەی خۆی یان ئۆردەری خۆی (پاراستنی ڕەفتاری کۆن)
+                if (userRole === "بەڕێوەبەر") {
+                    // بەڕێوەبەر تەنها بۆ تیمەکەی خۆی یان ئۆردەری خۆی (پاراستنی ڕەفتاری کۆن)
                     let isTeam = teamMembersData.some(m => m.code === o.seller_code);
                     canChangeStatus = (isTeam || isOwner);
                 } else {
@@ -3258,16 +3258,18 @@
                     let dbCode = String(u.code || "").trim();
                     let dbCreator = String(u.creator || "").trim();
                     let dbManager = String(u.manager || "").trim();
-                    let dbRole = String(u.role || "").trim();
+                    // نۆرمالایزکردنی ناوی کۆنی ڕۆڵ → نوێ (تا داتابەیس مایگرەیت نەکراوە کار بکات)
+                    let dbRole = normalizeRole(String(u.role || "").trim());
+                    u.role = dbRole;
 
                     if (!dbName || !dbCode) return;
 
                     let isMyUser = (myRole === "پاشا" || dbCreator === myCode || dbManager === myName || dbManager === dbCode);
 
-                    if (dbRole === "ئەڵماس" && myRole === "پاشا") {
+                    if (dbRole === "بەڕێوەبەر" && myRole === "پاشا") {
                         availableManagers.push({ name: dbName, code: dbCode });
                     }
-                    if (dbRole === "ئەدمین" && isMyUser) {
+                    if (dbRole === "ئەڵماس" && isMyUser) {
                         availableAdmins.push({ name: dbName, code: dbCode });
                     }
                     if (dbRole === "گۆڵد" && isMyUser) {
@@ -3490,7 +3492,7 @@
             let tgRadio = document.querySelector(`input[name="e_telegram"][value="${user.telegram_status}"]`);
             if (tgRadio) tgRadio.checked = true;
 
-            if (userRole !== "ئەدمین") {
+            if (userRole !== "ئەڵماس") {
                 let roleRadio = document.querySelector(`input[name="e_role"][value="${user.role}"]`);
                 if (roleRadio) roleRadio.checked = true;
             }
@@ -3541,20 +3543,20 @@
                 adminVal = document.getElementById('u-admin') ? (document.getElementById('u-admin').getAttribute('data-code') || "") : "";
                 consultantVal = document.getElementById('u-consultant') ? (document.getElementById('u-consultant').getAttribute('data-code') || "") : "";
 
-                if (role === "ئەڵماس") { managerVal = ""; adminVal = ""; consultantVal = ""; }
-                else if (role === "ئەدمین") { adminVal = ""; consultantVal = ""; }
+                if (role === "بەڕێوەبەر") { managerVal = ""; adminVal = ""; consultantVal = ""; }
+                else if (role === "ئەڵماس") { adminVal = ""; consultantVal = ""; }
                 else if (role === "گۆڵد") { consultantVal = ""; }
             } else {
                 managerVal = creatorCode;
                 adminVal = document.getElementById('u-admin') ? (document.getElementById('u-admin').getAttribute('data-code') || "") : "";
                 consultantVal = document.getElementById('u-consultant') ? (document.getElementById('u-consultant').getAttribute('data-code') || "") : "";
 
-                if (role === "ئەدمین") { adminVal = ""; consultantVal = ""; }
+                if (role === "ئەڵماس") { adminVal = ""; consultantVal = ""; }
                 else if (role === "گۆڵد") { consultantVal = ""; }
             }
 
-            if (isKing && managerVal && !availableManagers.some(m => m.code === managerVal)) { showToast("⚠️ تکایە ئەڵماسێک لە لیستەکە هەڵبژێرە.", "error"); return; }
-            if (adminVal && !availableAdmins.some(a => a.code === adminVal)) { showToast("⚠️ تکایە ئەدمینێک لە لیستەکە هەڵبژێرە.", "error"); return; }
+            if (isKing && managerVal && !availableManagers.some(m => m.code === managerVal)) { showToast("⚠️ تکایە بەڕێوەبەرێک لە لیستەکە هەڵبژێرە.", "error"); return; }
+            if (adminVal && !availableAdmins.some(a => a.code === adminVal)) { showToast("⚠️ تکایە ئەڵماسێک لە لیستەکە هەڵبژێرە.", "error"); return; }
             if (consultantVal && !availableConsultants.some(c => c.code === consultantVal)) { showToast("⚠️ تکایە گۆڵدێک لە لیستەکە هەڵبژێرە.", "error"); return; }
             if (!name) { showToast("تکایە ناوی سیانی بنووسە!", "error"); return; }
 
@@ -3641,8 +3643,8 @@
 
             if (!code || !name) { showToast("تکایە ناوی سیانی بنووسە", "error"); return; }
 
-            if (isKing && managerVal && !availableManagers.some(m => m.code === managerVal)) { showToast("⚠️ تکایە ئەڵماسێک لە لیستەکە هەڵبژێرە.", "error"); return; }
-            if (adminVal && !availableAdmins.some(a => a.code === adminVal)) { showToast("⚠️ تکایە ئەدمینێک لە لیستەکە هەڵبژێرە.", "error"); return; }
+            if (isKing && managerVal && !availableManagers.some(m => m.code === managerVal)) { showToast("⚠️ تکایە بەڕێوەبەرێک لە لیستەکە هەڵبژێرە.", "error"); return; }
+            if (adminVal && !availableAdmins.some(a => a.code === adminVal)) { showToast("⚠️ تکایە ئەڵماسێک لە لیستەکە هەڵبژێرە.", "error"); return; }
             if (consultantVal && !availableConsultants.some(c => c.code === consultantVal)) { showToast("⚠️ تکایە گۆڵدێک لە لیستەکە هەڵبژێرە.", "error"); return; }
 
             showToast("خەریکی نوێکردنەوە...", "loading");
@@ -3987,8 +3989,8 @@
                     let sav = u.data.savings || 0;
                     let role = u.data.role || "سلڤەر";
                     let roleBg = "rgba(16, 185, 129, 0.1)"; let roleColor = "#059669";
-                    if (role === "ئەڵماس") { roleBg = "rgba(59, 130, 246, 0.1)"; roleColor = "#2563eb"; }
-                    else if (role === "ئەدمین") { roleBg = "rgba(245, 158, 11, 0.1)"; roleColor = "#d97706"; }
+                    if (role === "بەڕێوەبەر") { roleBg = "rgba(59, 130, 246, 0.1)"; roleColor = "#2563eb"; }
+                    else if (role === "ئەڵماس") { roleBg = "rgba(245, 158, 11, 0.1)"; roleColor = "#d97706"; }
                     else if (role === "گۆڵد") { roleBg = "rgba(124, 58, 237, 0.1)"; roleColor = "#7c3aed"; }
 
                     html += `
@@ -4228,7 +4230,7 @@
             if (u.data.role === "گۆڵد") {
                 hint.innerHTML = "* قازانجی گۆڵد بۆ هەر <b>ئۆردەرێک</b> حیساب دەکرێت.";
             } else {
-                hint.innerHTML = "* قازانجی ئەڵماس یان ئەدمین بۆ هەر <b>کاڵایەک</b> حیساب دەکرێت.";
+                hint.innerHTML = "* قازانجی بەڕێوەبەر یان ئەڵماس بۆ هەر <b>کاڵایەک</b> حیساب دەکرێت.";
             }
 
             document.getElementById('profit-edit-section').style.display = 'block';
@@ -4493,7 +4495,7 @@
                     </div>
                 </div>
                 <div class="dist-input-row" style="${showManagerStyle}">
-                    <label><i class='bx bx-user'></i> ئەڵماس (${distData.manager.name})</label>
+                    <label><i class='bx bx-user'></i> بەڕێوەبەر (${distData.manager.name})</label>
                     <div class="dist-input-group">
                         <button type="button" class="qty-btn plus-btn" onclick="adjustDistValue('dist-manager', 1000)" ${!distData.manager.code ? 'disabled' : ''}>
                             <svg class="qty-icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 18 18">
@@ -4509,7 +4511,7 @@
                     </div>
                 </div>
                 <div class="dist-input-row" style="${showAdminStyle}">
-                    <label><i class='bx bx-shield'></i> ئەدمین (${distData.admin.name})</label>
+                    <label><i class='bx bx-shield'></i> ئەڵماس (${distData.admin.name})</label>
                     <div class="dist-input-group">
                         <button type="button" class="qty-btn plus-btn" onclick="adjustDistValue('dist-admin', 1000)" ${!distData.admin.code ? 'disabled' : ''}>
                             <svg class="qty-icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 18 18">
@@ -4649,8 +4651,8 @@
                 if (!isDistKingOrder && isAuthorized) {
                     addTx(distData.member.code, memberP, "قازانجی ئۆردەر", `قازانج لە ئۆردەری ${oCode} (گەیشت)`);
                     addTx(distData.member.code, savingsP, "پاشەکەوتی ئۆردەر", `پاشەکەوت لە ئۆردەری ${oCode}`, true);
-                    addTx(distData.manager.code, managerP, "قازانجی ئۆردەر", `قازانجی ئەڵماس لە ئۆردەری ${oCode}`);
-                    addTx(distData.admin.code, adminP, "قازانجی ئۆردەر", `قازانجی ئەدمین لە ئۆردەری ${oCode}`);
+                    addTx(distData.manager.code, managerP, "قازانجی ئۆردەر", `قازانجی بەڕێوەبەر لە ئۆردەری ${oCode}`);
+                    addTx(distData.admin.code, adminP, "قازانجی ئۆردەر", `قازانجی ئەڵماس لە ئۆردەری ${oCode}`);
                     addTx(distData.consultant.code, consultantP, "قازانجی ئۆردەر", `قازانجی گۆڵد لە ئۆردەری ${oCode}`);
                 }
 
