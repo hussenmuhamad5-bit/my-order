@@ -11,6 +11,10 @@
     <div class="login-container">
         <div class="modern-form">
             <div class="form-title">چوونە ژوورەوە</div>
+
+            <!-- ئەکاونتە پاشەکەوتکراوەکان (بۆ ئاڵوگۆڕی خێرا) -->
+            <div id="saved-accounts-list"></div>
+
             <div class="form-body">
                 <div class="input-group">
                     <div class="input-wrapper">
@@ -49,16 +53,19 @@
         
         document.addEventListener('DOMContentLoaded', async () => {
             await ensureSupabaseLoaded();
-            
+
+            let params = new URLSearchParams(location.search);
+            let addMode = params.get('add') === '1'; // زیادکردنی ئەکاونتی نوێ (بێ ئۆتۆ-ڕیدایرێکت)
+
             let tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
-            
-            if (tgUser && tgUser.id) {
+
+            if (tgUser && tgUser.id && !addMode) {
                 try {
                     const { data, error } = await supabase
                         .from('employees')
                         .select('*')
                         .eq('telegram_id', String(tgUser.id));
-                    
+
                     if (data && data.length > 0) {
                         localStorage.setItem('myAppUser', JSON.stringify(data[0]));
                         window.location.replace("app.html");
@@ -67,10 +74,75 @@
                 } catch (e) {}
             }
 
-            if (localStorage.getItem('myAppUser')) { 
-                window.location.replace("app.html"); 
+            if (!addMode && localStorage.getItem('myAppUser')) {
+                window.location.replace("app.html");
+                return;
             }
+
+            renderSavedAccounts();
         });
+
+        // ============ ئەکاونتە پاشەکەوتکراوەکان (Facebook-style) ============
+        function getSavedAccounts() {
+            try { return JSON.parse(localStorage.getItem('savedAccounts') || '[]'); } catch (e) { return []; }
+        }
+        function setSavedAccounts(a) { localStorage.setItem('savedAccounts', JSON.stringify(a)); }
+        function saveAccountToList(user) {
+            let a = getSavedAccounts();
+            let i = a.findIndex(x => x.code === user.code);
+            let e = { code: user.code, full_name: user.full_name || "", role: user.role || "" };
+            if (i >= 0) a[i] = e; else a.push(e);
+            setSavedAccounts(a);
+        }
+        function removeSavedAccount(code, ev) {
+            if (ev) ev.stopPropagation();
+            setSavedAccounts(getSavedAccounts().filter(x => x.code !== code));
+            renderSavedAccounts();
+        }
+        function maybeSaveAccount(user) {
+            if (getSavedAccounts().some(a => a.code === user.code)) { saveAccountToList(user); return; }
+            if (confirm("ئەتەوێت ئەم ئەکاونتە پاشەکەوت بکەیت بۆ ئاڵوگۆڕی خێرا؟")) saveAccountToList(user);
+        }
+
+        function renderSavedAccounts() {
+            let box = document.getElementById('saved-accounts-list');
+            if (!box) return;
+            let accts = getSavedAccounts();
+            if (accts.length === 0) { box.innerHTML = ""; return; }
+
+            let html = `<div style="font-size:12px; color:var(--text-secondary); font-weight:700; margin-bottom:10px; text-align:center;">ئەکاونتە پاشەکەوتکراوەکان</div>`;
+            accts.forEach(acc => {
+                let initial = (acc.full_name || "?").trim().charAt(0) || "?";
+                html += `
+                <div onclick="quickLogin('${acc.code}')" style="display:flex; align-items:center; gap:10px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:10px 12px; margin-bottom:8px; cursor:pointer; transition:0.2s;">
+                    <div style="width:40px; height:40px; border-radius:50%; background:var(--primary); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:18px; flex-shrink:0;">${initial}</div>
+                    <div style="flex:1; min-width:0;">
+                        <div style="font-size:14px; font-weight:700; color:var(--text-main); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${acc.full_name || "بێ ناو"}</div>
+                        <div style="font-size:11px; color:var(--text-secondary);">${acc.role || ""} · <span dir="ltr">${acc.code}</span></div>
+                    </div>
+                    <button onclick="removeSavedAccount('${acc.code}', event)" title="سڕینەوە" style="background:none; border:none; color:#cbd5e1; font-size:22px; cursor:pointer; padding:0 6px; line-height:1;">&times;</button>
+                </div>`;
+            });
+            html += `<div style="text-align:center; margin:12px 0 16px 0; font-size:12px; color:var(--text-secondary);">— یان بە ئەکاونتێکی تر بچۆ ژوورەوە —</div>`;
+            box.innerHTML = html;
+        }
+
+        async function quickLogin(code) {
+            await ensureSupabaseLoaded();
+            try {
+                const { data } = await supabase.from('employees').select('*').eq('code', code).single();
+                if (data) {
+                    localStorage.setItem('myAppUser', JSON.stringify(data));
+                    saveAccountToList(data);
+                    window.location.replace('app.html');
+                } else {
+                    showMsg("❌ ئەم ئەکاونتە ئیتر بوونی نییە.");
+                    removeSavedAccount(code);
+                }
+            } catch (e) {
+                showMsg("❌ کێشە لە پەیوەندی ئینتەرنێت هەیە.");
+            }
+        }
 
         function showMsg(text) {
             alert(text); 
@@ -149,6 +221,7 @@
                         if(tgId) user.telegram_id = tgId;
                         localStorage.setItem('myAppUser', JSON.stringify(user));
                         showMsg("✅ وشەی نهێنیت بۆ دانرا! لەمەودوا بەم وشەیە دەچیتە ژوورەوە.");
+                        maybeSaveAccount(user);
                         window.location.replace("app.html");
                     } else {
                         btn.innerHTML = "<span class='button-text'>چوونە ژوورەوە</span><div class='button-glow'></div>"; 
@@ -166,8 +239,9 @@
                         user.telegram_id = tgId;
                     }
                     localStorage.setItem('myAppUser', JSON.stringify(user));
+                    maybeSaveAccount(user);
                     window.location.replace("app.html");
-                } 
+                }
                 else {
                     btn.innerHTML = "<span class='button-text'>چوونە ژوورەوە</span><div class='button-glow'></div>"; 
                     btn.disabled = false;
