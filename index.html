@@ -90,9 +90,18 @@
         function saveAccountToList(user) {
             let a = getSavedAccounts();
             let i = a.findIndex(x => x.code === user.code);
-            let e = { code: user.code, full_name: user.full_name || "", role: user.role || "" };
+            let e = { code: user.code, full_name: user.full_name || "", role: user.role || "", avatar: user.avatar || "" };
             if (i >= 0) a[i] = e; else a.push(e);
             setSavedAccounts(a);
+        }
+        function avatarHtml(avatarUrl, name, size) {
+            size = size || 40;
+            let clean = avatarUrl ? String(avatarUrl).trim() : "";
+            if (clean && clean !== "null" && clean !== "undefined") {
+                return `<div style="width:${size}px; height:${size}px; border-radius:50%; overflow:hidden; flex-shrink:0; background:#e2e8f0;"><img src="${clean}" loading="lazy" style="width:100%; height:100%; object-fit:cover; display:block;"></div>`;
+            }
+            let initial = (name || "?").trim().charAt(0) || "?";
+            return `<div style="width:${size}px; height:${size}px; border-radius:50%; flex-shrink:0; background:var(--primary); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:${Math.round(size * 0.42)}px;">${initial}</div>`;
         }
         function removeSavedAccount(code, ev) {
             if (ev) ev.stopPropagation();
@@ -112,10 +121,9 @@
 
             let html = `<div style="font-size:12px; color:var(--text-secondary); font-weight:700; margin-bottom:10px; text-align:center;">ئەکاونتە پاشەکەوتکراوەکان</div>`;
             accts.forEach(acc => {
-                let initial = (acc.full_name || "?").trim().charAt(0) || "?";
                 html += `
                 <div onclick="quickLogin('${acc.code}')" style="display:flex; align-items:center; gap:10px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:10px 12px; margin-bottom:8px; cursor:pointer; transition:0.2s;">
-                    <div style="width:40px; height:40px; border-radius:50%; background:var(--primary); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:18px; flex-shrink:0;">${initial}</div>
+                    ${avatarHtml(acc.avatar, acc.full_name, 40)}
                     <div style="flex:1; min-width:0;">
                         <div style="font-size:14px; font-weight:700; color:var(--text-main); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${acc.full_name || "بێ ناو"}</div>
                         <div style="font-size:11px; color:var(--text-secondary);">${acc.role || ""} · <span dir="ltr">${acc.code}</span></div>
