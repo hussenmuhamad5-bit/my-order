@@ -359,7 +359,9 @@
                     <!-- بینینی لیستی کلیلەکان (وەک بەشی قازانجەکان) -->
                     <div id="edit-list-view">
                         <div class="segmented-control" id="edit-role-filter" style="margin-bottom: 15px;">
-                            <label><input type="radio" name="edit_role_filter" value="بەڕێوەبەر" checked
+                            <label><input type="radio" name="edit_role_filter" value="all" checked
+                                    onchange="filterEditUsers()"><span>هەموو</span></label>
+                            <label><input type="radio" name="edit_role_filter" value="بەڕێوەبەر"
                                     onchange="filterEditUsers()"><span>بەڕێوەبەر</span></label>
                             <label><input type="radio" name="edit_role_filter" value="سەرپەرشت"
                                     onchange="filterEditUsers()"><span>سەرپەرشت</span></label>
@@ -490,8 +492,10 @@
             <div id="section-profits" style="display: none;">
                 <div class="container" id="profits-container">
 
-                    <div class="segmented-control" style="margin-bottom: 15px;">
-                        <label><input type="radio" name="profit_role_filter" value="بەڕێوەبەر" checked
+                    <div class="segmented-control" id="profit-role-filter" style="margin-bottom: 15px;">
+                        <label><input type="radio" name="profit_role_filter" value="all" checked
+                                onchange="filterProfitUsers()"><span>هەموو</span></label>
+                        <label><input type="radio" name="profit_role_filter" value="بەڕێوەبەر"
                                 onchange="filterProfitUsers()"><span>بەڕێوەبەر</span></label>
                         <label><input type="radio" name="profit_role_filter" value="سەرپەرشت"
                                 onchange="filterProfitUsers()"><span>سەرپەرشت</span></label>
@@ -556,7 +560,9 @@
             <div id="section-wallets" style="display: none;">
                 <div class="container" id="wallets-container">
                     <div class="segmented-control" style="margin-bottom: 15px;" id="wallet-role-tabs-container">
-                        <label><input type="radio" name="wallet_role_filter" value="بەڕێوەبەر" checked
+                        <label><input type="radio" name="wallet_role_filter" value="all" checked
+                                onchange="filterWalletUsers()"><span>هەموو</span></label>
+                        <label><input type="radio" name="wallet_role_filter" value="بەڕێوەبەر"
                                 onchange="filterWalletUsers()"><span>بەڕێوەبەر</span></label>
                         <label><input type="radio" name="wallet_role_filter" value="سەرپەرشت"
                                 onchange="filterWalletUsers()"><span>سەرپەرشت</span></label>
@@ -664,9 +670,9 @@
         <h2><i class='bx bx-cog'></i> ڕێکخستنەکان</h2>
         <div
             style="background:#fff; padding:20px; border-radius:12px; text-align:center; margin-top:20px; box-shadow: 0 2px 10px rgba(0,0,0,0.05);">
-            <div
-                style="width:70px; height:70px; background:#eef2f5; border-radius:50%; margin:0 auto 10px auto; font-size:35px; line-height:70px;">
-                <i class='bx bx-user' style="color:var(--primary); line-height:70px;"></i>
+            <div style="position:relative; width:82px; height:82px; margin:0 auto 10px auto; cursor:pointer;" onclick="openAvatarEditor()" title="گۆڕینی وێنەی پرۆفایل">
+                <div id="settings-avatar"></div>
+                <div style="position:absolute; bottom:0; left:0; width:28px; height:28px; background:var(--primary); border:2px solid #fff; border-radius:50%; display:flex; align-items:center; justify-content:center; color:#fff; font-size:15px;"><i class='bx bx-camera'></i></div>
             </div>
             <h3 id="profile-name" style="margin:5px 0;">ناوی کارمەند</h3>
             <p id="profile-role" style="color:#666; font-size:14px; margin:0 0 20px 0;">ڕۆڵ</p>
@@ -758,6 +764,12 @@
                         </path>
                     </g>
                 </svg>
+            </div>
+
+            <!-- دوگمەی گۆڕینی بینین (هەموو / بەپێی ئەندام) — تەنها لە تابی تیم -->
+            <div class="segmented-control" id="team-view-mode" style="display:none; margin-bottom:12px;">
+                <label><input type="radio" name="team_view_mode" value="all" checked onchange="switchTeamView('all')"><span><i class='bx bx-list-ul'></i> هەموو</span></label>
+                <label><input type="radio" name="team_view_mode" value="members" onchange="switchTeamView('members')"><span><i class='bx bx-group'></i> بەپێی ئەندام</span></label>
             </div>
 
             <!-- فلتەری پلە (تەنها لە تابی ئۆردەری تیم دەردەکەوێت) -->
@@ -904,6 +916,30 @@
         </div>
     </div>
 
+    <!-- مۆدێلی دەستکاریی وێنەی پرۆفایل (کرۆپ + زووم) -->
+    <div id="avatar-crop-modal" class="modal-overlay" onclick="closeModal(event, 'avatar-crop-modal')">
+        <div class="modal-content" style="max-width:340px;" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h3 class="modal-title"><i class='bx bx-image-alt'></i> وێنەی پرۆفایل</h3>
+                <button class="modal-close" onclick="closeModal(null, 'avatar-crop-modal')"><i class='bx bx-x'></i></button>
+            </div>
+            <div id="avatar-crop-viewport"
+                style="width:280px; height:280px; max-width:100%; margin:0 auto 15px auto; position:relative; overflow:hidden; border-radius:50%; background:#0f172a; touch-action:none; cursor:grab; box-shadow:0 0 0 3px rgba(36,129,204,0.35);"
+                onpointerdown="avatarPointerDown(event)" onpointermove="avatarPointerMove(event)" onpointerup="avatarPointerUp(event)" onpointercancel="avatarPointerUp(event)">
+                <img id="avatar-crop-img" draggable="false" style="position:absolute; display:none; max-width:none; user-select:none; -webkit-user-drag:none;">
+                <div id="avatar-crop-hint" style="position:absolute; inset:0; display:flex; flex-direction:column; gap:8px; align-items:center; justify-content:center; color:#94a3b8; font-size:13px; text-align:center; padding:20px;"><i class='bx bx-image-add' style="font-size:34px;"></i> وێنەیەک هەڵبژێرە</div>
+            </div>
+            <div style="display:flex; align-items:center; gap:10px; margin-bottom:12px;">
+                <i class='bx bx-image' style="color:#64748b; font-size:16px;"></i>
+                <input type="range" id="avatar-zoom" min="1" max="3" step="0.01" value="1" oninput="onAvatarZoom(this.value)" style="flex:1; margin:0;">
+                <i class='bx bx-image' style="color:#64748b; font-size:22px;"></i>
+            </div>
+            <input type="file" id="avatar-file-input" accept="image/*" style="display:none" onchange="onAvatarFileSelected(this)">
+            <button class="btn" style="background:#f1f5f9; color:var(--primary); border:1px dashed var(--primary);" onclick="triggerAvatarFile()"><i class='bx bx-upload'></i> هەڵبژاردنی وێنە</button>
+            <button class="btn" id="avatar-confirm-btn" style="background:var(--primary);" onclick="confirmAvatar()" disabled><i class='bx bx-check'></i> پاشەکەوت</button>
+        </div>
+    </div>
+
     <div id="edit-city-modal" class="modal-overlay" onclick="closeModal(event, 'edit-city-modal')">
         <div class="modal-content" onclick="event.stopPropagation()">
             <div class="modal-header">
@@ -1011,6 +1047,7 @@
             { key: 'manage_employees', label: 'بەڕێوەبردنی کارمەندان (کلیل)' },
             { key: 'view_all_wallets', label: 'بینینی جزدان و قازانجی هەموان' },
             { key: 'manage_cities', label: 'بەڕێوەبردنی شارەکان و نرخەکان' },
+            { key: 'view_savings', label: 'پیشاندانی پاشەکەوت لە جزدان' },
         ];
 
         // دەسەڵاتی بنەڕەتی هەر ڕۆڵێک (کاتێک کلیلێک دەسەڵاتی دیارینەکراوە — بۆ گونجاندن لەگەڵ ڕەفتاری کۆن)
@@ -1102,6 +1139,7 @@
 
             document.getElementById('profile-name').innerText = userName;
             document.getElementById('profile-role').innerText = userRole;
+            applyOwnAvatar();
 
             if (typeof applyUserPermissions === 'function') {
                 applyUserPermissions();
@@ -1283,7 +1321,7 @@
         function saveAccountToList(user) {
             let a = getSavedAccounts();
             let i = a.findIndex(x => x.code === user.code);
-            let e = { code: user.code, full_name: user.full_name || "", role: normalizeRole(user.role) || "" };
+            let e = { code: user.code, full_name: user.full_name || "", role: normalizeRole(user.role) || "", avatar: user.avatar || "" };
             if (i >= 0) a[i] = e; else a.push(e);
             setSavedAccounts(a);
         }
@@ -1309,10 +1347,9 @@
             let html = "";
             accts.forEach(acc => {
                 let isCurrent = acc.code === curCode;
-                let initial = (acc.full_name || "?").trim().charAt(0) || "?";
                 html += `
                 <div ${isCurrent ? '' : `onclick="switchAccount('${acc.code}')"`} style="display:flex; align-items:center; gap:10px; background:${isCurrent ? 'rgba(36,129,204,0.08)' : '#f8fafc'}; border:1px solid ${isCurrent ? 'rgba(36,129,204,0.3)' : '#e2e8f0'}; border-radius:12px; padding:10px 12px; margin-bottom:8px; cursor:${isCurrent ? 'default' : 'pointer'};">
-                    <div style="width:40px; height:40px; border-radius:50%; background:var(--primary); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:18px; flex-shrink:0;">${initial}</div>
+                    ${avatarHtml(acc.avatar, acc.full_name, 40)}
                     <div style="flex:1; min-width:0;">
                         <div style="font-size:14px; font-weight:700; color:#1e293b; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${acc.full_name || "بێ ناو"}</div>
                         <div style="font-size:11px; color:#64748b;">${acc.role || ""} · <span dir="ltr">${acc.code}</span></div>
@@ -1347,6 +1384,131 @@
         function addAccount() {
             // چوونە پەڕەی چوونەژوورەوە بۆ زیادکردنی ئەکاونتێکی نوێ (بێ دەرچوون لە ئەکاونتی ئێستا)
             window.location.href = "index.html?add=1";
+        }
+
+        // ============ دەستکاریی وێنەی پرۆفایل (کرۆپ + زووم + ئەپلۆد) ============
+        const AV_VIEW = 280, AV_OUT = 400;
+        let avEditor = { imgEl: null, natW: 0, natH: 0, base: 1, zoom: 1, x: 0, y: 0, dragging: false, lastX: 0, lastY: 0 };
+
+        function openAvatarEditor() {
+            let imgEl = document.getElementById('avatar-crop-img');
+            imgEl.removeAttribute('src');
+            imgEl.style.display = 'none';
+            avEditor.imgEl = null;
+            document.getElementById('avatar-zoom').value = 1;
+            document.getElementById('avatar-crop-hint').style.display = 'flex';
+            document.getElementById('avatar-confirm-btn').disabled = true;
+            document.getElementById('avatar-crop-modal').classList.add('show');
+        }
+
+        function triggerAvatarFile() { document.getElementById('avatar-file-input').click(); }
+
+        function onAvatarFileSelected(input) {
+            let file = input.files && input.files[0];
+            if (!file) return;
+            let reader = new FileReader();
+            reader.onload = e => {
+                let imgEl = document.getElementById('avatar-crop-img');
+                imgEl.onload = () => {
+                    avEditor.imgEl = imgEl;
+                    avEditor.natW = imgEl.naturalWidth;
+                    avEditor.natH = imgEl.naturalHeight;
+                    avEditor.base = Math.max(AV_VIEW / avEditor.natW, AV_VIEW / avEditor.natH);
+                    avEditor.zoom = 1;
+                    document.getElementById('avatar-zoom').value = 1;
+                    let dW = avEditor.natW * avEditor.base, dH = avEditor.natH * avEditor.base;
+                    avEditor.x = (AV_VIEW - dW) / 2;
+                    avEditor.y = (AV_VIEW - dH) / 2;
+                    imgEl.style.display = 'block';
+                    document.getElementById('avatar-crop-hint').style.display = 'none';
+                    document.getElementById('avatar-confirm-btn').disabled = false;
+                    applyAvatarTransform();
+                };
+                imgEl.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+            input.value = "";
+        }
+
+        function applyAvatarTransform() {
+            if (!avEditor.imgEl) return;
+            let s = avEditor.base * avEditor.zoom;
+            let dW = avEditor.natW * s, dH = avEditor.natH * s;
+            avEditor.x = Math.min(0, Math.max(AV_VIEW - dW, avEditor.x));
+            avEditor.y = Math.min(0, Math.max(AV_VIEW - dH, avEditor.y));
+            let el = avEditor.imgEl;
+            el.style.width = dW + 'px';
+            el.style.height = dH + 'px';
+            el.style.left = avEditor.x + 'px';
+            el.style.top = avEditor.y + 'px';
+        }
+
+        function onAvatarZoom(val) {
+            if (!avEditor.imgEl) return;
+            let newZoom = parseFloat(val);
+            let s0 = avEditor.base * avEditor.zoom, s1 = avEditor.base * newZoom;
+            let cx = AV_VIEW / 2, cy = AV_VIEW / 2;
+            let ix = (cx - avEditor.x) / s0, iy = (cy - avEditor.y) / s0;
+            avEditor.zoom = newZoom;
+            avEditor.x = cx - ix * s1;
+            avEditor.y = cy - iy * s1;
+            applyAvatarTransform();
+        }
+
+        function avatarPointerDown(e) {
+            if (!avEditor.imgEl) return;
+            avEditor.dragging = true;
+            avEditor.lastX = e.clientX; avEditor.lastY = e.clientY;
+            try { e.currentTarget.setPointerCapture(e.pointerId); } catch (x) { }
+        }
+        function avatarPointerMove(e) {
+            if (!avEditor.dragging) return;
+            avEditor.x += e.clientX - avEditor.lastX;
+            avEditor.y += e.clientY - avEditor.lastY;
+            avEditor.lastX = e.clientX; avEditor.lastY = e.clientY;
+            applyAvatarTransform();
+        }
+        function avatarPointerUp(e) { avEditor.dragging = false; }
+
+        async function confirmAvatar() {
+            if (!avEditor.imgEl || !avEditor.imgEl.src) return;
+            let btn = document.getElementById('avatar-confirm-btn');
+            btn.disabled = true; btn.innerHTML = "<i class='bx bx-loader-alt bx-spin'></i> ئەپلۆد...";
+            try {
+                let s = avEditor.base * avEditor.zoom;
+                let srcX = -avEditor.x / s, srcY = -avEditor.y / s, srcSize = AV_VIEW / s;
+                let canvas = document.createElement('canvas');
+                canvas.width = AV_OUT; canvas.height = AV_OUT;
+                let ctx = canvas.getContext('2d');
+                ctx.drawImage(avEditor.imgEl, srcX, srcY, srcSize, srcSize, 0, 0, AV_OUT, AV_OUT);
+                let blob = await new Promise(res => canvas.toBlob(res, 'image/jpeg', 0.8));
+
+                let formData = new FormData();
+                formData.append("image", new File([blob], "avatar.jpg", { type: 'image/jpeg' }));
+                formData.append("key", "D46aeed04460f87292aa90c209ae88d5");
+                let resp = await fetch("https://api.imgbb.com/1/upload", { method: "POST", body: formData });
+                let data = await resp.json();
+                if (!data || !data.success) throw new Error("upload failed");
+                let url = data.data.url;
+
+                await supabase.from('employees').update({ avatar: url }).eq('code', currentUser.code);
+                currentUser.avatar = url;
+                localStorage.setItem('myAppUser', JSON.stringify(currentUser));
+                try { saveAccountToList(currentUser); } catch (x) { }
+                applyOwnAvatar();
+                closeModal(null, 'avatar-crop-modal');
+                showToast("وێنەی پرۆفایل نوێکرایەوە!", "success");
+            } catch (err) {
+                showToast("کێشە لە ئەپلۆدی وێنە ڕوویدا", "error");
+            } finally {
+                btn.disabled = false; btn.innerHTML = "<i class='bx bx-check'></i> پاشەکەوت";
+            }
+        }
+
+        // نوێکردنەوەی وێنەی پرۆفایلی خۆم لە ڕێکخستنەکان
+        function applyOwnAvatar() {
+            let el = document.getElementById('settings-avatar');
+            if (el && currentUser) el.innerHTML = avatarHtml(currentUser.avatar, userName, 82);
         }
 
         // فۆرماتکردنی کات و بەروار بە وردی: بەروار + کاتژمێر:خولەک + پ.ن/د.ن
@@ -1424,6 +1586,7 @@
         let currentOrdersTab = "my";
         let teamMembersData = [];
         let selectedTeamMember = null;
+        let teamViewMode = "all"; // "all" = هەموو ئۆردەرەکان، "members" = بەپێی ئەندام
 
 
         // گۆڕاوەکان بۆ سەیڤکردنی داتا لە مێشکی ئەپەکە
@@ -1578,15 +1741,41 @@
                     return;
                 }
 
+                // ژماردنی ئامارەکان + خەزنکردنی داتا
                 orders.forEach(o => {
                     allGlobalOrdersData[o.id] = o;
-                    let status = o.status || "ئامادە دەکرێت";
-
-                    if (status.includes("ئامادە")) prepCount++;
-                    else if (status.includes("ڕێگا")) onwayCount++;
-                    else if (status.includes("گەیشت")) delivCount++;
-                    else if (status.includes("گەڕا") || status.includes("کەنسەڵ")) retCount++;
+                    let st = o.status || "ئامادە دەکرێت";
+                    if (st.includes("ڕێگا")) onwayCount++;
+                    else if (st.includes("گەیشت")) delivCount++;
+                    else if (st.includes("گەڕا") || st.includes("کەنسەڵ")) retCount++;
                     else prepCount++;
+                });
+
+                // کۆکردنەوەی ئۆردەرەکان بەپێی ڕۆژ (ناوبڕی ڕۆژ لەگەڵ ژمارەی حاڵەتەکان)
+                let ymdStr = (d) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+                let todayStr = ymdStr(new Date());
+                let ydObj = new Date(); ydObj.setDate(ydObj.getDate() - 1); let yesterdayStr = ymdStr(ydObj);
+                let dayGroups = []; let dayMap = {};
+                orders.forEach(o => {
+                    let day = (o.date ? String(o.date).split(' ')[0].trim() : "نەزانراوە");
+                    if (!dayMap[day]) { dayMap[day] = { day: day, orders: [] }; dayGroups.push(dayMap[day]); }
+                    dayMap[day].orders.push(o);
+                });
+
+                dayGroups.forEach(group => {
+                    let dl = formatDayLabel(group.day);
+                    newListHTML += `
+                    <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin:16px 0 10px 0; padding-bottom:8px; border-bottom:1px dashed #e2e8f0;">
+                        <div style="display:flex; align-items:center; gap:6px; font-size:13px; font-weight:800; color:#334155;">
+                            <i class='bx bx-calendar-event' style="color:var(--primary); font-size:16px;"></i>
+                            <span dir="auto">${dl.label}</span>
+                            ${dl.sub ? `<span dir="ltr" style="font-size:10px; font-weight:600; color:#94a3b8;">${dl.sub}</span>` : ''}
+                        </div>
+                        <div style="display:flex; align-items:center; gap:5px; flex-wrap:wrap; justify-content:flex-end;">${statusCountBadges(group.orders)}</div>
+                    </div>`;
+
+                    group.orders.forEach(o => {
+                    let status = o.status || "ئامادە دەکرێت";
 
                     let statusBg = "rgba(59, 130, 246, 0.12)"; let statusColor = "#2563eb";
                     if (status.includes("ڕێگا")) { statusBg = "rgba(245, 158, 11, 0.12)"; statusColor = "#d97706"; }
@@ -1658,6 +1847,7 @@
                             </div>
                         </div>
                     </div>`;
+                    });
                 });
 
                 list.innerHTML = newListHTML;
@@ -1676,6 +1866,111 @@
         }
 
         // ٣. لابردنی هێڵە شینەکە لە تابی ئۆردەرەکانیش
+        // ناونیشانی ڕۆژ بۆ ناوبڕەکان: ئەمڕۆ / دوێنێ / ناوی ڕۆژی هەفتە / بەرواری جوان
+        // دەگەڕێنێتەوە { label, sub } — sub تەنها بۆ ئەمڕۆ/دوێنێ/ڕۆژی هەفتە (بۆ ئەوەی بەروار دووبارە نەبێتەوە)
+        function formatDayLabel(dayStr) {
+            let m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(dayStr || ""));
+            if (!m) return { label: "بەروار نەزانراوە", sub: "" };
+            let yr = Number(m[1]), mo = Number(m[2]), dy = Number(m[3]);
+            let dObj = new Date(yr, mo - 1, dy);
+            if (isNaN(dObj.getTime())) return { label: String(dayStr), sub: "" };
+
+            let now = new Date();
+            let todayMid = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            let diff = Math.round((todayMid - dObj) / 86400000);
+            // ساڵ-مانگ-ڕۆژ لە سترینگدا، بۆ ئەوەی لە پیشاندانی LTRدا ڕۆژ لای ڕاست و ساڵ لای چەپ بێت
+            // (خوێندنەوەی ڕاست-بۆ-چەپ: ڕۆژ ← مانگ ← ساڵ)
+            let numFmt = `${yr}-${mo}-${dy}`;
+
+            if (diff === 0) return { label: "ئەمڕۆ", sub: numFmt };
+            if (diff === 1) return { label: "دوێنێ", sub: numFmt };
+            return { label: numFmt, sub: "" };
+        }
+
+        // دروستکردنی HTMLـی وێنەی پرۆفایل (وێنە ئەگەر هەبوو، ئەگەرنا پیتی سەرەتای ناو بە ڕەنگ)
+        function avatarHtml(avatarUrl, name, size) {
+            size = size || 44;
+            let clean = avatarUrl ? String(avatarUrl).trim() : "";
+            if (clean && clean !== "null" && clean !== "undefined") {
+                return `<div style="width:${size}px; height:${size}px; border-radius:50%; overflow:hidden; flex-shrink:0; background:#e2e8f0;"><img src="${clean}" loading="lazy" style="width:100%; height:100%; object-fit:cover; display:block;"></div>`;
+            }
+            let initial = (name || "?").trim().charAt(0) || "?";
+            return `<div style="width:${size}px; height:${size}px; border-radius:50%; flex-shrink:0; background:var(--primary); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:${Math.round(size * 0.42)}px;">${initial}</div>`;
+        }
+
+        // دروستکردنی نیشانەی ژمارەی حاڵەتەکان (گەیشتوو/لەڕێگا/ئامادە/گەڕاوە) بە ڕەنگ
+        function statusCountBadges(orders) {
+            let cP = 0, cO = 0, cD = 0, cR = 0;
+            orders.forEach(o => {
+                let s = o.status || "";
+                if (s.includes("گەیشت")) cD++;
+                else if (s.includes("ڕێگا")) cO++;
+                else if (s.includes("گەڕا") || s.includes("کەنسەڵ")) cR++;
+                else cP++;
+            });
+            let b = (n, bg, col, icon) => n > 0 ? `<span style="background:${bg}; color:${col}; font-size:11px; font-weight:700; padding:2px 7px; border-radius:6px; display:inline-flex; align-items:center; gap:3px;"><i class='bx ${icon}'></i>${n}</span>` : '';
+            return b(cD, 'rgba(16,185,129,0.15)', '#059669', 'bx-check-circle')
+                + b(cO, 'rgba(245,158,11,0.15)', '#d97706', 'bx-car')
+                + b(cP, 'rgba(59,130,246,0.15)', '#2563eb', 'bx-package')
+                + b(cR, 'rgba(239,68,68,0.15)', '#dc2626', 'bx-undo');
+        }
+
+        // دەرهێنانی کلیلی ڕۆژ (YYYY-MM-DD) بە کاتی ناوخۆیی — کار دەکات لەگەڵ created_at ی ISO و فۆرماتی ئۆردەر
+        function dayKeyOf(dateInput) {
+            if (!dateInput) return "نەزانراوە";
+            let dObj;
+            let parts = String(dateInput).match(/(\d{4})-(\d{2})-(\d{2})\s+(\d{1,2}):(\d{2}):(\d{2})\s+(AM|PM)/i);
+            if (parts) {
+                let hour = parseInt(parts[4]); let ap = parts[7].toUpperCase();
+                if (ap === "PM" && hour < 12) hour += 12;
+                if (ap === "AM" && hour === 12) hour = 0;
+                dObj = new Date(parseInt(parts[1]), parseInt(parts[2]) - 1, parseInt(parts[3]), hour, parseInt(parts[5]), parseInt(parts[6]));
+            } else {
+                dObj = new Date(dateInput);
+            }
+            if (isNaN(dObj.getTime())) return "نەزانراوە";
+            return dObj.getFullYear() + '-' + String(dObj.getMonth() + 1).padStart(2, '0') + '-' + String(dObj.getDate()).padStart(2, '0');
+        }
+
+        // نیشانەی کۆی هاتوو (+) و چوو (−)ی جوڵە داراییەکان بۆ هەر ڕۆژێک
+        function txTotalsBadges(txs) {
+            let inSum = 0, outSum = 0;
+            txs.forEach(t => { let a = parseFloat(t.amount) || 0; if (a >= 0) inSum += a; else outSum += -a; });
+            let b = (n, bg, col, icon) => n > 0 ? `<span dir="ltr" style="background:${bg}; color:${col}; font-size:11px; font-weight:700; padding:2px 7px; border-radius:6px; display:inline-flex; align-items:center; gap:3px;"><i class='bx ${icon}'></i>${Number(n).toLocaleString()}</span>` : '';
+            return b(inSum, 'rgba(16,185,129,0.15)', '#059669', 'bx-up-arrow-alt')
+                + b(outSum, 'rgba(239,68,68,0.15)', '#dc2626', 'bx-down-arrow-alt');
+        }
+
+        // دروستکردنی HTMLـی ناوبڕی ڕۆژ بۆ جوڵە داراییەکان (بەروار + کۆی هاتوو/چوو)
+        function txDayDividerHtml(dayKey, txsOfDay) {
+            let dl = formatDayLabel(dayKey);
+            return `
+            <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin:14px 0 10px 0; padding-bottom:8px; border-bottom:1px dashed #e2e8f0;">
+                <div style="display:flex; align-items:center; gap:6px; font-size:13px; font-weight:800; color:#334155;">
+                    <i class='bx bx-calendar-event' style="color:var(--primary); font-size:16px;"></i>
+                    <span dir="auto">${dl.label}</span>
+                    ${dl.sub ? `<span dir="ltr" style="font-size:10px; font-weight:600; color:#94a3b8;">${dl.sub}</span>` : ''}
+                </div>
+                <div style="display:flex; align-items:center; gap:5px; flex-wrap:wrap; justify-content:flex-end;">${txTotalsBadges(txsOfDay)}</div>
+            </div>`;
+        }
+
+        // کۆکردنەوەی جوڵە داراییەکان بەپێی ڕۆژ + دروستکردنی لیست بە ناوبڕەوە
+        function renderTxListWithDayDividers(txs, buildItemHtml) {
+            let groups = []; let map = {};
+            txs.forEach(tx => {
+                let dk = dayKeyOf(tx.created_at);
+                if (!map[dk]) { map[dk] = { day: dk, items: [] }; groups.push(map[dk]); }
+                map[dk].items.push(tx);
+            });
+            let html = "";
+            groups.forEach(g => {
+                html += txDayDividerHtml(g.day, g.items);
+                g.items.forEach(tx => { html += buildItemHtml(tx); });
+            });
+            return html;
+        }
+
         function applyOrderFilters() {
             let list = document.getElementById('management-orders-list');
             let filterSection = document.getElementById('orders-filter-section');
@@ -1689,6 +1984,10 @@
             let roleFilterEl = document.querySelector('input[name="orders_role_filter"]:checked');
             let roleFilter = roleFilterEl ? roleFilterEl.value : "all";
 
+            // دوگمەی گۆڕینی بینین (هەموو / بەپێی ئەندام): تەنها لە تابی تیم و پێش چوونە ناو ئەندامێک
+            let viewModeBox = document.getElementById('team-view-mode');
+            if (viewModeBox) viewModeBox.style.display = (currentOrdersTab === "team" && !selectedTeamMember) ? "flex" : "none";
+
             // فلتەری پلە تەنها لە تابی تیم و لە دۆخی لیستی ئەندامان دەردەکەوێت
             let roleFilterBox = document.getElementById('orders-role-filter');
             if (roleFilterBox) roleFilterBox.style.display = (currentOrdersTab === "team" && !selectedTeamMember) ? "flex" : "none";
@@ -1699,6 +1998,12 @@
                 if (currentOrdersTab === "my" && !isMyOrder) return false;
                 if (currentOrdersTab === "team" && isMyOrder) return false;
                 if (currentOrdersTab === "team" && selectedTeamMember && o.seller_code !== selectedTeamMember) return false;
+
+                // فلتەری پلە بۆ ئۆردەرەکانی تیم (لە دۆخی «هەموو» یان لیستی گشتی)
+                if (currentOrdersTab === "team" && roleFilter !== "all") {
+                    let mem = teamMembersData.find(m => m.code === o.seller_code);
+                    if (!mem || normalizeRole(mem.role) !== roleFilter) return false;
+                }
 
                 if (statusFilter !== "all" && !(o.status || "").includes(statusFilter)) return false;
 
@@ -1749,7 +2054,7 @@
 
             let newListHTML = '';
 
-            if (currentOrdersTab === "team" && !selectedTeamMember) {
+            if (currentOrdersTab === "team" && teamViewMode === "members" && !selectedTeamMember) {
                 if (teamMembersData.length === 0) {
                     list.innerHTML = '<p style="text-align:center; color:#888; margin-top:40px;">هیچ ئەندامێک لە تیمەکەتدا نییە.</p>';
                     return;
@@ -1780,19 +2085,23 @@
 
                     if (shouldShow) {
                         membersShown++;
+                        let memberBadges = statusCountBadges(memberOrders);
                         newListHTML += `
-                        <div class="team-member-card" onclick="viewTeamMemberOrders('${member.code}')">
-                            <div class="tm-info">
-                                <div class="tm-avatar"><i class='bx bx-user'></i></div>
-                                <div class="tm-details">
-                                    <h4>${member.full_name || "بێ ناو"}</h4>
-                                    <p>کۆد: <span dir="ltr">${member.code}</span> | پلە: ${normalizeRole(member.role) || "ئەندام"}</p>
+                        <div class="team-member-card" style="flex-direction:column; align-items:stretch;" onclick="viewTeamMemberOrders('${member.code}')">
+                            <div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
+                                <div class="tm-info">
+                                    ${avatarHtml(member.avatar, member.full_name, 45)}
+                                    <div class="tm-details">
+                                        <h4>${member.full_name || "بێ ناو"}</h4>
+                                        <p>کۆد: <span dir="ltr">${member.code}</span> | پلە: ${normalizeRole(member.role) || "ئەندام"}</p>
+                                    </div>
+                                </div>
+                                <div class="tm-stats">
+                                    <span class="tm-count">${count}</span>
+                                    <span class="tm-label">داواکاری</span>
                                 </div>
                             </div>
-                            <div class="tm-stats">
-                                <span class="tm-count">${count}</span>
-                                <span class="tm-label">داواکاری</span>
-                            </div>
+                            ${memberBadges ? `<div style="display:flex; gap:5px; flex-wrap:wrap; padding-top:10px; margin-top:2px; border-top:1px dashed #eef2f5;">${memberBadges}</div>` : ''}
                         </div>
                     `;
                     }
@@ -1823,7 +2132,34 @@
                 return;
             }
 
+            // کۆکردنەوەی ئۆردەرەکان بەپێی ڕۆژ لە هەموو لیستە هاموارەکان (داواکارییەکانم، هەموو، ئۆردەری ئەندام)
+            let showDayDividers = true;
+            let ymdStr = (d) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+            let todayStr = ymdStr(new Date());
+            let ydObj = new Date(); ydObj.setDate(ydObj.getDate() - 1); let yesterdayStr = ymdStr(ydObj);
+
+            let dayGroups = []; let dayMap = {};
             filteredOrders.forEach(o => {
+                let day = (o.date ? String(o.date).split(' ')[0].trim() : "نەزانراوە");
+                if (!dayMap[day]) { dayMap[day] = { day: day, orders: [] }; dayGroups.push(dayMap[day]); }
+                dayMap[day].orders.push(o);
+            });
+
+            dayGroups.forEach(group => {
+                if (showDayDividers) {
+                    let dl = formatDayLabel(group.day);
+                    newListHTML += `
+                    <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin:16px 0 10px 0; padding-bottom:8px; border-bottom:1px dashed #e2e8f0;">
+                        <div style="display:flex; align-items:center; gap:6px; font-size:13px; font-weight:800; color:#334155;">
+                            <i class='bx bx-calendar-event' style="color:var(--primary); font-size:16px;"></i>
+                            <span dir="auto">${dl.label}</span>
+                            ${dl.sub ? `<span dir="ltr" style="font-size:10px; font-weight:600; color:#94a3b8;">${dl.sub}</span>` : ''}
+                        </div>
+                        <div style="display:flex; align-items:center; gap:5px; flex-wrap:wrap; justify-content:flex-end;">${statusCountBadges(group.orders)}</div>
+                    </div>`;
+                }
+
+                group.orders.forEach(o => {
                 let status = o.status || "ئامادە دەکرێت";
                 let statusBg = "rgba(59, 130, 246, 0.12)"; let statusColor = "#2563eb";
                 if (status.includes("ڕێگا")) { statusBg = "rgba(245, 158, 11, 0.12)"; statusColor = "#d97706"; }
@@ -1878,6 +2214,7 @@
                         </div>
                     </div>
                 </div>`;
+                });
             });
 
             list.innerHTML = newListHTML;
@@ -2284,7 +2621,7 @@
                 let finalHtml = `
                 <div style="background:linear-gradient(135deg, #1d6fa5, #2481cc); color:#fff; border-radius:14px; padding:15px; box-shadow:0 8px 20px rgba(36,129,204,0.25);">
                     <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px;">
-                        <div style="width:42px; height:42px; background:rgba(255,255,255,0.2); border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:22px; flex-shrink:0;"><i class='bx bx-id-card'></i></div>
+                        ${avatarHtml(seller.avatar, seller.full_name, 46)}
                         <div style="flex:1;">
                             <div style="font-size:15px; font-weight:800;">${seller.full_name || "بێ ناو"}</div>
                             <div style="font-size:11px; opacity:0.85; display:flex; gap:8px; align-items:center; margin-top:2px;">
@@ -2785,6 +3122,13 @@
 
 
         function backToTeamList() {
+            selectedTeamMember = null;
+            applyOrderFilters();
+        }
+
+        // گۆڕینی شێوازی بینینی ئۆردەرەکانی تیم: "all" (هەموو) یان "members" (بەپێی ئەندام)
+        function switchTeamView(mode) {
+            teamViewMode = mode;
             selectedTeamMember = null;
             applyOrderFilters();
         }
@@ -4165,27 +4509,16 @@
                     document.getElementById('my-wallet-balance').innerText = Number(me.balance || 0).toLocaleString() + " د.ع";
                     document.getElementById('my-wallet-savings').innerText = Number(me.savings || 0).toLocaleString() + " د.ع";
                 }
-                const { data: txs } = await supabase.from('transactions').select('*').eq('user_code', currentUser.code).order('created_at', { ascending: false }).limit(50);
+
+                // پیشاندانی کارتی پاشەکەوت تەنها ئەگەر دەسەڵاتی «پیشاندانی پاشەکەوت» هەبێت
+                let canSeeSavings = can('view_savings');
+                document.getElementById('my-wallet-savings-container').style.display = canSeeSavings ? 'block' : 'none';
+
+                const { data: txsRaw } = await supabase.from('transactions').select('*').eq('user_code', currentUser.code).order('created_at', { ascending: false }).limit(50);
+                // ئەگەر دەسەڵاتی پاشەکەوت نەبوو، جوڵەکانی پاشەکەوت لە لیستەکە دەشاردرێنەوە
+                let txs = (txsRaw || []).filter(tx => canSeeSavings || !(tx.wallet_type === 'savings' || tx.type === 'پاشەکەوتی ئۆردەر'));
                 if (txs && txs.length > 0) {
-                    let html = "";
-                    txs.forEach(tx => {
-                        let isPlus = parseFloat(tx.amount) > 0;
-                        let iconClass = isPlus ? "plus" : "minus";
-                        let amountClass = isPlus ? "plus" : "minus";
-                        let iconSign = isPlus ? "<i class='bx bx-up-arrow-alt'></i>" : "<i class='bx bx-down-arrow-alt'></i>";
-                        let amountSign = isPlus ? "+" : "";
-                        let dateStr = tx.created_at ? formatDateTimeKurdish(tx.created_at) : "";
-                        let clickAttr = "";
-                        let cursorStyle = "";
-                        let orderBadge = "";
-                        if (tx.order_id) {
-                            clickAttr = `onclick="openOrderDetails('${tx.order_id}')"`;
-                            cursorStyle = "cursor: pointer;";
-                            orderBadge = `<span style="font-size:9px; color:#2481cc; background:rgba(36,129,204,0.08); padding:1px 5px; border-radius:4px; margin-top:4px; display:inline-block;"><i class='bx bx-show-alt'></i> زانیاری ئۆردەر</span>`;
-                        }
-                        html += `<div class="transaction-item ${iconClass}" ${clickAttr} style="${cursorStyle}"><div class="tx-info"><div class="tx-icon ${iconClass}">${iconSign}</div><div class="tx-details"><h4>${tx.type}</h4><p>${tx.description} ${orderBadge}<br><i class='bx bx-calendar'></i> ${dateStr}</p></div></div><div class="tx-amount ${amountClass}">${amountSign}${Number(tx.amount).toLocaleString()}</div></div>`;
-                    });
-                    list.innerHTML = html;
+                    list.innerHTML = renderTxListWithDayDividers(txs, buildTxItemHtml);
                 } else { list.innerHTML = `<p style="text-align:center; color:#888;">هێشتا هیچ جووڵەیەکی دارایی نییە.</p>`; }
                 isWalletDataLoaded = true;
             } catch (err) {
@@ -4206,7 +4539,7 @@
             }
 
             let filteredUsers = allEditableUsers.filter(u => {
-                if (u.data.role !== roleFilter) return false;
+                if (roleFilter !== "all" && u.data.role !== roleFilter) return false;
                 if (searchVal) {
                     if (!u.name.toLowerCase().includes(searchVal) && !u.code.toLowerCase().includes(searchVal)) {
                         return false;
@@ -4230,10 +4563,13 @@
 
                     html += `
                     <div class="modern-order-card" style="background:#fff; border:1px solid #e2e8f0; padding:12px; border-radius:12px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; cursor:pointer;" onclick="openWalletEdit('${u.code}')">
-                        <div>
-                            <strong style="color:#1e293b; font-size:14px;">${u.name}</strong>
-                            <span style="font-size:10px; padding:2px 6px; border-radius:4px; margin-right:5px; background:${roleBg}; color:${roleColor}; font-weight:bold;">${role}</span><br>
-                            <span style="font-size:11px; color:#64748b; font-family:monospace;">${u.code}</span>
+                        <div style="display:flex; align-items:center; gap:10px; min-width:0;">
+                            ${avatarHtml(u.data.avatar, u.name, 42)}
+                            <div style="min-width:0;">
+                                <strong style="color:#1e293b; font-size:14px;">${u.name}</strong>
+                                <span style="font-size:10px; padding:2px 6px; border-radius:4px; margin-right:5px; background:${roleBg}; color:${roleColor}; font-weight:bold;">${role}</span><br>
+                                <span style="font-size:11px; color:#64748b; font-family:monospace;">${u.code}</span>
+                            </div>
                         </div>
                         <div style="text-align:left;">
                             <span style="display:block; font-size:12px; font-weight:700; color:var(--primary);" dir="ltr">باڵانس: ${Number(bal).toLocaleString()} د.ع</span>
@@ -4276,6 +4612,25 @@
         }
 
         // دروستکردنی HTMLـی لیستەکە
+        // دروستکردنی HTMLـی یەک جوڵەی دارایی (هاوبەش لەنێوان جزدانی خۆم و جزدانی ئەدمین)
+        function buildTxItemHtml(tx) {
+            let isPlus = parseFloat(tx.amount) > 0;
+            let iconClass = isPlus ? "plus" : "minus";
+            let amountClass = isPlus ? "plus" : "minus";
+            let iconSign = isPlus ? "<i class='bx bx-up-arrow-alt'></i>" : "<i class='bx bx-down-arrow-alt'></i>";
+            let amountSign = isPlus ? "+" : "";
+            let dateStr = tx.created_at ? formatDateTimeKurdish(tx.created_at) : "";
+            let clickAttr = "";
+            let cursorStyle = "";
+            let orderBadge = "";
+            if (tx.order_id) {
+                clickAttr = `onclick="openOrderDetails('${tx.order_id}')"`;
+                cursorStyle = "cursor: pointer;";
+                orderBadge = `<span style="font-size:9px; color:#2481cc; background:rgba(36,129,204,0.08); padding:1px 5px; border-radius:4px; margin-top:4px; display:inline-block;"><i class='bx bx-show-alt'></i> زانیاری ئۆردەر</span>`;
+            }
+            return `<div class="transaction-item ${iconClass}" ${clickAttr} style="${cursorStyle}"><div class="tx-info"><div class="tx-icon ${iconClass}">${iconSign}</div><div class="tx-details"><h4>${tx.type}</h4><p>${tx.description} ${orderBadge}<br><i class='bx bx-calendar'></i> ${dateStr}</p></div></div><div class="tx-amount ${amountClass}">${amountSign}${Number(tx.amount).toLocaleString()}</div></div>`;
+        }
+
         function renderWalletTransactions(txs) {
             let list = document.getElementById('wallet-tx-modal-body');
             if (!list) return;
@@ -4283,25 +4638,7 @@
                 list.innerHTML = `<p style="text-align:center; color:#888; font-size:12px; margin: 15px 0;">هیچ جووڵەیەکی دارایی نییە.</p>`;
                 return;
             }
-            let html = "";
-            txs.forEach(tx => {
-                let isPlus = parseFloat(tx.amount) > 0;
-                let iconClass = isPlus ? "plus" : "minus";
-                let amountClass = isPlus ? "plus" : "minus";
-                let iconSign = isPlus ? "<i class='bx bx-up-arrow-alt'></i>" : "<i class='bx bx-down-arrow-alt'></i>";
-                let amountSign = isPlus ? "+" : "";
-                let dateStr = tx.created_at ? formatDateTimeKurdish(tx.created_at) : "";
-                let clickAttr = "";
-                let cursorStyle = "";
-                let orderBadge = "";
-                if (tx.order_id) {
-                    clickAttr = `onclick="openOrderDetails('${tx.order_id}')"`;
-                    cursorStyle = "cursor: pointer;";
-                    orderBadge = `<span style="font-size:9px; color:#2481cc; background:rgba(36,129,204,0.08); padding:1px 5px; border-radius:4px; margin-top:4px; display:inline-block;"><i class='bx bx-show-alt'></i> زانیاری ئۆردەر</span>`;
-                }
-                html += `<div class="transaction-item ${iconClass}" ${clickAttr} style="${cursorStyle}"><div class="tx-info"><div class="tx-icon ${iconClass}">${iconSign}</div><div class="tx-details"><h4>${tx.type}</h4><p>${tx.description} ${orderBadge}<br><i class='bx bx-calendar'></i> ${dateStr}</p></div></div><div class="tx-amount ${amountClass}">${amountSign}${Number(tx.amount).toLocaleString()}</div></div>`;
-            });
-            list.innerHTML = html;
+            list.innerHTML = renderTxListWithDayDividers(txs, buildTxItemHtml);
         }
 
         async function loadUserWalletTransactions(code, force) {
@@ -4417,7 +4754,7 @@
 
             // فلتەرکردنی کارمەندان بەپێی پلە و بۆکسی گەڕان
             let filteredUsers = allEditableUsers.filter(u => {
-                if (u.data.role !== roleFilter) return false;
+                if (roleFilter !== "all" && u.data.role !== roleFilter) return false;
                 if (searchVal) {
                     if (!u.name.toLowerCase().includes(searchVal) && !u.code.toLowerCase().includes(searchVal)) {
                         return false;
@@ -4435,9 +4772,12 @@
                     let rate = u.data.profit_rate || 0;
                     html += `
                     <div style="background:#fff; border:1px solid #e2e8f0; padding:12px; border-radius:10px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; cursor:pointer; transition:0.2s;" onclick="openProfitEdit('${u.code}')">
-                        <div>
-                            <strong style="color:#1e293b; font-size:14px;">${u.name}</strong><br>
-                            <span style="font-size:11px; color:#64748b; font-family:monospace;">${u.code}</span>
+                        <div style="display:flex; align-items:center; gap:10px; min-width:0;">
+                            ${avatarHtml(u.data.avatar, u.name, 40)}
+                            <div style="min-width:0;">
+                                <strong style="color:#1e293b; font-size:14px;">${u.name}</strong><br>
+                                <span style="font-size:11px; color:#64748b; font-family:monospace;">${u.code}</span>
+                            </div>
                         </div>
                         <div style="text-align:left;">
                             <span style="display:block; font-size:13px; font-weight:bold; color:var(--primary);" dir="ltr">${rate} د.ع</span>
@@ -4490,7 +4830,7 @@
 
             let filtered = allEditableUsers.filter(u => {
                 let r = normalizeRole(u.data.role);
-                if (roleFilter && r !== roleFilter) return false;
+                if (roleFilter && roleFilter !== "all" && r !== roleFilter) return false;
                 if (searchVal && !u.name.toLowerCase().includes(searchVal) && !u.code.toLowerCase().includes(searchVal)) return false;
                 return true;
             });
@@ -4502,9 +4842,12 @@
                 filtered.forEach(u => {
                     html += `
                     <div style="background:#fff; border:1px solid #e2e8f0; padding:12px; border-radius:10px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; cursor:pointer; transition:0.2s;" onclick="openEditFromList('${u.code}')">
-                        <div>
-                            <strong style="color:#1e293b; font-size:14px;">${u.name}</strong><br>
-                            <span style="font-size:11px; color:#64748b; font-family:monospace;">${u.code}</span>
+                        <div style="display:flex; align-items:center; gap:10px; min-width:0;">
+                            ${avatarHtml(u.data.avatar, u.name, 40)}
+                            <div style="min-width:0;">
+                                <strong style="color:#1e293b; font-size:14px;">${u.name}</strong><br>
+                                <span style="font-size:11px; color:#64748b; font-family:monospace;">${u.code}</span>
+                            </div>
                         </div>
                         <div style="text-align:left;">
                             <span style="display:block; font-size:12px; font-weight:bold; color:var(--primary);">${normalizeRole(u.data.role)}</span>
