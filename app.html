@@ -359,14 +359,14 @@
                     <!-- بینینی لیستی کلیلەکان (وەک بەشی قازانجەکان) -->
                     <div id="edit-list-view">
                         <div class="segmented-control" id="edit-role-filter" style="margin-bottom: 15px;">
-                            <label><input type="radio" name="edit_role_filter" value="سلڤەر" checked
-                                    onchange="filterEditUsers()"><span>سلڤەر</span></label>
-                            <label><input type="radio" name="edit_role_filter" value="گۆڵد"
-                                    onchange="filterEditUsers()"><span>گۆڵد</span></label>
+                            <label><input type="radio" name="edit_role_filter" value="بەڕێوەبەر" checked
+                                    onchange="filterEditUsers()"><span>بەڕێوەبەر</span></label>
                             <label><input type="radio" name="edit_role_filter" value="ئەڵماس"
                                     onchange="filterEditUsers()"><span>ئەڵماس</span></label>
-                            <label><input type="radio" name="edit_role_filter" value="بەڕێوەبەر"
-                                    onchange="filterEditUsers()"><span>بەڕێوەبەر</span></label>
+                            <label><input type="radio" name="edit_role_filter" value="گۆڵد"
+                                    onchange="filterEditUsers()"><span>گۆڵد</span></label>
+                            <label><input type="radio" name="edit_role_filter" value="سلڤەر"
+                                    onchange="filterEditUsers()"><span>سلڤەر</span></label>
                         </div>
 
                         <div class="search-group">
@@ -1047,6 +1047,14 @@
                 let el = document.getElementById(`perm-${mode}-${p.key}`);
                 return el && el.checked;
             }).map(p => p.key);
+        }
+
+        // پشکنین ئایە هەڵەکە بەهۆی نەبوونی ستوونی permissions ـە لە داتابەیس (پێش زیادکردنی ستوونەکە)
+        function isMissingPermissionsColumn(error) {
+            if (!error) return false;
+            let msg = String(error.message || error.details || error.hint || '').toLowerCase();
+            let code = String(error.code || '');
+            return msg.includes('permissions') || code === 'PGRST204' || code === '42703';
         }
         let searchTimeout = null;
         let availableManagers = [];
@@ -3581,7 +3589,7 @@
             let code = getSecureCode();
 
             try {
-                const { error } = await supabase.from('employees').insert([{
+                let insertData = {
                     code: code,
                     password: "",
                     full_name: name,
@@ -3593,7 +3601,13 @@
                     telegram_status: hasTelegram,
                     permissions: collectPermToggles('create'),
                     date: fullDateString // لێرەدا کاتەکە دەنێرین بۆ داتابەیس
-                }]);
+                };
+                let { error } = await supabase.from('employees').insert([insertData]);
+                // ئەگەر ستوونی permissions هێشتا زیاد نەکرابێت لە داتابەیس، بەبێ ئەو هەوڵ بدەرەوە
+                if (error && isMissingPermissionsColumn(error)) {
+                    delete insertData.permissions;
+                    ({ error } = await supabase.from('employees').insert([insertData]));
+                }
 
                 if (error) throw error;
 
@@ -3650,7 +3664,7 @@
             showToast("خەریکی نوێکردنەوە...", "loading");
 
             try {
-                const { error } = await supabase.from('employees').update({
+                let updateData = {
                     full_name: name,
                     role: role,
                     manager: managerVal,
@@ -3658,7 +3672,13 @@
                     consultant: consultantVal,
                     telegram_status: hasTelegram,
                     permissions: collectPermToggles('edit')
-                }).eq('code', code);
+                };
+                let { error } = await supabase.from('employees').update(updateData).eq('code', code);
+                // ئەگەر ستوونی permissions هێشتا زیاد نەکرابێت لە داتابەیس، بەبێ ئەو هەوڵ بدەرەوە
+                if (error && isMissingPermissionsColumn(error)) {
+                    delete updateData.permissions;
+                    ({ error } = await supabase.from('employees').update(updateData).eq('code', code));
+                }
 
                 if (error) throw error;
 
