@@ -355,7 +355,7 @@
             </div>
 
             <div id="section-edit-code" style="display: none;">
-                <div class="container">
+                <div class="container" id="edit-container">
                     <!-- بینینی لیستی کلیلەکان (وەک بەشی قازانجەکان) -->
                     <div id="edit-list-view">
                         <div class="segmented-control" id="edit-role-filter" style="margin-bottom: 15px;">
@@ -1140,6 +1140,8 @@
             document.getElementById('profile-name').innerText = userName;
             document.getElementById('profile-role').innerText = userRole;
             applyOwnAvatar();
+            // پێش‌بارکردنی وێنەی خۆم و ئەکاونتە پاشەکەوتکراوەکان
+            try { preloadAvatars([currentUser.avatar].concat(getSavedAccounts().map(a => a.avatar))); } catch (e) { }
 
             if (typeof applyUserPermissions === 'function') {
                 applyUserPermissions();
@@ -1387,7 +1389,7 @@
         }
 
         // ============ دەستکاریی وێنەی پرۆفایل (کرۆپ + زووم + ئەپلۆد) ============
-        const AV_VIEW = 280, AV_OUT = 400;
+        const AV_VIEW = 280, AV_OUT = 256;
         let avEditor = { imgEl: null, natW: 0, natH: 0, base: 1, zoom: 1, x: 0, y: 0, dragging: false, lastX: 0, lastY: 0 };
 
         function openAvatarEditor() {
@@ -1489,7 +1491,8 @@
                 let resp = await fetch("https://api.imgbb.com/1/upload", { method: "POST", body: formData });
                 let data = await resp.json();
                 if (!data || !data.success) throw new Error("upload failed");
-                let url = data.data.url;
+                // بەکارهێنانی لینکی بچووک (thumb/medium)ی imgbb بۆ خێرایی زیاتر، ئەگەرنا لینکی ئاسایی
+                let url = (data.data.thumb && data.data.thumb.url) || (data.data.medium && data.data.medium.url) || data.data.url;
 
                 await supabase.from('employees').update({ avatar: url }).eq('code', currentUser.code);
                 currentUser.avatar = url;
@@ -1795,7 +1798,7 @@
                     let fullDateStr = o.date ? String(o.date) : "";
                     let dateParts = fullDateStr.split(' ');
                     let explicitDateOnly = dateParts[0] || "بەروار نەزانراوە";
-                    let explicitTimeOnly = (dateParts[1] && dateParts[2]) ? (dateParts[1] + ' ' + dateParts[2]) : "";
+                    let explicitTimeOnly = toKurdishMeridiem((dateParts[1] && dateParts[2]) ? (dateParts[1] + ' ' + dateParts[2]) : "");
                     let relativeTime = getRelativeTime(o.date);
 
                     newListHTML += `
@@ -1887,15 +1890,53 @@
             return { label: numFmt, sub: "" };
         }
 
+        // ============ کاش و پێش‌بارکردنی وێنەکانی پرۆفایل (بۆ دەرکەوتنی خێرا وەک ئنستاگرام) ============
+        let _avatarPreloaded = new Set();
+        function preloadAvatars(urls) {
+            if (!urls) return;
+            urls.forEach(u => {
+                let url = String(u || "").trim();
+                if (url && url !== "null" && url !== "undefined" && !_avatarPreloaded.has(url)) {
+                    _avatarPreloaded.add(url);
+                    let im = new Image();
+                    im.decoding = "async";
+                    im.src = url; // بارکردن بۆ کاشی وێبگەڕ (fire-and-forget)
+                }
+            });
+        }
+
         // دروستکردنی HTMLـی وێنەی پرۆفایل (وێنە ئەگەر هەبوو، ئەگەرنا پیتی سەرەتای ناو بە ڕەنگ)
         function avatarHtml(avatarUrl, name, size) {
             size = size || 44;
             let clean = avatarUrl ? String(avatarUrl).trim() : "";
             if (clean && clean !== "null" && clean !== "undefined") {
-                return `<div style="width:${size}px; height:${size}px; border-radius:50%; overflow:hidden; flex-shrink:0; background:#e2e8f0;"><img src="${clean}" loading="lazy" style="width:100%; height:100%; object-fit:cover; display:block;"></div>`;
+                preloadAvatars([clean]);
+                return `<div style="width:${size}px; height:${size}px; border-radius:50%; overflow:hidden; flex-shrink:0; background:#e2e8f0;"><img src="${clean}" decoding="async" style="width:100%; height:100%; object-fit:cover; display:block;"></div>`;
             }
             let initial = (name || "?").trim().charAt(0) || "?";
             return `<div style="width:${size}px; height:${size}px; border-radius:50%; flex-shrink:0; background:var(--primary); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:${Math.round(size * 0.42)}px;">${initial}</div>`;
+        }
+
+        // هۆکارە باوەکانی گەڕاندنەوەی ئۆردەر (بۆ هەڵبژاردنی خێرا)
+        const RETURN_REASONS = [
+            "کڕیار پەشیمان بۆتەوە",
+            "کڕیار ووتی هی من نییە",
+            "کڕیار وەڵامی پەیوەندی نادات",
+            "ژمارەی کڕیار هەڵەیە",
+            "ژمارەی کڕیار داخراوە و هیچی لەسەر نییە",
+            "کڕیار دەڵێت داوام نەکردووە",
+            "کاڵاکە هەڵە بووە",
+            "نرخی زیاد بووە",
+            "کڕیار بەهانە بە شۆفێر دەگرێت"
+        ];
+
+        // کاتێک هۆکارێکی باو هەڵدەبژێردرێت، دەیخاتە ناو بۆکسی نووسین
+        function pickReturnReason(el) {
+            let input = document.getElementById('return-reason-input');
+            if (input) { input.value = el.innerText.trim(); input.focus(); }
+            let box = document.getElementById('return-reason-chips');
+            if (box) box.querySelectorAll('.reason-chip').forEach(c => c.classList.remove('active'));
+            el.classList.add('active');
         }
 
         // دروستکردنی نیشانەی ژمارەی حاڵەتەکان (گەیشتوو/لەڕێگا/ئامادە/گەڕاوە) بە ڕەنگ
@@ -1913,6 +1954,84 @@
                 + b(cO, 'rgba(245,158,11,0.15)', '#d97706', 'bx-car')
                 + b(cP, 'rgba(59,130,246,0.15)', '#2563eb', 'bx-package')
                 + b(cR, 'rgba(239,68,68,0.15)', '#dc2626', 'bx-undo');
+        }
+
+        // گۆڕینی AM/PM بۆ پ.ن (پێش نیوەڕۆ) و د.ن (دوای نیوەڕۆ)
+        function toKurdishMeridiem(timeStr) {
+            return String(timeStr || "")
+                .replace(/\bAM\b/gi, 'پ.ن')
+                .replace(/\bPM\b/gi, 'د.ن');
+        }
+
+        // دروستکردنی کارتی ئۆردەری کۆمپاکت بۆ پەڕەی ئۆردەرەکانی تیم/داواکارییەکانم
+        // showMember = ئەگەر true بوو، وێنە و ناوی ئەندامەکە پیشان دەدرێت (لە دۆخی «هەموو»)
+        function buildMgmtOrderCard(o, showMember) {
+            let status = o.status || "ئامادە دەکرێت";
+            let statusBg = "rgba(59, 130, 246, 0.12)"; let statusColor = "#2563eb";
+            let statusClass = "status-preparing";
+            if (status.includes("ڕێگا")) { statusBg = "rgba(245, 158, 11, 0.12)"; statusColor = "#d97706"; statusClass = "status-onway"; }
+            else if (status.includes("گەیشت")) { statusBg = "rgba(16, 185, 129, 0.12)"; statusColor = "#059669"; statusClass = "status-delivered"; }
+            else if (status.includes("گەڕا") || status.includes("کەنسەڵ")) { statusBg = "rgba(239, 68, 68, 0.12)"; statusColor = "#dc2626"; statusClass = "status-returned"; }
+
+            let orderCodeStr = o.order_code || o.id || "00";
+            let custName = o.customer_name || "بێ ناو";
+            let total = Number(o.grand_total || 0).toLocaleString('en-US');
+            let city = o.address ? String(o.address).split('-')[0].trim() : "دیاری نەکراوە";
+            let fullDateStr = o.date ? String(o.date) : "";
+            let dParts = fullDateStr.split(' ');
+            let dOnly = dParts[0] || "نەزانراوە";
+            let tOnly = toKurdishMeridiem((dParts[1] && dParts[2]) ? (dParts[1] + ' ' + dParts[2]) : (dParts[1] || ""));
+
+            // لە دۆخی «هەموو» ئەندامەکە دەبێتە سەردێڕ (وێنە + ناو)، کڕیارەکە دەچێتە ژێری
+            // ناوی ئەندام تەنها دوو وشە: ناوی خۆی و ناوی باوکی (نەک باپیر)
+            let topHtml = "";
+            let custRow = "";
+            if (showMember) {
+                let mem = teamMembersData.find(m => m.code === o.seller_code);
+                let mName = mem ? (mem.full_name || "بێ ناو") : (o.seller_name || o.seller_code || "—");
+                let mNameShort = String(mName).trim().split(/\s+/).slice(0, 2).join(' ');
+                let mAvatar = mem ? mem.avatar : "";
+                let mRole = mem ? (normalizeRole(mem.role) || "") : "";
+                topHtml = `
+                    <div class="mocc-owner">
+                        ${avatarHtml(mAvatar, mName, 30)}
+                        <div class="mocc-owner-info">
+                            <span class="mocc-oname">${mNameShort}</span>
+                            ${mRole ? `<span class="mocc-orole">${mRole}</span>` : ''}
+                        </div>
+                    </div>`;
+                custRow = `
+                    <div class="mocc-custrow">
+                        <i class='bx bx-user'></i>
+                        <span>${custName}</span>
+                    </div>`;
+            } else {
+                topHtml = `
+                    <div class="mocc-cust">
+                        <i class='bx bx-user'></i>
+                        <span class="mocc-name">${custName}</span>
+                    </div>`;
+            }
+
+            return `
+            <div class="modern-order-card moc-compact ${statusClass}" onclick="openOrderDetails('${o.id}')">
+                <div class="mocc-top">
+                    ${topHtml}
+                    <span class="moc-status" style="background:${statusBg}; color:${statusColor};">${status}</span>
+                </div>
+                ${custRow}
+                <div class="mocc-bottom">
+                    <div class="mocc-meta">
+                        <span class="mocc-chip"><i class='bx bx-calendar'></i><span dir="ltr">${dOnly}</span></span>
+                        ${tOnly ? `<span class="mocc-chip"><i class='bx bx-time-five'></i><span dir="ltr">${tOnly}</span></span>` : ''}
+                        <span class="mocc-chip mocc-chip-plain"><i class='bx bx-map'></i>${city}</span>
+                    </div>
+                    <div class="mocc-price">
+                        <span class="mocc-amount"><span dir="ltr">${total}</span> د.ع</span>
+                        <span class="mocc-id"><i class='bx bx-hash'></i>${orderCodeStr}</span>
+                    </div>
+                </div>
+            </div>`;
         }
 
         // دەرهێنانی کلیلی ڕۆژ (YYYY-MM-DD) بە کاتی ناوخۆیی — کار دەکات لەگەڵ created_at ی ISO و فۆرماتی ئۆردەر
@@ -2090,7 +2209,7 @@
                         <div class="team-member-card" style="flex-direction:column; align-items:stretch;" onclick="viewTeamMemberOrders('${member.code}')">
                             <div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
                                 <div class="tm-info">
-                                    ${avatarHtml(member.avatar, member.full_name, 45)}
+                                    ${avatarHtml(member.avatar, member.full_name, 40)}
                                     <div class="tm-details">
                                         <h4>${member.full_name || "بێ ناو"}</h4>
                                         <p>کۆد: <span dir="ltr">${member.code}</span> | پلە: ${normalizeRole(member.role) || "ئەندام"}</p>
@@ -2133,6 +2252,8 @@
             }
 
             // کۆکردنەوەی ئۆردەرەکان بەپێی ڕۆژ لە هەموو لیستە هاموارەکان (داواکارییەکانم، هەموو، ئۆردەری ئەندام)
+            // لە دۆخی «هەموو»ی تیم (بێ چوونە ناو ئەندامێک) وێنەی ئەندامەکە لەسەر هەر ئۆردەرێک پیشان دەدرێت
+            let showMemberCol = (currentOrdersTab === "team" && !selectedTeamMember);
             let showDayDividers = true;
             let ymdStr = (d) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
             let todayStr = ymdStr(new Date());
@@ -2160,60 +2281,7 @@
                 }
 
                 group.orders.forEach(o => {
-                let status = o.status || "ئامادە دەکرێت";
-                let statusBg = "rgba(59, 130, 246, 0.12)"; let statusColor = "#2563eb";
-                if (status.includes("ڕێگا")) { statusBg = "rgba(245, 158, 11, 0.12)"; statusColor = "#d97706"; }
-                else if (status.includes("گەیشت")) { statusBg = "rgba(16, 185, 129, 0.12)"; statusColor = "#059669"; }
-                else if (status.includes("گەڕا") || status.includes("کەنسەڵ")) { statusBg = "rgba(239, 68, 68, 0.12)"; statusColor = "#dc2626"; }
-
-                let statusClass = "status-preparing";
-                if (status.includes("ڕێگا")) { statusClass = "status-onway"; }
-                else if (status.includes("گەیشت")) { statusClass = "status-delivered"; }
-                else if (status.includes("گەڕا") || status.includes("کەنسەڵ")) { statusClass = "status-returned"; }
-
-                let orderCodeStr = o.order_code || o.id || "00";
-                let custName = o.customer_name || "بێ ناو";
-                let total = Number(o.grand_total || 0).toLocaleString('en-US');
-                let city = o.address ? String(o.address).split('-')[0].trim() : "دیاری نەکراوە";
-                let fullDateStr = o.date ? String(o.date) : "";
-                let explicitDateOnly = fullDateStr.split(' ')[0] || "نەزانراوە";
-
-                // هێڵە شینەکە لێرەش سڕایەوە
-                newListHTML += `
-                <div class="modern-order-card ${statusClass}" style="margin-bottom:15px;" onclick="openOrderDetails('${o.id}')">
-                    <div class="moc-header">
-                        <h3 class="moc-title" style="display: flex; align-items: center; gap: 6px;">
-                            <div style="background: rgba(36, 129, 204, 0.1); padding: 5px; border-radius: 50%; display: flex;">
-                                <i class='bx bx-user' style="color: var(--primary); font-size: 16px;"></i>
-                            </div>
-                            ${custName}
-                        </h3>
-                        <span class="moc-status" style="background:${statusBg}; color:${statusColor};">${status}</span>
-                    </div>
-                    <div class="moc-footer" style="align-items: flex-end; padding-top:8px;">
-                        <div class="moc-meta-container" style="flex: 1;">
-                            <div class="moc-meta-row" style="margin-top: 6px; flex-wrap: wrap; gap: 8px;">
-                                <div style="display: flex; align-items: center; gap: 4px; background: #f1f5f9; padding: 4px 8px; border-radius: 6px;">
-                                    <i class='bx bx-calendar' style="font-size: 14px; color: #64748b;"></i>
-                                    <span dir="ltr" style="font-weight: 700; color: #475569; font-size: 11px;">${explicitDateOnly}</span>
-                                </div>
-                                <div style="display: flex; align-items: center; gap: 4px; padding: 4px 0;">
-                                    <i class='bx bx-map' style="font-size: 14px; color: #64748b;"></i>
-                                    <span style="font-size: 11px; font-weight: 600; color: #64748b;">${city}</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="moc-price-container" style="display: flex; flex-direction: column; align-items: flex-end; justify-content: center; flex-shrink: 0;">
-                            <p class="moc-price" style="display: flex; align-items: center; gap: 4px; direction: rtl; white-space: nowrap; margin: 0;">
-                                <span dir="ltr" style="font-weight: 800; font-size: 16px;">${total}</span>
-                                <span style="font-size: 13px; font-weight: 700; color: #64748b;">د.ع</span>
-                            </p>
-                            <p class="moc-id" style="display: flex; align-items: center; gap: 2px; margin: 6px 0 0 0; direction: ltr;">
-                                <i class='bx bx-hash' style="font-size: 13px;"></i> <span style="font-size: 11px; letter-spacing: 0.5px;">${orderCodeStr}</span>
-                            </p>
-                        </div>
-                    </div>
-                </div>`;
+                    newListHTML += buildMgmtOrderCard(o, showMemberCol);
                 });
             });
 
@@ -2277,6 +2345,8 @@
                             }
                             allowedCodes.push(tCode);
                         });
+                        // پێش‌بارکردنی وێنەکانی تیم بۆ کاش
+                        preloadAvatars(teamMembersData.map(t => t.avatar));
                     }
                 }
 
@@ -2488,7 +2558,10 @@
                     <input type="hidden" id="new-order-status" value="${o.status || 'ئامادە دەکرێت'}">
                 </div>
 
-                <input type="text" id="return-reason-input" placeholder="هۆکاری گەڕانەوە بنووسە بە ڕوونی..." value="${o.return_reason || ''}" style="width:100%; height:42px; border:1px solid #fecaca; border-radius:10px; background:#fff; font-family:inherit; font-size:13px; padding:0 10px; margin-bottom:10px; outline:none; color:#b91c1c; display: ${(o.status === 'گەڕاوەتەوە') ? 'block' : 'none'};">
+                <div id="return-reason-chips" style="display: ${(o.status === 'گەڕاوەتەوە') ? 'flex' : 'none'}; flex-wrap:wrap; gap:6px; margin-bottom:10px;">
+                    ${RETURN_REASONS.map(r => `<button type="button" class="reason-chip${o.return_reason === r ? ' active' : ''}" onclick="pickReturnReason(this)">${r}</button>`).join('')}
+                </div>
+                <input type="text" id="return-reason-input" placeholder="هۆکاری گەڕانەوە بنووسە یان لە سەرەوە هەڵبژێرە..." value="${o.return_reason || ''}" style="width:100%; height:42px; border:1px solid #fecaca; border-radius:10px; background:#fff; font-family:inherit; font-size:13px; padding:0 10px; margin-bottom:10px; outline:none; color:#b91c1c; display: ${(o.status === 'گەڕاوەتەوە') ? 'block' : 'none'};">
                 <button class="btn" style="background:#2481cc; padding:10px; font-size:14px; width:100%;" onclick="updateOrderStatus('${o.id}')"><i class='bx bx-save'></i> پاشەکەوتکردنی حاڵەت</button>
             </div>
             `;
@@ -2644,11 +2717,10 @@
 
         function toggleReturnReason(val) {
             let reasonInput = document.getElementById('return-reason-input');
-            if (val === "گەڕاوەتەوە") {
-                reasonInput.style.display = 'block';
-            } else {
-                reasonInput.style.display = 'none';
-            }
+            let chips = document.getElementById('return-reason-chips');
+            let show = (val === "گەڕاوەتەوە");
+            if (reasonInput) reasonInput.style.display = show ? 'block' : 'none';
+            if (chips) chips.style.display = show ? 'flex' : 'none';
         }
 
         async function updateOrderStatus(orderId) {
@@ -3113,9 +3185,16 @@
 
 
 
+        let teamMembersScrollTop = 0; // پاراستنی شوێنی سکرۆڵی لیستی ئەندامان
+
         function viewTeamMemberOrders(code) {
+            // پاراستنی شوێنی سکرۆڵی لیستی ئەندامان پێش چوونە ناو ئۆردەرەکان
+            let listEl = document.getElementById('management-orders-list');
+            if (listEl) teamMembersScrollTop = listEl.scrollTop;
             selectedTeamMember = code;
             applyOrderFilters();
+            // ئۆردەرەکانی ئەندام لە سەرەوە دەست پێ بکات
+            if (listEl) listEl.scrollTop = 0;
         }
 
 
@@ -3124,6 +3203,9 @@
         function backToTeamList() {
             selectedTeamMember = null;
             applyOrderFilters();
+            // گەڕانەوە بۆ هەمان شوێنی پێشووی لیستی ئەندامان
+            let listEl = document.getElementById('management-orders-list');
+            if (listEl) listEl.scrollTop = teamMembersScrollTop;
         }
 
         // گۆڕینی شێوازی بینینی ئۆردەرەکانی تیم: "all" (هەموو) یان "members" (بەپێی ئەندام)
@@ -3566,9 +3648,9 @@
             if (tabName === 'create') {
                 document.getElementById('section-create-code').style.display = 'block';
             } else if (tabName === 'edit') {
-                document.getElementById('section-edit-code').style.display = 'block';
+                document.getElementById('section-edit-code').style.display = 'flex';
                 document.getElementById('edit-section').style.display = 'none';
-                document.getElementById('edit-list-view').style.display = 'block';
+                document.getElementById('edit-list-view').style.display = 'flex';
                 filterEditUsers();
             } else if (tabName === 'profits') {
                 document.getElementById('section-profits').style.display = 'flex';
@@ -3851,6 +3933,9 @@
                 let uName = document.getElementById('u-name'); if (uName) uName.setAttribute('autocomplete', 'off');
                 let eName = document.getElementById('e-name'); if (eName) eName.setAttribute('autocomplete', 'off');
 
+                // پێش‌بارکردنی وێنەکان بۆ کاش (تا لیستەکان خێرا دەرکەون)
+                preloadAvatars(allEditableUsers.map(u => u.data && u.data.avatar));
+
                 setupBeautifulDropdowns();
                 setupSearchDropdown();
 
@@ -4059,12 +4144,17 @@
             let tgRadio = document.querySelector(`input[name="e_telegram"][value="${user.telegram_status}"]`);
             if (tgRadio) tgRadio.checked = true;
 
-            if (userRole !== "سەرپەرشت") {
-                let roleRadio = document.querySelector(`input[name="e_role"][value="${user.role}"]`);
-                if (roleRadio) roleRadio.checked = true;
+            // پیشاندانی پلەی ئێستای کارمەند لە ڕادیۆکان
+            // normalizeRole بۆ گونجاندن لەگەڵ ناوە کۆنەکانی پلە (بۆ نموونە ئەدمین ← سەرپەرشت)
+            let normRole = normalizeRole(user.role);
+            let roleRadio = document.querySelector(`input[name="e_role"][value="${normRole}"]`);
+            if (roleRadio) {
+                roleRadio.checked = true;
+                // نوێکردنەوەی بۆکسەکانی بەڕێوەبەر/سەرپەرشت/ڕاوێژکار بەپێی پلەی هەڵبژێردراو
+                updateFormByRole('edit');
             }
 
-            // بارکردنی دەسەڵاتەکان: ئەگەر دیاریکرابن ئەوان، ئەگەرنا بنەڕەتی ڕۆڵەکەی
+            // بارکردنی دەسەڵاتەکان دوای updateFormByRole (ئەوەی هەیەتی، نەک بنەڕەتی پلە)
             setPermToggles('edit', (user.permissions !== null && user.permissions !== undefined) ? user.permissions : roleDefaultPerms(user.role));
 
             const getName = (code, arr) => {
@@ -4245,7 +4335,7 @@
                 document.getElementById('edit-section').style.display = "none";
                 document.getElementById('search-code-input').value = "";
                 document.getElementById('search-code-input').removeAttribute('data-code');
-                document.getElementById('edit-list-view').style.display = 'block';
+                document.getElementById('edit-list-view').style.display = 'flex';
 
                 document.getElementById('admin-screen-content').style.display = 'none';
                 document.getElementById('admin-loading-spinner').style.display = 'flex';
@@ -4253,6 +4343,9 @@
                 filterEditUsers();
                 document.getElementById('admin-loading-spinner').style.display = 'none';
                 document.getElementById('admin-screen-content').style.display = 'flex';
+                // گەڕانەوە بۆ هەمان شوێنی پێشووی لیستی کلیلەکان (دوای دیارکەوتنەوەی ناوەڕۆک)
+                let editListScroller = document.getElementById('edit-users-list');
+                if (editListScroller) editListScroller.scrollTop = editListScrollTop;
             } catch (err) {
                 showToast("کێشەیەک لە نوێکردنەوەدا ڕوویدا", "error");
             }
@@ -4273,7 +4366,7 @@
                     document.getElementById('edit-section').style.display = "none";
                     document.getElementById('search-code-input').value = "";
                     document.getElementById('search-code-input').removeAttribute('data-code');
-                    document.getElementById('edit-list-view').style.display = 'block';
+                    document.getElementById('edit-list-view').style.display = 'flex';
 
                     document.getElementById('admin-screen-content').style.display = 'none';
                     document.getElementById('admin-loading-spinner').style.display = 'flex';
@@ -4859,9 +4952,14 @@
             listContainer.innerHTML = html;
         }
 
+        let editListScrollTop = 0; // پاراستنی شوێنی سکرۆڵی لیستی کلیلەکان لە چاکسازی
+
         function openEditFromList(code) {
             let u = allEditableUsers.find(x => x.code === code);
             if (!u) return;
+            // پاراستنی شوێنی سکرۆڵی لیستی کلیلەکان پێش کردنەوەی فۆرمی چاکسازی
+            let listScroller = document.getElementById('edit-users-list');
+            if (listScroller) editListScrollTop = listScroller.scrollTop;
             let sc = document.getElementById('search-code-input');
             if (sc) { sc.value = u.name; sc.setAttribute('data-code', u.code); }
             document.getElementById('edit-list-view').style.display = 'none';
@@ -4872,8 +4970,11 @@
             document.getElementById('edit-section').style.display = 'none';
             let sc = document.getElementById('search-code-input');
             if (sc) { sc.value = ""; sc.removeAttribute('data-code'); }
-            document.getElementById('edit-list-view').style.display = 'block';
+            document.getElementById('edit-list-view').style.display = 'flex';
             filterEditUsers();
+            // گەڕانەوە بۆ هەمان شوێنی پێشووی لیستی کلیلەکان
+            let listScroller = document.getElementById('edit-users-list');
+            if (listScroller) listScroller.scrollTop = editListScrollTop;
         }
 
         function adjustProfitRate(change) {
