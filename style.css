@@ -1246,9 +1246,7 @@ h2 i,
   justify-content: flex-start;
   margin-bottom: 20px;
   width: 100%;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: none; /* Firefox */
+  overflow-x: auto;  scrollbar-width: none; /* Firefox */
   -ms-overflow-style: none; /* IE and Edge */
 }
 
@@ -1751,11 +1749,6 @@ h2 i,
   padding-right: 25px;
   padding-left: 25px;
 
-  -webkit-overflow-scrolling: touch;
-
-  /* ٢. جادووی خوارەوە: توانەوەی نەرمی ئۆردەرەکان لەژێر بۆتن ناڤ بێ هیچ کێشەیەک */
-  -webkit-mask-image: linear-gradient(to bottom, black calc(100% - 80px), transparent 100%);
-  mask-image: linear-gradient(to bottom, black calc(100% - 80px), transparent 100%);
 }
 
 #orders-list::-webkit-scrollbar {
@@ -1794,11 +1787,6 @@ h2 i,
   padding-right: 25px;
   padding-left: 25px;
 
-  -webkit-overflow-scrolling: touch;
-
-  /* ٢. جادووی خوارەوە: توانەوەی نەرمی ئۆردەرەکان لەژێر بۆتن ناڤ بێ هیچ کێشەیەک */
-  -webkit-mask-image: linear-gradient(to bottom, black calc(100% - 80px), transparent 100%);
-  mask-image: linear-gradient(to bottom, black calc(100% - 80px), transparent 100%);
 }
 
 #my-transactions-list::-webkit-scrollbar {
@@ -2164,9 +2152,6 @@ h2 i,
   margin-left: -25px;
   padding-right: 25px;
   padding-left: 25px;
-  -webkit-overflow-scrolling: touch;
-  mask-image: linear-gradient(to bottom, black calc(100% - 80px), transparent 100%);
-  -webkit-mask-image: linear-gradient(to bottom, black calc(100% - 80px), transparent 100%);
 }
 
 #management-orders-list::-webkit-scrollbar {
@@ -2215,11 +2200,36 @@ h2 i,
   /* ماکس ویدت 430px */
   max-height: 85vh;
   border-radius: 20px;
-  padding: 20px;
+  padding: 16px;
   overflow-y: auto;
   transform: translateY(20px);
   transition: transform 0.3s ease;
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+}
+
+/* مۆدێلی زانیاری داواکاری: هێدەر (دوگمەی داخستن) جێگیر دەمێنێت، تەنها ناوەڕۆک سکرۆڵ دەکات */
+#order-details-modal .modal-content {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+#order-details-modal .modal-header {
+  flex-shrink: 0;
+}
+
+#modal-details-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;  margin: 0 -4px;
+  padding: 0 4px;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+#modal-details-body::-webkit-scrollbar {
+  display: none;
 }
 
 .modal-overlay.show .modal-content {
@@ -2230,13 +2240,13 @@ h2 i,
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 15px;
+  margin-bottom: 10px;
   border-bottom: 1px solid #f1f5f9;
-  padding-bottom: 10px;
+  padding-bottom: 8px;
 }
 
 .modal-title {
-  font-size: 18px;
+  font-size: 15.5px;
   font-weight: 700;
   color: var(--primary);
   margin: 0;
@@ -2248,15 +2258,16 @@ h2 i,
 .modal-close {
   background: #f1f5f9;
   border: none;
-  width: 34px;
-  height: 34px;
+  width: 30px;
+  height: 30px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   color: #475569;
-  font-size: 20px;
+  font-size: 18px;
+  flex-shrink: 0;
   transition: background 0.2s;
 }
 
@@ -2267,13 +2278,13 @@ h2 i,
 .detail-row {
   display: flex;
   flex-direction: column;
-  margin-bottom: 12px;
+  margin-bottom: 9px;
 }
 
 .detail-label {
-  font-size: 12px;
+  font-size: 11.5px;
   color: #64748b;
-  margin-bottom: 4px;
+  margin-bottom: 3px;
   font-weight: 700;
   display: flex;
   align-items: center;
@@ -2281,11 +2292,11 @@ h2 i,
 }
 
 .detail-value {
-  font-size: 14px;
+  font-size: 13px;
   color: #1e293b;
   background: #f8fafc;
-  padding: 12px;
-  border-radius: 12px;
+  padding: 9px 11px;
+  border-radius: 10px;
   border: 1px solid #e2e8f0;
   word-break: break-word;
   white-space: pre-line;
@@ -2856,14 +2867,42 @@ body.keyboard-open #main-fab {
   color: var(--primary);
 }
 
+/* دڕۆپداونی گۆڕینی حاڵەتی داواکاری لەناو مۆدێلدا:
+   بەرەو سەرەوە دەکرێتەوە و لەسەر ناوەڕۆکەکە دەخلیسکێت (شتەکانی تر پاڵ نادات و نابڕدرێت) */
+#new-status-list {
+  position: absolute;
+  top: auto;
+  bottom: 100%;
+  left: 0;
+  right: 0;
+  margin-top: 0;
+  margin-bottom: 6px;
+  max-height: 190px;
+  overflow-y: auto;
+  overflow-x: hidden;  box-shadow: 0 -6px 18px rgba(0, 0, 0, 0.1);
+  /* شاردنەوەی سکرۆڵبار */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+#new-status-list::-webkit-scrollbar {
+  display: none;
+}
+
+/* بژاردەکانی حاڵەت کەمێک گەورەتر و جوانتر لەناو مۆدێلدا */
+#new-status-list .custom-dropdown-item {
+  padding: 12px 14px;
+  font-size: 13.5px;
+}
+
 
 /* زیادکراوەکانی جزدان و قازانج */
 .wallet-card {
   background: linear-gradient(135deg, #1d6fa5, #2481cc);
-  border-radius: 14px;
-  padding: 12px 16px;
+  border-radius: 12px;
+  padding: 9px 14px;
   color: white;
-  margin-bottom: 10px;
+  margin-bottom: 7px;
   box-shadow: 0 6px 14px rgba(36, 129, 204, 0.18);
   position: relative;
   overflow: hidden;
@@ -2875,14 +2914,14 @@ body.keyboard-open #main-fab {
 }
 
 .wallet-card h3 {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: normal;
-  margin: 0 0 2px 0;
+  margin: 0 0 1px 0;
   opacity: 0.9;
 }
 
 .wallet-card h1 {
-  font-size: 21px;
+  font-size: 17px;
   margin: 0;
   font-weight: 800;
   direction: ltr;
@@ -2893,8 +2932,8 @@ body.keyboard-open #main-fab {
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border-radius: 12px;
-  padding: 15px;
-  margin-bottom: 10px;
+  padding: 11px 13px;
+  margin-bottom: 8px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -2930,17 +2969,18 @@ body.keyboard-open #main-fab {
 .tx-info {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
 }
 
 .tx-icon {
-  width: 40px;
-  height: 40px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 20px;
+  font-size: 18px;
+  flex-shrink: 0;
   flex-shrink: 0;
 }
 
@@ -2956,21 +2996,22 @@ body.keyboard-open #main-fab {
 
 .tx-details h4 {
   margin: 0;
-  font-size: 13px;
+  font-size: 12.5px;
   color: #1e293b;
 }
 
 .tx-details p {
   margin: 0;
-  font-size: 11px;
+  font-size: 10.5px;
   color: #64748b;
   margin-top: 2px;
 }
 
 .tx-amount {
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 800;
   direction: ltr;
+  flex-shrink: 0;
 }
 
 .tx-amount.plus {
@@ -3375,10 +3416,6 @@ body.keyboard-open #main-fab {
   overflow-x: hidden;
   padding-top: 5px;
   padding-bottom: 65px;
-  -webkit-overflow-scrolling: touch;
-  /* جادووی فەیدی خوارەوە (وەک جزدان/قازانج) */
-  -webkit-mask-image: linear-gradient(to bottom, black calc(100% - 80px), transparent 100%);
-  mask-image: linear-gradient(to bottom, black calc(100% - 80px), transparent 100%);
   scrollbar-width: none;
   -ms-overflow-style: none;
 }
@@ -3393,9 +3430,7 @@ body.keyboard-open #main-fab {
   min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
-  padding-bottom: 120px;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;
+  padding-bottom: 120px;  scrollbar-width: none;
   -ms-overflow-style: none;
 }
 
@@ -3432,6 +3467,20 @@ body.keyboard-open #main-fab {
   flex-shrink: 0;
 }
 
+/* کەمکردنەوەی بۆشایی نێوان فلتەری پلە/گەڕان و لیستەکە (قازانج/جزدان/چاکسازی)
+   تا لیستەکە نزیک بێت لە فلتەرەکە، وەک شارەکان */
+#profit-role-filter,
+#wallet-role-tabs-container,
+#edit-role-filter {
+  margin-bottom: 8px !important;
+}
+
+#profit-search-container,
+#wallet-search-container,
+#edit-list-view > .search-group {
+  margin-bottom: 4px;
+}
+
 /* لیستەکانی سکڕۆڵدەکەن */
 #wallet-users-list,
 #profit-users-list {
@@ -3447,11 +3496,6 @@ body.keyboard-open #main-fab {
   padding-right: 25px;
   padding-left: 25px;
 
-  -webkit-overflow-scrolling: touch;
-
-  /* جادووی فەیدی خوارەوە (وەک orders-list) */
-  -webkit-mask-image: linear-gradient(to bottom, black calc(100% - 80px), transparent 100%);
-  mask-image: linear-gradient(to bottom, black calc(100% - 80px), transparent 100%);
 }
 
 #admin-cities-list {
@@ -3467,17 +3511,40 @@ body.keyboard-open #main-fab {
   padding-right: 25px;
   padding-left: 25px;
 
-  -webkit-overflow-scrolling: touch;
-
-  /* جادووی فەیدی خوارەوە (وەک orders-list) */
-  -webkit-mask-image: linear-gradient(to bottom, black calc(100% - 80px), transparent 100%);
-  mask-image: linear-gradient(to bottom, black calc(100% - 80px), transparent 100%);
 }
 
 #wallet-users-list::-webkit-scrollbar,
 #profit-users-list::-webkit-scrollbar,
 #admin-cities-list::-webkit-scrollbar {
   display: none;
+}
+
+/* ============ فەیدی نەرمی خوارەوەی لیستەکان ============
+   بە داپۆشەرێکی جیا (::after) دروستکراوە — نەک ماسک لەسەر توخنی سکرۆڵ،
+   بۆیە هەرگیز کێشەی ڕیپەینت/سکرۆڵ دروست ناکات (تەنها دیمەنێکی جوانە). */
+#profits-container,
+#wallets-container,
+#cities-container,
+#edit-list-view {
+  position: relative;
+}
+
+#dashboard-screen.active::after,
+#orders-management-screen.active::after,
+#wallet-screen.active::after,
+#profits-container::after,
+#wallets-container::after,
+#cities-container::after,
+#edit-list-view::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 85px;
+  background: linear-gradient(to top, var(--bg) 35%, transparent);
+  pointer-events: none;
+  z-index: 5;
 }
 
 #wallet-edit-section {
@@ -3490,9 +3557,7 @@ body.keyboard-open #main-fab {
   /* ناوەڕۆکەکە کورتە؛ ئەگەر پێویست بوو سکڕۆڵ دەکات */
   overflow-y: auto;
   overflow-x: hidden;
-  padding-bottom: 120px;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;
+  padding-bottom: 120px;  scrollbar-width: none;
 }
 
 #wallet-edit-section::-webkit-scrollbar {
@@ -3547,9 +3612,7 @@ body.keyboard-open #main-fab {
 .wallet-tx-modal-body {
   max-height: 65vh;
   overflow-y: auto;
-  overflow-x: hidden;
-  -webkit-overflow-scrolling: touch;
-  margin: -4px;
+  overflow-x: hidden;  margin: -4px;
   padding: 4px;
   /* لابردنی سکڕۆڵ باڕ */
   scrollbar-width: none;
