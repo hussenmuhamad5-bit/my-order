@@ -1075,6 +1075,55 @@
             return roleDefaultPerms(userRole).includes(perm);
         }
 
+        // ============ پشکنینی چالاکی ئەکاونت و دەسەڵات (ئاسایش) ============
+        // دەرچواندنی بەکارهێنەر و گەڕانەوە بۆ پەڕەی چوونەژوورەوە (کاتێک کلیل سڕایەوە)
+        let _accountLockedOut = false;
+        function forceLogout(msg) {
+            if (_accountLockedOut) return;
+            _accountLockedOut = true;
+            try { localStorage.removeItem('myAppUser'); } catch (e) { }
+            if (msg) { try { showToast(msg, "error"); } catch (e) { } }
+            setTimeout(() => { window.location.replace("index.html"); }, 900);
+        }
+
+        // پشکنین: ئایا کلیلی بەکارهێنەری ئێستا هێشتا لە داتابەیس هەیە؟
+        // ئەگەر سڕابێتەوە → دەرچوون. ئەگەر هەبوو → نوێکردنەوەی ڕۆڵ/دەسەڵاتەکانی.
+        // لە کاتی کێشەی پەیوەندیدا ڕێگری لە بەکارهێنەری ڕاست ناکات (true دەگەڕێنێتەوە).
+        async function ensureAccountActive() {
+            if (_accountLockedOut) return false;
+            if (!currentUser || !currentUser.code) { forceLogout("ئەم ئەکاونتە نەماوە."); return false; }
+            try {
+                const { data, error } = await supabase.from('employees').select('*').eq('code', currentUser.code);
+                if (error) { console.warn('پشکنینی ئەکاونت: کێشەی پەیوەندی', error); return true; }
+                if (!data || data.length === 0) {
+                    forceLogout("⚠️ ئەم کلیلە سڕاوەتەوە! ناتوانیت بەردەوام بیت.");
+                    return false;
+                }
+                // نوێکردنەوەی زانیاری ئەکاونت (ڕۆڵ، دەسەڵات، ناو، وێنە) بە نوێترین دۆخی داتابەیس
+                let rec = data[0];
+                rec.role = normalizeRole(rec.role);
+                currentUser = rec;
+                userRole = currentUser.role;
+                userName = currentUser.full_name || currentUser.name || "بێ ناو";
+                try { localStorage.setItem('myAppUser', JSON.stringify(currentUser)); } catch (e) { }
+                return true;
+            } catch (e) {
+                console.warn('پشکنینی ئەکاونت: هەڵەی چاوەڕواننەکراو', e);
+                return true; // fail-open بۆ ئەوەی بەکارهێنەری ڕاست قوفڵ نەبێت
+            }
+        }
+
+        // پشکنین پێش هەر کردارێک: (١) کلیلەکە هەیە؟ (٢) دەسەڵاتی ئەم کارەی هەیە؟
+        async function ensureAuthorized(permKey) {
+            let active = await ensureAccountActive();
+            if (!active) return false;
+            if (permKey && !can(permKey)) {
+                try { showToast("دەسەڵاتت نییە بۆ ئەم کردارە!", "error"); } catch (e) { }
+                return false;
+            }
+            return true;
+        }
+
         // دروستکردنی سویچەکانی دەسەڵات لە فۆرمی (create/edit)
         function renderPermToggles(mode) {
             let container = document.getElementById('perms-' + mode);
@@ -1137,6 +1186,9 @@
                 console.error('Failed to load Supabase in app.html:', error);
             }
 
+            // پشکنینی ئاسایش: ئایا کلیلی ئەم ئەکاونتە هێشتا هەیە؟ ئەگەر سڕابێتەوە → دەرچوون
+            if (!await ensureAccountActive()) return;
+
             document.getElementById('profile-name').innerText = userName;
             document.getElementById('profile-role').innerText = userRole;
             applyOwnAvatar();
@@ -1154,6 +1206,10 @@
             try { if (typeof setupSmartSearch === 'function') setupSmartSearch(); } catch (e) { }
 
             switchScreen('dashboard-screen');
+
+            // پشکنینی دوورەپەڕ: هەموو ٦٠ چرکە دڵنیابوونەوە کە کلیلەکە هێشتا هەیە
+            // (ئەگەر سڕایەوە → دەرچوونی خۆکار، تەنانەت ئەگەر بەکارهێنەر هیچ نەکات)
+            setInterval(() => { try { ensureAccountActive(); } catch (e) { } }, 60000);
         };
 
 
@@ -2759,6 +2815,8 @@
         }
 
         async function updateOrderStatus(orderId) {
+            // پشکنینی ئاسایش: کلیلەکە هەیە + دەسەڵاتی گۆڕینی حاڵەت هەیە
+            if (!await ensureAuthorized('change_order_status')) return;
             let newStatus = document.getElementById('new-order-status').value;
             let reason = document.getElementById('return-reason-input').value.trim();
             let o = allGlobalOrdersData[orderId];
@@ -2862,6 +2920,8 @@
         }
 
         async function deleteOrder(orderId) {
+            // پشکنینی ئاسایش: ئایا کلیلەکە هێشتا هەیە؟
+            if (!await ensureAccountActive()) return;
             // سڕینەوە تەنها لە حاڵەتی «ئامادە دەکرێت»
             let ordDel = allGlobalOrdersData[orderId];
             if (ordDel && !((ordDel.status || "").includes("ئامادە"))) {
@@ -2886,7 +2946,9 @@
             }
         }
 
-        function editOrder(orderId) {
+        async function editOrder(orderId) {
+            // پشکنینی ئاسایش: ئایا کلیلەکە هێشتا هەیە؟
+            if (!await ensureAccountActive()) return;
             let o = allGlobalOrdersData[orderId];
             if (!o) return;
 
@@ -2991,6 +3053,8 @@
         }
 
         async function submitOrder() {
+            // پشکنینی ئاسایش: ئایا کلیلەکە هێشتا هەیە؟ (دروستکردن یان دەستکاریکردنی ئۆردەر)
+            if (!await ensureAccountActive()) return;
             let customerInput = document.getElementById('customerName');
             let switchCustomer = document.getElementById('switch-customer');
             let customerName = switchCustomer && switchCustomer.checked ? customerInput.value.trim() : "";
@@ -4258,7 +4322,7 @@
         // ٥. دروستکردنی کارمەند
         // ٥. فەنکشنی دروستکردنی کارمەند لەگەڵ کات و بەروار
         async function generateCode() {
-            if (!can('manage_employees')) { showToast("دەسەڵاتت نییە بۆ دروستکردنی کلیل!", "error"); return; }
+            if (!await ensureAuthorized('manage_employees')) return;
             let name = document.getElementById('u-name').value.trim();
             let telegramRadio = document.querySelector('input[name="u_telegram"]:checked');
             if (!telegramRadio) { showToast("تکایە دیاری بکە ئایا خاوەنی تێلیگرامە یان نا!", "error"); return; }
@@ -4358,7 +4422,7 @@
 
         // ٦. نوێکردنەوەی کارمەند
         async function updateCode() {
-            if (!can('manage_employees')) { showToast("دەسەڵاتت نییە بۆ نوێکردنەوەی کلیل!", "error"); return; }
+            if (!await ensureAuthorized('manage_employees')) return;
             let searchInput = document.getElementById('search-code-input');
             let code = searchInput.getAttribute('data-code');
             if (!code) code = searchInput.value.trim();
@@ -4429,7 +4493,7 @@
 
         // ٧. سڕینەوەی کارمەند
         async function deleteCode() {
-            if (!can('manage_employees')) { showToast("دەسەڵاتت نییە بۆ سڕینەوەی کلیل!", "error"); return; }
+            if (!await ensureAuthorized('manage_employees')) return;
             let searchInput = document.getElementById('search-code-input');
             let code = searchInput.getAttribute('data-code');
             if (!code) code = searchInput.value.trim();
@@ -5066,6 +5130,8 @@
 
         // سەیڤکردن بۆ ناو داتابەیس
         async function saveProfitRate() {
+            // پشکنینی ئاسایش: کلیلەکە هەیە + دەسەڵاتی دابەشکردنی قازانج هەیە
+            if (!await ensureAuthorized('distribute_profit')) return;
             let code = document.getElementById('p-hidden-code').value;
             let rate = document.getElementById('p-rate').value;
             if (!code || !rate) { showToast("تکایە بڕەکە بنووسە", "error"); return; }
@@ -5097,6 +5163,8 @@
         }
 
         async function submitWalletAction() {
+            // پشکنینی ئاسایش: کلیلەکە هەیە + دەسەڵاتی جزدانی هەموان هەیە
+            if (!await ensureAuthorized('view_all_wallets')) return;
             let userCode = document.getElementById('wa-user-code').value;
             let action = document.getElementById('wa-action').value;
             let amount = parseFloat(document.getElementById('wa-amount').value || 0);
@@ -5136,6 +5204,8 @@
         }
 
         async function addCity() {
+            // پشکنینی ئاسایش: کلیلەکە هەیە + دەسەڵاتی بەڕێوەبردنی شارەکان هەیە
+            if (!await ensureAuthorized('manage_cities')) return;
             let name = document.getElementById('c-name').value.trim(); let realP = document.getElementById('c-real').value; let dispP = document.getElementById('c-display').value;
             if (!name || !realP || !dispP) return showToast("هەموو خانەکان پڕبکەرەوە", "error");
             showToast("زیادکردن...", "loading");
@@ -5147,6 +5217,7 @@
         }
 
         async function deleteCity(id) {
+            if (!await ensureAuthorized('manage_cities')) return;
             if (!confirm("دڵنیایت؟")) return;
             showToast("سڕینەوە...", "loading");
             try {
@@ -5168,6 +5239,7 @@
         }
 
         async function updateCity() {
+            if (!await ensureAuthorized('manage_cities')) return;
             let id = document.getElementById('edit-c-id').value;
             let name = document.getElementById('edit-c-name').value.trim();
             let realP = document.getElementById('edit-c-real').value;
@@ -5362,6 +5434,8 @@
         }
 
         async function confirmDistribution() {
+            // پشکنینی ئاسایش: کلیلەکە هەیە + دەسەڵاتی دابەشکردنی قازانج هەیە
+            if (!await ensureAuthorized('distribute_profit')) return;
             // ڕێگریکردن لە دووجار کلیک کردن
             let confirmBtn = document.querySelector('#profit-distribution-modal .btn');
             if (confirmBtn) {
