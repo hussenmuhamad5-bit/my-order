@@ -961,7 +961,7 @@
     </div>
 
     <div id="wallet-screen" class="screen">
-        <h2 style="text-align: center; margin-bottom: 25px;"><i class='bx bx-wallet'></i> جزدانەکەم</h2>
+        <h2 style="text-align: center; margin-bottom: 12px; font-size: 20px;"><i class='bx bx-wallet'></i> جزدانەکەم</h2>
         <div class="wallet-card">
             <h3>پارەی بەردەست (باڵانس)</h3>
             <h1 id="my-wallet-balance">0 د.ع</h1>
@@ -971,7 +971,7 @@
             <h1 id="my-wallet-savings">0 د.ع</h1>
         </div>
         <h3
-            style="margin-top: 25px; font-size: 15px; color:#1e293b; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px;">
+            style="margin-top: 12px; margin-bottom: 6px; font-size: 14px; color:#1e293b; border-bottom: 2px solid #e2e8f0; padding-bottom: 6px;">
             دوایین جووڵە داراییەکان</h3>
         <div id="my-transactions-list">
             <p style="text-align:center; color:#888; margin-top:20px;">هێشتا هیچ جووڵەیەک نییە.</p>
@@ -2053,9 +2053,24 @@
 
         // نیشانەی کۆی هاتوو (+) و چوو (−)ی جوڵە داراییەکان بۆ هەر ڕۆژێک
         function txTotalsBadges(txs) {
+            // گرووپکردنی جوڵەکان بەپێی ئۆردەر + جۆری جزدان، تا جوڵە هەڵگەڕاوەکان
+            // (زیادکردنی قازانج ← ڕەشکردنەوەی بەهۆی گەڕانەوە) یەکتر بسڕنەوە،
+            // پاشان تەنها کاریگەری ڕاستەقینەی هەر ئۆردەرێک دەژمێردرێت (سەوز/سوور).
+            let groups = {};
+            txs.forEach((t, idx) => {
+                let a = parseFloat(t.amount) || 0;
+                // جوڵەی بەستراو بە ئۆردەرەوە بەپێی ئۆردەر+جزدان گرووپ دەکرێت؛
+                // جوڵەی بێ ئۆردەر هەریەکە بە جیا دەمێنێتەوە
+                let key = t.order_id ? ('o' + t.order_id + '|' + (t.wallet_type || '')) : ('s' + idx);
+                groups[key] = (groups[key] || 0) + a;
+            });
             let inSum = 0, outSum = 0;
-            txs.forEach(t => { let a = parseFloat(t.amount) || 0; if (a >= 0) inSum += a; else outSum += -a; });
-            let b = (n, bg, col, icon) => n > 0 ? `<span dir="ltr" style="background:${bg}; color:${col}; font-size:11px; font-weight:700; padding:2px 7px; border-radius:6px; display:inline-flex; align-items:center; gap:3px;"><i class='bx ${icon}'></i>${Number(n).toLocaleString()}</span>` : '';
+            Object.keys(groups).forEach(k => {
+                let net = groups[k];
+                if (net > 0) inSum += net;
+                else if (net < 0) outSum += -net;
+            });
+            let b = (n, bg, col, icon) => n > 0 ? `<span dir="ltr" style="background:${bg}; color:${col}; font-size:11px; font-weight:700; padding:2px 7px; border-radius:6px; display:inline-flex; align-items:center; gap:3px;"><i class='bx ${icon}'></i>${Number(Math.round(n)).toLocaleString()}</span>` : '';
             return b(inSum, 'rgba(16,185,129,0.15)', '#059669', 'bx-up-arrow-alt')
                 + b(outSum, 'rgba(239,68,68,0.15)', '#dc2626', 'bx-down-arrow-alt');
         }
@@ -2372,6 +2387,7 @@
         }
 
         let editingOrderId = null;
+        let editOrderOrigin = null; // شاشە و شوێنی سکرۆڵی سەرەتا پێش دەستکاریکردنی ئۆردەر (بۆ گەڕانەوە)
 
         function toggleOrderScreen(checkboxElement) {
             if (checkboxElement.checked) {
@@ -2505,16 +2521,16 @@
             // بۆکسی زانیاری فرۆشیار (تەنها کاتێک ئۆردەرەکە هی خۆی نییە)
             let sellerInfoPlaceholder = isOwner ? "" : '<div id="seller-info-box" style="margin-bottom:15px;"></div>';
 
+            // سڕینەوە تەنها لە «ئامادە دەکرێت»؛ دەستکاری لە «ئامادە دەکرێت» یان «لەڕێگادایە»
+            let isOnWay = (o.status || "").includes("ڕێگا");
             let actionButtonsHtml = "";
-            if (isPreparing) {
-                // خاوەن ئۆردەر هەمیشە دەتوانێت دەستکاری/سڕینەوەی هی خۆی بکات؛ ئەوانی تر بەپێی دەسەڵات
-                let canEditOrder = isOwner || can('edit_order');
-                let canDeleteOrder = isOwner || can('delete_order');
-                if (canEditOrder || canDeleteOrder) {
-                    let editBtn = canEditOrder ? `<button class="btn" style="background:#ffc107; color:#000; flex:1; font-size:14px; padding:10px;" onclick="editOrder('${o.id}')"><i class='bx bx-edit'></i> دەستکاریکردن</button>` : '';
-                    let delBtn = canDeleteOrder ? `<button class="btn" style="background:#dc3545; flex:1; font-size:14px; padding:10px;" onclick="deleteOrder('${o.id}')"><i class='bx bx-trash'></i> سڕینەوە</button>` : '';
-                    actionButtonsHtml = `<div style="display:flex; gap:10px; margin-top:20px;">${editBtn}${delBtn}</div>`;
-                }
+            // خاوەن ئۆردەر هەمیشە دەتوانێت دەستکاری/سڕینەوەی هی خۆی بکات؛ ئەوانی تر بەپێی دەسەڵات
+            let canEditOrder = (isOwner || can('edit_order')) && (isPreparing || isOnWay);
+            let canDeleteOrder = (isOwner || can('delete_order')) && isPreparing;
+            if (canEditOrder || canDeleteOrder) {
+                let editBtn = canEditOrder ? `<button class="btn" style="background:#ffc107; color:#000; flex:1; font-size:14px; padding:10px;" onclick="editOrder('${o.id}')"><i class='bx bx-edit'></i> دەستکاریکردن</button>` : '';
+                let delBtn = canDeleteOrder ? `<button class="btn" style="background:#dc3545; flex:1; font-size:14px; padding:10px;" onclick="deleteOrder('${o.id}')"><i class='bx bx-trash'></i> سڕینەوە</button>` : '';
+                actionButtonsHtml = `<div style="display:flex; gap:10px; margin-top:20px;">${editBtn}${delBtn}</div>`;
             }
 
             let canChangeStatus = false;
@@ -2532,13 +2548,16 @@
             if (canChangeStatus) {
                 let showDeliveredOption = can('mark_delivered');
 
-                // سنووردارکردنی هەڵبژاردەکان: گەیشتوو → تەنها گەڕاوە، گەڕاوە → تەنها گەیشتوو
+                // سنووردارکردنی هەڵبژاردەکان: گەیشتوو → تەنها گەڕاوە، گەڕاوە → تەنها گەیشتوو،
+                // لەڕێگادایە → ناتوانێت بگەڕێتەوە ئامادە دەکرێت
                 let mkOpt = (val) => `<div class="custom-dropdown-item ${o.status === val ? 'active' : ''}" onclick="selectNewStatus('${val}', event)">${val}</div>`;
                 let statusOptionsHtml = "";
                 if (o.status === "گەیشتووە") {
                     statusOptionsHtml = mkOpt('گەیشتووە') + mkOpt('گەڕاوەتەوە');
                 } else if (o.status === "گەڕاوەتەوە") {
                     statusOptionsHtml = mkOpt('گەڕاوەتەوە') + (showDeliveredOption ? mkOpt('گەیشتووە') : '');
+                } else if ((o.status || "").includes("ڕێگا")) {
+                    statusOptionsHtml = mkOpt('لە ڕێگایە') + (showDeliveredOption ? mkOpt('گەیشتووە') : '') + mkOpt('گەڕاوەتەوە');
                 } else {
                     statusOptionsHtml = mkOpt('ئامادە دەکرێت') + mkOpt('لە ڕێگایە') + (showDeliveredOption ? mkOpt('گەیشتووە') : '') + mkOpt('گەڕاوەتەوە');
                 }
@@ -2723,6 +2742,22 @@
             if (chips) chips.style.display = show ? 'flex' : 'none';
         }
 
+        // دووبارە بارکردنی لیستی ئۆردەرەکان بەبێ لادانی شوێنی سکرۆڵ (دوای گۆڕینی حاڵەت/سڕینەوە/دابەشکردن)
+        function refreshOrdersKeepScroll() {
+            let mgmtActive = document.getElementById('orders-management-screen').classList.contains('active');
+            // شاشەی ناچالاک بە کۆن دابنێ تا کاتی سەردان دووبارە بار بێت (بۆ پاراستنی نوێیی داتا لە هەردوو شاشە)
+            if (mgmtActive) { isDashboardDataLoaded = false; } else { isManagementDataLoaded = false; }
+            let listId = mgmtActive ? 'management-orders-list' : 'orders-list';
+            let el = document.getElementById(listId);
+            let saved = el ? el.scrollTop : 0;
+            let p = mgmtActive ? loadManagementOrders() : fetchOrders();
+            // دوای تەواوبوونی دووبارە بارکردن، گەڕاندنەوەی شوێنی سکرۆڵ
+            Promise.resolve(p).then(() => {
+                let el2 = document.getElementById(listId);
+                if (el2) el2.scrollTop = saved;
+            });
+        }
+
         async function updateOrderStatus(orderId) {
             let newStatus = document.getElementById('new-order-status').value;
             let reason = document.getElementById('return-reason-input').value.trim();
@@ -2735,6 +2770,11 @@
             }
             if (o && o.status === "گەڕاوەتەوە" && newStatus !== "گەڕاوەتەوە" && newStatus !== "گەیشتووە") {
                 showToast("ئۆردەری گەڕاوە تەنها دەکرێت بگۆڕدرێت بۆ «گەیشتووە»!", "error");
+                return;
+            }
+            // ڕێگرتن لە گەڕانەوەی «لەڕێگادایە» بۆ «ئامادە دەکرێت»
+            if (o && (o.status || "").includes("ڕێگا") && newStatus.includes("ئامادە")) {
+                showToast("ناتوانرێت لە «لەڕێگادایە» بگەڕێتەوە «ئامادە دەکرێت»!", "error");
                 return;
             }
 
@@ -2805,7 +2845,7 @@
                     }
                     await supabase.from('orders').update({ status: newStatus, return_reason: reason, status_changed_by: userName }).eq('id', orderId);
                     showToast("حاڵەت گۆڕدرا و پارەکان بڕدران!", "success");
-                    if (document.getElementById('orders-management-screen').classList.contains('active')) loadManagementOrders(); else fetchOrders();
+                    refreshOrdersKeepScroll();
                 } catch (e) { showToast("هەڵە لە گەڕانەوەدا ڕوویدا", "error"); }
                 return;
             }
@@ -2817,11 +2857,17 @@
                 await supabase.from('orders').update({ status: newStatus, return_reason: reason, status_changed_by: userName }).eq('id', orderId);
                 showToast("حاڵەت گۆڕدرا!", "success");
                 closeModal(null, 'order-details-modal');
-                if (document.getElementById('orders-management-screen').classList.contains('active')) loadManagementOrders(); else fetchOrders();
+                refreshOrdersKeepScroll();
             } catch (e) { showToast("هەڵەیەک ڕوویدا", "error"); }
         }
 
         async function deleteOrder(orderId) {
+            // سڕینەوە تەنها لە حاڵەتی «ئامادە دەکرێت»
+            let ordDel = allGlobalOrdersData[orderId];
+            if (ordDel && !((ordDel.status || "").includes("ئامادە"))) {
+                showToast("تەنها ئۆردەری لە حاڵەتی «ئامادە دەکرێت» دەسڕێتەوە!", "error");
+                return;
+            }
             if (!confirm("⚠️ دڵنیایت دەتەوێت ئەم داواکارییە بسڕیتەوە؟")) return;
 
             closeModal(null, 'order-details-modal');
@@ -2833,14 +2879,7 @@
 
                 showToast("🗑️ بە سەرکەوتوویی سڕایەوە!", "success");
 
-                isDashboardDataLoaded = false;
-                isManagementDataLoaded = false;
-
-                if (document.getElementById('dashboard-screen').classList.contains('active')) {
-                    fetchOrders();
-                } else if (document.getElementById('orders-management-screen').classList.contains('active')) {
-                    loadManagementOrders();
-                }
+                refreshOrdersKeepScroll();
             } catch (err) {
                 console.log(err);
                 showToast("❌ هەڵەیەک ڕوویدا لە سڕینەوەدا", "error");
@@ -2851,7 +2890,25 @@
             let o = allGlobalOrdersData[orderId];
             if (!o) return;
 
+            // دەستکاری تەنها لە حاڵەتی «ئامادە دەکرێت» یان «لەڕێگادایە»
+            let stEdit = o.status || "";
+            if (!(stEdit.includes("ئامادە") || stEdit.includes("ڕێگا"))) {
+                showToast("تەنها ئۆردەری «ئامادە دەکرێت» یان «لەڕێگادایە» دەستکاری دەکرێت!", "error");
+                return;
+            }
+
             editingOrderId = orderId;
+
+            // خەزنکردنی شاشە و شوێنی سکرۆڵی سەرەتا بۆ گەڕانەوە دوای دەستکاری
+            let mgmtActiveEdit = document.getElementById('orders-management-screen').classList.contains('active');
+            let originListId = mgmtActiveEdit ? 'management-orders-list' : 'orders-list';
+            let originListEl = document.getElementById(originListId);
+            editOrderOrigin = {
+                screenId: mgmtActiveEdit ? 'orders-management-screen' : 'dashboard-screen',
+                listId: originListId,
+                scrollTop: originListEl ? originListEl.scrollTop : 0
+            };
+
             closeModal(null, 'order-details-modal');
 
             let customerInput = document.getElementById('customerName');
@@ -3065,13 +3122,32 @@
                     showToast("بە سەرکەوتوویی تۆمار کرا!", "success");
                 }
 
+                let wasEditing = !!editingOrderId;
+                let origin = editOrderOrigin;
+                editOrderOrigin = null;
                 resetOrderForm();
                 document.getElementById('fab-checkbox').checked = false;
-                switchScreen('dashboard-screen');
 
-                isDashboardDataLoaded = false;
-                isManagementDataLoaded = false;
-                fetchOrders();
+                if (wasEditing && origin) {
+                    // دەستکاری: گەڕانەوە بۆ هەمان شاشە و هەمان شوێنی سکرۆڵ (نەک پەڕەی سەرەکی)
+                    let mgmt = (origin.screenId === 'orders-management-screen');
+                    // شاشەی سەرەتا خۆمان نوێ دەکەینەوە (بەبێ سپینەر)؛ ئەوی تر بە کۆن دادەنێین
+                    if (mgmt) { isManagementDataLoaded = true; isDashboardDataLoaded = false; }
+                    else { isDashboardDataLoaded = true; isManagementDataLoaded = false; }
+                    if (mgmt) switchScreen('orders-management-screen', document.getElementById('nav-orders-management'));
+                    else switchScreen('dashboard-screen');
+                    let reload = mgmt ? loadManagementOrders() : fetchOrders();
+                    Promise.resolve(reload).then(() => {
+                        let el = document.getElementById(origin.listId);
+                        if (el) el.scrollTop = origin.scrollTop;
+                    });
+                } else {
+                    // ئۆردەری نوێ: وەک جاران بۆ پەڕەی سەرەکی
+                    switchScreen('dashboard-screen');
+                    isDashboardDataLoaded = false;
+                    isManagementDataLoaded = false;
+                    fetchOrders();
+                }
 
             } catch (err) {
                 console.log("Submit order error: ", err);
@@ -4526,6 +4602,10 @@
             if (list.style.display === 'none' || list.style.display === '') {
                 list.style.display = 'block';
                 wrapper.classList.add('open');
+                // دڕۆپداونی حاڵەت لەناو مۆدێلدایە؛ بیهێنە ناو دیمەن تا بژاردەکان بەتەواوی دەربکەون
+                if (listId === 'new-status-list') {
+                    setTimeout(() => list.scrollIntoView({ block: 'nearest', behavior: 'smooth' }), 60);
+                }
             } else {
                 list.style.display = 'none';
                 wrapper.classList.remove('open');
@@ -5384,9 +5464,8 @@
                 showToast("بە سەرکەوتوویی دابەشکرا!", "success");
                 closeModal(null, 'profit-distribution-modal');
 
-                // ڕیفرێشکردنی شاشەکان
-                isDashboardDataLoaded = false; isManagementDataLoaded = false;
-                if (document.getElementById('orders-management-screen').classList.contains('active')) loadManagementOrders(); else fetchOrders();
+                // ڕیفرێشکردنی شاشەکان بەبێ لادانی شوێنی سکرۆڵ
+                refreshOrdersKeepScroll();
 
             } catch (e) {
                 console.error(e);
