@@ -4859,7 +4859,17 @@
             let adminVal = document.getElementById('e-admin') ? (document.getElementById('e-admin').getAttribute('data-code') || "") : "";
             let consultantVal = document.getElementById('e-consultant') ? (document.getElementById('e-consultant').getAttribute('data-code') || "") : "";
 
-            if (!isKing) managerVal = creatorCode;
+            // پاککردنەوەی خانەکانی سەروو بەپێی پلە (وەک دروستکردن) — تا نرخی کۆنی هەڵە خەزن نەبێت
+            // بەڕێوەبەر: هیچ سەروویەکی نییە؛ سەرپەرشت: بێ سەرپەرشت/ڕاوێژکار؛ ڕاوێژکار: بێ ڕاوێژکار
+            if (isKing) {
+                if (role === "بەڕێوەبەر") { managerVal = ""; adminVal = ""; consultantVal = ""; }
+                else if (role === "سەرپەرشت") { adminVal = ""; consultantVal = ""; }
+                else if (role === "ڕاوێژکار") { consultantVal = ""; }
+            } else {
+                managerVal = creatorCode;
+                if (role === "سەرپەرشت") { adminVal = ""; consultantVal = ""; }
+                else if (role === "ڕاوێژکار") { consultantVal = ""; }
+            }
 
             if (!code || !name) { showToast("تکایە ناوی سیانی بنووسە", "error"); return; }
 
