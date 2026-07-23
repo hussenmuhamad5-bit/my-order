@@ -3,7 +3,11 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=362, user-scalable=no">
+    <!-- گرنگ: width=device-width (نەک پانێکی جێگیر وەک 362) — ئەگینا وێبگەڕ پەڕەکە
+         بچووک ڕێندەر دەکات و پاشان بەزۆر گەورەی دەکاتەوە، وا هەموو فۆنت و دوگمەکان
+         ١٠-٢٠٪ گەورەتر و لێڵتر دەردەکەون لەسەر مۆبایل. -->
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>ئەپڵیکەیشنی کارمەندان</title>
     <link rel="stylesheet" href="style.css">
     <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
@@ -2237,9 +2241,9 @@
                 dayGroups.forEach(group => {
                     let dl = formatDayLabel(group.day);
                     newListHTML += `
-                    <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin:16px 0 10px 0; padding-bottom:8px; border-bottom:1px dashed #e2e8f0;">
-                        <div style="display:flex; align-items:center; gap:6px; font-size:13px; font-weight:800; color:#334155;">
-                            <i class='bx bx-calendar-event' style="color:var(--primary); font-size:16px;"></i>
+                    <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin:12px 0 7px 0; padding-bottom:6px; border-bottom:1px dashed #e2e8f0;">
+                        <div style="display:flex; align-items:center; gap:5px; font-size:12px; font-weight:700; color:#334155;">
+                            <i class='bx bx-calendar-event' style="color:var(--primary); font-size:15px;"></i>
                             <span dir="auto">${dl.label}</span>
                             ${dl.sub ? `<span dir="ltr" style="font-size:10px; font-weight:600; color:#94a3b8;">${dl.sub}</span>` : ''}
                         </div>
@@ -2261,62 +2265,33 @@
 
                     let orderCodeStr = o.order_code || o.id || "00";
                     let custName = o.customer_name || "بێ ناو";
-                    let items = o.item_names ? String(o.item_names).replace(/\n/g, ' - ') : "دیاری نەکراوە";
+                    let items = shortItemNames(o.item_names);
                     let total = Number(o.grand_total || 0).toLocaleString('en-US');
                     let city = o.address ? String(o.address).split('-')[0].trim() : "دیاری نەکراوە";
                     let fullDateStr = o.date ? String(o.date) : "";
                     let dateParts = fullDateStr.split(' ');
                     let explicitDateOnly = dateParts[0] || "بەروار نەزانراوە";
-                    let explicitTimeOnly = toKurdishMeridiem((dateParts[1] && dateParts[2]) ? (dateParts[1] + ' ' + dateParts[2]) : "");
-                    let relativeTime = getRelativeTime(o.date);
+                    let explicitTimeOnly = stripSeconds(toKurdishMeridiem((dateParts[1] && dateParts[2]) ? (dateParts[1] + ' ' + dateParts[2]) : ""));
+                    let relativeTime = shortRelativeTime(o.date);
 
                     newListHTML += `
                     <div class="modern-order-card ${statusClass}" onclick="openOrderDetails('${o.id}')">
                         <div class="moc-header">
-                            <h3 class="moc-title" style="display: flex; align-items: center; gap: 6px;">
-                                <div style="background: rgba(36, 129, 204, 0.1); padding: 5px; border-radius: 50%; display: flex;">
-                                    <i class='bx bx-user' style="color: var(--primary); font-size: 16px;"></i>
-                                </div>
-                                ${custName}
+                            <h3 class="moc-title">
+                                <i class='bx bx-user moc-avatar'></i>
+                                <span class="moc-name">${custName}</span>
                             </h3>
                             <span class="moc-status" style="background:${statusBg}; color:${statusColor};">${status}</span>
                         </div>
-                        <p class="moc-items" style="display: flex; align-items: flex-start; gap: 8px; margin-top: 8px;">
-                            <i class='bx bx-package' style="font-size: 16px; color: #94a3b8; margin-top: 2px;"></i>
-                            <span>${items}</span>
-                        </p>
-                        <div class="moc-footer" style="align-items: flex-end;">
-                            <div class="moc-meta-container" style="flex: 1;">
-                                <div class="moc-meta-row" style="flex-wrap: wrap; gap: 8px;">
-                                    <div style="display: flex; align-items: center; gap: 4px; background: #f1f5f9; padding: 4px 8px; border-radius: 6px;">
-                                        <i class='bx bx-calendar' style="font-size: 14px; color: #64748b;"></i>
-                                        <span dir="ltr" style="font-weight: 700; color: #475569; font-size: 11px;">${explicitDateOnly}</span>
-                                    </div>
-                                    <div style="display: flex; align-items: center; gap: 4px; background: #f1f5f9; padding: 4px 8px; border-radius: 6px;">
-                                        <i class='bx bx-time' style="font-size: 14px; color: #64748b;"></i>
-                                        <span dir="ltr" style="font-weight: 700; color: #475569; font-size: 11px;">${explicitTimeOnly}</span>
-                                    </div>
-                                </div>
-                                <div class="moc-meta-row" style="margin-top: 6px; flex-wrap: wrap; gap: 8px;">
-                                    <div style="display: flex; align-items: center; gap: 4px; background: #f1f5f9; padding: 4px 8px; border-radius: 6px;">
-                                        <i class='bx bx-history' style="font-size: 14px; color: #64748b;"></i>
-                                        <span style="font-weight: 700; font-size: 10px; color: #475569;">${relativeTime}</span>
-                                    </div>
-                                    <div style="display: flex; align-items: center; gap: 4px; padding: 4px 0;">
-                                        <i class='bx bx-map' style="font-size: 14px; color: #64748b;"></i>
-                                        <span style="font-size: 11px; font-weight: 600; color: #64748b;">${city}</span>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="moc-price-container" style="display: flex; flex-direction: column; align-items: flex-end; justify-content: center; flex-shrink: 0;">
-                                <p class="moc-price" style="display: flex; align-items: center; gap: 4px; direction: rtl; white-space: nowrap; margin: 0;">
-                                    <span dir="ltr" style="font-weight: 800; font-size: 16px;">${total}</span>
-                                    <span style="font-size: 13px; font-weight: 700; color: #64748b;">د.ع</span>
-                                </p>
-                                <p class="moc-id" style="display: flex; align-items: center; gap: 2px; margin: 6px 0 0 0; direction: ltr;">
-                                    <i class='bx bx-hash' style="font-size: 13px;"></i> <span style="font-size: 11px; letter-spacing: 0.5px;">${orderCodeStr}</span>
-                                </p>
-                            </div>
+                        <div class="moc-body">
+                            <p class="moc-items"><i class='bx bx-package'></i><span>${items.text}</span>${items.more ? `<b class="moc-more">+${items.more}</b>` : ''}</p>
+                            <p class="moc-price"><span dir="ltr">${total}</span><em>د.ع</em></p>
+                        </div>
+                        <div class="moc-meta">
+                            <span class="moc-chip"><i class='bx bx-calendar'></i><span dir="ltr">${explicitDateOnly} · ${explicitTimeOnly}</span></span>
+                            <span class="moc-chip"><i class='bx bx-map'></i>${city}</span>
+                            <span class="moc-chip"><i class='bx bx-history'></i>${relativeTime}</span>
+                            <span class="moc-id" dir="ltr"><i class='bx bx-hash'></i>${orderCodeStr}</span>
                         </div>
                     </div>`;
                     });
@@ -2432,6 +2407,28 @@
                 .replace(/\bPM\b/gi, 'د.ن');
         }
 
+        // لابردنی چرکە لە کاتژمێر: "10:35:22 پ.ن" -> "10:35 پ.ن"
+        function stripSeconds(timeStr) {
+            return String(timeStr || "").replace(/(\d{1,2}:\d{2}):\d{2}/, '$1');
+        }
+
+        // کورتکردنەوەی ناوی کالاکان بۆ لیست: ئەگەر لە ٢ زیاتر بوون
+        // "بۆن - فلچە +5" واتە ٧ کالا هەیە (٢ نووسراو + ٥ی تر)
+        // { text, more } دەگەڕێنێتەوە تا نیشانەی +N لە دەرەوەی ئەو سپانە دابنرێت
+        // کە ellipsisـی هەیە — ئەگینا لەگەڵ ناوی درێژدا دەبڕدرێت.
+        function shortItemNames(raw) {
+            let arr = String(raw || "").split('\n').map(s => s.trim()).filter(Boolean);
+            if (!arr.length) return { text: "دیاری نەکراوە", more: 0 };
+            if (arr.length <= 2) return { text: arr.join(' - '), more: 0 };
+            return { text: arr.slice(0, 2).join(' - '), more: arr.length - 2 };
+        }
+
+        // کورتکردنەوەی کاتی ڕابردوو: "٢ کاتژمێر پێش ئێستا" -> "٢ کاتژمێر"
+        // (ئایکۆنی کاتژمێر خۆی مانای «پێش ئێستا» دەگەیەنێت)
+        function shortRelativeTime(dateString) {
+            return String(getRelativeTime(dateString) || "").replace(' پێش ئێستا', '');
+        }
+
         // دروستکردنی کارتی ئۆردەری کۆمپاکت بۆ پەڕەی ئۆردەرەکانی تیم/داواکارییەکانم
         // showMember = ئەگەر true بوو، وێنە و ناوی ئەندامەکە پیشان دەدرێت (لە دۆخی «هەموو»)
         function buildMgmtOrderCard(o, showMember) {
@@ -2449,7 +2446,11 @@
             let fullDateStr = o.date ? String(o.date) : "";
             let dParts = fullDateStr.split(' ');
             let dOnly = dParts[0] || "نەزانراوە";
-            let tOnly = toKurdishMeridiem((dParts[1] && dParts[2]) ? (dParts[1] + ' ' + dParts[2]) : (dParts[1] || ""));
+            // بەروار و کاتژمێر پێکەوە لە یەک چیپ، بەبێ چرکە — وەک پەڕەی داشبۆرد
+            let tOnly = stripSeconds(toKurdishMeridiem((dParts[1] && dParts[2]) ? (dParts[1] + ' ' + dParts[2]) : (dParts[1] || "")));
+            let dateTime = tOnly ? (dOnly + ' · ' + tOnly) : dOnly;
+            let relTime = shortRelativeTime(o.date);
+            let items = shortItemNames(o.item_names);
 
             // لە دۆخی «هەموو» ئەندامەکە دەبێتە سەردێڕ (وێنە + ناو)، کڕیارەکە دەچێتە ژێری
             // ناوی ئەندام تەنها دوو وشە: ناوی خۆی و ناوی باوکی (نەک باپیر)
@@ -2489,16 +2490,17 @@
                     <span class="moc-status" style="background:${statusBg}; color:${statusColor};">${status}</span>
                 </div>
                 ${custRow}
+                <div class="mocc-line">
+                    <p class="mocc-items"><i class='bx bx-package'></i><span>${items.text}</span>${items.more ? `<b class="moc-more">+${items.more}</b>` : ''}</p>
+                    <span class="mocc-amount"><span dir="ltr">${total}</span> د.ع</span>
+                </div>
                 <div class="mocc-bottom">
                     <div class="mocc-meta">
-                        <span class="mocc-chip"><i class='bx bx-calendar'></i><span dir="ltr">${dOnly}</span></span>
-                        ${tOnly ? `<span class="mocc-chip"><i class='bx bx-time-five'></i><span dir="ltr">${tOnly}</span></span>` : ''}
+                        <span class="mocc-chip"><i class='bx bx-calendar'></i><span dir="ltr">${dateTime}</span></span>
                         <span class="mocc-chip mocc-chip-plain"><i class='bx bx-map'></i>${city}</span>
+                        <span class="mocc-chip mocc-chip-plain"><i class='bx bx-history'></i>${relTime}</span>
                     </div>
-                    <div class="mocc-price">
-                        <span class="mocc-amount"><span dir="ltr">${total}</span> د.ع</span>
-                        <span class="mocc-id"><i class='bx bx-hash'></i>${orderCodeStr}</span>
-                    </div>
+                    <span class="mocc-id"><i class='bx bx-hash'></i>${orderCodeStr}</span>
                 </div>
             </div>`;
         }
@@ -2754,9 +2756,9 @@
                 if (showDayDividers) {
                     let dl = formatDayLabel(group.day);
                     newListHTML += `
-                    <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin:16px 0 10px 0; padding-bottom:8px; border-bottom:1px dashed #e2e8f0;">
-                        <div style="display:flex; align-items:center; gap:6px; font-size:13px; font-weight:800; color:#334155;">
-                            <i class='bx bx-calendar-event' style="color:var(--primary); font-size:16px;"></i>
+                    <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin:12px 0 7px 0; padding-bottom:6px; border-bottom:1px dashed #e2e8f0;">
+                        <div style="display:flex; align-items:center; gap:5px; font-size:12px; font-weight:700; color:#334155;">
+                            <i class='bx bx-calendar-event' style="color:var(--primary); font-size:15px;"></i>
                             <span dir="auto">${dl.label}</span>
                             ${dl.sub ? `<span dir="ltr" style="font-size:10px; font-weight:600; color:#94a3b8;">${dl.sub}</span>` : ''}
                         </div>
