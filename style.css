@@ -13,31 +13,70 @@
   --text-main: #1e293b;
   --text-secondary: #64748b;
 
-  /* === سیستەمی تایپۆگرافی === */
-  /* قەبارەی فۆنتەکان */
-  --text-xs: 10px;
-  /* بۆ تێبینی و نووسینە زۆر بچووکەکان */
-  --text-sm: 14px;
-  /* بۆ لێبڵ (ناوی سەر بۆکسەکان) */
-  --text-md: 15px;
-  /* بۆ نووسینی ناو بۆکسەکان (Input) */
-  --text-lg: 16px;
-  /* قەبارەی ستاندارد بۆ ناو دوگمەکان (Button) */
-  --text-xl: 15px;
-  /* بۆ ناونیشانە سەرەکییەکان (H2) */
+  /* ==========================================================
+     سیستەمی قەبارە — بەپێی ستانداردی Telegram Mini Apps (Wallet / TON Space)
+     پێشتر ٢٤ قەبارەی جیاوازی فۆنت هەبوو؛ ئێستا تەنها ٧ پلە.
+     ========================================================== */
 
-  /* ئەستووری فۆنتەکان */
+  /* --- پلەکانی فۆنت --- */
+  --fs-2xs: 10px;
+  /* ژمارەی ئۆردەر، کات، نیشانە زۆر بچووکەکان */
+  --fs-xs: 11px;
+  /* چیپ، بەج، لێبڵی لاوەکی */
+  --fs-sm: 12px;
+  /* زانیاری لاوەکی، لێبڵی ناڤبار */
+  --fs-md: 13px;
+  /* دێڕی دووەمی لیست، لێبڵی فۆرم */
+  --fs-base: 15px;
+  /* دەقی سەرەکی، ناونیشانی ئایتەمی لیست، ناو بۆکسەکان */
+  --fs-lg: 16px;
+  /* دوگمە، ناونیشانی کارت، نرخ */
+  --fs-xl: 20px;
+  /* ناونیشانی پەڕە، ژمارە گەورەکان */
+
+  /* --- ئەستووری فۆنت (وەک iOS: 590/600 نەک 700) --- */
   --font-normal: 400;
-  /* ئاسایی */
+  --font-medium: 500;
+  --font-semibold: 600;
   --font-bold: 700;
-  /* تۆخ (بۆڵد) */
-  /* === سیستەمی ئایکۆن === */
-  --icon-sm: 18px;
-  /* بۆ ناو لێبڵ و شتە بچووکەکان */
-  --icon-md: 22px;
-  /* بۆ ناو دوگمەکان */
-  --icon-lg: 28px;
-  /* بۆ ناونیشان و داشبۆرد */
+
+  /* --- سیستەمی ئایکۆن --- */
+  --icon-sm: 16px;
+  /* ناو لێبڵ و دێڕی لیست */
+  --icon-md: 20px;
+  /* ناو دوگمەکان */
+  --icon-lg: 26px;
+  /* ناڤبار و ناونیشان */
+
+  /* --- ڕادیوس (٤ پلە بەجێی ١٥) --- */
+  --r-sm: 10px;
+  /* بۆکس، دوگمەی بچووک */
+  --r-md: 12px;
+  /* کارت، دوگمەی سەرەکی */
+  --r-lg: 16px;
+  /* کارتی گەورە، مۆداڵ */
+  --r-full: 999px;
+  /* چیپ و پیل */
+
+  /* --- بۆشایی (٨px grid) --- */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 20px;
+
+  /* --- بەرزی کۆنترۆڵەکان (کەمترین ئامانجی دەستلێدان ٤٤px) --- */
+  --ctl-h: 44px;
+  /* بۆکس و لیستی هەڵبژاردن */
+  --btn-h: 48px;
+  /* دوگمەی سەرەکی */
+
+  /* --- گۆڕاوە کۆنەکان (بۆ ئەوەی کۆدی پێشوو نەشکێت) --- */
+  --text-xs: var(--fs-2xs);
+  --text-sm: var(--fs-md);
+  --text-md: var(--fs-base);
+  --text-lg: var(--fs-lg);
+  --text-xl: var(--fs-lg);
 }
 
 /*
@@ -49,11 +88,16 @@ body {
   font-size: var(--text-md);
   color: var(--text-main);
   background-color: var(--bg);
+  /* بۆشایی نێوان دێڕەکان — بۆ فۆنتی کوردی/عەرەبی 1.5 پێویستە */
+  line-height: 1.5;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
   margin: 0 auto;
   /* سەنتەرکردنی هۆست */
-  padding: 1.5rem 0.5rem;
-  /* فلوید spacing */
-  padding-bottom: 8rem;
+  padding: 14px 12px;
+  /* بۆشایی لای پەڕە — وەک ئەپەکانی تلگرام */
+  /* safe-area: بۆ ئایفۆنەکانی خاوەن هێڵی ماڵەوە، تا ناوەڕۆک لەژێری نەچێت */
+  padding-bottom: calc(8rem + env(safe-area-inset-bottom, 0px));
   /* بۆ FAB و ناڤی خوارەوە */
   width: 100%;
   max-width: 430px;
@@ -78,11 +122,13 @@ h2,
 }
 
 label {
-  font-size: var(--text-sm);
-  font-weight: var(--font-bold);
+  font-size: var(--fs-md);
+  /* ئەستووری 600 نەک 700 — وەک iOS/Telegram، کەمتر «بەتن» دەردەکەوێت */
+  font-weight: var(--font-semibold);
   color: var(--text-secondary);
   display: block;
-  margin-bottom: 8px;
+  margin-bottom: var(--sp-1);
+  line-height: 1.4;
 }
 
 
@@ -92,11 +138,11 @@ button,
 .action-btn {
   font-family: inherit;
   /* هەمان فۆنتی سایتەکە */
-  font-size: var(--text-lg);
+  font-size: var(--fs-lg);
   /* قەبارە گەورەکەی دوگمە */
-  font-weight: var(--font-bold);
-  /* نووسینەکەی تۆخ دەبێت */
+  font-weight: var(--font-semibold);
   text-align: center;
+  line-height: 1.2;
   /* ... (دیزاینەکانی ڕەنگ و شێوە وەک خۆی لێ بگەڕێ) ... */
 }
 
@@ -104,11 +150,11 @@ button,
 input,
 select {
   width: 100%;
-  height: 45px;
-  padding: 0 10px;
-  margin-bottom: 15px;
+  height: var(--ctl-h);
+  padding: 0 var(--sp-3);
+  margin-bottom: var(--sp-3);
   border: 1px solid #e2e8f0;
-  border-radius: 10px;
+  border-radius: var(--r-sm);
   background: #f8fafc;
   /* ڕەنگێکی زۆر کاڵ و جوانی باکگراوند */
   transition: all 0.2s ease;
@@ -144,14 +190,14 @@ input::placeholder {
 
 .btn {
   width: 100%;
-  height: 45px;
-  padding: 14px;
+  height: var(--btn-h);
+  padding: 0 var(--sp-4);
   background: var(--primary);
   color: white;
   border: none;
-  border-radius: 10px;
-  font-size: 16px;
-  font-weight: bold;
+  border-radius: var(--r-md);
+  font-size: var(--fs-lg);
+  font-weight: 600;
   cursor: pointer;
   margin-top: 10px;
 }
@@ -178,8 +224,8 @@ input::placeholder {
 
 .order-total {
   color: #28a745;
-  font-weight: bold;
-  font-size: 14px;
+  font-weight: 700;
+  font-size: 15px;
   margin-top: 5px;
   display: block;
 }
@@ -206,7 +252,7 @@ input::placeholder {
   color: #888;
   cursor: pointer;
   font-size: 12px;
-  font-weight: bold;
+  font-weight: 600;
   width: 33%;
 }
 
@@ -216,7 +262,7 @@ input::placeholder {
 
 .nav-icon {
   display: block;
-  font-size: 22px;
+  font-size: 24px;
   margin-bottom: 3px;
 }
 
@@ -266,7 +312,7 @@ input::placeholder {
   padding: 10px;
   background: #fff;
   margin-bottom: 5px;
-  border-radius: 8px;
+  border-radius: 10px;
 }
 
 /* دوگمەی گەڕانەوە بۆ فۆرمی ئۆردەر */
@@ -275,10 +321,10 @@ input::placeholder {
   background: #ddd;
   color: #333;
   padding: 8px 15px;
-  border-radius: 8px;
+  border-radius: 10px;
   text-decoration: none;
-  font-size: 14px;
-  font-weight: bold;
+  font-size: 13px;
+  font-weight: 600;
   margin-bottom: 15px;
 }
 
@@ -310,8 +356,8 @@ input::placeholder {
 }
 
 .form-title {
-  font-size: 24px;
-  font-weight: bold;
+  font-size: 20px;
+  font-weight: 700;
   color: var(--primary);
   text-align: center;
   margin-bottom: 24px;
@@ -380,14 +426,14 @@ input::placeholder {
 .submit-button {
   position: relative;
   width: 100%;
-  height: 45px;
+  height: var(--btn-h);
   margin-top: 10px;
   background: var(--primary);
   color: white;
   border: none;
-  border-radius: 10px;
-  font-size: 16px;
-  font-weight: bold;
+  border-radius: var(--r-md);
+  font-size: var(--fs-lg);
+  font-weight: 600;
   cursor: pointer;
   overflow: hidden;
   transition: all 0.2s ease;
@@ -444,10 +490,10 @@ input::placeholder {
 .btn-toggle {
   padding: 12px 15px;
   border: none;
-  border-radius: 8px;
+  border-radius: 10px;
   cursor: pointer;
   font-size: 13px;
-  font-weight: bold;
+  font-weight: 600;
   color: white;
   width: 90px;
   transition: 0.3s;
@@ -472,9 +518,9 @@ input::placeholder {
   padding: 12px;
   color: #fff;
   border: none;
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: bold;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
   cursor: pointer;
 }
 
@@ -501,15 +547,15 @@ input::placeholder {
   display: none;
   background: #e9ecef;
   padding: 15px;
-  border-radius: 8px;
+  border-radius: 10px;
   text-align: center;
   border: 2px dashed #2481cc;
   margin-top: 15px;
 }
 
 .code-display {
-  font-size: 26px;
-  font-weight: bold;
+  font-size: 22px;
+  font-weight: 700;
   letter-spacing: 4px;
   color: #2481cc;
   margin: 10px 0;
@@ -722,15 +768,17 @@ h2 i,
   display: block;
 }
 
+/* گرنگ: هیچ transformـێک لێرە بەکارنەهێنرێت.
+   transform لەسەر .screen دەبێتە هۆی دروستبوونی "backdrop root"ـی نوێ،
+   کە وادەکات هەموو ئەو کارتانەی backdrop-filterیان هەیە لە هەر فرەیمێکدا
+   لە نوێوە بلێر بکرێنەوە — و لە کۆتایی ئەنیمەیشنەکەدا پرتەیەک (flicker) دروست دەبێت لە مۆبایل. */
 @keyframes fadeInSmooth {
   from {
     opacity: 0;
-    transform: scale(0.98) translateY(10px);
   }
 
   to {
     opacity: 1;
-    transform: scale(1) translateY(0);
   }
 }
 
@@ -936,7 +984,7 @@ h2 i,
    کارتەکانی ئاماری داشبۆرد (Dashboard Stats)
    ========================================= */
 .dashboard-header {
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 600;
   color: var(--text-main);
   margin: 5px 0 10px 0;
@@ -955,7 +1003,7 @@ h2 i,
   max-width: 100%;
   min-height: 90%;
   max-height: 95%;
-  border-radius: 18px;
+  border-radius: 16px;
   padding: 12px 15px;
   color: #fff;
   display: flex;
@@ -1056,7 +1104,7 @@ h2 i,
 .img-upload-header p {
   text-align: center;
   color: black;
-  font-weight: bold;
+  font-weight: 600;
 }
 
 #image-preview {
@@ -1151,7 +1199,7 @@ h2 i,
   color: var(--text-secondary);
   text-align: center;
   transition: 0.3s;
-  font-size: 14px;
+  font-size: 13px;
 }
 
 /* لابردنی دووبارەبوونەوەی هێڵەکان لە نێوان بۆکسەکان */
@@ -1172,7 +1220,7 @@ h2 i,
 .segmented-control input:checked+span {
   background: rgba(36, 129, 204, 0.1);
   color: var(--primary);
-  font-weight: bold;
+  font-weight: 600;
 }
 
 /* =========================================
@@ -1384,7 +1432,7 @@ h2 i,
   flex-shrink: 0;
   align-items: center;
   justify-content: center;
-  border-radius: 8px;
+  border-radius: 10px;
   background: linear-gradient(to bottom right, var(--t-light), var(--t-dark));
   transition: transform 0.3s;
 }
@@ -1403,7 +1451,7 @@ h2 i,
 .t-icon-blur {
   position: absolute;
   inset: 0;
-  border-radius: 8px;
+  border-radius: 10px;
   background-color: var(--t-main);
   opacity: 0.5;
   filter: blur(4px);
@@ -1487,7 +1535,7 @@ h2 i,
 .t-status-badge {
   margin-inline-start: auto;
   font-size: 11px;
-  font-weight: bold;
+  font-weight: 600;
   color: var(--t-main);
   background-color: rgba(255, 255, 255, 0.08);
   padding: 4px 10px;
@@ -1621,11 +1669,11 @@ h2 i,
   align-items: center;
   background: #f8fafc;
   border: 1px solid #e2e8f0;
-  border-radius: 10px;
-  height: 45px;
-  padding: 0 16px;
+  border-radius: var(--r-sm);
+  height: var(--ctl-h);
+  padding: 0 var(--sp-3);
   cursor: pointer;
-  font-size: 15px;
+  font-size: var(--fs-base);
   color: #333;
   transition: all 0.2s;
 }
@@ -1639,8 +1687,9 @@ h2 i,
   top: 52px;
   left: 0;
   right: 0;
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(10px);
+  /* backdrop-filter لابرا: پاشخانەکە ٩٥٪ ڕەقە، بۆیە بلێر نەدەبینرا —
+     بەڵام چینێکی زیادەی GPUـی دروست دەکرد لەگەڵ ئەنیمەیشنی slideDown */
+  background: rgba(255, 255, 255, 0.97);
   border: 1px solid #e2e8f0;
   border-radius: 10px;
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
@@ -1662,7 +1711,7 @@ h2 i,
   padding: 0 15px;
   outline: none;
   font-family: inherit;
-  font-size: 14px;
+  font-size: 15px;
   background: transparent;
 }
 
@@ -1678,7 +1727,7 @@ h2 i,
   padding: 12px 15px;
   cursor: pointer;
   border-bottom: 1px solid #f8fafc;
-  font-size: 14px;
+  font-size: 15px;
   color: #475569;
   transition: all 0.2s;
 }
@@ -1796,13 +1845,18 @@ h2 i,
 /* =========================================
    دیزاینی مۆدێرنی ئۆردەرەکان (Glassmorphism)
    ========================================= */
+/* تێبینی: backdrop-filter لێرە لابرا — پاشخانی ئەپەکە ڕەنگێکی تەختە (--bg)،
+   بۆیە بلێر هیچ جیاوازییەکی بینراوی دروست نەدەکرد، بەڵام هەر کارتێکی دەکردە
+   چینێکی سەربەخۆی GPU (لیستی ٣٠ کارت = ٣٠ چین) کە دەبووە هۆی پرتە لە مۆبایل. */
 .modern-order-card {
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
   border-radius: 16px;
   padding: 16px;
   margin-bottom: 12px;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  /* transition: all نەکرێت — ئەگینا backdrop-filter/فلتەرەکانیش ئەنیمەیت دەکرێن */
+  transition: background 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              border-color 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   cursor: pointer;
 }
 
@@ -1862,95 +1916,185 @@ h2 i,
   transform: translateY(-2px);
 }
 
+/* ============================================================
+   کارتی «دوایین ئۆردەرەکان» — ٣ ڕیز بەجێی ٥
+   هەموو زانیارییەکان هەن، تەنها چڕتر ڕێکخراون تا ئۆردەری زیاتر دەربکەوێت.
+   ڕیز ١: ناوی کڕیار + حاڵەت
+   ڕیز ٢: کالاکان + نرخ
+   ڕیز ٣: بەروار·کاتژمێر + شار + کاتی ڕابردوو + کۆدی ئۆردەر
+   ============================================================ */
+
+/* --- ڕیزی ١: ناوی کڕیار + حاڵەت --- */
 .moc-header {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 8px;
+  align-items: center;
+  gap: var(--sp-2);
+  margin-bottom: 7px;
 }
 
 .moc-title {
-  font-size: 15px;
-  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--fs-base);
+  font-weight: 600;
   color: #1e293b;
   margin: 0;
+  min-width: 0;
+  /* بۆ ئەوەی ناوی درێژ کارتەکە نەتەقێنێت */
+}
+
+/* گرنگ: دەبێت `i.moc-avatar` بێت نەک `.moc-avatar` —
+   چونکە boxicons.min.css دوای style.css بار دەبێت و `.bx { display:inline-block }`ـی
+   هەیە بە هەمان تایبەتمەندی (0,1,0)، بۆیە بەسەر flexـەکەماندا زاڵ دەبێت و
+   ئایکۆنەکە لە ناوەڕاستی بازنەکە لانادات. `i.` تایبەتمەندی دەکاتە (0,1,1). */
+i.moc-avatar {
+  flex-shrink: 0;
+  font-size: 14px;
+  line-height: 1;
+  color: var(--primary);
+  background: rgba(36, 129, 204, 0.1);
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.moc-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .moc-status {
-  font-size: 11px;
-  font-weight: 700;
-  padding: 4px 10px;
-  border-radius: 8px;
+  flex-shrink: 0;
+  white-space: nowrap;
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  padding: 3px 9px;
+  border-radius: var(--r-full);
+}
+
+/* --- ڕیزی ٢: کالاکان + نرخ --- */
+.moc-body {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2);
+  margin-bottom: 7px;
 }
 
 .moc-items {
-  font-size: 13px;
-  color: #64748b;
-  margin: 0 0 12px 0;
-  line-height: 1.6;
-}
-
-.moc-footer {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding-top: 12px;
-  border-top: 1px solid rgba(226, 232, 240, 0.8);
-}
-
-.moc-meta-container {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.moc-meta-row {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 12px;
+  font-size: var(--fs-md);
   color: #64748b;
+  margin: 0;
+  min-width: 0;
+  line-height: 1.4;
 }
 
-.moc-meta-icon {
-  width: 15px;
-  height: 15px;
-  stroke: currentColor;
+.moc-items>i {
+  flex-shrink: 0;
+  font-size: 15px;
+  color: #94a3b8;
 }
 
-.moc-relative-time {
-  font-size: 10px;
-  background: rgba(0, 0, 0, 0.06);
-  padding: 2px 6px;
-  border-radius: 6px;
-  color: #475569;
-  font-weight: 600;
+.moc-items>span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.moc-price-container {
-  text-align: left;
+/* نیشانەی «+5» بۆ کالا زیادەکان — flex-shrink:0 تا هەرگیز نەبڕدرێت */
+.moc-more {
+  flex-shrink: 0;
+  display: inline-block;
+  font-size: var(--fs-2xs);
+  font-weight: 700;
+  color: var(--primary);
+  background: rgba(36, 129, 204, 0.1);
+  padding: 1px 5px;
+  border-radius: var(--r-full);
+  margin-inline-start: 2px;
+  vertical-align: 1px;
 }
 
 .moc-price {
-  font-size: 16px;
-  font-weight: 800;
+  flex-shrink: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 3px;
+  direction: rtl;
+  white-space: nowrap;
+  font-size: var(--fs-lg);
+  font-weight: 700;
   color: #1e293b;
   margin: 0;
-  direction: ltr;
 }
 
-.moc-id {
-  font-size: 10px;
-  color: #94a3b8;
+.moc-price em {
+  font-size: var(--fs-2xs);
   font-weight: 600;
-  margin: 2px 0 0 0;
+  font-style: normal;
+  color: #94a3b8;
+}
+
+/* --- ڕیزی ٣: چیپەکانی زانیاری --- */
+.moc-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 5px;
+  padding-top: 7px;
+  border-top: 1px solid rgba(226, 232, 240, 0.8);
+}
+
+.moc-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: var(--fs-2xs);
+  font-weight: 600;
+  color: #475569;
+  background: #f1f5f9;
+  padding: 3px 7px;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+
+.moc-chip i {
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+/* کۆدی ئۆردەر — هەمیشە لای کۆتایی ڕیزەکە */
+.moc-id {
+  display: inline-flex;
+  align-items: center;
+  gap: 1px;
+  margin: 0;
+  margin-inline-start: auto;
+  font-size: var(--fs-2xs);
+  font-weight: 600;
+  color: #94a3b8;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+}
+
+.moc-id i {
+  font-size: 12px;
 }
 
 /* ============ کارتی ئۆردەری کۆمپاکت (پەڕەی ئۆردەرەکانی تیم/داواکارییەکانم) ============ */
 .modern-order-card.moc-compact {
   padding: 10px 12px;
   margin-bottom: 8px;
-  border-radius: 13px;
+  border-radius: 12px;
 }
 
 .mocc-top {
@@ -1969,7 +2113,7 @@ h2 i,
 
 .mocc-cust i {
   color: var(--primary);
-  font-size: 14px;
+  font-size: 15px;
   background: rgba(36, 129, 204, 0.1);
   padding: 4px;
   border-radius: 50%;
@@ -1978,8 +2122,8 @@ h2 i,
 }
 
 .mocc-name {
-  font-size: 13.5px;
-  font-weight: 700;
+  font-size: 13px;
+  font-weight: 600;
   color: #1e293b;
   white-space: nowrap;
   overflow: hidden;
@@ -1987,7 +2131,7 @@ h2 i,
 }
 
 .moc-compact .moc-status {
-  font-size: 9.5px;
+  font-size: 10px;
   padding: 3px 8px;
   flex-shrink: 0;
   white-space: nowrap;
@@ -2009,8 +2153,8 @@ h2 i,
 }
 
 .mocc-oname {
-  font-size: 13.5px;
-  font-weight: 700;
+  font-size: 13px;
+  font-weight: 600;
   color: #1e293b;
   white-space: nowrap;
   overflow: hidden;
@@ -2018,8 +2162,8 @@ h2 i,
 }
 
 .mocc-orole {
-  font-size: 9px;
-  font-weight: 700;
+  font-size: 10px;
+  font-weight: 600;
   color: var(--primary);
   background: rgba(36, 129, 204, 0.1);
   padding: 1px 7px;
@@ -2073,8 +2217,8 @@ h2 i,
   background: #f1f5f9;
   padding: 3px 7px;
   border-radius: 6px;
-  font-size: 10.5px;
-  font-weight: 700;
+  font-size: 11px;
+  font-weight: 600;
   color: #475569;
 }
 
@@ -2090,30 +2234,56 @@ h2 i,
   font-weight: 600;
 }
 
-.mocc-price {
+/* ڕیزی کالاکان + نرخ — وەک ڕیزی دووەمی کارتی داشبۆرد */
+.mocc-line {
   display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 2px;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2);
+  margin-top: 7px;
+}
+
+.mocc-items {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  margin: 0;
+  font-size: var(--fs-sm);
+  color: #64748b;
+  line-height: 1.4;
+}
+
+.mocc-items>i {
   flex-shrink: 0;
+  font-size: 14px;
+  color: #94a3b8;
+}
+
+.mocc-items>span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .mocc-amount {
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   gap: 3px;
   direction: rtl;
-  font-size: 14.5px;
-  font-weight: 800;
+  font-size: var(--fs-base);
+  font-weight: 700;
   color: #1e293b;
   white-space: nowrap;
 }
 
 .mocc-id {
+  flex-shrink: 0;
   display: inline-flex;
   align-items: center;
   gap: 2px;
-  font-size: 10px;
+  font-size: var(--fs-2xs);
   font-weight: 600;
   color: #94a3b8;
   direction: ltr;
@@ -2246,8 +2416,8 @@ h2 i,
 }
 
 .modal-title {
-  font-size: 15.5px;
-  font-weight: 700;
+  font-size: 16px;
+  font-weight: 600;
   color: var(--primary);
   margin: 0;
   display: flex;
@@ -2282,10 +2452,10 @@ h2 i,
 }
 
 .detail-label {
-  font-size: 11.5px;
+  font-size: 11px;
   color: #64748b;
   margin-bottom: 3px;
-  font-weight: 700;
+  font-weight: 600;
   display: flex;
   align-items: center;
   gap: 4px;
@@ -2410,7 +2580,7 @@ h2 i,
   left: 50%;
   transform: translateX(-50%);
   color: #fff;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
   background: rgba(0, 0, 0, 0.45);
   padding: 5px 14px;
@@ -2430,7 +2600,7 @@ h2 i,
   background: rgba(255, 255, 255, 0.18);
   color: #fff;
   border: none;
-  font-size: 28px;
+  font-size: 26px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2491,13 +2661,13 @@ h2 i,
   .gallery-nav {
     width: 38px;
     height: 38px;
-    font-size: 24px;
+    font-size: 26px;
   }
 
   .gallery-close {
     width: 38px;
     height: 38px;
-    font-size: 22px;
+    font-size: 24px;
   }
 }
 
@@ -2510,7 +2680,7 @@ h2 i,
   padding: 10px;
   border-radius: 12px;
   font-size: 13px;
-  font-weight: 700;
+  font-weight: 600;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2560,7 +2730,7 @@ h2 i,
 .team-member-card {
   background: #fff;
   border: 1px solid #e2e8f0;
-  border-radius: 14px;
+  border-radius: 12px;
   padding: 10px 13px;
   margin-bottom: 6px;
   display: flex;
@@ -2568,7 +2738,7 @@ h2 i,
   align-items: center;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02);
   cursor: pointer;
-  transition: all 0.2s;
+  transition: background 0.2s, border-color 0.2s, box-shadow 0.2s, transform 0.2s;
 }
 
 .team-member-card:active {
@@ -2596,9 +2766,9 @@ h2 i,
 
 .tm-details h4 {
   margin: 0 0 4px 0;
-  font-size: 14px;
+  font-size: 15px;
   color: #1e293b;
-  font-weight: 700;
+  font-weight: 600;
 }
 
 .tm-details p {
@@ -2614,7 +2784,7 @@ h2 i,
 
 .tm-count {
   font-size: 16px;
-  font-weight: 800;
+  font-weight: 700;
   color: var(--primary);
   display: block;
 }
@@ -2699,10 +2869,10 @@ body.keyboard-open #main-fab {
   align-items: center;
   width: 200px;
   /* پانی بۆکسەکە */
-  height: 45px;
+  height: var(--ctl-h);
   background: #f8fafc;
   border: 1px solid #e2e8f0;
-  border-radius: 10px;
+  border-radius: var(--r-sm);
   overflow: hidden;
   transition: all 0.2s ease;
   margin-bottom: 2px;
@@ -2760,8 +2930,8 @@ body.keyboard-open #main-fab {
   border: none;
   background: transparent;
   text-align: center;
-  font-size: 14px;
-  font-weight: 700;
+  font-size: 15px;
+  font-weight: 600;
   color: var(--text-main);
   padding: 0;
   margin: 0;
@@ -2892,7 +3062,7 @@ body.keyboard-open #main-fab {
 /* بژاردەکانی حاڵەت کەمێک گەورەتر و جوانتر لەناو مۆدێلدا */
 #new-status-list .custom-dropdown-item {
   padding: 12px 14px;
-  font-size: 13.5px;
+  font-size: 13px;
 }
 
 
@@ -2921,23 +3091,25 @@ body.keyboard-open #main-fab {
 }
 
 .wallet-card h1 {
-  font-size: 17px;
+  font-size: 20px;
   margin: 0;
-  font-weight: 800;
+  font-weight: 700;
   direction: ltr;
   text-align: left;
 }
 
+/* تێبینی: backdrop-filter لێرەش لابرا (هەمان هۆکاری .modern-order-card) */
 .transaction-item {
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
   border-radius: 12px;
   padding: 11px 13px;
   margin-bottom: 8px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: background 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              border-color 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .transaction-item.plus {
@@ -2996,20 +3168,20 @@ body.keyboard-open #main-fab {
 
 .tx-details h4 {
   margin: 0;
-  font-size: 12.5px;
+  font-size: 12px;
   color: #1e293b;
 }
 
 .tx-details p {
   margin: 0;
-  font-size: 10.5px;
+  font-size: 11px;
   color: #64748b;
   margin-top: 2px;
 }
 
 .tx-amount {
-  font-size: 14px;
-  font-weight: 800;
+  font-size: 15px;
+  font-weight: 700;
   direction: ltr;
   flex-shrink: 0;
 }
@@ -3045,7 +3217,7 @@ body.keyboard-open #main-fab {
   margin: 0;
   text-align: left;
   direction: ltr;
-  font-weight: bold;
+  font-weight: 600;
   border-color: #cbd5e1;
 }
 
@@ -3058,187 +3230,81 @@ body.keyboard-open #main-fab {
  * ==========================================================================
  */
 
-/* ئەم بەشە بۆ مۆبایلە گەورەکانە وەک ئایفۆن ١٤ پڵەس یان مۆبایلە هاوشێوەکان. لێرەدا کەمێک گۆڕانکاری دەکەین بۆ گونجاندنی شاشەکە */
-@media screen and (max-width: 414px) {
-  :root {
-    /* کەمکردنەوەی قەبارەی فۆنتەکان بە ڕێژەیەکی کەم */
-    --text-lg: 15.5px;
-    --text-md: 14.5px;
-  }
+/* ئەم بەشە پێشتر ٥ بلۆکی لەسەریەکی هەبوو (414/390/375/365/340) کە هەموویان
+   پێکەوە کاریان دەکرد چونکە viewport لە 362ـدا بەند بوو. ئێستا بە سیستەمێکی
+   پاکی دوو ئاست جێگیر کراوە: ئاسایی (≥390px) و شاشەی بچووک (<390px). */
 
-  .screen {
-    /* کەمکردنەوەی پادینگ (بۆشایی ناوەوە) بۆ شاشەکە */
-    padding: 1.2rem 0.4rem;
-  }
-
-  .fab-wrapper {
-    /* بچووککردنەوەی قەبارەی دوگمەی سەرەکی و هێنانە خوارەوەی کەمێک */
-    width: 3.4rem;
-    height: 3.4rem;
-    bottom: 5.8rem;
-  }
-
-  .stats-grid {
-    /* کەمکردنەوەی بۆشایی نێوان کارتەکانی ئامار */
-    gap: 14px;
-  }
+/* --- ڕێکخستنی جێگیر بۆ هەموو شاشەکان (پێشتر بە هەڵە لەناو @media بوون) --- */
+#bottom-nav {
+  bottom: calc(25px + env(safe-area-inset-bottom, 0px));
 }
 
-/* ئەم بەشە بۆ مۆبایلە مامناوەندەکانە وەک ئایفۆن ١٢، ١٣، و ١٤. لێرەدا فۆنتەکان و بۆشاییەکان زیاتر کەم دەکەینەوە */
-@media screen and (max-width: 390px) {
-  :root {
-    /* زیاتر کەمکردنەوەی قەبارەی فۆنتەکان */
-    --text-lg: 15px;
-    --text-md: 14px;
-  }
-
-  .screen {
-    /* کەمکردنەوەی زیاتری پادینگ */
-    padding: 1rem 0.3rem;
-  }
-
-  .fab-wrapper {
-    /* بچووککردنەوەی دوگمەکە بە پێی شاشەکە */
-    width: 3.3rem;
-    height: 3.3rem;
-    bottom: 5.5rem;
-  }
-
-  .stats-grid {
-    /* نزیککردنەوەی کارتەکان لە یەکتری */
-    gap: 12px;
-  }
+.fab-wrapper {
+  bottom: calc(115px + env(safe-area-inset-bottom, 0px));
+  left: 12%;
 }
 
-/* ئەم بەشە بۆ مۆبایلە بچووکەکانە وەک ئایفۆن X و ١١ پڕۆ. شتەکان زیاتر بچووک دەبنەوە بۆ ئەوەی جێگەیان ببێتەوە */
-@media screen and (max-width: 375px) {
+#orders-list {
+  padding-bottom: 150px;
+}
+
+#management-orders-list {
+  padding-bottom: 80px;
+}
+
+/* کارتی چڕ — بەرزی لە ~١٦٦px بۆ ~١٠٠px کەم کرایەوە بەبێ لابردنی هیچ زانیارییەک */
+.modern-order-card {
+  padding: 10px 12px;
+  margin-bottom: 7px;
+  border-radius: var(--r-md);
+}
+
+.stats-grid {
+  gap: var(--sp-3);
+}
+
+/* --- شاشەی بچووک: ئایفۆن SE / mini و ئەندرۆیدی تەسک --- */
+@media screen and (max-width: 389px) {
   :root {
-    /* گونجاندنی فۆنتەکان لەگەڵ شاشە بچووکەکان */
-    --text-lg: 14.5px;
-    --text-md: 13.5px;
+    --fs-base: 14px;
+    --fs-lg: 15px;
+    --fs-xl: 19px;
+    --sp-3: 10px;
+    --sp-4: 14px;
   }
 
-  .screen {
-    /* ڕێکخستنی پادینگ بۆ گونجاندنی ناوەڕۆک */
-    padding: 0.9rem 0.25rem;
-  }
-
-  .fab-wrapper {
-    /* گۆڕینی قەبارەی دوگمە سەرەکییەکە */
-    width: 3.2rem;
-    height: 3.2rem;
-    bottom: 5.2rem;
+  body {
+    padding-left: 10px;
+    padding-right: 10px;
   }
 
   .stats-grid {
-    /* کەمکردنەوەی بۆشایی نێوان کارتەکان */
     gap: 10px;
   }
-}
-
-/* ئەم بەشە بۆ مۆبایلە زۆر بچووکەکان یان ئەندرۆیدە کۆنەکانە. دەبێت دیزاینەکە زۆر کۆمپاکت بێت */
-@media screen and (max-width: 365px) {
-  :root {
-    /* === سیستەمی تایپۆگرافی === */
-    /* قەبارەی فۆنتەکان */
-    --text-xs: 12px;
-    /* بۆ تێبینی و نووسینە زۆر بچووکەکان */
-    --text-sm: 12px;
-    /* بۆ لێبڵ (ناوی سەر بۆکسەکان) */
-    --text-md: 12px;
-    /* بۆ نووسینی ناو بۆکسەکان (Input) */
-    --text-lg: 12px;
-    /* قەبارەی ستاندارد بۆ ناو دوگمەکان (Button) */
-    --text-xl: 13px;
-    /* بۆ ناونیشانە سەرەکییەکان (H2) */
-
-    /* ئەستووری فۆنتەکان */
-    --font-normal: 300;
-    /* ئاسایی */
-    --font-bold: 600;
-    /* تۆخ (بۆڵد) */
-    /* === سیستەمی ئایکۆن === */
-    --icon-sm: 16px;
-    /* بۆ ناو لێبڵ و شتە بچووکەکان */
-    --icon-md: 20px;
-    /* بۆ ناو دوگمەکان */
-    --icon-lg: 24px;
-    /* بۆ ناونیشان و داشبۆرد */
-  }
-
-  .screen {
-    /* کەمترین پادینگ بۆ هێشتنەوەی جێگای تەواو */
-    padding: 0.8rem 0.2rem;
-  }
 
   .fab-wrapper {
-    /* بچووکترین قەبارەی ئاسایی بۆ دوگمەکە */
-    width: 3.1rem;
-    height: 3.1rem;
-    bottom: 5rem;
-  }
-
-  .stats-grid {
-    /* کەمترین بۆشایی قبووڵکراو بۆ ئامارەکان */
-    gap: 8px;
-    margin-bottom: 10px;
-  }
-
-  #bottom-nav {
-    bottom: 25px;
-  }
-
-  .fab-wrapper {
-    bottom: 115px;
-    left: 12%;
-  }
-
-  #orders-list {
-    padding-bottom: 150px;
-  }
-
-  .modern-order-card {
-    padding: 12px;
-    margin-bottom: 8px;
-  }
-
-  .moc-status {
-    font-size: 9px;
-  }
-
-  .moc-title {
-    font-size: 12px;
-  }
-
-  #management-orders-list {
-    padding-bottom: 80px;
-
+    --width: 44px;
+    --height: 44px;
   }
 }
 
-/* ئەم بەشە بۆ شاشە زۆر تەسکەکانە وەک ئایفۆن SE نەوەی یەکەم. لێرەدا هەموو شتێک بچووکترین قەبارەی دەبێت */
+/* --- شاشەی زۆر تەسک: ئایفۆن SE نەوەی یەکەم (320px) --- */
 @media screen and (max-width: 340px) {
   :root {
-    /* بچووکترین قەبارەی فۆنت بۆ ئەوەی لە دەرەوەی شاشە نەبێت */
-    --text-lg: 13px;
-    --text-md: 12px;
+    --fs-base: 13px;
+    --fs-lg: 14px;
+    --fs-xl: 18px;
+    --ctl-h: 42px;
+    --btn-h: 46px;
   }
 
-  .screen {
-    /* پادینگ زۆر کەم دەکرێتەوە بۆ باشترین سوودوەرگرتن لە شوێن */
-    padding: 0.5rem 0.1rem;
-  }
-
-  .fab-wrapper {
-    /* بچووککردنەوەی دوگمەکە بۆ گونجان لەگەڵ شاشەی تەسک */
-    width: 2.8rem;
-    height: 2.8rem;
-    bottom: 4.8rem;
+  body {
+    padding-left: 8px;
+    padding-right: 8px;
   }
 
   .stats-grid {
-    /* کارتەکان زۆر لەیەک نزیک دەبنەوە */
-    gap: 6px;
+    gap: 8px;
   }
 }
 
@@ -3316,7 +3382,7 @@ body.keyboard-open #main-fab {
   background: transparent;
   text-align: center;
   font-size: 13px;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--text-main);
   padding: 0 5px;
   margin: 0;
@@ -3584,8 +3650,8 @@ body.keyboard-open #main-fab {
   border-radius: 12px;
   color: var(--primary);
   font-family: inherit;
-  font-size: 14px;
-  font-weight: 700;
+  font-size: 13px;
+  font-weight: 600;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -3689,16 +3755,8 @@ body.no-glass .fab-wrapper .btn {
 /* ============ ڕێکخستنی جێگای دوگمەی FAB و ناڤ باڕ بۆ هەموو شاشەکانی ژێر ٤١٥px ============ */
 /* هۆکار: ناڤ باڕ لە bottom:50px ـە و بەرزی 60px، بۆیە لە شاشەکانی 366–414px کە FAB لە 83–93px بوو،
    دوگمەکە دەکەوتە ژێر ناڤیکەیشن بۆتووم. ئێستا هەموو شاشەیەکی ژێر 415 هەمان جێگای دیزاینی 362 بەکاردەهێنێت. */
-@media screen and (max-width: 414px) {
-  #bottom-nav {
-    bottom: 25px;
-  }
-
-  .fab-wrapper {
-    bottom: 115px;
-    left: 12%;
-  }
-}
+/* (بلۆکی 414px لابرا — ئەم ڕێکخستنانە ئێستا بنەڕەتین بۆ هەموو شاشەکان،
+    لەگەڵ safe-area بۆ ئایفۆنەکانی خاوەن هێڵی ماڵەوە) */
 
 /* ============ فلتەری پلە (ئۆردەری تیم + چاکسازی + قازانج + جزدان): تێکست و بەتن بچووکتر ============ */
 #orders-role-filter span,
@@ -3707,7 +3765,7 @@ body.no-glass .fab-wrapper .btn {
 #wallet-role-tabs-container span,
 #team-view-mode span {
   padding: 6px 2px;
-  font-size: 10.5px;
+  font-size: 11px;
 }
 
 /* بچووککردنەوەی ئایکۆنەکانی «هەموو / بەپێی ئەندام» */
@@ -3720,7 +3778,7 @@ body.no-glass .fab-wrapper .btn {
 #section-edit-code .segmented-control span,
 #order-screen .segmented-control span {
   padding: 6px 2px;
-  font-size: 10.5px;
+  font-size: 11px;
 }
 
 /* ============ چیپسی هۆکارە باوەکانی گەڕاندنەوەی ئۆردەر ============ */
@@ -3729,7 +3787,7 @@ body.no-glass .fab-wrapper .btn {
   border: 1px solid #fecaca;
   color: #b91c1c;
   font-family: inherit;
-  font-size: 11.5px;
+  font-size: 11px;
   font-weight: 600;
   padding: 6px 11px;
   border-radius: 20px;
@@ -3902,7 +3960,7 @@ body.no-glass .fab-wrapper .btn {
 .pseg {
   display: inline-flex;
   background: #f1f5f9;
-  border-radius: 8px;
+  border-radius: 10px;
   padding: 2px;
   gap: 2px;
   flex-shrink: 0;
