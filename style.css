@@ -759,27 +759,18 @@ h2 i,
 /* =========================================
    سیستەمی شاردنەوە و دەرخستنی شاشەکان 
    ========================================= */
+/* گرنگ: هیچ ئەنیمەیشنێکی opacity یان transform لێرە بەکارنەهێنرێت.
+   شریتی خوارەوە (.button-container) `backdrop-filter`ـی هەیە و بە fixed
+   لەسەر ناوەڕۆکەکەوەیە. ئەگەر .screen ئۆپاسیتی ئەنیمەیت بکات، ئەوەی لەپشت
+   شریتەکەوەیە لە هەر فرەیمێکدا دەگۆڕێت — بۆیە شریتەکە ناچار دەبێت لە هەر
+   فرەیمێکدا پاشخانەکەی لە نوێوە بلێر بکاتەوە، کە دەبێتە ئەو پرتەیە لە مۆبایل.
+   ئەپەکانی تلگرام/iOS خۆشیان تابەکان دەستبەجێ دەگۆڕن، بەبێ فەید. */
 .screen {
   display: none;
-  animation: fadeInSmooth 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .screen.active {
   display: block;
-}
-
-/* گرنگ: هیچ transformـێک لێرە بەکارنەهێنرێت.
-   transform لەسەر .screen دەبێتە هۆی دروستبوونی "backdrop root"ـی نوێ،
-   کە وادەکات هەموو ئەو کارتانەی backdrop-filterیان هەیە لە هەر فرەیمێکدا
-   لە نوێوە بلێر بکرێنەوە — و لە کۆتایی ئەنیمەیشنەکەدا پرتەیەک (flicker) دروست دەبێت لە مۆبایل. */
-@keyframes fadeInSmooth {
-  from {
-    opacity: 0;
-  }
-
-  to {
-    opacity: 1;
-  }
 }
 
 #bottom-nav {
@@ -868,12 +859,14 @@ h2 i,
   align-items: center;
 }
 
+/* backdrop-filter لێرە لابرا — ئەم دوگمەیە ئەنیمەیشنی سووڕانەوەی (transform)
+   ٠.٤ چرکەیی هەیە، و transform + backdrop-filter لەسەر هەمان توخم واتە
+   GPU لە هەر فرەیمێکدا دەبێت پاشخانەکەی لە نوێوە بلێر بکاتەوە. هەر جارێک
+   switchScreen دوگمەکە پیشان بدات ئەنیمەیشنەکە دووبارە دەست پێدەکاتەوە.
+   پاشخانی ئەپەکە ڕەنگێکی تەختە بۆیە بلێرەکە کاریگەریی بینراوی نەبوو. */
 .fab-wrapper .btn {
-  background: linear-gradient(135deg, rgba(66, 135, 247, 0.3), rgba(40, 104, 241, 0.4));
-  background-color: rgba(255, 255, 255, 0.4);
-  backdrop-filter: blur(10px);
-  /* درەوشانەوەی شینەکەی پشت */
-  -webkit-backdrop-filter: blur(10px);
+  background: linear-gradient(135deg, rgba(66, 135, 247, 0.55), rgba(40, 104, 241, 0.7));
+  background-color: rgba(255, 255, 255, 0.55);
   border: 1px solid rgba(226, 232, 240, 0.15);
   border-top: 1px solid rgba(255, 255, 255, 0.25);
   border-left: 1px solid rgba(255, 255, 255, 0.25);
@@ -2346,9 +2339,12 @@ i.moc-avatar {
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(15, 23, 42, 0.7);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  /* backdrop-filter لێرە لابرا — هۆکاری سەرەکیی ئەو پرتەیە بوو کاتێک مۆداڵ دەکرێتەوە:
+     بلێرێکی تەواوی شاشە بوو کە ئۆپاسیتییەکەی بۆ ٣٠٠ملی‌چرکە ئەنیمەیت دەکرا، واتە
+     GPU لە هەر فرەیمێکدا دەبوو تەواوی شاشە لە نوێوە بلێر بکاتەوە.
+     پاشخانەکە ٧٠٪ ڕەق بوو بۆیە بلێرەکە بەزەحمەت دەبینرا — لە جیاتی ئەوە
+     تۆزێک تۆختر کرا (0.78) تا هەمان کاریگەریی جیاکردنەوە بدات. */
+  background: rgba(15, 23, 42, 0.78);
   z-index: 2000;
   display: flex;
   align-items: center;
@@ -2500,10 +2496,10 @@ i.moc-avatar {
 }
 
 /* ================= گەلەری وێنە (Lightbox) ================= */
+/* بلێر لابرا — پاشخانەکە ٩٢٪ ڕەقە بۆیە نەدەبینرا، بەڵام لەگەڵ
+   ئەنیمەیشنی ئۆپاسیتیی .modal-overlay دەبووە هۆی پرتە کاتی کردنەوەی گەلەری */
 .gallery-modal {
-  background: rgba(0, 0, 0, 0.92) !important;
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
+  background: rgba(0, 0, 0, 0.94) !important;
   padding: 0;
 }
 
@@ -2555,7 +2551,7 @@ i.moc-avatar {
   width: 42px;
   height: 42px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.22);
   color: #fff;
   border: none;
   font-size: 24px;
@@ -2564,8 +2560,7 @@ i.moc-avatar {
   justify-content: center;
   cursor: pointer;
   z-index: 2115;
-  -webkit-backdrop-filter: blur(25px);
-  backdrop-filter: blur(25px);
+  /* بلێر لابرا: لەسەر پاشخانی ٩٤٪ ڕەش نەدەبینرا، بەڵام لەگەڵ ئەنیمەیشنی opacity پرتەی دروست دەکرد */
   box-shadow: 0 10px 20px -5px rgba(0, 0, 0, 0.2), 0 8px 5px -6px rgba(0, 0, 0, 0.2);
   transition: background 0.2s;
 }
@@ -2597,7 +2592,7 @@ i.moc-avatar {
   width: 44px;
   height: 44px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.22);
   color: #fff;
   border: none;
   font-size: 26px;
@@ -2606,8 +2601,7 @@ i.moc-avatar {
   justify-content: center;
   cursor: pointer;
   z-index: 2115;
-  -webkit-backdrop-filter: blur(25px);
-  backdrop-filter: blur(25px);
+  /* بلێر لابرا: لەسەر پاشخانی ٩٤٪ ڕەش نەدەبینرا، بەڵام لەگەڵ ئەنیمەیشنی opacity پرتەی دروست دەکرد */
   box-shadow: 0 10px 20px -5px rgba(0, 0, 0, 0.2), 0 8px 5px -6px rgba(0, 0, 0, 0.2);
   transition: opacity 0.2s, background 0.2s;
 }
