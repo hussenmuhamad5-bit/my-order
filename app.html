@@ -270,6 +270,8 @@
                         style="display:none;">جزدانەکان</button>
                     <button class="magic-tab" onclick="switchAdminTab('cities', this)" id="tab-cities"
                         style="display:none;">شارەکان</button>
+                    <button class="magic-tab" onclick="switchAdminTab('trash', this)" id="tab-trash"
+                        style="display:none;">تەنەکەی خۆڵ</button>
                 </div>
             </div>
 
@@ -682,6 +684,25 @@
                     </div>
                     <h4 style="margin:0 0 10px 0; color:#333;">لیستی شارەکان</h4>
                     <div id="admin-cities-list"></div>
+                </div>
+            </div>
+
+            <!-- تەنەکەی خۆڵ -->
+            <div id="section-trash" style="display: none;">
+                <div class="trash-head">
+                    <div class="trash-note">
+                        <i class='bx bx-info-circle'></i>
+                        <span>هەر شتێک بسڕدرێتەوە <b>٣٠ ڕۆژ</b> لێرە دەمێنێتەوە، پاشان بۆ هەمیشە دەسڕدرێتەوە.</span>
+                    </div>
+                    <div class="trash-filters" id="trash-filters">
+                        <button type="button" class="trash-chip active" data-trash-filter="all" onclick="setTrashFilter('all', this)">هەموو</button>
+                        <button type="button" class="trash-chip" data-trash-filter="orders" onclick="setTrashFilter('orders', this)">ئۆردەر</button>
+                        <button type="button" class="trash-chip" data-trash-filter="employees" onclick="setTrashFilter('employees', this)">کلیل</button>
+                        <button type="button" class="trash-chip" data-trash-filter="cities" onclick="setTrashFilter('cities', this)">شار</button>
+                    </div>
+                </div>
+                <div class="container" id="trash-container">
+                    <div id="trash-list"></div>
                 </div>
             </div>
         </div>
@@ -1123,6 +1144,7 @@
                     { key: 'manage_wallets', type: 'scope', label: 'بەڕێوەبردنی جزدان (زیاد/کەم)' },
                     { key: 'manage_all_keys', type: 'toggle', label: 'چاکسازی/بینینی کلیلی هەموان' },
                     { key: 'manage_cities', type: 'toggle', label: 'بەڕێوەبردنی شارەکان' },
+                    { key: 'manage_trash', type: 'toggle', label: 'تەنەکەی خۆڵ (بینین و گەڕاندنەوە)' },
                 ]
             },
         ];
@@ -1141,6 +1163,7 @@
             manage_wallets: 'زیادکردن/کەمکردنی پارە لە جزدانی ئەندامان. مەترسیدارە — تیم = تەنها ئەندامەکانی خۆی، هەموان = هەمووان.',
             manage_all_keys: 'بینین و چاکسازی کلیلی هەموو بەکارهێنەران (نەک تەنها ئەوانەی خۆی دروستی کردوون). دەسەڵاتێکی زۆر بەهێزە.',
             manage_cities: 'زیادکردنی شار و دیاریکردنی نرخی شۆفێر و ئەندام. بە کوژاندنەوە: بەشی شارەکان نابینێت.',
+            manage_trash: 'کردنەوەی تەنەکەی خۆڵ، بینینی هەموو شتە سڕاوەکان و گەڕاندنەوەیان. پاشا هەمیشە ئەم دەسەڵاتەی هەیە.',
             // ژێرەکان و خانەکان
             st_delivered: 'ڕێگە دەدات ئۆردەر بکرێت بە «گەیشتووە» (پارە دابەش دەکات).',
             st_returned: 'ڕێگە دەدات ئۆردەر بکرێت بە «گەڕاوەتەوە» (پارە دەگەڕێنێتەوە).',
@@ -1148,10 +1171,10 @@
             st_ret2del: 'ڕێگە دەدات ئۆردەری گەڕاوە بگۆڕدرێت بۆ گەیشتوو.',
         };
 
-        const PERM_KEYS_ALL = ['create_key', 'delete_key', 'view_orders', 'edit_order', 'delete_order', 'change_status', 'st_delivered', 'st_returned', 'st_del2ret', 'st_ret2del', 'distribute', 'pf_driver', 'pf_manager', 'pf_supervisor', 'pf_consultant', 'pf_member', 'pf_savings', 'view_savings', 'set_profit_rates', 'manage_wallets', 'manage_all_keys', 'manage_cities'];
+        const PERM_KEYS_ALL = ['create_key', 'delete_key', 'view_orders', 'edit_order', 'delete_order', 'change_status', 'st_delivered', 'st_returned', 'st_del2ret', 'st_ret2del', 'distribute', 'pf_driver', 'pf_manager', 'pf_supervisor', 'pf_consultant', 'pf_member', 'pf_savings', 'view_savings', 'set_profit_rates', 'manage_wallets', 'manage_all_keys', 'manage_cities', 'manage_trash'];
         const PERM_SCOPE_KEYS = ['view_orders', 'edit_order', 'delete_order', 'change_status', 'distribute', 'set_profit_rates', 'manage_wallets'];
         const PERM_PROFIT_KEYS = ['pf_driver', 'pf_manager', 'pf_supervisor', 'pf_consultant', 'pf_member', 'pf_savings'];
-        const PERM_TOGGLE_KEYS = ['create_key', 'delete_key', 'st_delivered', 'st_returned', 'st_del2ret', 'st_ret2del', 'view_savings', 'manage_all_keys', 'manage_cities'];
+        const PERM_TOGGLE_KEYS = ['create_key', 'delete_key', 'st_delivered', 'st_returned', 'st_del2ret', 'st_ret2del', 'view_savings', 'manage_all_keys', 'manage_cities', 'manage_trash'];
 
         // دەسەڵاتی بنەڕەتی هەر پلەیەک (فۆرماتی نوێ) — کلیلە کۆنەکان ئەمە وەردەگرن
         function defaultPermsForRole(role) {
@@ -1167,7 +1190,8 @@
                 return allOn(Object.assign({
                     create_key: true, delete_key: true, view_orders: 'all', edit_order: 'all', delete_order: 'all',
                     change_status: 'all', distribute: 'all', view_savings: true,
-                    set_profit_rates: 'all', manage_wallets: 'all', manage_all_keys: true, manage_cities: true
+                    set_profit_rates: 'all', manage_wallets: 'all', manage_all_keys: true, manage_cities: true,
+                    manage_trash: true
                 }, allStatus, fullProfit));
             }
             if (role === 'بەڕێوەبەر') {
@@ -1226,7 +1250,8 @@
             if (userRole === "پاشا") return true;
             switch (perm) {
                 case 'manage_employees': return permOn('create_key') || permOn('manage_all_keys');
-                case 'access_admin': return permOn('create_key') || permOn('manage_all_keys') || permOn('manage_cities') || permScope('set_profit_rates') !== 'none' || permScope('manage_wallets') !== 'none';
+                case 'access_admin': return permOn('create_key') || permOn('manage_all_keys') || permOn('manage_cities') || permOn('manage_trash') || permScope('set_profit_rates') !== 'none' || permScope('manage_wallets') !== 'none';
+                case 'manage_trash': return permOn('manage_trash');
                 case 'view_all_orders': return permScope('view_orders') === 'all';
                 case 'view_all_wallets': return permScope('set_profit_rates') !== 'none' || permScope('manage_wallets') !== 'none';
                 case 'manage_cities': return permOn('manage_cities');
@@ -1646,6 +1671,8 @@
 
             // بارکردنی سنووری تیم (ژێردەستەکان) بۆ جێبەجێکردنی مەودای دەسەڵاتەکان
             loadTeamScope();
+            // کۆدی کلیلە سڕاوەکان — بۆ نیشانەی «خاوەنەکەی سڕاوەتەوە» لەسەر ئۆردەرەکان
+            refreshDeletedOwners();
 
             document.getElementById('profile-name').innerText = userName;
             document.getElementById('profile-role').innerText = userRole;
@@ -1739,6 +1766,8 @@
                     if (tabProfits) tabProfits.style.display = can('view_all_wallets') ? 'inline-block' : 'none';
                     if (tabWallets) tabWallets.style.display = can('view_all_wallets') ? 'inline-block' : 'none';
                     if (tabCities) tabCities.style.display = can('manage_cities') ? 'inline-block' : 'none';
+                    let tabTrash = document.getElementById('tab-trash');
+                    if (tabTrash) tabTrash.style.display = can('manage_trash') ? 'inline-block' : 'none';
                 } else {
                     adminNavBtn.style.display = "none";
                 }
@@ -3237,15 +3266,143 @@
             ${reasonInfoHtml}
             ${changerInfoHtml}
             ${statusChangerHtml}
+            <div class="detail-section" style="margin-top:14px;">
+                <div class="detail-label"><i class='bx bx-history'></i> مێژووی کردارەکان</div>
+                <div id="order-log-box" class="order-log-box"></div>
+            </div>
             ${actionButtonsHtml}
         `;
             document.getElementById('order-details-modal').classList.add('show');
 
+            loadOrderLogs(o.id);
             if (!isOwner && canViewSeller) loadSellerInfo(o.seller_code);
+            else if (isOwnerDeleted(o.seller_code)) showOwnerDeletedBanner(o.seller_code);
+        }
+
+        // نیشانەی «خاوەنەکەی سڕاوەتەوە» کاتێک بۆکسی فرۆشیار پیشان نادرێت
+        async function showOwnerDeletedBanner(sellerCode) {
+            const body = document.getElementById('modal-details-body');
+            if (!body || document.getElementById('owner-deleted-banner')) return;
+            const wrap = document.createElement('div');
+            wrap.id = 'owner-deleted-banner';
+            wrap.innerHTML = await deletedOwnerNotice(sellerCode);
+            body.insertBefore(wrap, body.firstChild);
+        }
+
+        // ============================================================
+        // پیشاندانی مێژووی کردارەکانی ئۆردەر
+        // ============================================================
+        const LOG_ACTION_META = {
+            create:     { icon: 'bx-plus-circle',   color: '#2481cc', label: 'دروستکردن' },
+            edit:       { icon: 'bx-edit-alt',      color: '#f39c12', label: 'دەستکاری' },
+            status:     { icon: 'bx-transfer',      color: '#8b5cf6', label: 'گۆڕینی حاڵەت' },
+            distribute: { icon: 'bx-check-circle',  color: '#10b981', label: 'گەیشتن و دابەشکردن' },
+            delete:     { icon: 'bx-trash',         color: '#dc3545', label: 'سڕینەوە' }
+        };
+
+        // 2026-07-27T14:32:05Z → «2026-07-27 · 2:32 د.ن»
+        function formatLogTime(iso) {
+            try {
+                const d = new Date(iso);
+                if (isNaN(d.getTime())) return String(iso || '');
+                const date = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+                let h = d.getHours();
+                const m = String(d.getMinutes()).padStart(2, '0');
+                const suffix = h < 12 ? 'پ.ن' : 'د.ن';
+                if (h === 0) h = 12; else if (h > 12) h -= 12;
+                return `${date} · ${h}:${m} ${suffix}`;
+            } catch (e) { return String(iso || ''); }
+        }
+
+        async function loadOrderLogs(orderId) {
+            const box = document.getElementById('order-log-box');
+            if (!box) return;
+            box.innerHTML = `<div class="order-log-empty"><i class='bx bx-loader-alt bx-spin'></i> بارکردن...</div>`;
+            try {
+                const { data, error } = await supabase.from('order_logs')
+                    .select('*')
+                    .eq('order_id', String(orderId))
+                    .order('id', { ascending: false })
+                    .limit(50);
+                if (error) throw error;
+
+                if (!data || data.length === 0) {
+                    box.innerHTML = `<div class="order-log-empty"><i class='bx bx-info-circle'></i> هێشتا هیچ کردارێک تۆمار نەکراوە</div>`;
+                    return;
+                }
+
+                box.innerHTML = data.map(l => {
+                    const meta = LOG_ACTION_META[l.action] || { icon: 'bx-dots-horizontal-rounded', color: '#64748b', label: l.action };
+                    const who = histEsc(l.user_name || l.user_code || 'نەزانراو');
+                    const detail = histEsc(l.detail || meta.label);
+                    const arrow = (l.from_status && l.to_status && l.from_status !== l.to_status)
+                        ? `<div class="olog-status">
+                             <span class="olog-chip old">${histEsc(l.from_status)}</span>
+                             <i class='bx bx-left-arrow-alt'></i>
+                             <span class="olog-chip new">${histEsc(l.to_status)}</span>
+                           </div>` : '';
+                    return `<div class="olog-row">
+                        <span class="olog-dot" style="background:${meta.color}1f; color:${meta.color};"><i class='bx ${meta.icon}'></i></span>
+                        <div class="olog-body">
+                            <div class="olog-top"><b>${who}</b> <span class="olog-tag" style="color:${meta.color}; background:${meta.color}14;">${histEsc(meta.label)}</span></div>
+                            <div class="olog-detail">${detail}</div>
+                            ${arrow}
+                            <div class="olog-time"><i class='bx bx-time-five'></i> ${histEsc(formatLogTime(l.created_at))}</div>
+                        </div>
+                    </div>`;
+                }).join('');
+            } catch (e) {
+                console.warn('loadOrderLogs:', e);
+                box.innerHTML = `<div class="order-log-empty"><i class='bx bx-error-circle'></i> نەتوانرا مێژوو باربکرێت</div>`;
+            }
         }
 
         // کاشی زانیاری فرۆشیار — تەنها یەکجار بار دەکرێت بۆ هەر فرۆشیارێک
         let sellerInfoCache = {};
+
+        // کۆدی ئەو کلیلانەی سڕاونەتەوە (بۆ نیشانەی «خاوەنەکەی سڕاوەتەوە»)
+        let deletedOwnerCodes = new Set();
+
+        async function refreshDeletedOwners() {
+            try {
+                const { data } = await supabase.from('trash')
+                    .select('record_id')
+                    .eq('source_table', 'employees');
+                deletedOwnerCodes = new Set((data || []).map(r => String(r.record_id)));
+            } catch (e) { console.warn('refreshDeletedOwners:', e); }
+        }
+
+        function isOwnerDeleted(sellerCode) {
+            return deletedOwnerCodes.has(String(sellerCode || ''));
+        }
+
+        // پەیامی «خاوەنی ئەم ئۆردەرە ئەکاونتی سڕاوەتەوە» لەگەڵ وردەکاری
+        async function deletedOwnerNotice(sellerCode) {
+            let who = String(sellerCode || '');
+            let when = '';
+            let byWhom = '';
+            let daysLeft = null;
+            try {
+                const { data } = await supabase.from('trash')
+                    .select('label, deleted_at, deleted_by_name, expires_at')
+                    .eq('source_table', 'employees')
+                    .eq('record_id', String(sellerCode))
+                    .limit(1);
+                if (data && data[0]) {
+                    who = data[0].label || who;
+                    when = formatLogTime(data[0].deleted_at);
+                    byWhom = data[0].deleted_by_name || '';
+                    daysLeft = trashDaysLeft(data[0].expires_at);
+                }
+            } catch (e) { }
+
+            return `<div class="owner-deleted-box">
+                <div class="odb-head"><i class='bx bx-user-x'></i> خاوەنی ئەم ئۆردەرە ئەکاونتی سڕاوەتەوە</div>
+                <div class="odb-line"><i class='bx bx-key'></i> ${histEsc(who)}</div>
+                ${when ? `<div class="odb-line"><i class='bx bx-time-five'></i> ${histEsc(when)}${byWhom ? ' — لەلایەن ' + histEsc(byWhom) : ''}</div>` : ''}
+                ${daysLeft !== null ? `<div class="odb-line"><i class='bx bx-undo'></i> ${daysLeft > 0 ? `تا ${daysLeft} ڕۆژی تر دەکرێت لە تەنەکەی خۆڵ بگەڕێتەوە` : 'ئەمڕۆ بۆ هەمیشە دەسڕدرێتەوە'}</div>` : ''}
+            </div>`;
+        }
 
         // بارکردن و پیشاندانی زانیاری فرۆشیار و سلسیلەی سەرۆکایەتییەکەی
         async function loadSellerInfo(sellerCode) {
@@ -3269,7 +3426,11 @@
             </div>`;
             try {
                 const { data: seller } = await supabase.from('employees').select('*').eq('code', sellerCode).single();
-                if (!seller) { box.innerHTML = ""; return; }
+                // فرۆشیارەکە نەدۆزرایەوە — ڕەنگە کلیلەکەی سڕابێتەوە
+                if (!seller) {
+                    box.innerHTML = await deletedOwnerNotice(sellerCode);
+                    return;
+                }
 
                 let codes = [seller.manager, seller.admin, seller.consultant].filter(Boolean);
                 let nameMap = {};
@@ -3335,6 +3496,66 @@
                 let el2 = document.getElementById(listId);
                 if (el2) el2.scrollTop = saved;
             });
+        }
+
+        // ============================================================
+        // مێژووی کردارەکانی ئۆردەر — کێ چی کرد و کەی
+        // هەرگیز ڕێگری لە کردارەکە ناکات: ئەگەر تۆمارکردن شکستی هێنا،
+        // تەنها لە کۆنسۆڵ دەنووسرێت و کارەکە بەردەوام دەبێت.
+        // ============================================================
+        async function logOrderAction(order, action, opts) {
+            try {
+                opts = opts || {};
+                const oid = String((order && (order.id != null ? order.id : order)) || '');
+                if (!oid) return;
+                await supabase.from('order_logs').insert([{
+                    order_id: oid,
+                    order_code: (order && order.order_code) ? String(order.order_code) : null,
+                    action: action,
+                    detail: opts.detail || null,
+                    from_status: opts.from || null,
+                    to_status: opts.to || null,
+                    user_code: currentUser ? String(currentUser.code) : null,
+                    user_name: userName || null
+                }]);
+            } catch (e) {
+                console.warn('logOrderAction:', e);
+            }
+        }
+
+        // بەراوردی ئۆردەری کۆن و نوێ → لیستی ئەوەی گۆڕاوە
+        const ORDER_FIELD_LABELS = {
+            customer_name: 'ناوی کڕیار',
+            city: 'شار',
+            address: 'ناونیشان',
+            phone1: 'مۆبایل',
+            phone2: 'مۆبایلی دووەم',
+            socials: 'هەژمارە کۆمەڵایەتییەکان',
+            item_names: 'کاڵاکان',
+            item_qtys: 'بڕی کاڵاکان',
+            item_prices: 'نرخی کاڵاکان',
+            items_total: 'کۆی کاڵاکان',
+            delivery_price: 'نرخی گەیاندن',
+            grand_total: 'کۆی گشتی',
+            amount_received: 'بڕی وەرگیراو',
+            member_profit: 'قازانجی ئەندام',
+            notes: 'تێبینی',
+            image_url: 'وێنەکان'
+        };
+
+        function diffOrderFields(oldO, newO) {
+            const out = [];
+            if (!oldO) return out;
+            Object.keys(ORDER_FIELD_LABELS).forEach(k => {
+                const a = oldO[k] == null ? '' : String(oldO[k]).trim();
+                const b = newO[k] == null ? '' : String(newO[k]).trim();
+                if (a === b) return;
+                // ژمارەکان بە بەهای ژمارەیی بەراورد دەکرێن (١٠٠٠ و 1000.0 وەک یەک)
+                const na = parseFloat(a), nb = parseFloat(b);
+                if (!isNaN(na) && !isNaN(nb) && na === nb) return;
+                out.push(ORDER_FIELD_LABELS[k]);
+            });
+            return out;
         }
 
         async function updateOrderStatus(orderId) {
@@ -3428,6 +3649,10 @@
                         if (revertTxs.length > 0) await supabase.from('transactions').insert(revertTxs);
                     }
                     await supabase.from('orders').update({ status: newStatus, return_reason: reason, status_changed_by: userName }).eq('id', orderId);
+                    await logOrderAction(o, 'status', {
+                        from: o.status, to: newStatus,
+                        detail: `ئۆردەرەکەی کردە گەڕاوە و پارەکان بڕدران. هۆکار: ${reason}`
+                    });
                     showToast("حاڵەت گۆڕدرا و پارەکان بڕدران!", "success");
                     refreshOrdersKeepScroll();
                 } catch (e) { showToast("هەڵە لە گەڕانەوەدا ڕوویدا", "error"); }
@@ -3439,6 +3664,10 @@
             showToast("خەریکی نوێکردنەوە...", "loading");
             try {
                 await supabase.from('orders').update({ status: newStatus, return_reason: reason, status_changed_by: userName }).eq('id', orderId);
+                await logOrderAction(o, 'status', {
+                    from: o ? o.status : null, to: newStatus,
+                    detail: `حاڵەتی گۆڕی بۆ «${newStatus}»` + (reason ? ` — هۆکار: ${reason}` : '')
+                });
                 showToast("حاڵەت گۆڕدرا!", "success");
                 closeModal(null, 'order-details-modal');
                 refreshOrdersKeepScroll();
@@ -3465,10 +3694,15 @@
             showToast("خەریکی سڕینەوە...", "loading");
 
             try {
-                const { error } = await supabase.from('orders').delete().eq('id', orderId);
-                if (error) throw error;
+                // پێش سڕینەوە تۆمار دەکرێت — تا دیار بێت کێ سڕیویەتییەوە
+                await logOrderAction(ordDel || { id: orderId }, 'delete', {
+                    from: ordDel ? ordDel.status : null,
+                    detail: 'ئۆردەرەکەی سڕییەوە'
+                });
 
-                showToast("🗑️ بە سەرکەوتوویی سڕایەوە!", "success");
+                await deleteWithActor('orders', orderId);
+
+                showToast("🗑️ سڕایەوە — بۆ ٣٠ ڕۆژ لە تەنەکەی خۆڵدایە", "success");
 
                 refreshOrdersKeepScroll();
             } catch (err) {
@@ -3657,7 +3891,7 @@
 
             try {
                 if (editingOrderId) {
-                    const { error } = await supabase.from('orders').update({
+                    const updatedFields = {
                         address: address,
                         city: city,
                         customer_name: customerName,
@@ -3674,9 +3908,25 @@
                         amount_received: amountReceived,
                         member_profit: memberProfit,
                         notes: notes
-                    }).eq('id', editingOrderId);
+                    };
+
+                    // دۆخی پێش دەستکاری — بۆ زانینی ئەوەی چی گۆڕا
+                    const beforeEdit = allGlobalOrdersData[editingOrderId] || null;
+
+                    const { error } = await supabase.from('orders').update(updatedFields).eq('id', editingOrderId);
 
                     if (error) throw error;
+
+                    const changed = diffOrderFields(beforeEdit, updatedFields);
+                    await logOrderAction(
+                        beforeEdit || { id: editingOrderId },
+                        'edit',
+                        {
+                            detail: changed.length
+                                ? 'دەستکاری کرد: ' + changed.join('، ')
+                                : 'ئۆردەرەکەی پاشەکەوت کردەوە (هیچ گۆڕانکارییەک نەبوو)'
+                        }
+                    );
                     showToast("بە سەرکەوتوویی نوێکرایەوە!", "success");
 
                 } else {
@@ -3694,7 +3944,7 @@
                     hours = String(hours).padStart(2, '0');
                     let fullDateString = `${year}-${month}-${day} ${hours}:${minutes}:${seconds} ${ampm}`;
 
-                    const { error } = await supabase.from('orders').insert([{
+                    const { data: created, error } = await supabase.from('orders').insert([{
                         date: fullDateString,
                         seller_name: receiptDisplayName(),
                         seller_code: currentUser.code,
@@ -3718,9 +3968,14 @@
                         source: "سایت",
                         tg_info: "",
                         status: "ئامادە دەکرێت"
-                    }]);
+                    }]).select('id, order_code');
 
                     if (error) throw error;
+                    const newRow = (created && created[0]) ? created[0] : { id: null, order_code: orderCode };
+                    await logOrderAction(newRow, 'create', {
+                        to: "ئامادە دەکرێت",
+                        detail: "ئۆردەرەکەی دروستکرد"
+                    });
                     showToast("بە سەرکەوتوویی تۆمار کرا!", "success");
                 }
 
@@ -4908,6 +5163,7 @@
             document.getElementById('section-profits').style.display = 'none';
             document.getElementById('section-wallets').style.display = 'none';
             document.getElementById('section-cities').style.display = 'none';
+            document.getElementById('section-trash').style.display = 'none';
 
             if (tabName === 'create') {
                 document.getElementById('section-create-code').style.display = 'block';
@@ -4925,6 +5181,9 @@
                 filterWalletUsers();
             } else if (tabName === 'cities') {
                 document.getElementById('section-cities').style.display = 'flex';
+            } else if (tabName === 'trash') {
+                document.getElementById('section-trash').style.display = 'flex';
+                loadTrash();
             }
         }
 
@@ -5645,11 +5904,44 @@
                 }
             }
 
-            if (confirm("⚠️ دڵنیایت دەتەوێت ئەم کارمەندە بسڕیتەوە؟")) {
+            // ئاگادارکردنەوەی ورد: چەند ئۆردەر و چەند پارەی هەیە
+            let warnLines = [];
+            let ordersOfKey = 0;
+            try {
+                const { data: info } = await supabase.from('employees')
+                    .select('full_name, balance, savings').eq('code', code).single();
+                const { count } = await supabase.from('orders')
+                    .select('id', { count: 'exact', head: true }).eq('seller_code', code);
+                ordersOfKey = count || 0;
+
+                const nm = (info && info.full_name) ? info.full_name : code;
+                warnLines.push(`⚠️ سڕینەوەی کلیلی «${nm}»`);
+                warnLines.push('');
+                if (ordersOfKey > 0) {
+                    warnLines.push(`📦 ${ordersOfKey} ئۆردەری هەیە`);
+                    warnLines.push(`   ئۆردەرەکان ناسڕدرێنەوە، بەڵام وەک «خاوەنەکەی سڕاوەتەوە» نیشان دەکرێن.`);
+                }
+                const bal = parseFloat((info && info.balance) || 0);
+                const sav = parseFloat((info && info.savings) || 0);
+                if (bal !== 0) warnLines.push(`💰 باڵانس: ${bal.toLocaleString('en-US')} دینار`);
+                if (sav !== 0) warnLines.push(`🏦 پاشەکەوت: ${sav.toLocaleString('en-US')} دینار`);
+                if (ordersOfKey === 0 && bal === 0 && sav === 0) {
+                    warnLines.push('ئەم کلیلە هیچ ئۆردەر و پارەیەکی نییە.');
+                }
+                warnLines.push('');
+                warnLines.push('🗑️ بۆ ٣٠ ڕۆژ لە تەنەکەی خۆڵدا دەمێنێتەوە و دەکرێت بگەڕێتەوە.');
+                warnLines.push('');
+                warnLines.push('دڵنیایت؟');
+            } catch (e) {
+                warnLines = ["⚠️ دڵنیایت دەتەوێت ئەم کارمەندە بسڕیتەوە؟", "", "بۆ ٣٠ ڕۆژ لە تەنەکەی خۆڵدا دەمێنێتەوە."];
+            }
+
+            if (confirm(warnLines.join('\n'))) {
                 try {
-                    const { error } = await supabase.from('employees').delete().eq('code', code);
-                    if (error) throw error;
-                    showToast("🗑️ بە سەرکەوتوویی سڕایەوە!", "success");
+                    await deleteWithActor('employees', code);
+                    showToast(ordersOfKey > 0
+                        ? `🗑️ سڕایەوە — ${ordersOfKey} ئۆردەری وەک «خاوەنی سڕاو» نیشان کران`
+                        : "🗑️ سڕایەوە — بۆ ٣٠ ڕۆژ لە تەنەکەی خۆڵدایە", "success");
                     document.getElementById('edit-section').style.display = "none";
                     document.getElementById('search-code-input').value = "";
                     document.getElementById('search-code-input').removeAttribute('data-code');
@@ -6367,13 +6659,151 @@
             } catch (e) { showToast("هەڵە هەیە", "error"); }
         }
 
+        // ============================================================
+        // تەنەکەی خۆڵ
+        // گرتنەوەی شتە سڕاوەکان لە ئاستی داتابەیس ڕوودەدات (تریگەر)، بۆیە
+        // سڕینەوە لە هەر کڵاینتێکەوە بێت دەگیرێت. ئەم بەشە تەنها پیشاندان
+        // و گەڕاندنەوەیە.
+        // ============================================================
+        let trashFilter = 'all';
+        let trashCache = [];
+
+        const TRASH_META = {
+            orders:    { icon: 'bx-package',      color: '#2481cc', label: 'ئۆردەر' },
+            employees: { icon: 'bx-key',          color: '#8b5cf6', label: 'کلیل' },
+            cities:    { icon: 'bx-map-pin',      color: '#10b981', label: 'شار' }
+        };
+
+        // سڕینەوە بە تۆمارکردنی ناوی ئەو کەسەی ئەنجامی دەدات.
+        // سڕینەوە و ناوەکە لە یەک تڕانزاکشندان، بۆیە هەرگیز لێک جیا نابنەوە.
+        async function deleteWithActor(table, id) {
+            const { data, error } = await supabase.rpc('delete_with_actor', {
+                p_table: table,
+                p_id: String(id),
+                p_code: currentUser ? String(currentUser.code) : null,
+                p_name: userName || null
+            });
+            if (error) throw error;
+            if (data && String(data).startsWith('error')) throw new Error(String(data));
+            return data;
+        }
+
+        function trashDaysLeft(expiresAt) {
+            const ms = new Date(expiresAt).getTime() - Date.now();
+            return Math.max(0, Math.ceil(ms / 86400000));
+        }
+
+        function setTrashFilter(kind, el) {
+            trashFilter = kind;
+            document.querySelectorAll('#trash-filters .trash-chip').forEach(c => c.classList.remove('active'));
+            if (el) el.classList.add('active');
+            renderTrash();
+        }
+
+        async function loadTrash() {
+            const box = document.getElementById('trash-list');
+            if (!box) return;
+            if (!can('manage_trash')) {
+                box.innerHTML = `<div class="trash-empty"><i class='bx bx-lock-alt'></i><p>دەسەڵاتت نییە بۆ بینینی تەنەکەی خۆڵ</p></div>`;
+                return;
+            }
+
+            box.innerHTML = `<div class="trash-empty"><i class='bx bx-loader-alt bx-spin'></i><p>بارکردن...</p></div>`;
+            try {
+                // پاککردنەوەی ئەوانەی ٣٠ ڕۆژیان بەسەرچووە — هەر جارێک دەکرێتەوە
+                try { await supabase.rpc('purge_expired_trash'); } catch (e) { console.warn('purge:', e); }
+
+                const { data, error } = await supabase.from('trash')
+                    .select('id, source_table, record_id, label, deleted_by, deleted_by_name, deleted_at, expires_at')
+                    .order('deleted_at', { ascending: false })
+                    .limit(300);
+                if (error) throw error;
+                trashCache = data || [];
+                renderTrash();
+            } catch (e) {
+                console.error('loadTrash:', e);
+                box.innerHTML = `<div class="trash-empty"><i class='bx bx-error-circle'></i><p>نەتوانرا تەنەکەی خۆڵ باربکرێت</p></div>`;
+            }
+        }
+
+        function renderTrash() {
+            const box = document.getElementById('trash-list');
+            if (!box) return;
+
+            const rows = trashCache.filter(r => trashFilter === 'all' || r.source_table === trashFilter);
+            if (rows.length === 0) {
+                box.innerHTML = `<div class="trash-empty"><i class='bx bx-trash'></i><p>${trashFilter === 'all' ? 'تەنەکەی خۆڵ بەتاڵە' : 'هیچ شتێک لەم جۆرە نییە'}</p></div>`;
+                return;
+            }
+
+            box.innerHTML = rows.map(r => {
+                const meta = TRASH_META[r.source_table] || { icon: 'bx-file', color: '#64748b', label: r.source_table };
+                const days = trashDaysLeft(r.expires_at);
+                const urgent = days <= 5;
+                return `<div class="trash-card">
+                    <span class="trash-ico" style="background:${meta.color}1a; color:${meta.color};"><i class='bx ${meta.icon}'></i></span>
+                    <div class="trash-body">
+                        <div class="trash-title">${histEsc(r.label || r.record_id)}</div>
+                        <div class="trash-sub">
+                            <span class="trash-type" style="color:${meta.color}; background:${meta.color}14;">${histEsc(meta.label)}</span>
+                            <span><i class='bx bx-user'></i> ${histEsc(r.deleted_by_name || r.deleted_by || 'نەزانراو')}</span>
+                        </div>
+                        <div class="trash-time"><i class='bx bx-time-five'></i> ${histEsc(formatLogTime(r.deleted_at))}</div>
+                        <div class="trash-left ${urgent ? 'urgent' : ''}">
+                            <i class='bx ${urgent ? 'bx-error' : 'bx-calendar'}'></i>
+                            ${days > 0 ? `${days} ڕۆژ ماوە` : 'ئەمڕۆ دەسڕدرێتەوە'}
+                        </div>
+                    </div>
+                    <button type="button" class="trash-restore" onclick="restoreTrashItem(${r.id}, this)">
+                        <i class='bx bx-undo'></i> گەڕاندنەوە
+                    </button>
+                </div>`;
+            }).join('');
+        }
+
+        async function restoreTrashItem(trashId, btn) {
+            if (!can('manage_trash')) { showToast("دەسەڵاتت نییە!", "error"); return; }
+            const item = trashCache.find(r => r.id === trashId);
+            if (!confirm(`دڵنیایت دەتەوێت «${item ? (item.label || item.record_id) : 'ئەمە'}» بگەڕێنیتەوە؟`)) return;
+
+            if (btn) { btn.disabled = true; btn.innerHTML = "<i class='bx bx-loader-alt bx-spin'></i>"; }
+            try {
+                const { data, error } = await supabase.rpc('restore_from_trash', { p_trash_id: trashId });
+                if (error) throw error;
+
+                if (data === 'ok') {
+                    showToast("بە سەرکەوتوویی گەڕێندرایەوە!", "success");
+                    // ئەگەر کلیلێک گەڕایەوە، لیستی ئەندامان نوێ بکەرەوە
+                    if (item && item.source_table === 'employees') {
+                        try { await loadTeamScope(); } catch (e) { }
+                    }
+                    if (item && item.source_table === 'cities') {
+                        try { await loadDBCities(); } catch (e) { }
+                    }
+                    await loadTrash();
+                } else if (data === 'exists') {
+                    showToast("ناتوانرێت بگەڕێتەوە — هەمان کۆد/ناسنامە دووبارە بەکارهاتووە", "error");
+                } else if (data === 'expired') {
+                    showToast("ماوەکەی بەسەرچووە", "error");
+                    await loadTrash();
+                } else {
+                    showToast("نەگەڕایەوە: " + String(data), "error");
+                }
+            } catch (e) {
+                console.error('restoreTrashItem:', e);
+                showToast("هەڵەیەک لە گەڕاندنەوەدا ڕوویدا", "error");
+            } finally {
+                if (btn) { btn.disabled = false; btn.innerHTML = "<i class='bx bx-undo'></i> گەڕاندنەوە"; }
+            }
+        }
+
         async function deleteCity(id) {
             if (!await ensureAuthorized('manage_cities')) return;
             if (!confirm("دڵنیایت؟")) return;
             showToast("سڕینەوە...", "loading");
             try {
-                await supabase.from('cities').delete().eq('id', id);
-                showToast("سڕایەوە", "success");
+                await deleteWithActor('cities', id);
+                showToast("سڕایەوە — بۆ ٣٠ ڕۆژ لە تەنەکەی خۆڵدایە", "success");
                 await loadDBCities();
                 renderAdminCities();
             } catch (e) { showToast("هەڵە هەیە", "error"); }
@@ -6741,6 +7171,10 @@
                 }
 
                 await supabase.from('orders').update({ status: "گەیشتووە", status_changed_by: userName }).eq('id', o.id);
+                await logOrderAction(o, 'distribute', {
+                    from: o.status, to: "گەیشتووە",
+                    detail: "ئۆردەرەکەی کردە گەیشتوو و قازانجەکانی دابەشکرد"
+                });
 
                 showToast("بە سەرکەوتوویی دابەشکرا!", "success");
                 closeModal(null, 'profit-distribution-modal');

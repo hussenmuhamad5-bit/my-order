@@ -1162,6 +1162,383 @@ h2 i,
 }
 
 /* =========================================
+   تەنەکەی خۆڵ
+   ========================================= */
+
+#section-trash {
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.trash-head {
+  flex-shrink: 0;
+  padding-bottom: 10px;
+}
+
+.trash-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  background: rgba(36, 129, 204, 0.06);
+  border: 1px solid rgba(36, 129, 204, 0.18);
+  color: #475569;
+  border-radius: var(--r-sm);
+  padding: 9px 11px;
+  font-size: var(--fs-sm);
+  line-height: 1.6;
+  margin-bottom: 10px;
+}
+
+.trash-note i {
+  color: var(--primary);
+  font-size: 16px;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.trash-filters {
+  display: flex;
+  gap: 7px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.trash-filters::-webkit-scrollbar {
+  display: none;
+}
+
+.trash-chip {
+  flex-shrink: 0;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  color: var(--text-secondary);
+  font-family: inherit;
+  font-size: var(--fs-xs);
+  font-weight: var(--font-semibold);
+  padding: 6px 14px;
+  border-radius: var(--r-full);
+  cursor: pointer;
+  transition: all 0.16s ease;
+}
+
+.trash-chip.active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+}
+
+#trash-container {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-bottom: 90px;
+  scrollbar-width: none;
+}
+
+#trash-container::-webkit-scrollbar {
+  display: none;
+}
+
+.trash-card {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  background: #fff;
+  border: 1px solid #e9eef4;
+  border-radius: var(--r-md);
+  padding: 12px;
+  margin-bottom: 10px;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+}
+
+.trash-ico {
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  border-radius: var(--r-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 21px;
+}
+
+.trash-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.trash-title {
+  font-size: var(--fs-md);
+  font-weight: var(--font-bold);
+  color: var(--text-main);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.trash-sub {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+  font-size: var(--fs-xs);
+  color: var(--text-secondary);
+}
+
+.trash-type {
+  font-weight: var(--font-bold);
+  padding: 2px 7px;
+  border-radius: var(--r-full);
+}
+
+.trash-time {
+  margin-top: 3px;
+  font-size: var(--fs-2xs);
+  color: #94a3b8;
+}
+
+.trash-left {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 5px;
+  font-size: var(--fs-2xs);
+  font-weight: var(--font-semibold);
+  color: #64748b;
+  background: #f1f5f9;
+  padding: 3px 8px;
+  border-radius: var(--r-full);
+}
+
+.trash-left.urgent {
+  color: #b91c1c;
+  background: #fef2f2;
+}
+
+.trash-restore {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(36, 129, 204, 0.1);
+  border: 1px solid rgba(36, 129, 204, 0.28);
+  color: var(--primary);
+  font-family: inherit;
+  font-size: var(--fs-xs);
+  font-weight: var(--font-bold);
+  padding: 8px 11px;
+  border-radius: var(--r-sm);
+  cursor: pointer;
+  transition: all 0.16s ease;
+}
+
+.trash-restore:active {
+  transform: scale(0.94);
+  background: rgba(36, 129, 204, 0.22);
+}
+
+.trash-restore:disabled {
+  opacity: 0.6;
+}
+
+.trash-empty {
+  text-align: center;
+  padding: 50px 20px;
+  color: #94a3b8;
+}
+
+.trash-empty i {
+  font-size: 42px;
+  opacity: 0.5;
+}
+
+.trash-empty p {
+  margin: 8px 0 0 0;
+  font-size: var(--fs-md);
+}
+
+/* ---- نیشانەی «خاوەنی ئۆردەرەکە سڕاوەتەوە» ---- */
+.owner-deleted-box {
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+  border-radius: var(--r-md);
+  padding: 12px 14px;
+  margin-bottom: 12px;
+}
+
+.odb-head {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: var(--fs-md);
+  font-weight: var(--font-bold);
+  color: #c2410c;
+  margin-bottom: 7px;
+}
+
+.odb-head i {
+  font-size: 18px;
+}
+
+.odb-line {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--fs-sm);
+  color: #9a3412;
+  line-height: 1.9;
+}
+
+.odb-line i {
+  font-size: 14px;
+  opacity: 0.8;
+  flex-shrink: 0;
+}
+
+/* =========================================
+   مێژووی کردارەکانی ئۆردەر (timeline)
+   ========================================= */
+
+.order-log-box {
+  background: #f8fafc;
+  border: 1px solid #e9eef4;
+  border-radius: var(--r-md);
+  padding: 4px 12px;
+  max-height: 300px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+}
+
+.order-log-box::-webkit-scrollbar {
+  display: none;
+}
+
+.order-log-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 18px 0;
+  font-size: var(--fs-sm);
+  color: #94a3b8;
+}
+
+.olog-row {
+  display: flex;
+  gap: 10px;
+  padding: 12px 0;
+  position: relative;
+}
+
+.olog-row + .olog-row {
+  border-top: 1px solid #eef2f7;
+}
+
+/* هێڵی وەسڵکەری کاتەکان */
+.olog-row:not(:last-child)::before {
+  content: '';
+  position: absolute;
+  top: 40px;
+  bottom: -2px;
+  right: 13px;
+  width: 2px;
+  background: #e6ecf3;
+  border-radius: 2px;
+}
+
+.olog-dot {
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  z-index: 1;
+}
+
+.olog-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.olog-top {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-wrap: wrap;
+  font-size: var(--fs-md);
+  color: var(--text-main);
+  margin-bottom: 3px;
+}
+
+.olog-tag {
+  font-size: var(--fs-2xs);
+  font-weight: var(--font-bold);
+  padding: 2px 7px;
+  border-radius: var(--r-full);
+}
+
+.olog-detail {
+  font-size: var(--fs-sm);
+  color: #475569;
+  line-height: 1.65;
+  word-break: break-word;
+}
+
+.olog-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+  flex-wrap: wrap;
+}
+
+.olog-status i {
+  color: #94a3b8;
+  font-size: 15px;
+}
+
+.olog-chip {
+  font-size: var(--fs-2xs);
+  font-weight: var(--font-semibold);
+  padding: 3px 9px;
+  border-radius: var(--r-full);
+  white-space: nowrap;
+}
+
+.olog-chip.old {
+  background: #f1f5f9;
+  color: #64748b;
+  text-decoration: line-through;
+  text-decoration-color: #cbd5e1;
+}
+
+.olog-chip.new {
+  background: rgba(36, 129, 204, 0.12);
+  color: var(--primary);
+}
+
+.olog-time {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 6px;
+  font-size: var(--fs-2xs);
+  color: #94a3b8;
+  direction: rtl;
+}
+
+.olog-time i {
+  font-size: 13px;
+}
+
+/* =========================================
    پانێڵی مێژوو (گەڕان + کاڵاکان)
    نەرم و هێمن — دەردەکەوێت بەبێ ئەوەی سەرنج بدزێت
    ========================================= */
