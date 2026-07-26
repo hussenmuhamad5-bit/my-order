@@ -143,7 +143,9 @@
 
         <div class="cart-wrapper">
             <label>سەبەتەی کاڵاکان</label>
-            <input type="text" id="item-name" placeholder="ناوی کاڵا (نموونە: قەڵەم)">
+            <div class="hist-anchor">
+                <input type="text" id="item-name" placeholder="ناوی کاڵا (نموونە: قەڵەم)" autocomplete="off">
+            </div>
             <div class="cart-row-flex">
                 <input type="number" id="item-price" placeholder="نرخی ١ دانە (دینار)">
                 <div class="qty-input-group">
@@ -185,8 +187,17 @@
                             stroke="#2481cc" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path>
                     </g>
                 </svg>
-                <p id="upload-status" style="margin: 0; color: #1e293b; font-weight: bold; font-size: 13px;">کلیک بکە بۆ
-                    دانانی وێنەکان</p>
+                <div id="upload-status" style="margin: 0; color: #1e293b; font-weight: bold; font-size: 13px;">کلیک بکە بۆ
+                    دانانی وێنەکان</div>
+
+                <!-- بارەکەی پێشکەوتنی گشتی (سەدی) -->
+                <div id="upload-progress-wrap" class="upload-progress" style="display:none;">
+                    <div class="upload-progress-head">
+                        <span id="upload-progress-label">ئەپلۆدکردن...</span>
+                        <span id="upload-progress-pct" class="upload-progress-pct">0%</span>
+                    </div>
+                    <div class="upload-progress-track"><span id="upload-progress-fill"></span></div>
+                </div>
 
                 <div id="image-previews-container"
                     style="display: flex; flex-wrap: wrap; gap: 10px; margin-top: 15px; width: 100%; justify-content: center;">
@@ -1987,16 +1998,12 @@
                 canvas.width = AV_OUT; canvas.height = AV_OUT;
                 let ctx = canvas.getContext('2d');
                 ctx.drawImage(avEditor.imgEl, srcX, srcY, srcSize, srcSize, 0, 0, AV_OUT, AV_OUT);
-                let blob = await new Promise(res => canvas.toBlob(res, 'image/jpeg', 0.8));
+                let blob = await canvasToBlob(canvas, 0.8);
+                canvas.width = canvas.height = 0;
+                if (!blob) throw new Error("نەتوانرا وێنەکە ئامادە بکرێت");
 
-                let formData = new FormData();
-                formData.append("image", new File([blob], "avatar.jpg", { type: 'image/jpeg' }));
-                formData.append("key", "D46aeed04460f87292aa90c209ae88d5");
-                let resp = await fetch("https://api.imgbb.com/1/upload", { method: "POST", body: formData });
-                let data = await resp.json();
-                if (!data || !data.success) throw new Error("upload failed");
-                // بەکارهێنانی لینکی بچووک (thumb/medium)ی imgbb بۆ خێرایی زیاتر، ئەگەرنا لینکی ئاسایی
-                let url = (data.data.thumb && data.data.thumb.url) || (data.data.medium && data.data.medium.url) || data.data.url;
+                // هەمان ڕێگای وێنەی ئۆردەر: Supabase سەرەکی، ImgBB پاشەکەوت
+                let url = await uploadImage(blob, "avatar.jpg", null);
 
                 await supabase.from('employees').update({ avatar: url }).eq('code', currentUser.code);
                 currentUser.avatar = url;
@@ -3010,6 +3017,7 @@
             cart = [];
             updateCartUI();
             uploadedImageUrls = [];
+            clearPendingUploads();
             renderImagePreviews();
         }
 
@@ -3564,6 +3572,7 @@
             } else {
                 uploadedImageUrls = [];
             }
+            clearPendingUploads();
             renderImagePreviews();
 
             let submitBtn = document.querySelector('#order-screen .btn[onclick="submitOrder()"]');
@@ -3598,9 +3607,8 @@
             let notesInput = document.getElementById('order-notes');
             let notes = notesInput.value.trim();
 
-            let uploadStatus = document.getElementById('upload-status');
-            if (uploadStatus && uploadStatus.innerText.includes("چاوەڕێ")) {
-                showToast("تکایە چاوەڕێ بکە تا وێنەکە بەتەواوی ئاپلۆد دەبێت!", "error");
+            if (typeof isUploadingImages === 'function' && isUploadingImages()) {
+                showToast("تکایە چاوەڕێ بکە تا وێنەکان بەتەواوی ئەپلۆد دەبن!", "error");
                 return;
             }
 
@@ -4079,6 +4087,268 @@
 
 
 
+        // ============================================================
+        // مێژووی گەڕان و کاڵاکان
+        // هەر ئەندامێک مێژووی خۆی هەیە (بەپێی کۆدەکەی) و لە ئامێرەکەی خۆی
+        // پاشەکەوت دەکرێت. کاڵاکان نرخی دواجاریشیان لەگەڵدایە بۆ پڕکردنەوەی خۆکار.
+        // ============================================================
+        const HIST_MAX_SEARCH = 12;
+        const HIST_MAX_ITEMS = 40;
+        const HIST_SHOW_SEARCH = 6;
+        const HIST_SHOW_ITEMS = 7;
+
+        function histKey(kind) {
+            const code = (currentUser && currentUser.code) ? currentUser.code : 'guest';
+            return 'hist_' + kind + '_' + code;
+        }
+        function histLoad(kind) {
+            try {
+                const a = JSON.parse(localStorage.getItem(histKey(kind)) || '[]');
+                return Array.isArray(a) ? a : [];
+            } catch (e) { return []; }
+        }
+        function histSave(kind, arr) {
+            try { localStorage.setItem(histKey(kind), JSON.stringify(arr)); } catch (e) { }
+        }
+
+        function histEsc(s) {
+            return String(s == null ? '' : s)
+                .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+        }
+
+        // بەشە هاوتاکە بە ڕەنگی سەرەکی دەردەخات
+        function histMark(text, q) {
+            const safe = histEsc(text);
+            if (!q) return safe;
+            const i = text.toLowerCase().indexOf(q.toLowerCase());
+            if (i < 0) return safe;
+            return histEsc(text.slice(0, i)) + '<b>' + histEsc(text.slice(i, i + q.length)) + '</b>' + histEsc(text.slice(i + q.length));
+        }
+
+        // ---------- مێژووی گەڕان (هەر شاشەیەک مێژووی جیای خۆی هەیە) ----------
+        function addSearchHistory(kind, q) {
+            q = String(q || '').trim();
+            if (q.length < 2) return;
+            const lower = q.toLowerCase();
+            // ئەو داواکارییە ناتەواوانە لادەبەن کە سەرەتای ئەمەن ("ئارا" → "ئاراس")
+            let arr = histLoad(kind).filter(e => {
+                const el = String(e.q || '').toLowerCase();
+                return el !== lower && !lower.startsWith(el);
+            });
+            arr.unshift({ q: q, t: Date.now() });
+            histSave(kind, arr.slice(0, HIST_MAX_SEARCH));
+        }
+
+        function removeSearchHistory(kind, q) {
+            histSave(kind, histLoad(kind).filter(e => String(e.q) !== q));
+        }
+
+        // ---------- مێژووی کاڵاکان ----------
+        function addItemHistory(name, price) {
+            name = String(name || '').trim();
+            if (!name) return;
+            let arr = histLoad('items');
+            const i = arr.findIndex(e => String(e.n || '').toLowerCase() === name.toLowerCase());
+            if (i > -1) {
+                arr[i].c = (arr[i].c || 1) + 1;
+                arr[i].p = price;
+                arr[i].t = Date.now();
+                arr[i].n = name;
+            } else {
+                arr.push({ n: name, p: price, c: 1, t: Date.now() });
+            }
+            // زۆر بەکارهاتووەکان سەرەوە، پاشان نوێترینەکان
+            arr.sort((a, b) => ((b.c || 1) - (a.c || 1)) || ((b.t || 0) - (a.t || 0)));
+            histSave('items', arr.slice(0, HIST_MAX_ITEMS));
+        }
+
+        function removeItemHistory(name) {
+            histSave('items', histLoad('items').filter(e => String(e.n) !== name));
+        }
+
+        // ---------- پانێڵی مێژوو (هاوبەش بۆ هەردووکیان) ----------
+        function histPanelFor(input) {
+            const anchor = input.closest('.hist-anchor') || input.parentElement;
+            let p = anchor.querySelector(':scope > .hist-panel');
+            if (!p) {
+                p = document.createElement('div');
+                p.className = 'hist-panel';
+                anchor.appendChild(p);
+            }
+            p._input = input;
+            return p;
+        }
+
+        function closeHistPanel(p) {
+            if (p) p.classList.remove('open');
+        }
+        function closeAllHistPanels() {
+            document.querySelectorAll('.hist-panel.open').forEach(closeHistPanel);
+        }
+
+        // داخستن بە دەستلێدان لە دەرەوە
+        document.addEventListener('pointerdown', function (e) {
+            document.querySelectorAll('.hist-panel.open').forEach(p => {
+                if (p.contains(e.target)) return;
+                if (p._input && p._input.contains(e.target)) return;
+                closeHistPanel(p);
+            });
+        }, true);
+
+        function renderHistPanel(p, opts) {
+            const rows = opts.rows;
+            if (!rows.length) { closeHistPanel(p); return; }
+
+            let html = `<div class="hist-head">
+                <span><i class='bx bx-time-five'></i> ${histEsc(opts.title)}</span>
+                <button type="button" class="hist-clear" data-hist-clear="1">پاککردنەوە</button>
+            </div>`;
+
+            rows.forEach(r => {
+                html += `<div class="hist-row" data-hist-pick="${histEsc(r.value)}">
+                    <span class="hist-ico"><i class='bx ${opts.icon}'></i></span>
+                    <span class="hist-txt">${r.label}</span>
+                    ${r.meta ? `<span class="hist-meta">${histEsc(r.meta)}</span>` : ''}
+                    <button type="button" class="hist-del" data-hist-del="${histEsc(r.value)}" aria-label="سڕینەوە"><i class='bx bx-x'></i></button>
+                </div>`;
+            });
+
+            p.innerHTML = html;
+            p.classList.add('open');
+
+            // pointerdown بەکاردێت نەک click — تا بۆکسەکە فۆکەس لەدەست نەدات
+            p.querySelectorAll('[data-hist-pick]').forEach(el => {
+                el.addEventListener('pointerdown', ev => {
+                    if (ev.target.closest('[data-hist-del]')) return;
+                    ev.preventDefault();
+                    opts.onPick(el.getAttribute('data-hist-pick'));
+                });
+            });
+            p.querySelectorAll('[data-hist-del]').forEach(el => {
+                el.addEventListener('pointerdown', ev => {
+                    ev.preventDefault();
+                    ev.stopPropagation();
+                    opts.onDelete(el.getAttribute('data-hist-del'));
+                });
+            });
+            const clearBtn = p.querySelector('[data-hist-clear]');
+            if (clearBtn) clearBtn.addEventListener('pointerdown', ev => {
+                ev.preventDefault();
+                opts.onClear();
+            });
+        }
+
+        // ---------- پەیوەندکردن بە بۆکسەکانەوە ----------
+        // هەموو بۆکسەکانی گەڕان کە مێژوویان هەیە
+        const SEARCH_HISTORY_INPUTS = [
+            { id: 'orders-search-input', kind: 'search_orders', onApply: 'applyOrderFilters' },
+            { id: 'edit-list-search', kind: 'search_edit', onApply: 'filterEditUsers' },
+            { id: 'search-profit-input', kind: 'search_profit', onApply: 'filterProfitUsers' },
+            { id: 'search-wallet-input', kind: 'search_wallet', onApply: 'filterWalletUsers' }
+        ];
+
+        function setupSmartSearch() {
+            SEARCH_HISTORY_INPUTS.forEach(setupSearchHistoryUI);
+            setupItemHistoryUI();
+        }
+
+        function setupSearchHistoryUI(cfg) {
+            const input = document.getElementById(cfg.id);
+            if (!input || input._histReady) return;
+            input._histReady = true;
+
+            // بۆکسەکە دەخرێتە ناو ئەنکەرێکەوە تا پانێڵەکە ڕێک لەژێری دابنیشێت
+            const group = input.closest('.search-group');
+            if (group && !group.classList.contains('hist-anchor')) group.classList.add('hist-anchor');
+
+            const apply = () => {
+                const fn = window[cfg.onApply];
+                if (typeof fn === 'function') { try { fn(); } catch (e) { } }
+            };
+
+            const show = () => {
+                const q = input.value.trim();
+                const rows = histLoad(cfg.kind)
+                    .filter(e => !q || String(e.q).toLowerCase().includes(q.toLowerCase()))
+                    .filter(e => String(e.q).toLowerCase() !== q.toLowerCase())
+                    .slice(0, HIST_SHOW_SEARCH)
+                    .map(e => ({ value: String(e.q), label: histMark(String(e.q), q) }));
+
+                renderHistPanel(histPanelFor(input), {
+                    title: 'گەڕانە پێشووەکان',
+                    icon: 'bx-search',
+                    rows: rows,
+                    onPick: v => {
+                        input.value = v;
+                        addSearchHistory(cfg.kind, v);
+                        closeAllHistPanels();
+                        apply();
+                    },
+                    onDelete: v => { removeSearchHistory(cfg.kind, v); show(); },
+                    onClear: () => { histSave(cfg.kind, []); closeAllHistPanels(); }
+                });
+            };
+
+            input.addEventListener('focus', show);
+            input.addEventListener('input', show);
+            input.addEventListener('blur', () => {
+                const v = input.value.trim();
+                if (v.length >= 2) addSearchHistory(cfg.kind, v);
+            });
+            input.addEventListener('keydown', e => {
+                if (e.key === 'Enter') {
+                    addSearchHistory(cfg.kind, input.value.trim());
+                    closeAllHistPanels();
+                    input.blur();
+                } else if (e.key === 'Escape') {
+                    closeAllHistPanels();
+                }
+            });
+        }
+
+        function setupItemHistoryUI() {
+            const input = document.getElementById('item-name');
+            if (!input || input._histReady) return;
+            input._histReady = true;
+
+            const show = () => {
+                const q = input.value.trim();
+                const rows = histLoad('items')
+                    .filter(e => !q || String(e.n).toLowerCase().includes(q.toLowerCase()))
+                    .filter(e => String(e.n).toLowerCase() !== q.toLowerCase())
+                    .slice(0, HIST_SHOW_ITEMS)
+                    .map(e => ({
+                        value: String(e.n),
+                        label: histMark(String(e.n), q),
+                        meta: (e.p || e.p === 0) ? Number(e.p).toLocaleString('en-US') + ' د.ع' : ''
+                    }));
+
+                renderHistPanel(histPanelFor(input), {
+                    title: 'کاڵا بەکارهاتووەکان',
+                    icon: 'bx-package',
+                    rows: rows,
+                    onPick: v => {
+                        const rec = histLoad('items').find(e => String(e.n) === v);
+                        input.value = v;
+                        // نرخی دواجار خۆکار پڕ دەکرێتەوە
+                        const priceEl = document.getElementById('item-price');
+                        if (priceEl && rec && (rec.p || rec.p === 0)) priceEl.value = rec.p;
+                        closeAllHistPanels();
+                        if (priceEl) priceEl.focus();
+                    },
+                    onDelete: v => { removeItemHistory(v); show(); },
+                    onClear: () => { histSave('items', []); closeAllHistPanels(); }
+                });
+            };
+
+            input.addEventListener('focus', show);
+            input.addEventListener('input', show);
+            input.addEventListener('keydown', e => {
+                if (e.key === 'Escape') closeAllHistPanels();
+            });
+        }
+
         function formatPhone(input) {
             let val = input.value.replace(/\D/g, '');
             if (!val.startsWith('07')) val = '07' + val.substring(2);
@@ -4105,6 +4375,8 @@
             let qty = parseInt(document.getElementById('item-qty').value);
             if (!name || isNaN(price) || isNaN(qty) || qty < 1) return;
             cart.push({ name: name, unitPrice: price, qty: qty });
+            try { addItemHistory(name, price); } catch (e) { }
+            try { closeAllHistPanels(); } catch (e) { }
             document.getElementById('item-name').value = '';
             document.getElementById('item-price').value = '';
             document.getElementById('item-qty').value = 1;
@@ -4160,113 +4432,434 @@
         // سیستەمی کۆمپرێس کردن و ئاپلۆدکردنی چەند وێنەیەک
         // ==========================================
 
-        // ١. فەنکشنی کۆمپرێس کردن (قەبارە بچووک دەکاتەوە بێ لەدەستدانی کواڵێتی زۆر)
-        function compressImage(file, maxWidth = 1200, quality = 0.7) {
-            return new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.readAsDataURL(file);
-                reader.onload = event => {
-                    const img = new Image();
-                    img.src = event.target.result;
-                    img.onload = () => {
-                        const canvas = document.createElement('canvas');
-                        let width = img.width;
-                        let height = img.height;
+        const IMG_BUCKET = "order-images";   // باکێتی Supabase Storage
+        const IMGBB_KEY = "D46aeed04460f87292aa90c209ae88d5"; // تەنها وەک پاشەکەوت
+        const IMG_MAX_DIM = 1280;        // ئەوپەڕی درێژی لای گەورە
+        const IMG_MAX_PIXELS = 12e6;     // سنووری کەنڤاس (iOS بەتاڵ دەیگەڕێنێتەوە ئەگەر تێپەڕێت)
+        const IMG_QUALITY = 0.72;
+        const IMG_SKIP_BELOW = 280 * 1024; // وێنەی لەمە بچووکتر کۆمپرێس ناکرێت
+        const UPLOAD_CONCURRENCY = 3;    // چەند وێنە پێکەوە بنێردرێن
+        const UPLOAD_TIMEOUT = 90000;
 
-                        if (width > maxWidth) {
-                            height = Math.round((height * maxWidth) / width);
-                            width = maxWidth;
-                        }
+        // وێنەکانی لە ئارادان: {id, thumb, progress, failed, file}
+        let pendingUploads = [];
+        let _pendingSeq = 0;
 
-                        canvas.width = width;
-                        canvas.height = height;
-                        const ctx = canvas.getContext('2d');
-                        ctx.drawImage(img, 0, 0, width, height);
+        function isUploadingImages() {
+            return pendingUploads.some(p => !p.failed);
+        }
 
-                        canvas.toBlob(blob => {
-                            resolve(new File([blob], file.name, { type: 'image/jpeg', lastModified: Date.now() }));
-                        }, 'image/jpeg', quality);
-                    };
-                    img.onerror = error => reject(error);
+        // ---------- ١. کردنەوەی وێنە (خێرا + هەموو ئامێرەکان) ----------
+        // createImageBitmap خێراترینە و ئاراستەی EXIF ڕاست دەکاتەوە.
+        // ئەگەر پشتگیری نەکرا (Safariـی کۆن)، دەگەڕێتەوە بۆ objectURL + <img>.
+        // FileReader/base64ـی کۆن بەکارنایەت — قورس بوو و لەسەر مۆبایلی لاواز تاب دەکوژا.
+        async function decodeImageFile(file) {
+            if (typeof createImageBitmap === 'function') {
+                try {
+                    const bmp = await createImageBitmap(file, { imageOrientation: 'from-image' });
+                    return { src: bmp, w: bmp.width, h: bmp.height, cleanup: () => { try { bmp.close(); } catch (e) { } } };
+                } catch (e) {
+                    try {
+                        const bmp = await createImageBitmap(file);
+                        return { src: bmp, w: bmp.width, h: bmp.height, cleanup: () => { try { bmp.close(); } catch (e2) { } } };
+                    } catch (e2) { /* دەکەوێتە ڕێگای پاشەکەوت */ }
+                }
+            }
+            const url = URL.createObjectURL(file);
+            try {
+                const img = await new Promise((resolve, reject) => {
+                    const im = new Image();
+                    im.onload = () => resolve(im);
+                    im.onerror = () => reject(new Error('decode failed'));
+                    im.src = url;
+                });
+                return {
+                    src: img,
+                    w: img.naturalWidth || img.width,
+                    h: img.naturalHeight || img.height,
+                    cleanup: () => URL.revokeObjectURL(url)
                 };
-                reader.onerror = error => reject(error);
+            } catch (e) {
+                URL.revokeObjectURL(url);
+                throw e;
+            }
+        }
+
+        // toBlob لە Safariـی کۆندا نییە → toDataURL بەکاردێت
+        function canvasToBlob(canvas, quality) {
+            return new Promise(resolve => {
+                if (typeof canvas.toBlob === 'function') {
+                    try { canvas.toBlob(b => resolve(b), 'image/jpeg', quality); return; }
+                    catch (e) { /* دەکەوێتە ڕێگای پاشەکەوت */ }
+                }
+                try {
+                    const parts = canvas.toDataURL('image/jpeg', quality).split(',');
+                    const bin = atob(parts[1]);
+                    const arr = new Uint8Array(bin.length);
+                    for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+                    resolve(new Blob([arr], { type: 'image/jpeg' }));
+                } catch (e) { resolve(null); }
             });
         }
 
-        // ٢. فەنکشنی ئاپلۆدکردنی وێنەکان بۆ ImgBB
-        async function handleMultipleImages(input) {
-            let files = Array.from(input.files);
-            if (files.length === 0) return;
+        // ---------- ٢. کۆمپرێسکردن ----------
+        // هەر هەڵەیەک ڕوو بدات، وێنە ڕەسەنەکە دەنێردرێت — وێنە هەرگیز لەدەست ناچێت.
+        async function compressImage(file) {
+            if (file.size <= IMG_SKIP_BELOW && /jpe?g/i.test(file.type || '')) return file;
 
-            let statusText = document.getElementById('upload-status');
-            let uploadBox = document.getElementById('upload-box');
-            let uploadIcon = document.getElementById('upload-icon-svg');
+            let dec = null;
+            try {
+                dec = await decodeImageFile(file);
+                const { w, h } = dec;
+                if (!w || !h) return file;
 
-            uploadBox.style.borderColor = "#f39c12";
-            uploadIcon.style.display = "none";
+                let scale = Math.min(1, IMG_MAX_DIM / Math.max(w, h));
+                // پاراستن لە سنووری کەنڤاسی iOS (وێنەی 48MP بەبێ ئەمە ڕەش دەردەچوو)
+                if (w * h * scale * scale > IMG_MAX_PIXELS) scale = Math.sqrt(IMG_MAX_PIXELS / (w * h));
 
-            for (let i = 0; i < files.length; i++) {
+                const cw = Math.max(1, Math.round(w * scale));
+                const ch = Math.max(1, Math.round(h * scale));
+
+                const canvas = document.createElement('canvas');
+                canvas.width = cw;
+                canvas.height = ch;
+                const ctx = canvas.getContext('2d', { alpha: false });
+                if (!ctx) return file;
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(0, 0, cw, ch);
+                ctx.drawImage(dec.src, 0, 0, cw, ch);
+
+                const blob = await canvasToBlob(canvas, IMG_QUALITY);
+                canvas.width = canvas.height = 0; // ئازادکردنی بیرگە — گرنگە بۆ iOS
+
+                if (!blob || blob.size === 0) return file;
+                if (blob.size >= file.size) return file; // کۆمپرێس سوودی نەبوو
+                return blob;
+            } catch (e) {
+                console.warn('compressImage fallback:', e);
+                return file;
+            } finally {
+                if (dec) { try { dec.cleanup(); } catch (e) { } }
+            }
+        }
+
+        // ---------- ٣. ناردنی وێنە ----------
+        // سەرەکی: Supabase Storage — هەمان دۆمەینی ئەپەکە خۆی، بۆیە لەسەر
+        // هەموو هێڵێک (ئاسیاسێل، کۆرەک، زەین...) کاردەکات. ئەگەر ئەپەکە
+        // بکرێتەوە، ئەپلۆدیش کاردەکات.
+        // پاشەکەوت: ImgBB — تەنها ئەگەر Supabase شکستی هێنا.
+        //
+        // supabase-js بەکارنایەت لێرەدا چونکە fetch بەکاردێنێت و سەدی ناردن
+        // نادات؛ ڕاستەوخۆ REST + XHR بەکاردێت بۆ پیشاندانی پێشکەوتنی ڕاستەقینە.
+
+        function xhrUpload(opts) {
+            return new Promise((resolve, reject) => {
+                const xhr = new XMLHttpRequest();
+                xhr.open('POST', opts.url);
+                xhr.timeout = UPLOAD_TIMEOUT;
+                if (opts.headers) {
+                    Object.keys(opts.headers).forEach(k => xhr.setRequestHeader(k, opts.headers[k]));
+                }
+                if (xhr.upload && typeof opts.onProgress === 'function') {
+                    xhr.upload.onprogress = e => {
+                        if (e.lengthComputable && e.total > 0) opts.onProgress(e.loaded / e.total);
+                    };
+                }
+                xhr.onload = () => resolve({ status: xhr.status, text: xhr.responseText });
+                xhr.onerror = () => reject(new Error('کێشەی ئینتەرنێت'));
+                xhr.ontimeout = () => reject(new Error('کاتەکە بەسەرچوو'));
+                xhr.send(opts.body);
+            });
+        }
+
+        function makeImagePath(filename) {
+            const code = (currentUser && currentUser.code) ? String(currentUser.code) : 'x';
+            const d = new Date();
+            const ym = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+            const rand = Math.random().toString(36).slice(2, 9);
+            // ناوی فایل پاک دەکرێتەوە — Supabase تەنها پیتی ئاسایی قبوڵ دەکات
+            const safe = String(filename || 'photo').replace(/[^\w.\-]/g, '_').slice(-40);
+            return `${ym}/${code}/${Date.now()}_${rand}_${safe}`;
+        }
+
+        async function uploadToSupabase(blob, filename, onProgress) {
+            if (typeof SUPABASE_URL === 'undefined' || typeof SUPABASE_KEY === 'undefined') {
+                throw new Error('Supabase ڕێکنەخراوە');
+            }
+            const path = makeImagePath(filename);
+            const res = await xhrUpload({
+                url: `${SUPABASE_URL}/storage/v1/object/${IMG_BUCKET}/${encodeURI(path)}`,
+                headers: {
+                    'Authorization': 'Bearer ' + SUPABASE_KEY,
+                    'x-upsert': 'true',
+                    'Content-Type': blob.type || 'image/jpeg'
+                },
+                body: blob,
+                onProgress: onProgress
+            });
+            if (res.status < 200 || res.status >= 300) {
+                let msg = 'HTTP ' + res.status;
+                try { const j = JSON.parse(res.text); if (j && j.message) msg = j.message; } catch (e) { }
+                throw new Error(msg);
+            }
+            return `${SUPABASE_URL}/storage/v1/object/public/${IMG_BUCKET}/${encodeURI(path)}`;
+        }
+
+        async function uploadToImgbb(blob, filename, onProgress) {
+            const fd = new FormData();
+            fd.append('image', blob, filename);
+            fd.append('key', IMGBB_KEY);
+            const res = await xhrUpload({
+                url: 'https://api.imgbb.com/1/upload',
+                body: fd,
+                onProgress: onProgress
+            });
+            let j = null;
+            try { j = JSON.parse(res.text); } catch (e) { }
+            if (j && j.success && j.data && j.data.url) return j.data.url;
+            throw new Error((j && j.error && j.error.message) || ('HTTP ' + res.status));
+        }
+
+        // Supabase → ئەگەر شکستی هێنا → ImgBB
+        async function uploadImage(blob, filename, onProgress) {
+            try {
+                return await uploadToSupabase(blob, filename, onProgress);
+            } catch (e1) {
+                console.warn('Supabase Storage نەیتوانی:', e1 && e1.message);
+                if (onProgress) onProgress(0);
                 try {
-                    statusText.innerHTML = `⏳ خەریکی کۆمپرێس و ئاپلۆدی وێنەی ${i + 1} لە ${files.length}...`;
-                    statusText.style.color = "#f39c12";
-
-                    // بچووککردنەوەی قەبارەی وێنەکە
-                    let compressedFile = await compressImage(files[i]);
-
-                    let formData = new FormData();
-                    formData.append("image", compressedFile);
-                    formData.append("key", "D46aeed04460f87292aa90c209ae88d5");
-
-                    let response = await fetch("https://api.imgbb.com/1/upload", { method: "POST", body: formData });
-                    let data = await response.json();
-
-                    if (data.success) {
-                        uploadedImageUrls.push(data.data.url);
-                    }
-                } catch (err) {
-                    console.log("Error uploading image: ", err);
-                    showToast("❌ هەڵەیەک لە ئاپلۆدکردنی یەکێک لە وێنەکان ڕوویدا", "error");
+                    return await uploadToImgbb(blob, filename, onProgress);
+                } catch (e2) {
+                    console.warn('ImgBB نەیتوانی:', e2 && e2.message);
+                    throw e1; // هەڵەی سەرەکی دەگەڕێندرێتەوە
                 }
             }
+        }
 
-            // کۆتایی هاتن
+        // ---------- ٤. بەڕێوەبردنی ڕیزی ئەپلۆد ----------
+        async function handleMultipleImages(input) {
+            const files = Array.from(input.files || []).filter(f => f && /^image\//i.test(f.type || ''));
             input.value = "";
-            uploadBox.style.borderColor = "var(--primary)";
+            if (files.length === 0) return;
+
+            const items = files.map(f => ({
+                id: 'up' + (++_pendingSeq),
+                file: f,
+                thumb: URL.createObjectURL(f),
+                progress: 0,
+                failed: false
+            }));
+            pendingUploads.push(...items);
+            renderImagePreviews();
+
+            // چەند وێنە پێکەوە دەنێردرێن — زۆر خێراترە لە یەک بە یەک
+            await runUploadPool(items, UPLOAD_CONCURRENCY, processUploadItem);
+
+            renderImagePreviews();
+            const okCount = items.filter(i => !i.failed && !pendingUploads.includes(i)).length;
+            const failCount = items.filter(i => i.failed).length;
+            if (failCount > 0) {
+                showToast(`${failCount} وێنە نەنێردرا — دەتوانیت دووبارە هەوڵ بدەیتەوە`, "error");
+            } else if (okCount > 0) {
+                showToast(`${okCount} وێنە بە سەرکەوتوویی نێردرا`, "success");
+            }
+        }
+
+        async function runUploadPool(items, limit, worker) {
+            let idx = 0;
+            const runners = [];
+            for (let k = 0; k < Math.min(limit, items.length); k++) {
+                runners.push((async () => {
+                    while (idx < items.length) {
+                        const item = items[idx++];
+                        await worker(item);
+                    }
+                })());
+            }
+            await Promise.all(runners);
+        }
+
+        async function processUploadItem(item) {
+            item.failed = false;
+            setItemProgress(item, 0.05);
+            try {
+                const blob = await compressImage(item.file);
+                setItemProgress(item, 0.12);
+
+                const name = (item.file.name || 'photo').replace(/\.[^.]+$/, '') + '.jpg';
+                const track = p => setItemProgress(item, 0.12 + 0.88 * p);
+                // یەک هەوڵدانەوەی خۆکار — ئینتەرنێتی مۆبایل زۆرجار یەکەم جار سەرکەوتوو نابێت
+                let url;
+                try {
+                    url = await uploadImage(blob, name, track);
+                } catch (e) {
+                    setItemProgress(item, 0.12);
+                    url = await uploadImage(blob, name, track);
+                }
+
+                // ئەگەر فۆرمەکە لە کاتی ئەپلۆددا ڕیسێت کرابێت، وێنەکە فڕێدەدرێت
+                if (item.cancelled) {
+                    try { URL.revokeObjectURL(item.thumb); } catch (e) { }
+                    return;
+                }
+
+                setItemProgress(item, 1);
+                uploadedImageUrls.push(url);
+                const i = pendingUploads.indexOf(item);
+                if (i > -1) pendingUploads.splice(i, 1);
+                renderImagePreviews();
+                // تەنها دوای ڕێندەرکردنەوە ئازاد دەکرێت تا وێنەکە نەپچڕێت
+                setTimeout(() => { try { URL.revokeObjectURL(item.thumb); } catch (e) { } }, 4000);
+            } catch (err) {
+                console.error('upload failed:', err);
+                if (item.cancelled) return;
+                item.failed = true;
+                item.progress = 0;
+                renderImagePreviews();
+            }
+        }
+
+        // دووبارە هەوڵدانەوەی وێنەیەکی سەرنەکەوتوو
+        async function retryUpload(id) {
+            const item = pendingUploads.find(p => p.id === id);
+            if (!item) return;
+            renderImagePreviews();
+            await processUploadItem(item);
             renderImagePreviews();
         }
 
-        // ٣. پیشاندانی وێنە ئاپلۆدکراوەکان لەناو بۆکسەکە
-        function renderImagePreviews() {
-            let container = document.getElementById('image-previews-container');
-            let statusText = document.getElementById('upload-status');
-            let uploadIcon = document.getElementById('upload-icon-svg');
+        function cancelPendingUpload(id) {
+            const i = pendingUploads.findIndex(p => p.id === id);
+            if (i < 0) return;
+            pendingUploads[i].cancelled = true;
+            try { URL.revokeObjectURL(pendingUploads[i].thumb); } catch (e) { }
+            pendingUploads.splice(i, 1);
+            renderImagePreviews();
+        }
 
-            container.innerHTML = "";
+        function clearPendingUploads() {
+            // cancelled: ڕێگری لەوە دەکات ئەپلۆدی نێو ئارا وێنە بخاتە فۆرمی نوێوە
+            pendingUploads.forEach(p => {
+                p.cancelled = true;
+                try { URL.revokeObjectURL(p.thumb); } catch (e) { }
+            });
+            pendingUploads = [];
+        }
 
-            if (uploadedImageUrls.length === 0) {
-                statusText.innerHTML = "کلیک بکە بۆ دانانی وێنەکان";
-                statusText.style.color = "var(--text-main)";
-                uploadIcon.style.display = "block";
+        // ---------- ٥. نوێکردنەوەی سەدی ----------
+        function setItemProgress(item, p) {
+            item.progress = Math.max(0, Math.min(1, p));
+            const pct = Math.round(item.progress * 100);
+
+            const ring = document.getElementById('ring-' + item.id);
+            if (ring) {
+                const C = 2 * Math.PI * 15.5;
+                ring.style.strokeDasharray = C;
+                ring.style.strokeDashoffset = C * (1 - item.progress);
+            }
+            const lbl = document.getElementById('pct-' + item.id);
+            if (lbl) lbl.textContent = pct + '%';
+
+            updateOverallProgress();
+        }
+
+        function updateOverallProgress() {
+            const wrap = document.getElementById('upload-progress-wrap');
+            const fill = document.getElementById('upload-progress-fill');
+            const pctEl = document.getElementById('upload-progress-pct');
+            const label = document.getElementById('upload-progress-label');
+            if (!wrap || !fill || !pctEl || !label) return;
+
+            const active = pendingUploads.filter(p => !p.failed);
+            if (active.length === 0) {
+                wrap.style.display = 'none';
                 return;
             }
 
-            statusText.innerHTML = `✅ ${uploadedImageUrls.length} وێنە ئاپلۆد کران (کلیک بکە بۆ وێنەی تر)`;
-            statusText.style.color = "#28a745";
-            uploadIcon.style.display = "none";
+            const done = uploadedImageUrls.length;
+            const sum = active.reduce((a, p) => a + p.progress, 0);
+            const pct = Math.round((sum / active.length) * 100);
 
-            uploadedImageUrls.forEach((url, index) => {
-                container.innerHTML += `
-                    <div style="position: relative; display: inline-block;">
-                        <img src="${url}" onclick="event.stopPropagation(); openImageGallery(uploadedImageUrls, ${index})" style="width: 70px; height: 70px; object-fit: cover; border-radius: 8px; border: 2px solid #e2e8f0; box-shadow: 0 2px 5px rgba(0,0,0,0.1); cursor: pointer;">
-                        <div onclick="event.stopPropagation(); removeUploadedImage(${index})" style="position: absolute; top: -5px; right: -5px; background: #dc3545; color: white; width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">
-                            <i class='bx bx-x'></i>
-                        </div>
-                    </div>
-                `;
-            });
+            wrap.style.display = 'block';
+            fill.style.width = pct + '%';
+            pctEl.textContent = pct + '%';
+            label.textContent = active.length > 1
+                ? `ئەپلۆدکردنی ${active.length} وێنە...`
+                : (done > 0 ? `ئەپلۆدکردنی وێنەی ${done + 1}...` : 'ئەپلۆدکردن...');
         }
 
-        // ٤. سڕینەوەی یەک وێنە بە دیاریکراوی
+        // ---------- ٦. پیشاندانی وێنەکان ----------
+        function renderImagePreviews() {
+            const container = document.getElementById('image-previews-container');
+            const statusText = document.getElementById('upload-status');
+            const uploadIcon = document.getElementById('upload-icon-svg');
+            const uploadBox = document.getElementById('upload-box');
+            if (!container) return;
+
+            const total = uploadedImageUrls.length + pendingUploads.length;
+            const busy = isUploadingImages();
+
+            if (uploadIcon) uploadIcon.style.display = total === 0 ? 'block' : 'none';
+            if (uploadBox) uploadBox.style.borderColor = busy ? '#f39c12' : 'royalblue';
+
+            if (statusText) {
+                if (total === 0) {
+                    statusText.innerHTML = "کلیک بکە بۆ دانانی وێنەکان";
+                    statusText.style.color = "var(--text-main)";
+                } else if (busy) {
+                    statusText.innerHTML = "چاوەڕێ بکە...";
+                    statusText.style.color = "#f39c12";
+                } else {
+                    const failed = pendingUploads.length;
+                    statusText.innerHTML = failed > 0
+                        ? `✅ ${uploadedImageUrls.length} نێردرا · ⚠️ ${failed} سەرنەکەوت`
+                        : `✅ ${uploadedImageUrls.length} وێنە نێردرا (کلیک بکە بۆ وێنەی تر)`;
+                    statusText.style.color = failed > 0 ? "#f39c12" : "#28a745";
+                }
+            }
+
+            let html = '';
+            uploadedImageUrls.forEach((url, index) => {
+                html += `
+                    <div class="img-tile">
+                        <img src="${url}" loading="lazy" onclick="event.stopPropagation(); openImageGallery(uploadedImageUrls, ${index})">
+                        <div class="img-tile-remove" onclick="event.stopPropagation(); removeUploadedImage(${index})"><i class='bx bx-x'></i></div>
+                    </div>`;
+            });
+
+            pendingUploads.forEach(item => {
+                if (item.failed) {
+                    html += `
+                        <div class="img-tile failed">
+                            <img src="${item.thumb}">
+                            <div class="img-tile-overlay failed" onclick="event.stopPropagation(); retryUpload('${item.id}')" title="دووبارە هەوڵ بدەوە">
+                                <i class='bx bx-refresh'></i>
+                                <span class="img-tile-retry">دووبارە</span>
+                            </div>
+                            <div class="img-tile-remove" onclick="event.stopPropagation(); cancelPendingUpload('${item.id}')"><i class='bx bx-x'></i></div>
+                        </div>`;
+                } else {
+                    const C = 2 * Math.PI * 15.5;
+                    html += `
+                        <div class="img-tile uploading">
+                            <img src="${item.thumb}">
+                            <div class="img-tile-overlay">
+                                <svg class="prog-ring" viewBox="0 0 36 36">
+                                    <circle class="ring-bg" cx="18" cy="18" r="15.5"></circle>
+                                    <circle class="ring-fg" id="ring-${item.id}" cx="18" cy="18" r="15.5"
+                                        style="stroke-dasharray:${C}; stroke-dashoffset:${C * (1 - item.progress)};"></circle>
+                                </svg>
+                                <span class="prog-pct" id="pct-${item.id}">${Math.round(item.progress * 100)}%</span>
+                            </div>
+                        </div>`;
+                }
+            });
+
+            container.innerHTML = html;
+            updateOverallProgress();
+        }
+
+        // سڕینەوەی یەک وێنە بە دیاریکراوی
         function removeUploadedImage(index) {
             uploadedImageUrls.splice(index, 1);
             renderImagePreviews();
@@ -4542,6 +5135,7 @@
             } else {
                 uploadedImageUrls = [];
             }
+            clearPendingUploads();
             renderImagePreviews();
 
 

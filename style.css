@@ -1161,6 +1161,352 @@ h2 i,
   display: none;
 }
 
+/* =========================================
+   پانێڵی مێژوو (گەڕان + کاڵاکان)
+   نەرم و هێمن — دەردەکەوێت بەبێ ئەوەی سەرنج بدزێت
+   ========================================= */
+
+.hist-anchor {
+  position: relative;
+}
+
+.hist-panel {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  left: 0;
+  z-index: 60;
+  background: #fff;
+  border: 1px solid #e9eef4;
+  border-radius: 14px;
+  box-shadow: 0 14px 30px -10px rgba(15, 23, 42, 0.22), 0 2px 6px rgba(15, 23, 42, 0.04);
+  max-height: 268px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+
+  /* بەبێ ئەنیمەیشنی توند — تەنها هەڵسانەوەیەکی نەرم */
+  opacity: 0;
+  transform: translateY(-6px) scale(0.99);
+  transform-origin: top center;
+  pointer-events: none;
+  transition: opacity 0.17s ease, transform 0.2s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+.hist-panel::-webkit-scrollbar {
+  display: none;
+}
+
+.hist-panel.open {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  pointer-events: auto;
+}
+
+/* سەردێڕ */
+.hist-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 11px 14px 9px 10px;
+  font-size: var(--fs-xs);
+  font-weight: var(--font-semibold);
+  color: #94a3b8;
+  position: sticky;
+  top: 0;
+  background: #fff;
+  z-index: 1;
+}
+
+.hist-head > span {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.hist-head i {
+  font-size: 14px;
+}
+
+.hist-clear {
+  background: none;
+  border: none;
+  font-family: inherit;
+  font-size: var(--fs-xs);
+  font-weight: var(--font-bold);
+  color: var(--primary);
+  cursor: pointer;
+  padding: 4px 7px;
+  border-radius: 7px;
+  transition: background 0.15s ease;
+}
+
+.hist-clear:active {
+  background: rgba(36, 129, 204, 0.12);
+}
+
+/* ڕیزەکان */
+.hist-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 14px;
+  cursor: pointer;
+  transition: background 0.14s ease;
+}
+
+.hist-row:active {
+  background: #f1f5f9;
+}
+
+.hist-row + .hist-row {
+  border-top: 1px solid #f5f8fb;
+}
+
+.hist-row:last-child {
+  padding-bottom: 11px;
+}
+
+.hist-ico {
+  width: 27px;
+  height: 27px;
+  flex-shrink: 0;
+  border-radius: 9px;
+  background: #f1f5f9;
+  color: #94a3b8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  transition: all 0.15s ease;
+}
+
+.hist-row:active .hist-ico {
+  background: rgba(36, 129, 204, 0.12);
+  color: var(--primary);
+}
+
+.hist-txt {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--fs-md);
+  color: var(--text-main);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* بەشە هاوتاکەی گەڕان */
+.hist-txt b {
+  color: var(--primary);
+  font-weight: var(--font-bold);
+}
+
+.hist-meta {
+  flex-shrink: 0;
+  font-size: var(--fs-xs);
+  font-weight: var(--font-semibold);
+  color: #64748b;
+  background: #f4f7fa;
+  padding: 3px 7px;
+  border-radius: var(--r-full);
+  direction: ltr;
+}
+
+.hist-del {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  border: none;
+  background: none;
+  border-radius: 50%;
+  color: #cbd5e1;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.hist-del:active {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+/* =========================================
+   ئەپلۆدی وێنە — بارەکەی سەدی و خشتەکانی وێنە
+   ========================================= */
+
+.upload-progress {
+  width: 100%;
+  max-width: 290px;
+  margin: 12px auto 0 auto;
+  animation: upFade 0.25s ease;
+}
+
+@keyframes upFade {
+  from { opacity: 0; transform: translateY(-3px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.upload-progress-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+  font-size: var(--fs-xs);
+  font-weight: var(--font-semibold);
+  color: var(--text-secondary);
+}
+
+.upload-progress-pct {
+  font-size: var(--fs-md);
+  font-weight: var(--font-bold);
+  color: var(--primary);
+  font-variant-numeric: tabular-nums;
+  direction: ltr;
+}
+
+.upload-progress-track {
+  width: 100%;
+  height: 7px;
+  border-radius: var(--r-full);
+  background: rgba(36, 129, 204, 0.14);
+  overflow: hidden;
+}
+
+.upload-progress-track > span {
+  display: block;
+  height: 100%;
+  width: 0%;
+  border-radius: var(--r-full);
+  background: linear-gradient(90deg, #2481cc, #4aa3e8);
+  transition: width 0.25s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+/* درەوشانەوەی جوڵاو لەسەر بارەکە */
+.upload-progress-track > span::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.45), transparent);
+  animation: upShine 1.1s linear infinite;
+}
+
+@keyframes upShine {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(100%); }
+}
+
+/* ---- خشتەی وێنە ---- */
+.img-tile {
+  position: relative;
+  width: 70px;
+  height: 70px;
+  flex-shrink: 0;
+}
+
+.img-tile img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 2px solid #e2e8f0;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+  display: block;
+}
+
+.img-tile.uploading img,
+.img-tile.failed img {
+  filter: brightness(0.55);
+  cursor: default;
+}
+
+.img-tile-remove {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  background: #dc3545;
+  color: #fff;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  z-index: 3;
+}
+
+.img-tile-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  border-radius: 8px;
+  color: #fff;
+}
+
+.img-tile-overlay.failed {
+  cursor: pointer;
+  background: rgba(220, 53, 69, 0.35);
+}
+
+.img-tile-overlay.failed i {
+  font-size: 21px;
+}
+
+.img-tile-retry {
+  font-size: 10px;
+  font-weight: var(--font-bold);
+}
+
+/* ---- بازنەی سەدی ---- */
+.prog-ring {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+
+.prog-ring circle {
+  fill: none;
+  stroke-width: 3;
+  stroke-linecap: round;
+}
+
+.prog-ring .ring-bg {
+  stroke: rgba(255, 255, 255, 0.28);
+}
+
+.prog-ring .ring-fg {
+  stroke: #4aa3e8;
+  transition: stroke-dashoffset 0.25s ease;
+}
+
+.prog-pct {
+  position: relative;
+  font-size: 12px;
+  font-weight: var(--font-bold);
+  color: #fff;
+  font-variant-numeric: tabular-nums;
+  direction: ltr;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+}
+
 
 /* =========================================
    دیزاینی هەڵبژاردەکان (بۆ Single و Multi)
