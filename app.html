@@ -7612,9 +7612,14 @@
                 distData.grandTotal = (o.amount_received != null && parseFloat(o.amount_received) > 0) ? parseFloat(o.amount_received) : parseFloat(o.grand_total);
                 // قازانجی ئەندام و پاشەکەوت (خۆکارانە پڕ دەکرێنەوە)
                 distData.memberProfit = (o.member_profit != null && !isNaN(parseFloat(o.member_profit)) && parseFloat(o.member_profit) > 0) ? parseFloat(o.member_profit) : 0;
-                // پاشەکەوتی بنەڕەتی: ئەگەر ئۆردەر هی ئەندام بوو و سەرپەرشت یان ڕاوێژکاری نەبوو → ١٠٠٠؛
-                // ئەگەر هەردووکی هەبوو → ٥٠٠ (وەک جاران). بۆ پلەکانی تر → ٥٠٠.
-                distData.savingsDefault = (normalizeRole(memberData.role) === 'ئەندام' && !(memberData.admin && memberData.consultant)) ? 1000 : 500;
+                // پاشەکەوتی بنەڕەتی (بۆ خاوەنی ئۆردەرەکە):
+                //  • بەڕێوەبەر — ئۆردەری خۆی            → ١٠٠٠
+                //  • ئەندام — سەرپەرشت یان ڕاوێژکاری نەبێت → ١٠٠٠
+                //  • هەموو حاڵەتەکانی تر                  → ٥٠٠
+                distData.savingsDefault =
+                    (sellerRole === 'بەڕێوەبەر') ? 1000
+                        : (sellerRole === 'ئەندام' && !(memberData.admin && memberData.consultant)) ? 1000
+                            : 500;
 
                 isDistKingOrder = (memberData && memberData.role === "پاشا");
                 let isAuthorized = can('distribute_profit');
