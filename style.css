@@ -423,6 +423,19 @@ input::placeholder {
   height: 18px;
 }
 
+/* هێڵی سەر چاو — کاتێک پاسوۆرد پیشان دەدرێت */
+.eye-slash {
+  opacity: 0;
+}
+
+.password-toggle.on .eye-slash {
+  opacity: 1;
+}
+
+.password-toggle.on {
+  color: var(--primary);
+}
+
 .submit-button {
   position: relative;
   width: 100%;
@@ -1161,6 +1174,245 @@ h2 i,
   display: none;
 }
 
+/* پاداشتی بەڕێوەبەری تاک لە مۆدالی دابەشکردن */
+.dist-bonus {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin-right: 6px;
+  padding: 2px 8px;
+  border-radius: var(--r-full);
+  background: rgba(16, 185, 129, 0.14);
+  color: #059669;
+  font-size: var(--fs-2xs);
+  font-weight: var(--font-bold);
+  direction: ltr;
+}
+
+.dist-bonus i {
+  font-size: 13px;
+}
+
+/* ڕیزی بەڕێوەبەر کاتێک پاداشتی هەیە: نۆتەکە دێڕێکی تەواوی خۆی دەبێت */
+.dist-input-row:has(> .dist-bonus-note) {
+  flex-wrap: wrap;
+}
+
+.dist-bonus-note {
+  order: 3;
+  flex: 0 0 100%;
+  width: 100%;
+  font-size: var(--fs-2xs);
+  color: #059669;
+  background: rgba(16, 185, 129, 0.07);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  border-radius: var(--r-sm);
+  padding: 6px 9px;
+  margin-top: 9px;
+  line-height: 1.7;
+  box-sizing: border-box;
+}
+
+/* =========================================
+   کۆپیکردنی زانیاری ئۆردەر
+   ========================================= */
+
+.modal-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-shrink: 0;
+}
+
+.modal-copy {
+  width: 34px;
+  height: 34px;
+  border: none;
+  border-radius: 11px;
+  background: rgba(36, 129, 204, 0.1);
+  color: var(--primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 19px;
+  cursor: pointer;
+  transition: all 0.16s ease;
+}
+
+.modal-copy:active {
+  background: rgba(36, 129, 204, 0.25);
+  transform: scale(0.9);
+}
+
+/* ئایکۆنی کۆپی لەسەر کارتی ئۆردەر — لای سەرەوەی بەرامبەر */
+.modern-order-card {
+  position: relative;
+}
+
+.card-copy {
+  position: absolute;
+  bottom: 10px;
+  left: 10px;
+  width: 30px;
+  height: 30px;
+  border: none;
+  border-radius: 9px;
+  background: #f1f5f9;
+  color: #94a3b8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  cursor: pointer;
+  transition: all 0.16s ease;
+  z-index: 3;
+}
+
+.card-copy:active {
+  background: rgba(36, 129, 204, 0.16);
+  color: var(--primary);
+  transform: scale(0.88);
+}
+
+/* ---- مێنیوی هەڵبژاردنی شێواز (bottom sheet) ---- */
+.copy-menu-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(8, 11, 20, 0.5);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.22s ease, visibility 0.22s ease;
+}
+
+.copy-menu-overlay.show {
+  opacity: 1;
+  visibility: visible;
+}
+
+.copy-menu {
+  width: 100%;
+  max-width: 430px;
+  background: #fff;
+  border-radius: 22px 22px 0 0;
+  padding: 10px 16px calc(18px + env(safe-area-inset-bottom, 0px));
+  transform: translateY(100%);
+  transition: transform 0.3s cubic-bezier(.32, .72, 0, 1);
+}
+
+.copy-menu-overlay.show .copy-menu {
+  transform: translateY(0);
+}
+
+.copy-menu-grip {
+  width: 38px;
+  height: 4px;
+  border-radius: var(--r-full);
+  background: #e2e8f0;
+  margin: 0 auto 14px;
+}
+
+.copy-menu-title {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: var(--fs-md);
+  font-weight: var(--font-bold);
+  color: #94a3b8;
+  margin-bottom: 12px;
+  padding: 0 2px;
+}
+
+.copy-opt {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #f8fafc;
+  border: 1px solid #eef2f7;
+  border-radius: 15px;
+  padding: 13px 14px;
+  margin-bottom: 9px;
+  font-family: inherit;
+  text-align: right;
+  cursor: pointer;
+  transition: all 0.16s cubic-bezier(.32, .72, 0, 1);
+}
+
+.copy-opt:active {
+  transform: scale(0.98);
+  background: #f1f5f9;
+}
+
+.copy-opt-ico {
+  width: 42px;
+  height: 42px;
+  flex-shrink: 0;
+  border-radius: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+}
+
+.copy-opt-ico.full {
+  background: rgba(36, 129, 204, 0.12);
+  color: var(--primary);
+}
+
+.copy-opt-ico.cust {
+  background: rgba(16, 185, 129, 0.13);
+  color: #059669;
+}
+
+.copy-opt-txt {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.copy-opt-txt b {
+  font-size: var(--fs-base);
+  font-weight: var(--font-bold);
+  color: var(--text-main);
+}
+
+.copy-opt-txt small {
+  font-size: var(--fs-xs);
+  color: #94a3b8;
+  line-height: 1.5;
+}
+
+.copy-opt-arrow {
+  flex-shrink: 0;
+  font-size: 21px;
+  color: #cbd5e1;
+}
+
+.copy-menu-cancel {
+  width: 100%;
+  height: 46px;
+  margin-top: 4px;
+  border: none;
+  border-radius: var(--r-md);
+  background: #f1f5f9;
+  color: #64748b;
+  font-family: inherit;
+  font-size: var(--fs-md);
+  font-weight: var(--font-bold);
+  cursor: pointer;
+}
+
+.copy-menu-cancel:active {
+  background: #e2e8f0;
+}
+
 /* =========================================
    کارتی گۆڕینی پاسوۆرد (ڕێکخستنەکان)
    ========================================= */
@@ -1366,49 +1618,53 @@ h2 i,
    خانەی پاسوۆرد لە بەشی چاکسازی
    ========================================= */
 
+/* هەمان شێوازی پەڕەی چوونەژوورەوە: ئایکۆنەکە لەناو بۆکسەکەدایە */
 .pass-field {
   position: relative;
-  display: flex;
-  align-items: center;
-  gap: 6px;
   margin-bottom: 6px;
 }
 
 .pass-field input {
-  flex: 1;
+  width: 100%;
   margin-bottom: 0;
-  padding-left: 4px;
   direction: ltr;
   text-align: left;
-  letter-spacing: 0.4px;
   font-family: inherit;
+  /* جێگا بۆ ئایکۆنەکان: چاو لای ڕاست، کۆپی لای چەپ */
+  padding: 0 42px 0 42px;
+  /* transition: all نەکرا — نەوەک گۆڕینی جۆر ئەنیمەیشن دروست بکات */
+  transition: border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
 }
 
-.pass-field input[type="password"] {
-  letter-spacing: 3px;
+/* بۆکسی بێ دوگمەی کۆپی (گۆڕینی پاسوۆرد) — تەنها لای ڕاست بۆشایی */
+.pass-field.no-copy input {
+  padding: 0 42px 0 14px;
 }
 
-.pass-eye {
-  flex-shrink: 0;
-  width: var(--ctl-h);
-  height: var(--ctl-h);
-  border: 1px solid #e2e8f0;
-  background: #f8fafc;
-  color: var(--text-secondary);
-  border-radius: var(--r-sm);
+/* دوگمەی کۆپی — لای چەپ، وەک شوێنی ئایکۆنی پەڕەی چوونەژوورەوە */
+.pass-copy {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 19px;
+  padding: 4px;
+  background: none;
+  border: none;
+  color: var(--text-secondary);
   cursor: pointer;
-  transition: all 0.16s ease;
+  transition: color 0.2s ease;
+  z-index: 2;
 }
 
-.pass-eye:active {
-  background: rgba(36, 129, 204, 0.12);
-  border-color: rgba(36, 129, 204, 0.3);
+.pass-copy:active {
   color: var(--primary);
-  transform: scale(0.93);
+}
+
+.pass-copy i {
+  font-size: 18px;
 }
 
 .pass-hint {
@@ -1592,6 +1848,67 @@ h2 i,
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* زانیاری دێڕی دووەم */
+.tb-code {
+  flex-shrink: 0;
+  direction: ltr;
+  font-family: monospace;
+  font-size: var(--fs-xs);
+  letter-spacing: -0.2px;
+  color: #64748b;
+}
+
+.tb-total {
+  flex-shrink: 0;
+  direction: ltr;
+  font-weight: var(--font-bold);
+  color: var(--primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.tb-cust {
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ئەنیمەیشنی لۆدینگ — وەک بەشی جزدان */
+.trash-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 45vh;
+}
+
+.trash-retry {
+  margin-top: 14px;
+  background: rgba(36, 129, 204, 0.1);
+  border: 1px solid rgba(36, 129, 204, 0.28);
+  color: var(--primary);
+  font-family: inherit;
+  font-size: var(--fs-sm);
+  font-weight: var(--font-bold);
+  padding: 8px 16px;
+  border-radius: var(--r-full);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.trash-retry:active {
+  background: rgba(36, 129, 204, 0.22);
+  transform: scale(0.96);
+}
+
+.trash-chip.refresh {
+  padding: 6px 11px;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
 }
 
 .trash-foot {

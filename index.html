@@ -26,8 +26,8 @@
                     <div class="input-wrapper">
                         <svg fill="none" viewBox="0 0 24 24" class="input-icon"><path stroke-width="1.5" stroke="currentColor" d="M12 10V14M8 6H16C17.1046 6 18 6.89543 18 8V16C18 17.1046 17.1046 18 16 18H8C6.89543 18 6 17.1046 6 16V8C6 6.89543 6.89543 6 8 6Z"></path></svg>
                         <input id="login-pass" placeholder="وشەی نهێنی" class="form-input" type="password" />
-                        <button class="password-toggle" type="button" onclick="togglePassword()">
-                            <svg fill="none" viewBox="0 0 24 24" class="eye-icon"><path stroke-width="1.5" stroke="currentColor" d="M2 12C2 12 5 5 12 5C19 5 22 12 22 12C22 12 19 19 12 19C5 19 2 12 2 12Z"></path><circle stroke-width="1.5" stroke="currentColor" r="3" cy="12" cx="12"></circle></svg>
+                        <button class="password-toggle" type="button" onpointerdown="event.preventDefault()" onclick="togglePassword(this)">
+                            <svg fill="none" viewBox="0 0 24 24" class="eye-icon"><path stroke-width="1.5" stroke="currentColor" d="M2 12C2 12 5 5 12 5C19 5 22 12 22 12C22 12 19 19 12 19C5 19 2 12 2 12Z"></path><circle stroke-width="1.5" stroke="currentColor" r="3" cy="12" cx="12"></circle><line class="eye-slash" x1="4.5" y1="19.5" x2="19.5" y2="4.5" stroke-width="1.5" stroke="currentColor" stroke-linecap="round"></line></svg>
                         </button>
                     </div>
                 </div>
@@ -156,9 +156,27 @@
             alert(text); 
         }
         
-        function togglePassword() {
+        // پیشاندان/شاردنەوەی پاسوۆرد بەبێ داخستنی کیبۆردی مۆبایل.
+        // دوگمەکە pointerdown ی preventDefault دەکات تا فۆکەس لە بۆکسەکە نەڕوات،
+        // پاشان شوێنی کێرسۆر دەپارێزرێت و فۆکەس دەگەڕێتەوە.
+        function togglePassword(btn) {
             let passInput = document.getElementById("login-pass");
-            passInput.type = passInput.type === "password" ? "text" : "password";
+            if (!passInput) return;
+
+            let wasFocused = (document.activeElement === passInput);
+            let start = null, end = null;
+            try { start = passInput.selectionStart; end = passInput.selectionEnd; } catch (e) { }
+
+            let show = (passInput.type === "password");
+            passInput.type = show ? "text" : "password";
+            if (btn) btn.classList.toggle('on', show);
+
+            if (wasFocused) {
+                passInput.focus({ preventScroll: true });
+                if (start !== null) {
+                    try { passInput.setSelectionRange(start, end); } catch (e) { }
+                }
+            }
         }
 
         async function performLogin() {

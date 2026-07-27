@@ -425,10 +425,16 @@
                             <div class="pass-field">
                                 <input type="password" id="e-password" autocomplete="new-password"
                                     placeholder="پاسوۆردی ئێستا" spellcheck="false">
-                                <button type="button" class="pass-eye" id="e-pass-eye" title="پیشاندان/شاردنەوە"
-                                    onclick="toggleEditPassword()"><i class='bx bx-show'></i></button>
-                                <button type="button" class="pass-eye" title="کۆپیکردن"
-                                    onclick="copyEditPassword()"><i class='bx bx-copy'></i></button>
+                                <button type="button" class="pass-copy" title="کۆپیکردن"
+                                    onpointerdown="event.preventDefault()" onclick="copyEditPassword()"><i class='bx bx-copy'></i></button>
+                                <button type="button" class="password-toggle" id="e-pass-eye" title="پیشاندان/شاردنەوە"
+                                    onpointerdown="event.preventDefault()" onclick="togglePwField('e-password', this)">
+                                    <svg fill="none" viewBox="0 0 24 24" class="eye-icon">
+                                        <path stroke-width="1.5" stroke="currentColor" d="M2 12C2 12 5 5 12 5C19 5 22 12 22 12C22 12 19 19 12 19C5 19 2 12 2 12Z"></path>
+                                        <circle stroke-width="1.5" stroke="currentColor" r="3" cy="12" cx="12"></circle>
+                                        <line class="eye-slash" x1="4.5" y1="19.5" x2="19.5" y2="4.5" stroke-width="1.5" stroke="currentColor" stroke-linecap="round"></line>
+                                    </svg>
+                                </button>
                             </div>
                             <div class="pass-hint" id="e-pass-hint">
                                 <i class='bx bx-info-circle'></i>
@@ -716,6 +722,7 @@
                         <button type="button" class="trash-chip" data-trash-filter="orders" onclick="setTrashFilter('orders', this)">ئۆردەر</button>
                         <button type="button" class="trash-chip" data-trash-filter="employees" onclick="setTrashFilter('employees', this)">کلیل</button>
                         <button type="button" class="trash-chip" data-trash-filter="cities" onclick="setTrashFilter('cities', this)">شار</button>
+                        <button type="button" class="trash-chip refresh" onclick="loadTrash(true)" title="نوێکردنەوە"><i class='bx bx-refresh'></i></button>
                     </div>
                 </div>
                 <div class="container" id="trash-container">
@@ -773,17 +780,31 @@
             <div class="pwc-body" id="pwc-body">
                 <div class="pwc-inner">
                     <label class="pwc-label">پاسوۆردی ئێستا</label>
-                    <div class="pass-field">
+                    <div class="pass-field no-copy">
                         <input type="password" id="pw-current" autocomplete="current-password"
                             placeholder="پاسوۆردی ئێستات" spellcheck="false" oninput="validatePwForm()">
-                        <button type="button" class="pass-eye" onclick="togglePwEye('pw-current', this)"><i class='bx bx-show'></i></button>
+                        <button type="button" class="password-toggle" title="پیشاندان/شاردنەوە"
+                            onpointerdown="event.preventDefault()" onclick="togglePwField('pw-current', this)">
+                            <svg fill="none" viewBox="0 0 24 24" class="eye-icon">
+                                <path stroke-width="1.5" stroke="currentColor" d="M2 12C2 12 5 5 12 5C19 5 22 12 22 12C22 12 19 19 12 19C5 19 2 12 2 12Z"></path>
+                                <circle stroke-width="1.5" stroke="currentColor" r="3" cy="12" cx="12"></circle>
+                                <line class="eye-slash" x1="4.5" y1="19.5" x2="19.5" y2="4.5" stroke-width="1.5" stroke="currentColor" stroke-linecap="round"></line>
+                            </svg>
+                        </button>
                     </div>
 
                     <label class="pwc-label">پاسوۆردی نوێ</label>
-                    <div class="pass-field">
+                    <div class="pass-field no-copy">
                         <input type="password" id="pw-new" autocomplete="new-password" maxlength="15"
                             placeholder="٦ بۆ ١٥ پیت یان ژمارە" spellcheck="false" oninput="validatePwForm()">
-                        <button type="button" class="pass-eye" onclick="togglePwEye('pw-new', this)"><i class='bx bx-show'></i></button>
+                        <button type="button" class="password-toggle" title="پیشاندان/شاردنەوە"
+                            onpointerdown="event.preventDefault()" onclick="togglePwField('pw-new', this)">
+                            <svg fill="none" viewBox="0 0 24 24" class="eye-icon">
+                                <path stroke-width="1.5" stroke="currentColor" d="M2 12C2 12 5 5 12 5C19 5 22 12 22 12C22 12 19 19 12 19C5 19 2 12 2 12Z"></path>
+                                <circle stroke-width="1.5" stroke="currentColor" r="3" cy="12" cx="12"></circle>
+                                <line class="eye-slash" x1="4.5" y1="19.5" x2="19.5" y2="4.5" stroke-width="1.5" stroke="currentColor" stroke-linecap="round"></line>
+                            </svg>
+                        </button>
                     </div>
 
                     <div class="pwc-meter" id="pwc-meter">
@@ -794,10 +815,17 @@
                     </div>
 
                     <label class="pwc-label">دووبارەکردنەوەی پاسوۆردی نوێ</label>
-                    <div class="pass-field">
+                    <div class="pass-field no-copy">
                         <input type="password" id="pw-confirm" autocomplete="new-password" maxlength="15"
                             placeholder="دووبارە بینووسەوە" spellcheck="false" oninput="validatePwForm()">
-                        <button type="button" class="pass-eye" onclick="togglePwEye('pw-confirm', this)"><i class='bx bx-show'></i></button>
+                        <button type="button" class="password-toggle" title="پیشاندان/شاردنەوە"
+                            onpointerdown="event.preventDefault()" onclick="togglePwField('pw-confirm', this)">
+                            <svg fill="none" viewBox="0 0 24 24" class="eye-icon">
+                                <path stroke-width="1.5" stroke="currentColor" d="M2 12C2 12 5 5 12 5C19 5 22 12 22 12C22 12 19 19 12 19C5 19 2 12 2 12Z"></path>
+                                <circle stroke-width="1.5" stroke="currentColor" r="3" cy="12" cx="12"></circle>
+                                <line class="eye-slash" x1="4.5" y1="19.5" x2="19.5" y2="4.5" stroke-width="1.5" stroke="currentColor" stroke-linecap="round"></line>
+                            </svg>
+                        </button>
                     </div>
 
                     <div class="pwc-msg" id="pwc-msg"></div>
@@ -967,10 +995,41 @@
         <div class="modal-content" onclick="event.stopPropagation()">
             <div class="modal-header">
                 <h3 class="modal-title"><i class='bx bx-receipt'></i> زانیاری داواکاری</h3>
-                <button class="modal-close" onclick="closeModal(null, 'order-details-modal')"><i
-                        class='bx bx-x'></i></button>
+                <div class="modal-head-actions">
+                    <button class="modal-copy" id="order-copy-btn" title="کۆپیکردنی زانیاری ئۆردەر"><i class='bx bx-copy'></i></button>
+                    <button class="modal-close" onclick="closeModal(null, 'order-details-modal')"><i
+                            class='bx bx-x'></i></button>
+                </div>
             </div>
             <div id="modal-details-body"></div>
+        </div>
+    </div>
+
+    <!-- مێنیوی هەڵبژاردنی شێوازی کۆپیکردن -->
+    <div id="order-copy-menu" class="copy-menu-overlay" style="z-index: 2400;" onclick="closeCopyMenu()">
+        <div class="copy-menu" onclick="event.stopPropagation()">
+            <div class="copy-menu-grip"></div>
+            <div class="copy-menu-title"><i class='bx bx-copy'></i> کۆپیکردنی زانیاری ئۆردەر</div>
+
+            <button type="button" class="copy-opt" onclick="doCopyOrder('full')">
+                <span class="copy-opt-ico full"><i class='bx bx-detail'></i></span>
+                <span class="copy-opt-txt">
+                    <b>تەواو</b>
+                    <small>هەموو زانیارییەک — کۆد، دۆخ، نرخی وردەکاری و وێنەکان</small>
+                </span>
+                <i class='bx bx-chevron-left copy-opt-arrow'></i>
+            </button>
+
+            <button type="button" class="copy-opt" onclick="doCopyOrder('customer')">
+                <span class="copy-opt-ico cust"><i class='bx bx-user-voice'></i></span>
+                <span class="copy-opt-txt">
+                    <b>بۆ کڕیار</b>
+                    <small>بێ کۆدی ناوخۆیی و دۆخ — تەنها ئەوەی کڕیار پێویستیەتی</small>
+                </span>
+                <i class='bx bx-chevron-left copy-opt-arrow'></i>
+            </button>
+
+            <button type="button" class="copy-menu-cancel" onclick="closeCopyMenu()">پاشگەزبوونەوە</button>
         </div>
     </div>
 
@@ -2182,20 +2241,13 @@
             if (!open) resetPwForm();
         }
 
-        function togglePwEye(id, btn) {
-            const input = document.getElementById(id);
-            if (!input) return;
-            const show = input.type === 'password';
-            input.type = show ? 'text' : 'password';
-            if (btn) btn.innerHTML = show ? "<i class='bx bx-hide'></i>" : "<i class='bx bx-show'></i>";
-        }
 
         function resetPwForm() {
             ['pw-current', 'pw-new', 'pw-confirm'].forEach(id => {
                 const el = document.getElementById(id);
                 if (el) { el.value = ''; el.type = 'password'; }
             });
-            document.querySelectorAll('.pwc-inner .pass-eye').forEach(b => b.innerHTML = "<i class='bx bx-show'></i>");
+            document.querySelectorAll('.pwc-inner .password-toggle').forEach(b => b.classList.remove('on'));
             const msg = document.getElementById('pwc-msg');
             if (msg) { msg.className = 'pwc-msg'; msg.innerHTML = ''; }
             setPwMeter(0, '');
@@ -2655,6 +2707,8 @@
                             <span class="moc-chip"><i class='bx bx-history'></i>${relativeTime}</span>
                             <span class="moc-id" dir="ltr"><i class='bx bx-hash'></i>${orderCodeStr}</span>
                         </div>
+                        <button type="button" class="card-copy" title="کۆپیکردنی زانیاری ئۆردەر"
+                            onclick="openCopyMenu('${o.id}', event)"><i class='bx bx-copy'></i></button>
                     </div>`;
                     });
                 });
@@ -2865,6 +2919,8 @@
                     </div>
                     <span class="mocc-id"><i class='bx bx-hash'></i>${orderCodeStr}</span>
                 </div>
+                <button type="button" class="card-copy" title="کۆپیکردنی زانیاری ئۆردەر"
+                    onclick="openCopyMenu('${o.id}', event)"><i class='bx bx-copy'></i></button>
             </div>`;
         }
 
@@ -3278,6 +3334,129 @@
             renderImagePreviews();
         }
 
+        // ============================================================
+        // کۆپیکردنی زانیاری ئۆردەر بۆ چاتی سۆشیاڵ میدیا
+        // دوو شێواز: «تەواو» (ناوخۆیی) و «بۆ کڕیار» (بێ کۆد و دۆخ و وردەکاری نرخ)
+        // ============================================================
+        const COPY_SEP = '━━━━━━━━━━━━━━';
+
+        function orderItemLines(o, withPrice) {
+            const names = String(o.item_names || '').split('\n').map(s => s.trim()).filter(Boolean);
+            const qtys = String(o.item_qtys || '').split('\n');
+            const prices = String(o.item_prices || '').split('\n');
+            if (!names.length) return [];
+            return names.map((n, i) => {
+                const q = (qtys[i] || '').trim() || '1';
+                if (!withPrice) return `• ${n} × ${q}`;
+                const p = parseFloat(prices[i] || 0);
+                return `• ${n} × ${q} — ${isNaN(p) ? '' : p.toLocaleString('en-US')}`;
+            });
+        }
+
+        function orderImageLinks(o) {
+            return String(o.image_url || '').split(',').map(s => s.trim()).filter(Boolean);
+        }
+
+        function buildOrderCopyText(o, mode) {
+            if (!o) return '';
+            const L = [];
+            const imgs = orderImageLinks(o);
+            const total = Number(o.grand_total || 0).toLocaleString('en-US');
+
+            if (mode === 'customer') {
+                L.push(`👋 بەخێربێیت ${String(o.customer_name || '').trim()}`.trim());
+                L.push('داواکارییەکەت تۆمار کرا ✅');
+                L.push(COPY_SEP);
+                const items = orderItemLines(o, false);
+                if (items.length) { L.push('📦 کاڵاکان:'); L.push(...items); L.push(COPY_SEP); }
+                if (o.address) L.push(`📍 ${o.address}`);
+                if (o.phone1) L.push(`📱 ${o.phone1}`);
+                L.push(`💰 بڕی پارە: ${total} د.ع`);
+                if (o.notes) { L.push(COPY_SEP); L.push(`📝 ${o.notes}`); }
+            } else {
+                if (o.order_code) L.push(`🧾 ئۆردەر: ${o.order_code}`);
+                if (o.status) L.push(`🔖 دۆخ: ${o.status}`);
+                L.push(COPY_SEP);
+                if (o.customer_name) L.push(`👤 کڕیار: ${o.customer_name}`);
+                const phones = [o.phone1, o.phone2].filter(Boolean).join(' / ');
+                if (phones) L.push(`📱 ${phones}`);
+                if (o.address) L.push(`📍 ${o.address}`);
+                const items = orderItemLines(o, true);
+                if (items.length) { L.push(COPY_SEP); L.push('📦 کاڵاکان:'); L.push(...items); }
+                L.push(COPY_SEP);
+                L.push(`کۆی کاڵاکان: ${Number(o.items_total || 0).toLocaleString('en-US')} د.ع`);
+                L.push(`گەیاندن: ${Number(o.delivery_price || 0).toLocaleString('en-US')} د.ع`);
+                L.push(`💰 کۆی گشتی: ${total} د.ع`);
+                if (o.notes) { L.push(COPY_SEP); L.push(`📝 تێبینی: ${o.notes}`); }
+                const dt = formatDateTimeKurdish(o.date || o.created_at);
+                if (dt) L.push(`📅 ${dt}`);
+            }
+
+            if (imgs.length) {
+                L.push(COPY_SEP);
+                L.push('🖼 وێنەکان:');
+                L.push(...imgs);
+            }
+            return L.join('\n');
+        }
+
+        // کۆپیکردن — clipboard API، ئەگەر نەبوو ڕێگای کۆن
+        async function copyTextToClipboard(text) {
+            try {
+                if (navigator.clipboard && window.isSecureContext) {
+                    await navigator.clipboard.writeText(text);
+                    return true;
+                }
+            } catch (e) { /* دەکەوێتە ڕێگای پاشەکەوت */ }
+            try {
+                const ta = document.createElement('textarea');
+                ta.value = text;
+                ta.setAttribute('readonly', '');
+                ta.style.position = 'fixed';
+                ta.style.top = '-1000px';
+                ta.style.opacity = '0';
+                document.body.appendChild(ta);
+                ta.select();
+                ta.setSelectionRange(0, ta.value.length);
+                const ok = document.execCommand('copy');
+                document.body.removeChild(ta);
+                return ok;
+            } catch (e) { return false; }
+        }
+
+        // ---------- مێنیوی هەڵبژاردنی شێواز ----------
+        let copyMenuOrderId = null;
+
+        function openCopyMenu(orderId, ev) {
+            if (ev) { ev.stopPropagation(); ev.preventDefault(); }
+            copyMenuOrderId = orderId;
+            const m = document.getElementById('order-copy-menu');
+            if (m) m.classList.add('show');
+        }
+
+        function closeCopyMenu() {
+            const m = document.getElementById('order-copy-menu');
+            if (m) m.classList.remove('show');
+            copyMenuOrderId = null;
+        }
+
+        async function doCopyOrder(mode) {
+            const o = allGlobalOrdersData[copyMenuOrderId];
+            closeCopyMenu();
+            if (!o) { showToast("زانیاری ئۆردەرەکە نەدۆزرایەوە", "error"); return; }
+
+            const text = buildOrderCopyText(o, mode);
+            const ok = await copyTextToClipboard(text);
+            if (ok) {
+                const imgs = orderImageLinks(o).length;
+                showToast(imgs
+                    ? `زانیاری ئۆردەر کۆپی کرا (${imgs} وێنە)`
+                    : "زانیاری ئۆردەر کۆپی کرا", "success");
+            } else {
+                showToast("نەتوانرا کۆپی بکرێت", "error");
+            }
+        }
+
         async function openOrderDetails(orderId) {
             let o = allGlobalOrdersData[orderId];
             let b = document.getElementById('modal-details-body');
@@ -3500,6 +3679,10 @@
             </div>
             ${actionButtonsHtml}
         `;
+            // دوگمەی کۆپی لە سەردێڕی مۆدال — بەم ئۆردەرەوە دەبەسترێت
+            const copyBtn = document.getElementById('order-copy-btn');
+            if (copyBtn) copyBtn.onclick = (ev) => openCopyMenu(o.id, ev);
+
             document.getElementById('order-details-modal').classList.add('show');
 
             loadOrderLogs(o.id);
@@ -5911,7 +6094,7 @@
             input.setAttribute('data-original', pass);
             // هەمیشە بە شاراوەیی دەست پێدەکات — نەوەک بەهەڵە کەسێک ببینێت
             input.type = 'password';
-            if (eye) eye.innerHTML = "<i class='bx bx-show'></i>";
+            if (eye) eye.classList.remove('on');
 
             if (hint) {
                 hint.innerHTML = pass
@@ -5920,13 +6103,27 @@
             }
         }
 
-        function toggleEditPassword() {
-            const input = document.getElementById('e-password');
-            const eye = document.getElementById('e-pass-eye');
+        // پیشاندان/شاردنەوەی پاسوۆرد — بێ داخستنی کیبۆردی مۆبایل.
+        // دوگمەکە pointerdown ی preventDefault دەکات تا فۆکەس لە بۆکسەکە نەڕوات؛
+        // لێرەش شوێنی کێرسۆر دەپارێزرێت و فۆکەس دەگەڕێتەوە.
+        function togglePwField(inputId, btn) {
+            const input = document.getElementById(inputId);
             if (!input) return;
-            const show = input.type === 'password';
+
+            const wasFocused = (document.activeElement === input);
+            let start = null, end = null;
+            try { start = input.selectionStart; end = input.selectionEnd; } catch (e) { }
+
+            const show = (input.type === 'password');
             input.type = show ? 'text' : 'password';
-            if (eye) eye.innerHTML = show ? "<i class='bx bx-hide'></i>" : "<i class='bx bx-show'></i>";
+            if (btn) btn.classList.toggle('on', show);
+
+            if (wasFocused) {
+                input.focus({ preventScroll: true });
+                if (start !== null) {
+                    try { input.setSelectionRange(start, end); } catch (e) { }
+                }
+            }
         }
 
         function copyEditPassword() {
@@ -7001,7 +7198,22 @@
             renderTrash();
         }
 
-        async function loadTrash() {
+        // ئەنیمەیشنی لۆدینگ — هەمان ئەوەی بەشی جزدان/بەڕێوەبردن
+        const TRASH_SPINNER = `
+            <div class="trash-loading">
+                <svg viewBox="0 0 100 100" style="width:45px; height:45px; fill: var(--primary); transform: translateY(-27.11%) scale(1.5);">
+                    <g style="transform-origin: 50% 72.8938%; animation: spinner-rotate 1s linear infinite;">
+                        <path d="M33.52,68.12 C35.02,62.8 39.03,58.52 44.24,56.69 C49.26,54.93 54.68,55.61 59.04,58.4 C59.04,58.4 56.24,60.53 56.24,60.53 C55.45,61.13 55.68,62.37 56.63,62.64 C56.63,62.64 67.21,65.66 67.21,65.66 C67.98,65.88 68.75,65.3 68.74,64.5 C68.74,64.5 68.68,53.5 68.68,53.5 C68.67,52.51 67.54,51.95 66.75,52.55 C66.75,52.55 64.04,54.61 64.04,54.61 C57.88,49.79 49.73,48.4 42.25,51.03 C35.2,53.51 29.78,59.29 27.74,66.49 C27.29,68.08 28.22,69.74 29.81,70.19 C30.09,70.27 30.36,70.31 30.63,70.31 C31.94,70.31 33.14,69.44 33.52,68.12Z"></path>
+                        <path d="M69.95,74.85 C68.35,74.4 66.7,75.32 66.25,76.92 C64.74,82.24 60.73,86.51 55.52,88.35 C50.51,90.11 45.09,89.43 40.73,86.63 C40.73,86.63 43.53,84.51 43.53,84.51 C44.31,83.91 44.08,82.67 43.13,82.4 C43.13,82.4 32.55,79.38 32.55,79.38 C31.78,79.16 31.02,79.74 31.02,80.54 C31.02,80.54 31.09,91.54 31.09,91.54 C31.09,92.53 32.22,93.09 33.01,92.49 C33.01,92.49 35.72,90.43 35.72,90.43 C39.81,93.63 44.77,95.32 49.84,95.32 C52.41,95.32 55,94.89 57.51,94.01 C64.56,91.53 69.99,85.75 72.02,78.55 C72.47,76.95 71.54,75.3 69.95,74.85Z"></path>
+                    </g>
+                </svg>
+            </div>`;
+
+        // یەکجار بار دەکرێت — دوای ئەوە لە کاشەوە دەردەکەوێت.
+        // تەنها دوای گەڕاندنەوە/سڕینەوە یان بە داواکاری ڕوون نوێ دەکرێتەوە.
+        let trashLoaded = false;
+
+        async function loadTrash(force) {
             const box = document.getElementById('trash-list');
             if (!box) return;
             if (!can('manage_trash')) {
@@ -7009,7 +7221,13 @@
                 return;
             }
 
-            box.innerHTML = `<div class="trash-empty"><i class='bx bx-loader-alt bx-spin'></i><p>بارکردن...</p></div>`;
+            // پێشتر بارکراوە → دەستبەجێ پیشان بدە بەبێ لۆدینگ
+            if (trashLoaded && !force) {
+                renderTrash();
+                return;
+            }
+
+            box.innerHTML = TRASH_SPINNER;
             try {
                 // پاککردنەوەی ئەوانەی ٣٠ ڕۆژیان بەسەرچووە — هەر جارێک دەکرێتەوە
                 try { await supabase.rpc('purge_expired_trash'); } catch (e) { console.warn('purge:', e); }
@@ -7021,10 +7239,14 @@
                     .limit(300);
                 if (error) throw error;
                 trashCache = data || [];
+                trashLoaded = true;
                 renderTrash();
             } catch (e) {
                 console.error('loadTrash:', e);
-                box.innerHTML = `<div class="trash-empty"><i class='bx bx-error-circle'></i><p>نەتوانرا تەنەکەی خۆڵ باربکرێت</p></div>`;
+                box.innerHTML = `<div class="trash-empty"><i class='bx bx-error-circle'></i>
+                    <p>نەتوانرا تەنەکەی خۆڵ باربکرێت</p>
+                    <button type="button" class="trash-retry" onclick="loadTrash(true)"><i class='bx bx-refresh'></i> هەوڵدانەوە</button>
+                </div>`;
             }
         }
 
@@ -7042,15 +7264,36 @@
                 const meta = TRASH_META[r.source_table] || { icon: 'bx-file', color: '#64748b', label: r.source_table };
                 const days = trashDaysLeft(r.expires_at);
                 const urgent = days <= 5;
+                const p = r.payload || {};
+
+                // ناونیشان = ناوی خاوەنەکەی؛ دێڕی دووەم = زانیاری تایبەتی هەر جۆرێک
+                let title = '';
+                let bits = [];
+                if (r.source_table === 'orders') {
+                    title = String(p.seller_name || '').trim() || String(p.seller_code || '').trim() || 'بێ خاوەن';
+                    if (p.order_code) bits.push(`<span class="tb-code">${histEsc(p.order_code)}</span>`);
+                    if (p.grand_total != null && p.grand_total !== '') bits.push(`<span class="tb-total">${money(p.grand_total)} د.ع</span>`);
+                    if (p.customer_name) bits.push(`<span class="tb-cust">${histEsc(p.customer_name)}</span>`);
+                } else if (r.source_table === 'employees') {
+                    title = String(p.full_name || '').trim() || String(p.code || '').trim() || 'بێ ناو';
+                    if (p.code) bits.push(`<span class="tb-code">${histEsc(p.code)}</span>`);
+                    if (p.role) bits.push(`<span class="tb-cust">${histEsc(p.role)}</span>`);
+                } else if (r.source_table === 'cities') {
+                    title = String(p.name || '').trim() || String(r.label || '').trim() || 'شار';
+                    if (p.real_price != null) bits.push(`<span class="tb-total">${money(p.real_price)} د.ع</span>`);
+                } else {
+                    title = r.label || r.record_id;
+                }
+
+                const sub = bits.length
+                    ? `<div class="trash-sub">${bits.join('<span class="trash-meta-dot"></span>')}</div>`
+                    : '';
+
                 return `<div class="trash-card" onclick="openTrashDetail(${r.id})">
-                    <span class="trash-ico" style="--tc:${meta.color};"><i class='bx ${meta.icon}'></i></span>
+                    <span class="trash-ico" style="--tc:${meta.color};" title="${histEsc(meta.label)}"><i class='bx ${meta.icon}'></i></span>
                     <div class="trash-body">
-                        <div class="trash-title">${histEsc(r.label || r.record_id)}</div>
-                        <div class="trash-sub">
-                            <span class="trash-type" style="--tc:${meta.color};">${histEsc(meta.label)}</span>
-                            <span class="trash-meta-dot"></span>
-                            <span class="trash-who">${histEsc(r.deleted_by_name || r.deleted_by || 'نەزانراو')}</span>
-                        </div>
+                        <div class="trash-title">${histEsc(title)}</div>
+                        ${sub}
                         <div class="trash-foot">
                             <span class="trash-time">${histEsc(formatLogTime(r.deleted_at))}</span>
                             <span class="trash-left ${urgent ? 'urgent' : ''}">${days > 0 ? `${days} ڕۆژ` : 'ئەمڕۆ'}</span>
@@ -7191,7 +7434,7 @@
                 if (error) throw error;
                 showToast("بۆ هەمیشە سڕایەوە", "success");
                 if (fromModal) closeModal(null, 'trash-detail-modal');
-                await loadTrash();
+                await loadTrash(true);
                 if (item && item.source_table === 'employees') refreshDeletedOwners();
             } catch (e) {
                 console.error('purgeTrashItem:', e);
@@ -7221,12 +7464,12 @@
                     if (item && item.source_table === 'cities') {
                         try { await loadDBCities(); } catch (e) { }
                     }
-                    await loadTrash();
+                    await loadTrash(true);
                 } else if (data === 'exists') {
                     showToast("ناتوانرێت بگەڕێتەوە — هەمان کۆد/ناسنامە دووبارە بەکارهاتووە", "error");
                 } else if (data === 'expired') {
                     showToast("ماوەکەی بەسەرچووە", "error");
-                    await loadTrash();
+                    await loadTrash(true);
                 } else {
                     showToast("نەگەڕایەوە: " + String(data), "error");
                 }
@@ -7321,6 +7564,9 @@
             });
         }
 
+        // پاداشتی بەڕێوەبەر بۆ هەر دانەیەک، کاتێک ئەندامەکە تەنها بەڕێوەبەری هەیە
+        const MANAGER_SOLO_BONUS = 1000;
+
         async function openDistributionModal(orderId) {
             closeModal(null, 'order-details-modal');
             distributingOrder = allGlobalOrdersData[orderId]; let o = distributingOrder;
@@ -7336,8 +7582,27 @@
 
                 let itemsCount = (o.item_qtys || "").split('\n').reduce((sum, q) => sum + (parseInt(q) || 1), 0);
 
+                // ---- پاداشتی «بەڕێوەبەری تاک» ----
+                // ئەگەر ئۆردەرەکە هی ئەندامێک بێت کە تەنها بەڕێوەبەری هەبێت
+                // (نە سەرپەرشت و نە ڕاوێژکار)، بەڕێوەبەرەکە بۆ هەر دانەیەک
+                // ١٠٠٠ی زیادە وەردەگرێت، جگە لە قازانجی دیاریکراوی خۆی.
+                let sellerRole = normalizeRole(memberData.role);
+                let soloManager = (sellerRole === 'ئەندام')
+                    && !!memberData.manager
+                    && !memberData.admin
+                    && !memberData.consultant;
+                let managerBase = (uMap[memberData.manager]?.profit_rate || 0) * itemsCount;
+                let managerBonus = soloManager ? (MANAGER_SOLO_BONUS * itemsCount) : 0;
+
                 distData.member = { code: o.seller_code, name: uMap[o.seller_code]?.full_name || "ئەندام", role: normalizeRole(memberData.role) || "ئەندام" };
-                distData.manager = { code: memberData.manager, name: uMap[memberData.manager]?.full_name || "نییە", profit: (uMap[memberData.manager]?.profit_rate || 0) * itemsCount };
+                distData.manager = {
+                    code: memberData.manager,
+                    name: uMap[memberData.manager]?.full_name || "نییە",
+                    profit: managerBase + managerBonus,
+                    base: managerBase,
+                    bonus: managerBonus,
+                    itemsCount: itemsCount
+                };
                 distData.admin = { code: memberData.admin, name: uMap[memberData.admin]?.full_name || "نییە", profit: (uMap[memberData.admin]?.profit_rate || 0) * itemsCount };
                 distData.consultant = { code: memberData.consultant, name: uMap[memberData.consultant]?.full_name || "نییە", profit: (uMap[memberData.consultant]?.profit_rate || 0) * 1 };
 
@@ -7378,7 +7643,12 @@
                     </div>
                 </div>
                 <div class="dist-input-row" style="${showManagerStyle}">
-                    <label><i class='bx bx-user'></i> بەڕێوەبەر (${distData.manager.name})</label>
+                    <label><i class='bx bx-user'></i> بەڕێوەبەر (${distData.manager.name})${distData.manager.bonus > 0
+                        ? `<span class="dist-bonus" title="ئەم ئەندامە تەنها بەڕێوەبەری هەیە — ${MANAGER_SOLO_BONUS.toLocaleString()} × ${distData.manager.itemsCount} دانە">
+                             <i class='bx bx-gift'></i> +${distData.manager.bonus.toLocaleString()}
+                           </span>` : ''}</label>
+                    ${distData.manager.bonus > 0
+                        ? `<div class="dist-bonus-note">قازانجی دیاریکراو ${distData.manager.base.toLocaleString()} + پاداشتی بەڕێوەبەری تاک ${distData.manager.bonus.toLocaleString()} (${MANAGER_SOLO_BONUS.toLocaleString()} × ${distData.manager.itemsCount} دانە)</div>` : ''}
                     <div class="dist-input-group">
                         <button type="button" class="qty-btn plus-btn" onclick="adjustDistValue('dist-manager', 1000)" ${!distData.manager.code ? 'disabled' : ''}>
                             <svg class="qty-icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 18 18">
@@ -7562,7 +7832,12 @@
                 if (!isDistKingOrder && isAuthorized) {
                     addTx(distData.member.code, memberP, "قازانجی ئۆردەر", `قازانجی ${distData.member.role} لە ئۆردەری ${oCode}`);
                     addTx(distData.member.code, savingsP, "پاشەکەوتی ئۆردەر", `پاشەکەوت لە ئۆردەری ${oCode}`, true);
-                    addTx(distData.manager.code, managerP, "قازانجی ئۆردەر", `قازانجی بەڕێوەبەر لە ئۆردەری ${oCode}`);
+                    // ئەگەر پاداشتی بەڕێوەبەری تاک هەبێت و بڕەکە دەستکاری نەکرابێت، لە وەسفەکەدا دیاری دەکرێت
+                    let mgrDesc = `قازانجی بەڕێوەبەر لە ئۆردەری ${oCode}`;
+                    if (distData.manager.bonus > 0 && managerP === distData.manager.profit) {
+                        mgrDesc += ` (لەگەڵ ${distData.manager.bonus.toLocaleString()} پاداشتی بەڕێوەبەری تاک)`;
+                    }
+                    addTx(distData.manager.code, managerP, "قازانجی ئۆردەر", mgrDesc);
                     addTx(distData.admin.code, adminP, "قازانجی ئۆردەر", `قازانجی سەرپەرشت لە ئۆردەری ${oCode}`);
                     addTx(distData.consultant.code, consultantP, "قازانجی ئۆردەر", `قازانجی ڕاوێژکار لە ئۆردەری ${oCode}`);
                 }
