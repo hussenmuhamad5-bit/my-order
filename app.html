@@ -3611,6 +3611,16 @@
             `;
             }
 
+            // قازانجی ئۆردەر — وەک فۆرمی ئۆردەری نوێ:
+            // پارەی وەرگیراو − نرخی گەیاندن − کۆی نرخی کاڵاکان.
+            // ئەگەر لە کاتی تۆمارکردندا حساب کرابێت، هەمان بەها بەکاردێت.
+            let detailProfit;
+            if (o.member_profit != null && String(o.member_profit).trim() !== '' && !isNaN(parseFloat(o.member_profit))) {
+                detailProfit = parseFloat(o.member_profit);
+            } else {
+                detailProfit = Number(o.grand_total || 0) - Number(o.delivery_price || 0) - Number(o.items_total || 0);
+            }
+
             let reasonInfoHtml = "";
             if (o.return_reason && o.status === 'گەڕاوەتەوە') {
                 reasonInfoHtml = `
@@ -3662,6 +3672,10 @@
                     <div style="display:flex; justify-content:space-between; margin-bottom:8px; color:#555; font-size:14px;">
                         <span>نرخی گەیاندن:</span>
                         <strong>${Number(o.delivery_price || 0).toLocaleString()} دینار</strong>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; margin-bottom:8px; font-size:14px; color:${detailProfit < 0 ? '#dc2626' : '#059669'};">
+                        <span><i class='bx bx-trending-up'></i> قازانجی ئۆردەر:</span>
+                        <strong>${detailProfit.toLocaleString()} دینار</strong>
                     </div>
                     <hr style="border:0; border-top:1px dashed #ccc; margin:10px 0;">
                     <div style="display:flex; justify-content:space-between; color:var(--primary); font-size:18px; font-weight:bold;">
@@ -7629,8 +7643,87 @@
                 let showAdminStyle = (isDistKingOrder || !isAuthorized || !memberData.admin) ? 'display: none;' : '';
                 let showConsultantStyle = (isDistKingOrder || !isAuthorized || !memberData.consultant) ? 'display: none;' : '';
 
+                // ============================================================
+                // بۆکسی زانیاری ئۆردەر لە مۆدالی دابەشکردن
+                // کاڵاکان، وێنەکان (بە دەستلێدان گەورە دەبن)، و سیلسیلەی دەسەڵات
+                // ============================================================
+                let itemNamesArr = String(o.item_names || '').split('\n').map(s => s.trim()).filter(Boolean);
+                let itemQtysArr = String(o.item_qtys || '').split('\n');
+                let itemPricesArr = String(o.item_prices || '').split('\n');
+
+                let itemsRowsHtml = itemNamesArr.length
+                    ? itemNamesArr.map((n, i) => {
+                        let q = (itemQtysArr[i] || '').trim() || '1';
+                        let p = parseFloat(itemPricesArr[i] || 0);
+                        let unit = (!isNaN(p) && parseInt(q) > 0) ? Math.round(p / parseInt(q)) : p;
+                        return `<div class="ditem">
+                            <span class="ditem-name">${histEsc(n)}</span>
+                            <span class="ditem-qty">×${histEsc(q)}</span>
+                            <span class="ditem-price" dir="ltr">${isNaN(unit) ? '—' : unit.toLocaleString()}</span>
+                        </div>`;
+                    }).join('')
+                    : `<div class="ditem"><span class="ditem-name" style="color:#94a3b8;">هیچ کاڵایەک تۆمار نەکراوە</span></div>`;
+
+                let distImgs = String(o.image_url || '').split(',').map(u => u.trim()).filter(u => u.startsWith('http'));
+                window.__galleryDistImages = distImgs;
+                let distImgsHtml = distImgs.length
+                    ? `<div class="dinfo-title"><i class='bx bx-images'></i> وێنەکان (${distImgs.length})</div>
+                       <div class="dinfo-imgs">${distImgs.map((u, i) =>
+                        `<img src="${u}" loading="lazy" onclick="openImageGallery(window.__galleryDistImages, ${i})">`).join('')}</div>`
+                    : '';
+
+                // سیلسیلەی دەسەڵات — تەنها ئەوانەی هەن
+                let chain = [
+                    { role: distData.member.role || 'ئەندام', name: distData.member.name, code: distData.member.code, icon: 'bx-user', color: '#2481cc' },
+                    { role: 'بەڕێوەبەر', name: distData.manager.name, code: distData.manager.code, icon: 'bx-user-voice', color: '#8b5cf6' },
+                    { role: 'سەرپەرشت', name: distData.admin.name, code: distData.admin.code, icon: 'bx-shield', color: '#f59e0b' },
+                    { role: 'ڕاوێژکار', name: distData.consultant.name, code: distData.consultant.code, icon: 'bx-bulb', color: '#10b981' }
+                ].filter(x => x.code);
+
+                let chainHtml = chain.map(x => `<div class="dchain-row">
+                        <span class="dchain-ico" style="--cc:${x.color};"><i class='bx ${x.icon}'></i></span>
+                        <span class="dchain-role">${histEsc(x.role)}</span>
+                        <span class="dchain-name">${histEsc(x.name)}</span>
+                        <span class="dchain-code" dir="ltr">${histEsc(x.code)}</span>
+                    </div>`).join('');
+
+                let distInfoHtml = `
+                <div class="dist-info">
+                    <div class="dinfo-head">
+                        <span class="dinfo-code" dir="ltr"><i class='bx bx-hash'></i>${histEsc(o.order_code || o.id)}</span>
+                        <span class="dinfo-status">${histEsc(o.status || '')}</span>
+                    </div>
+                    <div class="dinfo-rows">
+                        ${o.customer_name ? `<div><i class='bx bx-user'></i>${histEsc(o.customer_name)}</div>` : ''}
+                        ${o.phone1 ? `<div><i class='bx bx-phone'></i><span dir="ltr">${histEsc([o.phone1, o.phone2].filter(Boolean).join(' / '))}</span></div>` : ''}
+                        ${o.address ? `<div><i class='bx bx-map'></i>${histEsc(o.address)}</div>` : ''}
+                        <div><i class='bx bx-time-five'></i><span dir="ltr">${histEsc(formatDateTimeKurdish(o.date || o.created_at))}</span></div>
+                        ${o.notes ? `<div><i class='bx bx-note'></i>${histEsc(o.notes)}</div>` : ''}
+                    </div>
+
+                    <div class="dinfo-title"><i class='bx bx-package'></i> کاڵاکان (${itemsCount} دانە)</div>
+                    <div class="dinfo-items">
+                        <div class="ditem ditem-head">
+                            <span class="ditem-name">کاڵا</span>
+                            <span class="ditem-qty">بڕ</span>
+                            <span class="ditem-price">نرخی دانە</span>
+                        </div>
+                        ${itemsRowsHtml}
+                    </div>
+                    <div class="dinfo-sum">
+                        <span>کۆی کاڵاکان</span>
+                        <b dir="ltr">${Number(o.items_total || 0).toLocaleString()} د.ع</b>
+                    </div>
+
+                    ${distImgsHtml}
+
+                    ${chainHtml ? `<div class="dinfo-title"><i class='bx bx-sitemap'></i> سیلسیلەی دەسەڵات</div>
+                    <div class="dinfo-chain">${chainHtml}</div>` : ''}
+                </div>`;
+
                 let b = document.getElementById('profit-modal-body');
                 b.innerHTML = `<div style="background:#f8fafc; padding:15px; border-radius:12px; border:1px dashed #cbd5e1; margin-bottom:15px; text-align:center;"><span style="font-size:12px; color:#64748b;">کۆی گشتی وەرگیراو لە کڕیار</span><h2 style="margin:5px 0 0 0; color:#10b981;" dir="ltr">${distData.grandTotal.toLocaleString()} د.ع</h2></div>
+                ${distInfoHtml}
                 <div class="dist-input-row">
                     <label><i class='bx bx-car'></i> نرخی گەیاندن (شۆفێر)</label>
                     <div class="dist-input-group">
@@ -7941,23 +8034,40 @@
             }
         }
 
+        let html5QrCodeScanner = null;
+        let _qrLibPromise = null;
+        let qrGalleryBusy = false;
+
+        function hasTelegramScanner() {
+            return !!(window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.showScanQrPopup);
+        }
+
+        // مۆدالەکە هەمیشە دەکرێتەوە — تا دوگمەی گەلەری لە هەموو حاڵەتێکدا بەردەست بێت
         function triggerOrderScan() {
-            if (window.Telegram?.WebApp?.showScanQrPopup) {
-                window.Telegram.WebApp.showScanQrPopup({
-                    text: "بارکۆد یان QR کۆدی ئۆردەرەکە سکان بکە..."
-                }, function(text) {
-                    if (text) {
-                        handleScannedCode(text);
-                        window.Telegram.WebApp.closeScanQrPopup();
-                        return true;
-                    }
-                });
-                return;
-            }
             openWebQrScanner();
         }
 
-        let html5QrCodeScanner = null;
+        // بارکردنی لایبرەری سکان — تەنها یەکجار
+        function ensureHtml5Qrcode() {
+            if (window.Html5Qrcode) return Promise.resolve(true);
+            if (_qrLibPromise) return _qrLibPromise;
+            _qrLibPromise = new Promise((resolve, reject) => {
+                const s = document.createElement('script');
+                s.src = "https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js";
+                s.onload = () => resolve(true);
+                s.onerror = () => { _qrLibPromise = null; reject(new Error('نەتوانرا لایبرەری سکان باربکرێت')); };
+                document.head.appendChild(s);
+            });
+            return _qrLibPromise;
+        }
+
+        function setQrHint(html, cls) {
+            const hint = document.getElementById('qr-modal-hint');
+            if (hint) {
+                hint.innerHTML = html;
+                hint.className = 'qr-modal-hint' + (cls ? ' ' + cls : '');
+            }
+        }
 
         async function openWebQrScanner() {
             let modal = document.getElementById('qr-scan-modal');
@@ -7965,20 +8075,65 @@
             modal.style.display = 'flex';
             requestAnimationFrame(() => modal.classList.add('active'));
 
-            if (!window.Html5Qrcode) {
-                let script = document.createElement('script');
-                script.src = "https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js";
-                script.onload = () => initHtml5Scanner();
-                document.head.appendChild(script);
-            } else {
-                initHtml5Scanner();
+            const frame = document.getElementById('qr-camera-frame');
+            const tgBtn = document.getElementById('qr-tg-camera');
+
+            // لەناو تێلیگرام کامێرای وێب زۆرجار بلۆک دەکرێت —
+            // بۆیە سکانەری خودی تێلیگرام بەکاردێت، بەڵام گەلەری هەر بەردەستە.
+            if (hasTelegramScanner()) {
+                if (frame) frame.style.display = 'none';
+                if (tgBtn) tgBtn.style.display = 'flex';
+                setQrHint("<i class='bx bx-camera'></i> کامێرا بکەرەوە، یان وێنەیەک لە گەلەری هەڵبژێرە");
+                return;
             }
+
+            if (frame) frame.style.display = '';
+            if (tgBtn) tgBtn.style.display = 'none';
+            setQrHint("<i class='bx bx-camera'></i> کامێراکە بگرە بەرامبەر بارکۆد یان QR کۆدی ئۆردەرەکە");
+
+            try {
+                await ensureHtml5Qrcode();
+                initHtml5Scanner();
+            } catch (e) {
+                const container = document.getElementById('qr-reader-container');
+                if (container) {
+                    container.innerHTML = `<div class="qr-error-state"><i class='bx bx-wifi-off'></i><p>❌ نەتوانرا لایبرەری سکان باربکرێت</p></div>`;
+                }
+            }
+        }
+
+        // سکانەری خودی تێلیگرام
+        function openTelegramScanner() {
+            if (!hasTelegramScanner()) return;
+            window.Telegram.WebApp.showScanQrPopup({
+                text: "بارکۆد یان QR کۆدی ئۆردەرەکە سکان بکە..."
+            }, function (text) {
+                if (text) {
+                    window.Telegram.WebApp.closeScanQrPopup();
+                    closeWebQrScanner();
+                    handleScannedCode(text);
+                    if (typeof showToast === 'function') {
+                        showToast("کۆد سکان کرا: " + text.trim(), "success");
+                    }
+                    return true;
+                }
+            });
+        }
+
+        function qrFormats() {
+            if (!window.Html5QrcodeSupportedFormats) return undefined;
+            return [
+                Html5QrcodeSupportedFormats.QR_CODE,
+                Html5QrcodeSupportedFormats.CODE_128,
+                Html5QrcodeSupportedFormats.EAN_13,
+                Html5QrcodeSupportedFormats.CODE_39
+            ];
         }
 
         function initHtml5Scanner() {
             if (!window.Html5Qrcode) return;
             if (html5QrCodeScanner) {
-                try { html5QrCodeScanner.stop(); } catch(e){}
+                try { html5QrCodeScanner.stop(); } catch (e) { }
             }
 
             let container = document.getElementById('qr-reader-container');
@@ -7988,12 +8143,7 @@
             const config = {
                 fps: 15,
                 qrbox: { width: 230, height: 230 },
-                formatsToSupport: [
-                    Html5QrcodeSupportedFormats.QR_CODE,
-                    Html5QrcodeSupportedFormats.CODE_128,
-                    Html5QrcodeSupportedFormats.EAN_13,
-                    Html5QrcodeSupportedFormats.CODE_39
-                ]
+                formatsToSupport: qrFormats()
             };
 
             html5QrCodeScanner.start(
@@ -8006,13 +8156,59 @@
                         showToast("کۆد سکان کرا: " + decodedText.trim(), "success");
                     }
                 },
-                () => {}
+                () => { }
             ).catch(err => {
                 console.error("Camera error:", err);
                 if (container) {
-                    container.innerHTML = `<div class="qr-error-state"><i class='bx bx-camera-off'></i><p>❌ نەتوانرا دەستگەیشتن بە کامێرا پەیدا بکرێت.</p></div>`;
+                    container.innerHTML = `<div class="qr-error-state"><i class='bx bx-camera-off'></i><p>❌ نەتوانرا دەستگەیشتن بە کامێرا پەیدا بکرێت.<br>وێنەیەک لە گەلەری هەڵبژێرە.</p></div>`;
                 }
             });
+        }
+
+        async function stopCameraScan() {
+            if (!html5QrCodeScanner) return;
+            try { await html5QrCodeScanner.stop(); } catch (e) { }
+            try { html5QrCodeScanner.clear(); } catch (e) { }
+            html5QrCodeScanner = null;
+        }
+
+        // ---------- سکانکردنی وێنە لە گەلەری ----------
+        async function scanImageFromGallery(input) {
+            const file = input.files && input.files[0];
+            input.value = '';
+            if (!file || qrGalleryBusy) return;
+            qrGalleryBusy = true;
+
+            const btn = document.getElementById('qr-gallery-btn');
+            if (btn) { btn.disabled = true; btn.innerHTML = "<i class='bx bx-loader-alt bx-spin'></i> خوێندنەوەی وێنە..."; }
+            setQrHint("<i class='bx bx-loader-alt bx-spin'></i> گەڕان بەدوای کۆد لە وێنەکەدا...");
+
+            let fileScanner = null;
+            try {
+                await ensureHtml5Qrcode();
+                // کامێرا دەوەستێت — نابێت لەگەڵ خوێندنەوەی فایل پێکەوە کاربکەن
+                await stopCameraScan();
+
+                fileScanner = new Html5Qrcode("qr-file-reader", { formatsToSupport: qrFormats() });
+                const text = await fileScanner.scanFile(file, false);
+
+                if (text && String(text).trim()) {
+                    closeWebQrScanner();
+                    handleScannedCode(String(text));
+                    if (typeof showToast === 'function') {
+                        showToast("کۆد لە وێنەکە دۆزرایەوە: " + String(text).trim(), "success");
+                    }
+                    return;
+                }
+                setQrHint("<i class='bx bx-error-circle'></i> هیچ کۆدێک لەم وێنەیەدا نەدۆزرایەوە", 'err');
+            } catch (e) {
+                console.warn('scanFile:', e);
+                setQrHint("<i class='bx bx-error-circle'></i> هیچ کۆدێک نەدۆزرایەوە — وێنەیەکی ڕوونتر و نزیکتر تاقی بکەرەوە", 'err');
+            } finally {
+                if (fileScanner) { try { fileScanner.clear(); } catch (e) { } }
+                qrGalleryBusy = false;
+                if (btn) { btn.disabled = false; btn.innerHTML = "<i class='bx bx-image-alt'></i> هەڵبژاردنی وێنە لە گەلەری"; }
+            }
         }
 
         function closeWebQrScanner() {
@@ -8021,13 +8217,7 @@
                 modal.classList.remove('active');
                 setTimeout(() => { modal.style.display = 'none'; }, 250);
             }
-            if (html5QrCodeScanner) {
-                try {
-                    html5QrCodeScanner.stop().then(() => {
-                        html5QrCodeScanner.clear();
-                    }).catch(e => console.log(e));
-                } catch(e) {}
-            }
+            stopCameraScan();
         }
 
     </script>
@@ -8042,7 +8232,8 @@
                 </h3>
                 <button onclick="closeWebQrScanner()" class="qr-modal-close" aria-label="داخستن"><i class='bx bx-x'></i></button>
             </div>
-            <div class="qr-scan-frame">
+            <!-- کامێرای زیندوو (دەرەوەی تێلیگرام) -->
+            <div class="qr-scan-frame" id="qr-camera-frame">
                 <div id="qr-reader-container" class="qr-reader"></div>
                 <div class="qr-scan-corners">
                     <span class="qr-corner tl"></span>
@@ -8052,7 +8243,25 @@
                 </div>
                 <div class="qr-scan-line"></div>
             </div>
-            <p class="qr-modal-hint"><i class='bx bx-camera'></i> کامێراکە بگرە بەرامبەر بارکۆد یان QR کۆدی ئۆردەرەکە</p>
+
+            <!-- کامێرای تێلیگرام (لەناو ئەپی تێلیگرام، چونکە کامێرای وێب بلۆک دەکرێت) -->
+            <button type="button" id="qr-tg-camera" class="qr-big-btn" style="display:none;" onclick="openTelegramScanner()">
+                <i class='bx bx-camera'></i> کردنەوەی کامێرا
+            </button>
+
+            <p class="qr-modal-hint" id="qr-modal-hint"><i class='bx bx-camera'></i> کامێراکە بگرە بەرامبەر بارکۆد یان QR کۆدی ئۆردەرەکە</p>
+
+            <div class="qr-or"><span>یان</span></div>
+
+            <button type="button" class="qr-gallery-btn" id="qr-gallery-btn"
+                onclick="document.getElementById('qr-gallery-input').click()">
+                <i class='bx bx-image-alt'></i> هەڵبژاردنی وێنە لە گەلەری
+            </button>
+            <input type="file" id="qr-gallery-input" accept="image/*" style="display:none;"
+                onchange="scanImageFromGallery(this)">
+
+            <!-- بۆکسی شاراوە بۆ خوێندنەوەی وێنەی هەڵبژێردراو -->
+            <div id="qr-file-reader" style="display:none;"></div>
         </div>
     </div>
 </body>
