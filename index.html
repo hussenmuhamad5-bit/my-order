@@ -19,10 +19,12 @@
                 <div class="input-group">
                     <div class="input-wrapper">
                         <svg fill="none" viewBox="0 0 24 24" class="input-icon"><circle stroke-width="1.5" stroke="currentColor" r="4" cy="8" cx="12"></circle><path stroke-linecap="round" stroke-width="1.5" stroke="currentColor" d="M5 20C5 17.2386 8.13401 15 12 15C15.866 15 19 17.2386 19 20"></path></svg>
-                        <input id="login-code" placeholder="کۆدی کارمەند" class="form-input" type="text" autocomplete="off" />
+                        <input id="login-code" placeholder="کۆدی کارمەند" class="form-input" type="text" autocomplete="off" oninput="onLoginCodeInput()" />
+                        <span class="code-spin" id="code-spin"></span>
                     </div>
+                    <div class="code-status" id="code-status"></div>
                 </div>
-                <div class="input-group">
+                <div class="input-group" id="pass-group">
                     <div class="input-wrapper">
                         <svg fill="none" viewBox="0 0 24 24" class="input-icon"><path stroke-width="1.5" stroke="currentColor" d="M12 10V14M8 6H16C17.1046 6 18 6.89543 18 8V16C18 17.1046 17.1046 18 16 18H8C6.89543 18 6 17.1046 6 16V8C6 6.89543 6.89543 6 8 6Z"></path></svg>
                         <input id="login-pass" placeholder="وشەی نهێنی" class="form-input" type="password" />
@@ -32,6 +34,55 @@
                     </div>
                 </div>
             </div>
+
+            <!-- ============================================================
+                 دانانی پاسوۆردی یەکەم جار
+                 کاتێک کۆدەکە دەنووسرێت و دەرکەوێت پاسوۆردی لەسەر نییە،
+                 ئەم پانێڵە دەردەکەوێت — هەمان شێوازی «گۆڕینی پاسوۆرد»ی پرۆفایل
+                 ============================================================ -->
+            <div class="pw-setup" id="pw-setup">
+                <div class="pw-setup-head">
+                    <span class="pwc-head-ico">
+                        <svg fill="none" viewBox="0 0 24 24" width="21" height="21"><path stroke-width="1.6" stroke="currentColor" stroke-linecap="round" d="M8 10V7.5a4 4 0 1 1 8 0V10"></path><rect x="5" y="10" width="14" height="10" rx="2.5" stroke-width="1.6" stroke="currentColor"></rect><circle cx="12" cy="15" r="1.4" fill="currentColor"></circle></svg>
+                    </span>
+                    <span class="pwc-head-txt">
+                        <span class="pwc-head-title">دانانی پاسوۆرد</span>
+                        <span class="pwc-head-sub" id="pw-setup-sub">ئەم کۆدە هێشتا پاسوۆردی نییە</span>
+                    </span>
+                </div>
+
+                <label class="pwc-label">پاسوۆردی نوێ</label>
+                <div class="pass-field no-copy">
+                    <input type="password" id="pw-new" autocomplete="new-password" maxlength="15"
+                        placeholder="٦ بۆ ١٥ پیت یان ژمارە" spellcheck="false" oninput="validateSetupForm()">
+                    <button type="button" class="password-toggle" title="پیشاندان/شاردنەوە"
+                        onpointerdown="event.preventDefault()" onclick="togglePwField('pw-new', this)">
+                        <svg fill="none" viewBox="0 0 24 24" class="eye-icon"><path stroke-width="1.5" stroke="currentColor" d="M2 12C2 12 5 5 12 5C19 5 22 12 22 12C22 12 19 19 12 19C5 19 2 12 2 12Z"></path><circle stroke-width="1.5" stroke="currentColor" r="3" cy="12" cx="12"></circle><line class="eye-slash" x1="4.5" y1="19.5" x2="19.5" y2="4.5" stroke-width="1.5" stroke="currentColor" stroke-linecap="round"></line></svg>
+                    </button>
+                </div>
+
+                <div class="pwc-meter" id="pwc-meter">
+                    <div class="pwc-bars"><span></span><span></span><span></span><span></span></div>
+                    <span class="pwc-meter-txt" id="pwc-meter-txt">هێزی پاسوۆرد</span>
+                </div>
+
+                <label class="pwc-label">دووبارەکردنەوەی پاسوۆرد</label>
+                <div class="pass-field no-copy">
+                    <input type="password" id="pw-confirm" autocomplete="new-password" maxlength="15"
+                        placeholder="دووبارە بینووسەوە" spellcheck="false" oninput="validateSetupForm()">
+                    <button type="button" class="password-toggle" title="پیشاندان/شاردنەوە"
+                        onpointerdown="event.preventDefault()" onclick="togglePwField('pw-confirm', this)">
+                        <svg fill="none" viewBox="0 0 24 24" class="eye-icon"><path stroke-width="1.5" stroke="currentColor" d="M2 12C2 12 5 5 12 5C19 5 22 12 22 12C22 12 19 19 12 19C5 19 2 12 2 12Z"></path><circle stroke-width="1.5" stroke="currentColor" r="3" cy="12" cx="12"></circle><line class="eye-slash" x1="4.5" y1="19.5" x2="19.5" y2="4.5" stroke-width="1.5" stroke="currentColor" stroke-linecap="round"></line></svg>
+                    </button>
+                </div>
+
+                <div class="pwc-msg" id="pw-setup-msg"></div>
+
+                <button class="btn pwc-save" id="pw-setup-btn" onclick="submitFirstPassword()" disabled>
+                    دانانی پاسوۆرد و چوونەژوورەوە
+                </button>
+            </div>
+
             <button class="submit-button" id="login-btn" onclick="performLogin()"><span class="button-text">چوونە ژوورەوە</span><div class="button-glow"></div></button>
         </div>
     </div>
@@ -179,7 +230,277 @@
             }
         }
 
+        // ============================================================
+        // پشکنینی کۆد: ئایا پاسوۆردی لەسەر دانراوە؟
+        // ------------------------------------------------------------
+        // کاتێک کۆدێک دەنووسرێت، دوای وەستانی نووسین پشکنین دەکرێت.
+        // ئەگەر ئەو کۆدە هێشتا پاسوۆردی نەبێت، پانێڵی دانانی پاسوۆرد
+        // دەردەکەوێت (دوو خانە) — هەمان شێوازی پرۆفایل.
+        // ============================================================
+        const PW_MIN = 6, PW_MAX = 15;
+        const CODE_DEBOUNCE = 550;
+
+        let codeCheckTimer = null;
+        let codeCheckSeq = 0;   // وەڵامی کۆن پشتگوێ دەخرێت (کۆدەکە خێرا دەگۆڕێت)
+        let setupUser = null;   // ئەگەر کۆدەکە پاسوۆردی نەبێت، زانیاری خاوەنەکەی
+
+        const ICON_ERR = "<svg viewBox='0 0 24 24' fill='none' width='16' height='16' style='flex-shrink:0'><circle cx='12' cy='12' r='9' stroke='currentColor' stroke-width='1.6'/><path d='M12 7.5v5.5' stroke='currentColor' stroke-width='1.6' stroke-linecap='round'/><circle cx='12' cy='16.3' r='1' fill='currentColor'/></svg>";
+        const ICON_OK = "<svg viewBox='0 0 24 24' fill='none' width='16' height='16' style='flex-shrink:0'><circle cx='12' cy='12' r='9' stroke='currentColor' stroke-width='1.6'/><path d='M8.5 12.2l2.4 2.4 4.6-4.8' stroke='currentColor' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/></svg>";
+
+        function esc(s) {
+            return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+                return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+            });
+        }
+
+        function setCodeStatus(html, cls) {
+            const el = document.getElementById('code-status');
+            const spin = document.getElementById('code-spin');
+            if (spin) spin.classList.toggle('on', cls === 'busy');
+            if (!el) return;
+            el.className = 'code-status' + (cls ? ' ' + cls : '');
+            el.innerHTML = html || '';
+        }
+
+        function onLoginCodeInput() {
+            clearTimeout(codeCheckTimer);
+            const code = document.getElementById('login-code').value.trim();
+
+            // هەر گۆڕانێک لە کۆدەکە → گەڕانەوە بۆ دۆخی ئاسایی
+            if (setupUser && setupUser.code !== code) exitSetupMode();
+            if (setupUser) return;   // هەمان کۆدە، پانێڵەکە وەک خۆی بمێنێتەوە
+
+            if (!code) { codeCheckSeq++; setCodeStatus('', ''); return; }
+            setCodeStatus('پشکنینی کۆد...', 'busy');
+            codeCheckTimer = setTimeout(function () { checkLoginCode(code); }, CODE_DEBOUNCE);
+        }
+
+        // زانیاری کۆدەکە — بە RPC، تا خودی پاسوۆرد نەگاتە وێبگەڕ
+        async function fetchCodeStatus(code) {
+            try {
+                const { data, error } = await supabase.rpc('login_code_status', { p_code: code });
+                if (!error && Array.isArray(data)) return data.length ? data[0] : null;
+            } catch (e) { }
+
+            // پاشەکەوت: ئەگەر RPCەکە بەردەست نەبوو
+            const { data } = await supabase.from('employees')
+                .select('full_name, avatar, role, password').eq('code', code).limit(1);
+            if (!data || !data.length) return null;
+            const u = data[0];
+            return {
+                full_name: u.full_name, avatar: u.avatar, role: u.role,
+                needs_password: String(u.password == null ? '' : u.password).trim() === ''
+            };
+        }
+
+        async function checkLoginCode(code) {
+            const seq = ++codeCheckSeq;
+            try {
+                await ensureSupabaseLoaded();
+                if (!supabase || typeof supabase.from !== 'function') { setCodeStatus('', ''); return; }
+
+                const info = await fetchCodeStatus(code);
+                if (seq !== codeCheckSeq) return;   // کۆدەکە گۆڕاوە — وەڵامی کۆنە
+
+                if (!info) { setCodeStatus(ICON_ERR + " ئەم کۆدە بوونی نییە", 'err'); return; }
+
+                if (info.needs_password) {
+                    enterSetupMode(code, info);
+                } else {
+                    setCodeStatus(ICON_OK + ' ' + esc(info.full_name || 'ئەکاونت دۆزرایەوە'), 'ok');
+                }
+            } catch (e) {
+                if (seq !== codeCheckSeq) return;
+                // کێشەی ئینتەرنێت — بێدەنگ، چوونەژوورەوەی ئاسایی هەر کار دەکات
+                setCodeStatus('', '');
+            }
+        }
+
+        function enterSetupMode(code, info) {
+            setupUser = {
+                code: code,
+                full_name: info.full_name || '',
+                avatar: info.avatar || '',
+                role: info.role || ''
+            };
+            setCodeStatus('', '');
+
+            const passGroup = document.getElementById('pass-group');
+            const panel = document.getElementById('pw-setup');
+            const loginBtn = document.getElementById('login-btn');
+            if (passGroup) passGroup.style.display = 'none';
+            if (loginBtn) loginBtn.style.display = 'none';
+            if (panel) panel.classList.add('show');
+
+            const sub = document.getElementById('pw-setup-sub');
+            if (sub) {
+                sub.innerHTML = info.full_name
+                    ? "بەخێربێیت <b>" + esc(info.full_name) + "</b> — پاسوۆردێک بۆ خۆت دابنێ"
+                    : "ئەم کۆدە هێشتا پاسوۆردی نییە — پاسوۆردێک دابنێ";
+            }
+
+            const lp = document.getElementById('login-pass');
+            if (lp) lp.value = '';
+            resetSetupForm();
+        }
+
+        function exitSetupMode() {
+            setupUser = null;
+            const passGroup = document.getElementById('pass-group');
+            const panel = document.getElementById('pw-setup');
+            const loginBtn = document.getElementById('login-btn');
+            if (passGroup) passGroup.style.display = '';
+            if (loginBtn) loginBtn.style.display = '';
+            if (panel) panel.classList.remove('show');
+            resetSetupForm();
+        }
+
+        function resetSetupForm() {
+            ['pw-new', 'pw-confirm'].forEach(function (id) {
+                const el = document.getElementById(id);
+                if (el) { el.value = ''; el.type = 'password'; }
+            });
+            document.querySelectorAll('#pw-setup .password-toggle').forEach(function (b) { b.classList.remove('on'); });
+            const msg = document.getElementById('pw-setup-msg');
+            if (msg) { msg.className = 'pwc-msg'; msg.innerHTML = ''; }
+            setPwMeter(0, '');
+            const btn = document.getElementById('pw-setup-btn');
+            if (btn) btn.disabled = true;
+        }
+
+        // پیشاندان/شاردنەوەی هەر خانەیەکی پاسوۆرد (بەبێ داخستنی کیبۆرد)
+        function togglePwField(inputId, btn) {
+            const input = document.getElementById(inputId);
+            if (!input) return;
+
+            const wasFocused = (document.activeElement === input);
+            let start = null, end = null;
+            try { start = input.selectionStart; end = input.selectionEnd; } catch (e) { }
+
+            const show = (input.type === 'password');
+            input.type = show ? 'text' : 'password';
+            if (btn) btn.classList.toggle('on', show);
+
+            if (wasFocused) {
+                input.focus({ preventScroll: true });
+                if (start !== null) {
+                    try { input.setSelectionRange(start, end); } catch (e) { }
+                }
+            }
+        }
+
+        // هێزی پاسوۆرد — هەمان یاسای پرۆفایل
+        function passwordStrength(p) {
+            if (!p) return 0;
+            let score = 0;
+            if (p.length >= PW_MIN) score++;
+            if (p.length >= 10) score++;
+            if (/[a-z]/i.test(p) && /\d/.test(p)) score++;
+            if (/[^a-z0-9]/i.test(p)) score++;
+            return Math.min(4, score);
+        }
+
+        function setPwMeter(score, label) {
+            const meter = document.getElementById('pwc-meter');
+            const txt = document.getElementById('pwc-meter-txt');
+            if (!meter || !txt) return;
+            meter.setAttribute('data-score', String(score));
+            txt.textContent = label || 'هێزی پاسوۆرد';
+        }
+
+        function validateSetupForm() {
+            const nw = (document.getElementById('pw-new') || {}).value || '';
+            const cf = (document.getElementById('pw-confirm') || {}).value || '';
+            const msg = document.getElementById('pw-setup-msg');
+            const btn = document.getElementById('pw-setup-btn');
+
+            const score = passwordStrength(nw);
+            setPwMeter(score, nw ? ['زۆر لاواز', 'لاواز', 'مامناوەند', 'باش', 'بەهێز'][score] : '');
+
+            let err = '', ok = false;
+            if (!nw || !cf) {
+                err = '';
+            } else if (nw.length < PW_MIN || nw.length > PW_MAX) {
+                err = 'پاسوۆرد دەبێت لە نێوان ' + PW_MIN + ' بۆ ' + PW_MAX + ' پیت یان ژمارە بێت';
+            } else if (nw !== cf) {
+                err = 'هەردوو پاسوۆردەکە یەکسان نین';
+            } else {
+                ok = true;
+            }
+
+            if (msg) {
+                if (err) { msg.className = 'pwc-msg err'; msg.innerHTML = ICON_ERR + ' ' + esc(err); }
+                else if (ok) { msg.className = 'pwc-msg ok'; msg.innerHTML = ICON_OK + ' ئامادەیە'; }
+                else { msg.className = 'pwc-msg'; msg.innerHTML = ''; }
+            }
+            if (btn) btn.disabled = !ok;
+            return ok;
+        }
+
+        async function submitFirstPassword() {
+            if (!setupUser || !validateSetupForm()) return;
+
+            const nw = document.getElementById('pw-new').value;
+            const btn = document.getElementById('pw-setup-btn');
+            const msg = document.getElementById('pw-setup-msg');
+            const originalLabel = btn.innerHTML;
+
+            btn.disabled = true;
+            btn.textContent = "پاشەکەوتکردن...";
+
+            try {
+                await ensureSupabaseLoaded();
+
+                // دڵنیابوونەوە کە هێشتا پاسوۆردی نییە — لەوانەیە لە ئامێرێکی
+                // تردا لەم ماوەیەدا پاسوۆردی بۆ دانرابێت
+                const info = await fetchCodeStatus(setupUser.code);
+                if (!info) {
+                    if (msg) { msg.className = 'pwc-msg err'; msg.innerHTML = ICON_ERR + " ئەم کۆدە ئیتر بوونی نییە"; }
+                    return;
+                }
+                if (!info.needs_password) {
+                    const code = setupUser.code;
+                    exitSetupMode();
+                    showMsg("⚠️ ئەم کۆدە ئێستا پاسوۆردی لەسەر دانراوە. تکایە بە پاسوۆردەکەت بچۆ ژوورەوە.");
+                    const cf = document.getElementById('login-code');
+                    if (cf) cf.value = code;
+                    setCodeStatus(ICON_OK + ' ' + esc(info.full_name || ''), 'ok');
+                    return;
+                }
+
+                const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
+                let updateData = { password: nw };
+                if (tgUser && tgUser.id) {
+                    updateData.telegram_id = String(tgUser.id);
+                    updateData.telegram_username = tgUser.username || "";
+                    updateData.telegram_name = tgUser.first_name + (tgUser.last_name ? " " + tgUser.last_name : "");
+                }
+
+                const { error: upErr } = await supabase.from('employees')
+                    .update(updateData).eq('code', setupUser.code);
+                if (upErr) throw upErr;
+
+                // ئەکاونتی تەواو بهێنە بۆ ئەوەی ئەپەکە هەموو زانیارییەکانی هەبێت
+                const { data: full } = await supabase.from('employees')
+                    .select('*').eq('code', setupUser.code).single();
+                const user = full || Object.assign({ code: setupUser.code }, updateData);
+
+                localStorage.setItem('myAppUser', JSON.stringify(user));
+                maybeSaveAccount(user);
+                window.location.replace("app.html");
+            } catch (e) {
+                console.error('submitFirstPassword:', e);
+                if (msg) { msg.className = 'pwc-msg err'; msg.innerHTML = ICON_ERR + " کێشەیەک ڕوویدا — دووبارە هەوڵ بدەوە"; }
+                btn.innerHTML = originalLabel;
+                btn.disabled = false;
+            }
+        }
+
         async function performLogin() {
+            // لە دۆخی دانانی پاسوۆردا، دوگمەی چوونەژوورەوە شاردراوەتەوە —
+            // بەڵام ئەگەر بە Enter بانگ کرا، بۆ ڕێچکەی دروست بگوازرێتەوە
+            if (setupUser) { submitFirstPassword(); return; }
+
             let code = document.getElementById('login-code').value.trim();
             let pass = document.getElementById('login-pass').value.trim();
             if(!code || !pass) { showMsg("تکایە هەردوو خانەکە پڕبکەرەوە"); return; }

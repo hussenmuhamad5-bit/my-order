@@ -779,19 +779,39 @@
 
             <div class="pwc-body" id="pwc-body">
                 <div class="pwc-inner">
-                    <label class="pwc-label">پاسوۆردی ئێستا</label>
-                    <div class="pass-field no-copy">
-                        <input type="password" id="pw-current" autocomplete="current-password"
-                            placeholder="پاسوۆردی ئێستات" spellcheck="false" oninput="validatePwForm()">
-                        <button type="button" class="password-toggle" title="پیشاندان/شاردنەوە"
-                            onpointerdown="event.preventDefault()" onclick="togglePwField('pw-current', this)">
-                            <svg fill="none" viewBox="0 0 24 24" class="eye-icon">
-                                <path stroke-width="1.5" stroke="currentColor" d="M2 12C2 12 5 5 12 5C19 5 22 12 22 12C22 12 19 19 12 19C5 19 2 12 2 12Z"></path>
-                                <circle stroke-width="1.5" stroke="currentColor" r="3" cy="12" cx="12"></circle>
-                                <line class="eye-slash" x1="4.5" y1="19.5" x2="19.5" y2="4.5" stroke-width="1.5" stroke="currentColor" stroke-linecap="round"></line>
-                            </svg>
+
+                    <!-- هەنگاوی ١: پشتڕاستکردنەوەی پاسوۆردی ئێستا -->
+                    <div class="pwc-step on" id="pwc-step1">
+                        <label class="pwc-label">پاسوۆردی ئێستا</label>
+                        <div class="pass-field no-copy">
+                            <input type="password" id="pw-current" autocomplete="current-password"
+                                placeholder="پاسوۆردی ئێستات" spellcheck="false" oninput="onCurrentPwInput()"
+                                onkeydown="if(event.key==='Enter'){event.preventDefault();verifyCurrentPassword();}">
+                            <button type="button" class="password-toggle" title="پیشاندان/شاردنەوە"
+                                onpointerdown="event.preventDefault()" onclick="togglePwField('pw-current', this)">
+                                <svg fill="none" viewBox="0 0 24 24" class="eye-icon">
+                                    <path stroke-width="1.5" stroke="currentColor" d="M2 12C2 12 5 5 12 5C19 5 22 12 22 12C22 12 19 19 12 19C5 19 2 12 2 12Z"></path>
+                                    <circle stroke-width="1.5" stroke="currentColor" r="3" cy="12" cx="12"></circle>
+                                    <line class="eye-slash" x1="4.5" y1="19.5" x2="19.5" y2="4.5" stroke-width="1.5" stroke="currentColor" stroke-linecap="round"></line>
+                                </svg>
+                            </button>
+                        </div>
+
+                        <div class="pwc-msg" id="pwc-msg1"></div>
+
+                        <button class="btn pwc-save" id="pwc-verify" onclick="verifyCurrentPassword()" disabled>
+                            <i class='bx bx-right-arrow-alt'></i> بەردەوامبوون
                         </button>
                     </div>
+
+                    <!-- هەنگاوی ٢: پاسوۆردی نوێ (تەنها دوای پشتڕاستکردنەوە) -->
+                    <div class="pwc-step" id="pwc-step2">
+                        <div class="pwc-verified">
+                            <i class='bx bx-check-circle'></i>
+                            <span>پاسوۆردی ئێستا پشتڕاست کرایەوە</span>
+                            <button type="button" class="pwc-back" onclick="pwBackToStep1()"
+                                title="گەڕانەوە" aria-label="گەڕانەوە"><i class='bx bx-x'></i></button>
+                        </div>
 
                     <label class="pwc-label">پاسوۆردی نوێ</label>
                     <div class="pass-field no-copy">
@@ -833,6 +853,8 @@
                     <button class="btn pwc-save" id="pwc-save" onclick="submitPasswordChange()" disabled>
                         <i class='bx bx-check-shield'></i> گۆڕینی پاسوۆرد
                     </button>
+                    </div>
+
                 </div>
             </div>
         </div>
@@ -2242,17 +2264,117 @@
         }
 
 
+        // پاسوۆردی ئێستا دوای پشتڕاستکردنەوە — تا کاتی ناردن هەڵدەگیرێت،
+        // بۆ ئەوەی خانەکەی بشاردرێتەوە بەڵام هێشتا بتوانرێت دووبارە بپشکنرێت
+        let pwVerifiedCurrent = null;
+
+        function pwSetStep(n) {
+            const s1 = document.getElementById('pwc-step1');
+            const s2 = document.getElementById('pwc-step2');
+            if (s1) s1.classList.toggle('on', n === 1);
+            if (s2) s2.classList.toggle('on', n === 2);
+        }
+
         function resetPwForm() {
+            pwVerifiedCurrent = null;
             ['pw-current', 'pw-new', 'pw-confirm'].forEach(id => {
                 const el = document.getElementById(id);
                 if (el) { el.value = ''; el.type = 'password'; }
             });
             document.querySelectorAll('.pwc-inner .password-toggle').forEach(b => b.classList.remove('on'));
+            ['pwc-msg', 'pwc-msg1'].forEach(id => {
+                const m = document.getElementById(id);
+                if (m) { m.className = 'pwc-msg'; m.innerHTML = ''; }
+            });
+            setPwMeter(0, '');
+            const btn = document.getElementById('pwc-save');
+            if (btn) btn.disabled = true;
+            const vbtn = document.getElementById('pwc-verify');
+            if (vbtn) vbtn.disabled = true;
+            pwSetStep(1);
+        }
+
+        // ---------- هەنگاوی ١: پشتڕاستکردنەوەی پاسوۆردی ئێستا ----------
+        // تەنها دۆخی دوگمەکە نوێ دەکاتەوە — پەیامەکە دەستکاری ناکات،
+        // چونکە دوای هەڵەیەک لە `finally`ـدا بانگ دەکرێت
+        function updateVerifyBtn() {
+            const v = (document.getElementById('pw-current') || {}).value || '';
+            const btn = document.getElementById('pwc-verify');
+            if (btn) btn.disabled = !v;
+        }
+
+        function onCurrentPwInput() {
+            updateVerifyBtn();
+            const msg = document.getElementById('pwc-msg1');
+            if (msg) { msg.className = 'pwc-msg'; msg.innerHTML = ''; }
+        }
+
+        async function verifyCurrentPassword() {
+            const el = document.getElementById('pw-current');
+            const btn = document.getElementById('pwc-verify');
+            const msg = document.getElementById('pwc-msg1');
+            const cur = el ? el.value : '';
+            if (!cur || !currentUser || !currentUser.code) return;
+
+            const label = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = "<i class='bx bx-loader-alt bx-spin'></i> پشکنین...";
+            try {
+                // پاسوۆردەکە لە داتابەیسەوە دەپشکنرێت، نەک لە کاشی ناو ئامێرەکە
+                const { data, error } = await supabase.from('employees')
+                    .select('password').eq('code', currentUser.code).single();
+                if (error) throw error;
+
+                const dbPass = (data && data.password != null) ? String(data.password) : '';
+                if (dbPass !== cur) {
+                    if (msg) {
+                        msg.className = 'pwc-msg err';
+                        msg.innerHTML = `<i class='bx bx-error-circle'></i> پاسوۆردی ئێستا هەڵەیە`;
+                    }
+                    if (el) { el.value = ''; el.focus(); }
+                    return;
+                }
+
+                // دروستە — خانەکە دەسڕدرێتەوە و دەشاردرێتەوە
+                pwVerifiedCurrent = cur;
+                if (el) { el.value = ''; el.type = 'password'; }
+                document.querySelectorAll('#pwc-step1 .password-toggle').forEach(b => b.classList.remove('on'));
+                if (msg) { msg.className = 'pwc-msg'; msg.innerHTML = ''; }
+                pwSetStep(2);
+                setTimeout(() => {
+                    const n = document.getElementById('pw-new');
+                    if (n) n.focus({ preventScroll: true });
+                }, 240);
+            } catch (e) {
+                console.error('verifyCurrentPassword:', e);
+                if (msg) {
+                    msg.className = 'pwc-msg err';
+                    msg.innerHTML = `<i class='bx bx-error-circle'></i> کێشەیەک ڕوویدا — دووبارە هەوڵ بدەوە`;
+                }
+            } finally {
+                btn.innerHTML = label;
+                updateVerifyBtn();
+            }
+        }
+
+        // گەڕانەوە بۆ هەنگاوی ١
+        function pwBackToStep1() {
+            pwVerifiedCurrent = null;
+            ['pw-new', 'pw-confirm'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) { el.value = ''; el.type = 'password'; }
+            });
+            document.querySelectorAll('#pwc-step2 .password-toggle').forEach(b => b.classList.remove('on'));
             const msg = document.getElementById('pwc-msg');
             if (msg) { msg.className = 'pwc-msg'; msg.innerHTML = ''; }
             setPwMeter(0, '');
             const btn = document.getElementById('pwc-save');
             if (btn) btn.disabled = true;
+            pwSetStep(1);
+            setTimeout(() => {
+                const c = document.getElementById('pw-current');
+                if (c) c.focus({ preventScroll: true });
+            }, 240);
         }
 
         // هێزی پاسوۆرد: درێژی + جۆری پیتەکان
@@ -2275,7 +2397,7 @@
         }
 
         function validatePwForm() {
-            const cur = (document.getElementById('pw-current') || {}).value || '';
+            const cur = pwVerifiedCurrent || '';
             const nw = (document.getElementById('pw-new') || {}).value || '';
             const cf = (document.getElementById('pw-confirm') || {}).value || '';
             const msg = document.getElementById('pwc-msg');
@@ -2287,7 +2409,7 @@
             let err = '';
             let ok = false;
 
-            if (!cur || !nw || !cf) {
+            if (!nw || !cf) {
                 err = '';
             } else if (nw.length < PW_MIN || nw.length > PW_MAX) {
                 err = `پاسوۆردی نوێ دەبێت لە نێوان ${PW_MIN} بۆ ${PW_MAX} پیت یان ژمارە بێت`;
@@ -2318,8 +2440,9 @@
         async function submitPasswordChange() {
             if (!validatePwForm()) return;
             if (!currentUser || !currentUser.code) return;
+            if (!pwVerifiedCurrent) { pwBackToStep1(); return; }
 
-            const cur = document.getElementById('pw-current').value;
+            const cur = pwVerifiedCurrent;
             const nw = document.getElementById('pw-new').value;
             const btn = document.getElementById('pwc-save');
             const msg = document.getElementById('pwc-msg');
@@ -2327,17 +2450,19 @@
             btn.disabled = true;
             btn.innerHTML = "<i class='bx bx-loader-alt bx-spin'></i> گۆڕین...";
             try {
-                // پاسوۆردی ئێستا لە داتابەیسەوە دەپشکنرێت، نەک لە کاشی ناو ئامێرەکە
+                // دووبارە دەپشکنرێت — لەوانەیە لەم ماوەیەدا لە ئامێرێکی تر گۆڕدرابێت
                 const { data, error } = await supabase.from('employees')
                     .select('password').eq('code', currentUser.code).single();
                 if (error) throw error;
 
                 const dbPass = (data && data.password != null) ? String(data.password) : '';
                 if (dbPass !== cur) {
-                    msg.className = 'pwc-msg err';
-                    msg.innerHTML = `<i class='bx bx-error-circle'></i> پاسوۆردی ئێستا هەڵەیە`;
-                    const curEl = document.getElementById('pw-current');
-                    if (curEl) { curEl.value = ''; curEl.focus(); }
+                    pwBackToStep1();
+                    const m1 = document.getElementById('pwc-msg1');
+                    if (m1) {
+                        m1.className = 'pwc-msg err';
+                        m1.innerHTML = `<i class='bx bx-error-circle'></i> پاسوۆردەکە گۆڕاوە — دووبارە بینووسەوە`;
+                    }
                     return;
                 }
 
@@ -2705,10 +2830,13 @@
                             <span class="moc-chip"><i class='bx bx-calendar'></i><span dir="ltr">${explicitDateOnly} · ${explicitTimeOnly}</span></span>
                             <span class="moc-chip"><i class='bx bx-map'></i>${city}</span>
                             <span class="moc-chip"><i class='bx bx-history'></i>${relativeTime}</span>
-                            <span class="moc-id" dir="ltr"><i class='bx bx-hash'></i>${orderCodeStr}</span>
+                            <span class="moc-end">
+                                <span class="moc-id" dir="ltr"><i class='bx bx-hash'></i>${orderCodeStr}</span>
+                                <button type="button" class="card-copy" title="کۆپیکردنی زانیاری ئۆردەر"
+                                    aria-label="کۆپیکردنی زانیاری ئۆردەر"
+                                    onclick="openCopyMenu('${o.id}', event)"><i class='bx bx-copy'></i></button>
+                            </span>
                         </div>
-                        <button type="button" class="card-copy" title="کۆپیکردنی زانیاری ئۆردەر"
-                            onclick="openCopyMenu('${o.id}', event)"><i class='bx bx-copy'></i></button>
                     </div>`;
                     });
                 });
@@ -2917,10 +3045,13 @@
                         <span class="mocc-chip mocc-chip-plain"><i class='bx bx-map'></i>${city}</span>
                         <span class="mocc-chip mocc-chip-plain"><i class='bx bx-history'></i>${relTime}</span>
                     </div>
-                    <span class="mocc-id"><i class='bx bx-hash'></i>${orderCodeStr}</span>
+                    <div class="mocc-end">
+                        <span class="mocc-id"><i class='bx bx-hash'></i>${orderCodeStr}</span>
+                        <button type="button" class="card-copy" title="کۆپیکردنی زانیاری ئۆردەر"
+                            aria-label="کۆپیکردنی زانیاری ئۆردەر"
+                            onclick="openCopyMenu('${o.id}', event)"><i class='bx bx-copy'></i></button>
+                    </div>
                 </div>
-                <button type="button" class="card-copy" title="کۆپیکردنی زانیاری ئۆردەر"
-                    onclick="openCopyMenu('${o.id}', event)"><i class='bx bx-copy'></i></button>
             </div>`;
         }
 
@@ -3426,10 +3557,14 @@
 
         // ---------- مێنیوی هەڵبژاردنی شێواز ----------
         let copyMenuOrderId = null;
+        // ئەو دوگمەیەی مێنیوەکەی کردەوە — بۆ پیشاندانی نیشانەی ✓ دوای کۆپیکردن
+        let copyMenuBtn = null;
 
         function openCopyMenu(orderId, ev) {
             if (ev) { ev.stopPropagation(); ev.preventDefault(); }
             copyMenuOrderId = orderId;
+            copyMenuBtn = (ev && ev.currentTarget && ev.currentTarget.tagName === 'BUTTON')
+                ? ev.currentTarget : null;
             const m = document.getElementById('order-copy-menu');
             if (m) m.classList.add('show');
         }
@@ -3438,16 +3573,35 @@
             const m = document.getElementById('order-copy-menu');
             if (m) m.classList.remove('show');
             copyMenuOrderId = null;
+            copyMenuBtn = null;
+        }
+
+        // دوگمەکە بۆ ساتێک دەبێتە ✓ سەوز — دڵنیایی بینراو کە کۆپی کرا
+        function flashCopied(btn) {
+            if (!btn || !btn.isConnected) return;
+            const ico = btn.querySelector('i');
+            if (!ico) return;
+            if (btn._copyTimer) clearTimeout(btn._copyTimer);
+            else btn._copyIcon = ico.className;
+            ico.className = 'bx bx-check';
+            btn.classList.add('copied');
+            btn._copyTimer = setTimeout(() => {
+                ico.className = btn._copyIcon || 'bx bx-copy';
+                btn.classList.remove('copied');
+                btn._copyTimer = null;
+            }, 1500);
         }
 
         async function doCopyOrder(mode) {
             const o = allGlobalOrdersData[copyMenuOrderId];
+            const srcBtn = copyMenuBtn;
             closeCopyMenu();
             if (!o) { showToast("زانیاری ئۆردەرەکە نەدۆزرایەوە", "error"); return; }
 
             const text = buildOrderCopyText(o, mode);
             const ok = await copyTextToClipboard(text);
             if (ok) {
+                flashCopied(srcBtn);
                 const imgs = orderImageLinks(o).length;
                 showToast(imgs
                     ? `زانیاری ئۆردەر کۆپی کرا (${imgs} وێنە)`

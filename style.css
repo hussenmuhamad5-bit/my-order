@@ -368,6 +368,12 @@ input::placeholder {
   position: relative;
 }
 
+/* ئایکۆنەکان بەرامبەر خودی خانەکە ڕێک بخرێن، نەک بەرامبەر تەواوی گرووپەکە —
+   چونکە ئێستا ڕیزی دۆخی کۆد لە ژێر خانەکەدا زیاد بووە و گرووپەکە بەرزتر دەبێت */
+.input-wrapper {
+  position: relative;
+}
+
 .form-input {
   width: 100%;
   height: 45px;
@@ -434,6 +440,131 @@ input::placeholder {
 
 .password-toggle.on {
   color: var(--primary);
+}
+
+/* =========================================
+   پەڕەی چوونەژوورەوە — پشکنینی کۆد و دانانی
+   پاسوۆردی یەکەم جار
+   ========================================= */
+
+/* دۆخی کۆد لە ژێر خانەکەدا (دۆزرایەوە / بوونی نییە / پشکنین) */
+.code-status {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  margin-top: 7px;
+  font-size: var(--fs-sm, 13px);
+  font-weight: 600;
+  line-height: 1.5;
+  text-align: center;
+}
+
+.code-status:empty {
+  display: none;
+}
+
+.code-status.ok {
+  color: #059669;
+}
+
+.code-status.err {
+  color: #dc2626;
+}
+
+.code-status.busy {
+  color: #94a3b8;
+  font-weight: 500;
+}
+
+/* سکرۆڵی بچووک لەناو خانەی کۆد کاتی پشکنین */
+.code-spin {
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  width: 15px;
+  height: 15px;
+  margin-top: -7.5px;
+  border-radius: 50%;
+  border: 2px solid #e2e8f0;
+  border-top-color: var(--primary);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+
+.code-spin.on {
+  opacity: 1;
+  animation: codeSpin 0.7s linear infinite;
+}
+
+@keyframes codeSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* پانێڵی دانانی پاسوۆردی یەکەم جار */
+.pw-setup {
+  display: none;
+  margin-top: 4px;
+  padding: 14px 16px 16px;
+  border-radius: 14px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  text-align: right;
+}
+
+.pw-setup.show {
+  display: block;
+  animation: pwSetupIn 0.32s cubic-bezier(.32, .72, 0, 1);
+}
+
+@keyframes pwSetupIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.pw-setup-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-bottom: 12px;
+  margin-bottom: 2px;
+  border-bottom: 1px solid #e8edf3;
+}
+
+/* لەم پانێڵەدا ئایکۆنەکە هەمیشە چالاکە (کارتەکە هەمیشە کراوەیە) */
+.pw-setup .pwc-head-ico {
+  background: var(--primary);
+  color: #fff;
+}
+
+.pw-setup .pwc-head-sub b {
+  color: var(--text-main, #1e293b);
+  font-weight: 700;
+}
+
+/* خانەکانی ناو پانێڵەکە با سپی بن لەسەر پاشخانی خۆڵەمێشی */
+.pw-setup .pass-field input {
+  background: #fff;
+}
+
+/* بەرزی نەرم — تا نووسینی درێژ لە شاشەی تەسکدا نەڕژێتە دەرەوە */
+.pw-setup .pwc-save {
+  margin-top: 14px;
+  height: auto;
+  min-height: var(--btn-h);
+  padding: 10px 14px;
+  font-size: var(--fs-md);
+  line-height: 1.5;
 }
 
 .submit-button {
@@ -1462,51 +1593,107 @@ h2 i,
 .modal-copy {
   width: 34px;
   height: 34px;
-  border: none;
+  padding: 0;
+  border: 1px solid rgba(36, 129, 204, 0.18);
   border-radius: 11px;
-  background: rgba(36, 129, 204, 0.1);
+  background: rgba(36, 129, 204, 0.08);
   color: var(--primary);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 19px;
+  font-size: 18px;
+  line-height: 1;
   cursor: pointer;
-  transition: all 0.16s ease;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.16s ease, border-color 0.16s ease, color 0.16s ease,
+    transform 0.12s ease;
 }
 
 .modal-copy:active {
-  background: rgba(36, 129, 204, 0.25);
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
   transform: scale(0.9);
 }
 
-/* ئایکۆنی کۆپی لەسەر کارتی ئۆردەر — لای سەرەوەی بەرامبەر */
-.modern-order-card {
-  position: relative;
-}
-
+/* ============================================================
+   دوگمەی کۆپیکردنی ئۆردەر لەسەر کارتەکان
+   ------------------------------------------------------------
+   پێشتر `position:absolute` بوو لە خوارەوەی کارتەکە، بۆیە دەکەوتە
+   سەر کۆدی ئۆردەر و چیپی «چەند ڕۆژ لەمەوبەر» و دەیشاردنەوە.
+   ئێستا ئەندامێکی ڕاستەقینەی ڕیزەکەیە (flex item) — هەرگیز
+   ناکەوێتە سەر هیچ زانیارییەک، لە هەموو پانییەکی شاشەدا.
+   ============================================================ */
 .card-copy {
-  position: absolute;
-  bottom: 10px;
-  left: 10px;
-  width: 30px;
-  height: 30px;
-  border: none;
-  border-radius: 9px;
-  background: #f1f5f9;
-  color: #94a3b8;
-  display: flex;
+  position: relative;
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  margin-inline-start: 2px;
+  border: 1px solid rgba(36, 129, 204, 0.18);
+  border-radius: 8px;
+  background: rgba(36, 129, 204, 0.07);
+  color: var(--primary);
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 16px;
+  font-size: 14px;
+  line-height: 1;
   cursor: pointer;
-  transition: all 0.16s ease;
-  z-index: 3;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.16s ease, border-color 0.16s ease, color 0.16s ease,
+    transform 0.12s ease;
+}
+
+.card-copy i {
+  line-height: 1;
+}
+
+/* شوێنی پەنجەلێدان فراوانتر لە خودی دوگمەکە (٢٦px → ~٤٢px)
+   بەبێ ئەوەی جێگای زیاتر لە ڕیزەکەدا بگرێت — بۆ ئاسانی لێدان بە پەنجە */
+.card-copy::after {
+  content: "";
+  position: absolute;
+  inset: -8px;
 }
 
 .card-copy:active {
-  background: rgba(36, 129, 204, 0.16);
-  color: var(--primary);
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
   transform: scale(0.88);
+}
+
+/* دۆخی «کۆپی کرا» — ✓ سەوز بۆ ١.٥ چرکە */
+.card-copy.copied,
+.modal-copy.copied {
+  background: rgba(16, 185, 129, 0.14);
+  border-color: rgba(16, 185, 129, 0.4);
+  color: #10b981;
+  animation: copyPop 0.3s ease;
+}
+
+@keyframes copyPop {
+  0% {
+    transform: scale(0.75);
+  }
+
+  55% {
+    transform: scale(1.12);
+  }
+
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* کۆدی ئۆردەر + دوگمەی کۆپی — پێکەوە لای کۆتایی ڕیزی خوارەوە */
+.mocc-end {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 5px;
 }
 
 /* ---- مێنیوی هەڵبژاردنی شێواز (bottom sheet) ---- */
@@ -1756,6 +1943,78 @@ h2 i,
   font-weight: var(--font-semibold);
   color: #64748b;
   margin: 12px 0 6px;
+}
+
+/* ---- دوو هەنگاو: سەرەتا پاسوۆردی ئێستا، پاشان پاسوۆردی نوێ ---- */
+.pwc-step {
+  display: none;
+}
+
+.pwc-step.on {
+  display: block;
+  animation: pwcStepIn 0.28s cubic-bezier(.32, .72, 0, 1);
+}
+
+@keyframes pwcStepIn {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ڕیزی «پشتڕاست کرایەوە» لە سەرەوەی هەنگاوی دووەم */
+.pwc-verified {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 14px;
+  padding: 9px 12px;
+  border-radius: 10px;
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.28);
+  color: #059669;
+  font-size: var(--fs-sm);
+  font-weight: var(--font-semibold);
+}
+
+.pwc-verified>i {
+  font-size: 17px;
+  flex-shrink: 0;
+}
+
+.pwc-verified>span {
+  flex: 1;
+  min-width: 0;
+}
+
+/* گەڕانەوە بۆ هەنگاوی یەکەم */
+.pwc-back {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  border-radius: 7px;
+  background: rgba(16, 185, 129, 0.14);
+  color: #059669;
+  font-size: 16px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.16s ease, transform 0.12s ease;
+}
+
+.pwc-back:active {
+  background: rgba(16, 185, 129, 0.28);
+  transform: scale(0.9);
 }
 
 /* ---- پێوەری هێزی پاسوۆرد ---- */
@@ -3131,9 +3390,9 @@ h2 i,
 #qr-scan-modal {
   position: fixed;
   inset: 0;
-  background: rgba(8, 11, 20, 0.8);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  background: rgba(15, 23, 42, 0.55);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   z-index: 9999;
   display: flex;
   align-items: center;
@@ -3153,10 +3412,10 @@ h2 i,
   padding: 20px;
   border-radius: var(--r-lg);
   text-align: center;
-  background: linear-gradient(165deg, #1c2740 0%, #0d1526 100%);
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  color: #fff;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.03);
+  background: linear-gradient(165deg, #ffffff 0%, #f8fafc 100%);
+  border: 1px solid #e2e8f0;
+  color: var(--text-main, #1e293b);
+  box-shadow: 0 20px 45px -12px rgba(15, 23, 42, 0.28);
   transform: translateY(20px) scale(0.96);
   transition: transform 0.3s cubic-bezier(.34, 1.56, .64, 1);
 }
@@ -3170,13 +3429,15 @@ h2 i,
   justify-content: space-between;
   align-items: center;
   margin-bottom: 16px;
+  border-bottom: 1px solid #f1f5f9;
+  padding-bottom: 10px;
 }
 
 .qr-modal-title {
   margin: 0;
   font-size: var(--fs-base);
   font-weight: var(--font-bold);
-  color: #fff;
+  color: var(--primary);
   display: flex;
   align-items: center;
   gap: 8px;
@@ -3187,7 +3448,7 @@ h2 i,
   height: 30px;
   flex-shrink: 0;
   border-radius: 9px;
-  background: rgba(36, 129, 204, 0.18);
+  background: rgba(36, 129, 204, 0.1);
   color: var(--primary);
   display: flex;
   align-items: center;
@@ -3196,8 +3457,8 @@ h2 i,
 }
 
 .qr-modal-close {
-  background: rgba(255, 255, 255, 0.08);
-  color: #fff;
+  background: #f1f5f9;
+  color: #475569;
   border: none;
   border-radius: 50%;
   width: 32px;
@@ -3213,16 +3474,19 @@ h2 i,
 
 .qr-modal-close:active {
   transform: scale(0.9);
-  background: rgba(255, 255, 255, 0.18);
+  background: #e2e8f0;
 }
 
+/* چوارچێوەی کامێرا — پاشخانێکی ڕووناک تا کاتی چاوەڕوانی و هەڵەشدا
+   لەگەڵ کارتەکەدا بگونجێت (ڤیدیۆکە خۆی تەواوی دادەپۆشێت). */
 .qr-scan-frame {
   position: relative;
   width: 100%;
   min-height: 250px;
   border-radius: var(--r-md);
   overflow: hidden;
-  background: #05070d;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
 }
 
 .qr-reader {
@@ -3242,7 +3506,8 @@ h2 i,
   width: 26px;
   height: 26px;
   border: 3px solid var(--primary);
-  filter: drop-shadow(0 0 4px rgba(36, 129, 204, 0.6));
+  /* هێڵێکی سپی لە دەرەوە — بۆ ئەوەی گۆشەکان لەسەر ڤیدیۆی ڕووناکیش دیار بن */
+  filter: drop-shadow(0 0 2px rgba(255, 255, 255, 0.9));
 }
 
 .qr-corner.tl {
@@ -3284,7 +3549,7 @@ h2 i,
   top: 16px;
   height: 2px;
   background: linear-gradient(90deg, transparent, var(--primary), transparent);
-  box-shadow: 0 0 8px 1px rgba(36, 129, 204, 0.8);
+  box-shadow: 0 0 6px 1px rgba(36, 129, 204, 0.45);
   animation: qrScanMove 2.2s ease-in-out infinite;
   pointer-events: none;
 }
@@ -3308,7 +3573,7 @@ h2 i,
 
 .qr-modal-hint {
   font-size: var(--fs-sm);
-  color: #94a3b8;
+  color: #64748b;
   margin-top: 14px;
   margin-bottom: 0;
   display: flex;
@@ -3320,17 +3585,17 @@ h2 i,
 }
 
 .qr-modal-hint.err {
-  color: #fca5a5;
+  color: #dc2626;
 }
 
 /* دوگمەی کامێرای تێلیگرام */
 .qr-big-btn {
   width: 100%;
   height: 120px;
-  border: 2px dashed rgba(255, 255, 255, 0.22);
+  border: 2px dashed #cbd5e1;
   border-radius: var(--r-md);
-  background: rgba(255, 255, 255, 0.04);
-  color: #fff;
+  background: #f8fafc;
+  color: var(--text-main, #1e293b);
   font-family: inherit;
   font-size: var(--fs-lg);
   font-weight: var(--font-bold);
@@ -3349,8 +3614,8 @@ h2 i,
 }
 
 .qr-big-btn:active {
-  background: rgba(36, 129, 204, 0.16);
-  border-color: rgba(36, 129, 204, 0.5);
+  background: rgba(36, 129, 204, 0.08);
+  border-color: var(--primary);
   transform: scale(0.98);
 }
 
@@ -3360,7 +3625,7 @@ h2 i,
   align-items: center;
   gap: 10px;
   margin: 14px 0 12px;
-  color: rgba(255, 255, 255, 0.35);
+  color: #94a3b8;
   font-size: var(--fs-xs);
 }
 
@@ -3369,17 +3634,17 @@ h2 i,
   content: '';
   flex: 1;
   height: 1px;
-  background: rgba(255, 255, 255, 0.13);
+  background: #e2e8f0;
 }
 
 /* دوگمەی گەلەری */
 .qr-gallery-btn {
   width: 100%;
   height: 46px;
-  border: 1px solid rgba(255, 255, 255, 0.16);
+  border: 1px solid #e2e8f0;
   border-radius: var(--r-md);
-  background: rgba(255, 255, 255, 0.07);
-  color: #fff;
+  background: #f1f5f9;
+  color: var(--text-main, #1e293b);
   font-family: inherit;
   font-size: var(--fs-md);
   font-weight: var(--font-bold);
@@ -3397,8 +3662,9 @@ h2 i,
 }
 
 .qr-gallery-btn:active {
-  background: rgba(36, 129, 204, 0.2);
-  border-color: rgba(36, 129, 204, 0.45);
+  background: rgba(36, 129, 204, 0.1);
+  border-color: var(--primary);
+  color: var(--primary);
   transform: scale(0.98);
 }
 
@@ -4233,13 +4499,21 @@ i.moc-avatar {
   color: #94a3b8;
 }
 
-/* کۆدی ئۆردەر — هەمیشە لای کۆتایی ڕیزەکە */
+/* کۆدی ئۆردەر + دوگمەی کۆپی — هەمیشە پێکەوە لای کۆتایی ڕیزەکە.
+   بە یەک گرووپ پێچراونەتەوە تا کاتی شکانی ڕیزەکە لێک جیا نەبنەوە. */
+.moc-end {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-inline-start: auto;
+  flex-shrink: 0;
+}
+
 .moc-id {
   display: inline-flex;
   align-items: center;
   gap: 1px;
   margin: 0;
-  margin-inline-start: auto;
   font-size: var(--fs-2xs);
   font-weight: 600;
   color: #94a3b8;
