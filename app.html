@@ -26,7 +26,7 @@
             </button>
         </div>
 
-        <div class="stats-grid">
+        <div class="stats-grid sh-collapse" id="stats-grid">
             <div class="stat-card bg-blue" onclick="goToFilteredOrders('ئامادە')">
                 <h3>ئامادە دەکرێت</h3>
                 <p><span id="count-preparing">0</span> ئۆردەر</p>
@@ -50,6 +50,27 @@
                 <p><span id="count-returned">0</span> ئۆردەر</p>
                 <i class='bx bx-left-arrow-alt icon-arrow'></i>
             </div>
+        </div>
+
+        <!-- شریتی چڕی ئامار — لە جیاتی کارتەکان کاتێک لیستەکە سکڕۆڵ دەکرێت
+             (تەنها ڕەنگ و ژمارە؛ هەمان کرداری کارتەکان لەسەریان) -->
+        <div class="stats-bar sh-collapse sh-hidden" id="stats-bar">
+            <button type="button" class="sbar-seg sb-blue" onclick="goToFilteredOrders('ئامادە')"
+                title="ئامادە دەکرێت" aria-label="ئامادە دەکرێت">
+                <span class="sbar-dot"></span><span id="sbar-preparing">0</span>
+            </button>
+            <button type="button" class="sbar-seg sb-orange" onclick="goToFilteredOrders('ڕێگا')"
+                title="لە ڕێگایە" aria-label="لە ڕێگایە">
+                <span class="sbar-dot"></span><span id="sbar-onway">0</span>
+            </button>
+            <button type="button" class="sbar-seg sb-green" onclick="goToFilteredOrders('گەیشت')"
+                title="گەیشتووە" aria-label="گەیشتووە">
+                <span class="sbar-dot"></span><span id="sbar-delivered">0</span>
+            </button>
+            <button type="button" class="sbar-seg sb-red" onclick="goToFilteredOrders('گەڕا')"
+                title="گەڕاوەتەوە" aria-label="گەڕاوەتەوە">
+                <span class="sbar-dot"></span><span id="sbar-returned">0</span>
+            </button>
         </div>
 
         <div class="dashboard-header" style="margin-top: 10px;">دوایین ئۆردەرەکان</div>
@@ -381,6 +402,7 @@
                 <div class="container" id="edit-container">
                     <!-- بینینی لیستی کلیلەکان (وەک بەشی قازانجەکان) -->
                     <div id="edit-list-view">
+                        <div class="sh-collapse" id="edit-filters-collapse">
                         <div class="segmented-control" id="edit-role-filter" style="margin-bottom: 15px;">
                             <label><input type="radio" name="edit_role_filter" value="all" checked
                                     onchange="filterEditUsers()"><span>هەموو</span></label>
@@ -404,6 +426,8 @@
                                     </path>
                                 </g>
                             </svg>
+                        </div>
+
                         </div>
 
                         <div id="edit-users-list" style="margin-top:15px; margin-bottom: 20px;"></div>
@@ -538,6 +562,7 @@
             <div id="section-profits" style="display: none;">
                 <div class="container" id="profits-container">
 
+                    <div class="sh-collapse" id="profit-filters-collapse">
                     <div class="segmented-control" id="profit-role-filter" style="margin-bottom: 15px;">
                         <label><input type="radio" name="profit_role_filter" value="all" checked
                                 onchange="filterProfitUsers()"><span>هەموو</span></label>
@@ -559,6 +584,8 @@
                                 </path>
                             </g>
                         </svg>
+                    </div>
+
                     </div>
 
                     <div id="profit-users-list" style="margin-bottom: 20px;"></div>
@@ -605,6 +632,7 @@
 
             <div id="section-wallets" style="display: none;">
                 <div class="container" id="wallets-container">
+                    <div class="sh-collapse" id="wallet-filters-collapse">
                     <div class="segmented-control" style="margin-bottom: 15px;" id="wallet-role-tabs-container">
                         <label><input type="radio" name="wallet_role_filter" value="all" checked
                                 onchange="filterWalletUsers()"><span>هەموو</span></label>
@@ -628,6 +656,8 @@
                                 </path>
                             </g>
                         </svg>
+                    </div>
+
                     </div>
 
                     <div id="wallet-users-list" style="margin-bottom: 20px;"></div>
@@ -693,7 +723,7 @@
 
             <div id="section-cities" style="display: none;">
                 <div class="container" id="cities-container">
-                    <div
+                    <div id="cities-add-collapse" class="sh-collapse"
                         style="background:rgba(36,129,204,0.05); border:1px solid rgba(36,129,204,0.2); padding:15px; border-radius:12px; margin-bottom:20px;">
                         <h4 style="margin:0 0 10px 0; color:var(--primary);"><i class='bx bx-map-pin'></i> زیادکردنی شار
                         </h4>
@@ -930,7 +960,7 @@
             </div>
         </div>
 
-        <div id="orders-filter-section">
+        <div id="orders-filter-section" class="sh-collapse">
             <div class="search-group" style="margin-bottom: 12px; margin-top: 5px; position: relative;">
                 <input class="search-input" type="search" id="orders-search-input"
                     placeholder="گەڕان بەناو، مۆبایل، یان کۆد..." oninput="applyOrderFilters()" autocomplete="off" style="padding-left: 48px;" />
@@ -1184,14 +1214,16 @@
     </div>
 
     <div id="wallet-screen" class="screen">
-        <h2 style="text-align: center; margin-bottom: 12px; font-size: 20px;"><i class='bx bx-wallet'></i> جزدانەکەم</h2>
-        <div class="wallet-card">
-            <h3>پارەی بەردەست (باڵانس)</h3>
-            <h1 id="my-wallet-balance">0 د.ع</h1>
-        </div>
-        <div class="wallet-card savings" id="my-wallet-savings-container" style="display: none;">
-            <h3>پاشەکەوت</h3>
-            <h1 id="my-wallet-savings">0 د.ع</h1>
+        <div id="wallet-head-collapse" class="sh-collapse">
+            <h2 style="text-align: center; margin-bottom: 12px; font-size: 20px;"><i class='bx bx-wallet'></i> جزدانەکەم</h2>
+            <div class="wallet-card">
+                <h3>پارەی بەردەست (باڵانس)</h3>
+                <h1 id="my-wallet-balance">0 د.ع</h1>
+            </div>
+            <div class="wallet-card savings" id="my-wallet-savings-container" style="display: none;">
+                <h3>پاشەکەوت</h3>
+                <h1 id="my-wallet-savings">0 د.ع</h1>
+            </div>
         </div>
         <h3
             style="margin-top: 12px; margin-bottom: 6px; font-size: 14px; color:#1e293b; border-bottom: 2px solid #e2e8f0; padding-bottom: 6px;">
@@ -2614,6 +2646,9 @@
             document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
             document.getElementById(screenId).classList.add('active');
 
+            // شاشەی نوێ هەمیشە بە سەرەوەی دەرکەوتوو دەست پێدەکات
+            if (typeof resetAllScrollHide === 'function') resetAllScrollHide();
+
             let bottomNav = document.getElementById('bottom-nav');
             let mainFab = document.getElementById('main-fab');
             let fabCheckbox = document.getElementById('fab-checkbox');
@@ -2730,6 +2765,9 @@
             clickedElement.classList.add('active');
             slider.style.width = clickedElement.offsetWidth + 'px';
             slider.style.left = clickedElement.offsetLeft + 'px';
+
+            // تابی نوێ بە فلتەرە دەرکەوتووەکان دەست پێدەکات
+            if (typeof resetAllScrollHide === 'function') resetAllScrollHide();
 
             applyOrderFilters();
         }
@@ -4917,6 +4955,196 @@
             document.getElementById('count-onway').innerText = onway;
             document.getElementById('count-delivered').innerText = deliv;
             document.getElementById('count-returned').innerText = ret;
+            // شریتی چڕەکەش هەمان ژمارەکان وەردەگرێت
+            const sb = {
+                'sbar-preparing': prep, 'sbar-onway': onway,
+                'sbar-delivered': deliv, 'sbar-returned': ret
+            };
+            for (const id in sb) {
+                const el = document.getElementById(id);
+                if (el) el.innerText = sb[id];
+            }
+        }
+
+        // ============================================================
+        // شاردنەوەی سەرەوە لەکاتی سکڕۆڵ (scroll-hide)
+        // ------------------------------------------------------------
+        // سکڕۆڵی خوارەوە → سەرەوەکە دەچەمێتەوە و جێگا بۆ لیستەکە دەکاتەوە.
+        // سکڕۆڵی سەرەوە بە بڕێکی کەم → دەستبەجێ دەگەڕێتەوە، پێویست ناکات
+        // بگەڕێیتەوە سەرەتای لیستەکە.
+        // ============================================================
+        const SH_DOWN_DELTA = 14;   // ئەم بڕە بەرەو خوارەوە → چەماندنەوە
+        const SH_UP_DELTA = 34;   // ئەم بڕە بەرەو سەرەوە → گەڕانەوە
+        const SH_TOP_ZONE = 8;    // نزیک سەرەوە → هەمیشە دەرکەوتوو
+        const SH_LOCK_MS = 420;  // لەکاتی ئەنیمەیشندا سکڕۆڵ پشتگوێ دەخرێت
+
+        function shHide(el) {
+            if (!el || el.__shHidden) return;
+            el.__shHidden = true;
+            clearTimeout(el.__shT);
+            el.classList.add('sh-anim');
+            el.style.height = el.offsetHeight + 'px';
+            void el.offsetHeight;               // ناچارکردنی reflow تا ئەنیمەیشن ڕوو بدات
+            el.classList.add('sh-hidden');
+            el.style.height = '0px';
+        }
+
+        function shShow(el) {
+            if (!el || !el.__shHidden) return;
+            el.__shHidden = false;
+            clearTimeout(el.__shT);
+            el.classList.add('sh-anim');
+            el.classList.remove('sh-hidden');
+            el.style.height = el.scrollHeight + 'px';
+            el.__shT = setTimeout(() => {
+                el.style.height = '';
+                el.classList.remove('sh-anim');
+            }, SH_LOCK_MS);
+        }
+
+        // گەڕانەوە بۆ دۆخی «دەرکەوتوو» بەبێ ئەنیمەیشن
+        function shReset(el) {
+            if (!el) return;
+            clearTimeout(el.__shT);
+            el.__shHidden = false;
+            el.classList.remove('sh-hidden', 'sh-anim');
+            el.style.height = '';
+        }
+
+        // شاردنەوەی خێرا بەبێ ئەنیمەیشن (بۆ دۆخی سەرەتا)
+        function shHideInstant(el) {
+            if (!el) return;
+            clearTimeout(el.__shT);
+            el.__shHidden = true;
+            el.classList.remove('sh-anim');
+            el.classList.add('sh-hidden');
+            el.style.height = '';
+        }
+
+        const shRegistry = [];
+
+        /**
+         * scroller  — ئەو توخمەی سکڕۆڵ دەکات
+         * hideEls   — ئەوانەی دەچەمێنەوە
+         * showEls   — ئەوانەی لە جیاتییان دەردەکەون (شریتی ئامار)
+         * canHide   — فەنکشنێک: ئایا ئێستا بۆی هەیە بچەمێتەوە؟
+         * minScroll — فەنکشنێک: لە چەند پیکسڵەوە بۆی هەیە بچەمێتەوە
+         */
+        function registerScrollHide(opts) {
+            const scroller = document.getElementById(opts.scroller);
+            if (!scroller || scroller.__shBound) return;
+            scroller.__shBound = true;
+
+            const state = { lastY: 0, up: 0, down: 0, hidden: false, lock: 0, raf: 0 };
+            const els = () => (opts.hideEls || []).map(id => document.getElementById(id)).filter(Boolean);
+            const alts = () => (opts.showEls || []).map(id => document.getElementById(id)).filter(Boolean);
+
+            function apply(hide) {
+                if (state.hidden === hide) return;
+                state.hidden = hide;
+                els().forEach(e => hide ? shHide(e) : shShow(e));
+                alts().forEach(e => hide ? shShow(e) : shHide(e));
+                state.lock = Date.now() + SH_LOCK_MS;
+            }
+
+            state.reset = function () {
+                state.hidden = false; state.up = 0; state.down = 0;
+                state.lastY = scroller.scrollTop; state.lock = 0;
+                els().forEach(shReset);
+                alts().forEach(shHideInstant);
+            };
+
+            function onScroll() {
+                if (state.raf) return;
+                state.raf = requestAnimationFrame(() => {
+                    state.raf = 0;
+                    const y = scroller.scrollTop;
+
+                    // لەکاتی ئەنیمەیشندا بەرزی لیستەکە دەگۆڕێت و وێبگەڕ
+                    // لەوانەیە scrollTop ڕێکبخاتەوە — ئەوە سکڕۆڵی بەکارهێنەر نییە
+                    if (Date.now() < state.lock) { state.lastY = y; state.up = state.down = 0; return; }
+
+                    const dy = y - state.lastY;
+                    state.lastY = y;
+
+                    if (y <= SH_TOP_ZONE) { state.up = state.down = 0; apply(false); return; }
+
+                    if (dy > 0) {
+                        state.down += dy; state.up = 0;
+                        const min = opts.minScroll ? opts.minScroll(scroller) : 0;
+                        if (state.down >= SH_DOWN_DELTA && y >= min &&
+                            (!opts.canHide || opts.canHide(scroller))) apply(true);
+                    } else if (dy < 0) {
+                        state.up -= dy; state.down = 0;
+                        if (state.up >= SH_UP_DELTA) apply(false);
+                    }
+                });
+            }
+
+            scroller.addEventListener('scroll', onScroll, { passive: true });
+
+            // ئەگەر لیستەکە کورت ببێتەوە (فلتەر، گەڕان، یان نوێکردنەوە) لەکاتێکدا
+            // سەرەوەکە شاراوەیە، ئیتر ناتوانرێت سکڕۆڵ بکرێت بۆ گەڕاندنەوەی —
+            // بۆیە خۆکارانە دەگەڕێتەوە.
+            try {
+                const mo = new MutationObserver(() => {
+                    clearTimeout(state.moT);
+                    state.moT = setTimeout(() => {
+                        if (!state.hidden) return;
+                        if (scroller.scrollHeight <= scroller.clientHeight + 1 ||
+                            (opts.canHide && !opts.canHide(scroller))) state.reset();
+                    }, 140);
+                });
+                mo.observe(scroller, { childList: true });
+            } catch (e) { }
+
+            shRegistry.push(state);
+            return state;
+        }
+
+        // دوای هەر ڕێندەرێکی نوێ یان گۆڕینی شاشە، هەموویان دەگەڕێنەوە دۆخی سەرەتا
+        function resetAllScrollHide() {
+            shRegistry.forEach(s => { try { s.reset(); } catch (e) { } });
+        }
+
+        // ---- تۆمارکردنی هەموو بەشەکان ----
+        function initScrollHide() {
+            // ئەوانەی لە مارکئەپدا بە `sh-hidden` دەستپێدەکەن (شریتی ئامار)
+            document.querySelectorAll('.sh-collapse.sh-hidden').forEach(e => { e.__shHidden = true; });
+
+            // داشبۆرد: کارتەکانی ئامار → شریتی چڕ
+            // تەنها ئەگەر لە ٣ ئۆردەر زیاتر هەبێت، و کاتێک ئۆردەری سێیەم گەیشتە سەرەوە
+            registerScrollHide({
+                scroller: 'orders-list',
+                hideEls: ['stats-grid'],
+                showEls: ['stats-bar'],
+                canHide: (sc) => sc.querySelectorAll('.modern-order-card').length > 3,
+                minScroll: (sc) => {
+                    const cards = sc.querySelectorAll('.modern-order-card');
+                    if (cards.length <= 3) return Infinity;
+                    // ئەو شوێنەی سکڕۆڵ کە کارتی سێیەم دەگاتە سەرەوەی لیستەکە
+                    return sc.scrollTop +
+                        (cards[2].getBoundingClientRect().top - sc.getBoundingClientRect().top);
+                }
+            });
+
+            // ئۆردەرەکان (داواکارییەکانم / ئۆردەری تیم): گەڕان + فلتەرەکان
+            registerScrollHide({ scroller: 'management-orders-list', hideEls: ['orders-filter-section'] });
+
+            // جزدانەکەم: سەردێڕ + کارتەکانی باڵانس و پاشەکەوت
+            registerScrollHide({ scroller: 'my-transactions-list', hideEls: ['wallet-head-collapse'] });
+
+            // پەڕەی ئەدمین
+            registerScrollHide({ scroller: 'edit-users-list', hideEls: ['edit-filters-collapse'] });
+            registerScrollHide({ scroller: 'profit-users-list', hideEls: ['profit-filters-collapse'] });
+            registerScrollHide({ scroller: 'wallet-users-list', hideEls: ['wallet-filters-collapse'] });
+            registerScrollHide({ scroller: 'admin-cities-list', hideEls: ['cities-add-collapse'] });
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initScrollHide);
+        } else {
+            initScrollHide();
         }
 
 
@@ -5743,6 +5971,9 @@
             document.getElementById('section-wallets').style.display = 'none';
             document.getElementById('section-cities').style.display = 'none';
             document.getElementById('section-trash').style.display = 'none';
+
+            // بەشی نوێ بە سەرەوەی دەرکەوتوو دەست پێدەکات
+            if (typeof resetAllScrollHide === 'function') resetAllScrollHide();
 
             if (tabName === 'create') {
                 document.getElementById('section-create-code').style.display = 'block';

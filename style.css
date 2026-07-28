@@ -1180,6 +1180,109 @@ h2 i,
   opacity: 0.8;
 }
 
+/* ============================================================
+   نەرمکردنەوەی سەرەوە لەکاتی سکڕۆڵ (sh = scroll-hide)
+   ------------------------------------------------------------
+   بەرزی بە JS ئەندازە دەگیرێت و ئەنیمەیت دەکرێت، بۆیە لەگەڵ هەر
+   ناوەڕۆکێکی گۆڕاودا کاردەکات.
+   `overflow: hidden` تەنها لەکاتی ئەنیمەیشن و شاردنەوەدا دادەنرێت —
+   ئەگەرنا دڕۆپداونەکانی فلتەر دەبڕدران.
+   ============================================================ */
+.sh-collapse {
+  transition: height 0.34s cubic-bezier(.32, .72, 0, 1),
+    opacity 0.22s ease,
+    margin 0.34s cubic-bezier(.32, .72, 0, 1),
+    transform 0.34s cubic-bezier(.32, .72, 0, 1);
+}
+
+.sh-collapse.sh-anim,
+.sh-collapse.sh-hidden {
+  overflow: hidden;
+}
+
+.sh-collapse.sh-hidden {
+  height: 0;
+  opacity: 0;
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  border-top-width: 0 !important;
+  border-bottom-width: 0 !important;
+  transform: translateY(-6px);
+  pointer-events: none;
+}
+
+/* کەسانێک ئەنیمەیشنیان پێ ناخۆشە — ڕاستەوخۆ بگۆڕدرێت */
+@media (prefers-reduced-motion: reduce) {
+  .sh-collapse {
+    transition: none;
+  }
+}
+
+/* ---- شریتی چڕی ئامار (لە جیاتی کارتەکان) ---- */
+.stats-bar {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.sbar-seg {
+  flex: 1;
+  min-width: 0;
+  height: 36px;
+  padding: 0 6px;
+  border: none;
+  border-radius: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-family: inherit;
+  font-size: var(--fs-base);
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.12s ease, filter 0.16s ease;
+}
+
+.sbar-seg:active {
+  transform: scale(0.95);
+  filter: brightness(0.95);
+}
+
+.sbar-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
+  box-shadow: 0 0 0 3px currentColor;
+  opacity: 0.9;
+}
+
+/* هەمان ڕەنگەکانی کارتەکان، بەڵام کاڵ — تا ژمارەکان بەڕوونی بخوێنرێنەوە */
+.sbar-seg.sb-blue {
+  background: rgba(36, 129, 204, 0.12);
+  color: #2481cc;
+}
+
+.sbar-seg.sb-orange {
+  background: rgba(243, 156, 18, 0.14);
+  color: #d98207;
+}
+
+.sbar-seg.sb-green {
+  background: rgba(46, 204, 113, 0.14);
+  color: #1e9e57;
+}
+
+.sbar-seg.sb-red {
+  background: rgba(255, 77, 77, 0.12);
+  color: #e03131;
+}
+
 /* ڕەنگەکان و سێبەرە درەوشاوەکان (ڕێک وەک وێنەکە) */
 .bg-blue {
   background: linear-gradient(135deg, #4fb5ff, #2481cc);
