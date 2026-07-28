@@ -26,7 +26,8 @@
             </button>
         </div>
 
-        <div class="stats-grid sh-collapse" id="stats-grid">
+        <div class="sh-collapse" id="stats-grid-wrap">
+        <div class="stats-grid" id="stats-grid">
             <div class="stat-card bg-blue" onclick="goToFilteredOrders('ئامادە')">
                 <h3>ئامادە دەکرێت</h3>
                 <p><span id="count-preparing">0</span> ئۆردەر</p>
@@ -51,10 +52,12 @@
                 <i class='bx bx-left-arrow-alt icon-arrow'></i>
             </div>
         </div>
+        </div>
 
         <!-- شریتی چڕی ئامار — لە جیاتی کارتەکان کاتێک لیستەکە سکڕۆڵ دەکرێت
              (تەنها ڕەنگ و ژمارە؛ هەمان کرداری کارتەکان لەسەریان) -->
-        <div class="stats-bar sh-collapse sh-init-hidden" id="stats-bar">
+        <div class="sh-collapse sh-init-hidden" id="stats-bar-wrap">
+        <div class="stats-bar" id="stats-bar">
             <button type="button" class="sbar-seg sb-blue" onclick="goToFilteredOrders('ئامادە')"
                 title="ئامادە دەکرێت" aria-label="ئامادە دەکرێت">
                 <span class="sbar-dot"></span><span id="sbar-preparing">0</span>
@@ -71,6 +74,7 @@
                 title="گەڕاوەتەوە" aria-label="گەڕاوەتەوە">
                 <span class="sbar-dot"></span><span id="sbar-returned">0</span>
             </button>
+        </div>
         </div>
 
         <div class="dashboard-header" style="margin-top: 10px;">دوایین ئۆردەرەکان</div>
@@ -430,7 +434,7 @@
 
                         </div>
 
-                        <div id="edit-users-list" style="margin-top:15px; margin-bottom: 20px;"></div>
+                        <div id="edit-users-list" style="margin-bottom: 20px;"></div>
                     </div>
 
                     <!-- بۆ گونجاندن لەگەڵ updateCode/deleteCode (کۆدی هەڵبژێردراو) -->
@@ -742,7 +746,7 @@
 
             <!-- تەنەکەی خۆڵ -->
             <div id="section-trash" style="display: none;">
-                <div class="trash-head">
+                <div class="trash-head sh-collapse" id="trash-head">
                     <div class="trash-note">
                         <i class='bx bx-info-circle'></i>
                         <span>هەر شتێک بسڕدرێتەوە <b>٣٠ ڕۆژ</b> لێرە دەمێنێتەوە، پاشان بۆ هەمیشە دەسڕدرێتەوە.</span>
@@ -1293,6 +1297,33 @@
         // فۆرماتی خەزنکراو (JSONB): object لەگەڵ نرخە تایپدارەکان
         //   toggle → true/false ، scope → 'none'|'team'|'all' ، profit → 'none'|'inc'|'dec'|'both'
         // پێکهاتەی ڕووکار: گرووپ → ئایتم (toggle | scope) → ژێری (subs) یان خانە (fields)
+        // ============ سنووری پلە (کردار لەسەر ئۆردەری کام پلە؟) ============
+        // مەودای «تیم» هەموو دارەکەی بەڕێوەبەری سەرەوە دەگرێتەوە — بۆیە
+        // سەرپەرشتێک بە شێوەی بنەڕەت دەیتوانی دەستکاری ئۆردەری بەڕێوەبەرەکەی
+        // بکات. ئەم سنوورانە ڕێگە دەدەن بە وردی دیاری بکرێت کە هەر کردارێک
+        // لەسەر ئۆردەری کام پلە ڕێگەپێدراوە.
+        const PERM_TIERS = [
+            { t: 'mgr', role: 'بەڕێوەبەر', label: 'ئۆردەری بەڕێوەبەر' },
+            { t: 'sup', role: 'سەرپەرشت', label: 'ئۆردەری سەرپەرشت' },
+            { t: 'con', role: 'ڕاوێژکار', label: 'ئۆردەری ڕاوێژکار' },
+            { t: 'mem', role: 'ئەندام', label: 'ئۆردەری ئەندام' },
+        ];
+        // پێشگری هەر کردارێک لە کلیلی سنووری پلەدا
+        const PERM_TIER_PREFIX = { view: 'tv', edit: 'te', delete: 'td', status: 'ts' };
+        // نەخشەی ڕۆڵ → کورتکراوە
+        const PERM_TIER_BY_ROLE = {};
+        PERM_TIERS.forEach(x => { PERM_TIER_BY_ROLE[x.role] = x.t; });
+        // هەموو کلیلەکانی سنووری پلە (١٦ کلیل)
+        const PERM_TIER_KEYS = [];
+        Object.values(PERM_TIER_PREFIX).forEach(p =>
+            PERM_TIERS.forEach(x => PERM_TIER_KEYS.push(p + '_' + x.t)));
+
+        // لیستی ژێرەکانی سنووری پلە بۆ ڕووکار
+        function tierSubs(action) {
+            const p = PERM_TIER_PREFIX[action];
+            return PERM_TIERS.map(x => ({ key: p + '_' + x.t, label: x.label }));
+        }
+
         const PERM_GROUPS = [
             {
                 id: 'keys', title: 'کلیلەکان', icon: 'bx-key', items: [
@@ -1302,11 +1333,12 @@
             },
             {
                 id: 'orders', title: 'ئۆردەرەکان', icon: 'bx-package', items: [
-                    { key: 'view_orders', type: 'scope', label: 'بینینی ئۆردەر' },
-                    { key: 'edit_order', type: 'scope', label: 'دەستکاری ئۆردەر' },
-                    { key: 'delete_order', type: 'scope', label: 'سڕینەوەی ئۆردەر' },
+                    { key: 'view_orders', type: 'scope', label: 'بینینی ئۆردەر', tiers: tierSubs('view') },
+                    { key: 'edit_order', type: 'scope', label: 'دەستکاری ئۆردەر', tiers: tierSubs('edit') },
+                    { key: 'delete_order', type: 'scope', label: 'سڕینەوەی ئۆردەر', tiers: tierSubs('delete') },
                     {
-                        key: 'change_status', type: 'scope', label: 'گۆڕینی حاڵەت', subs: [
+                        key: 'change_status', type: 'scope', label: 'گۆڕینی حاڵەت',
+                        tiers: tierSubs('status'), subs: [
                             { key: 'st_delivered', label: 'بکات بە گەیشتوو' },
                             { key: 'st_returned', label: 'بکات بە گەڕاوە' },
                             { key: 'st_del2ret', label: 'گەیشتوو → گەڕاوە' },
@@ -1365,10 +1397,24 @@
             st_ret2del: 'ڕێگە دەدات ئۆردەری گەڕاوە بگۆڕدرێت بۆ گەیشتوو.',
         };
 
+        // ڕوونکردنەوەی خۆکاری سنوورەکانی پلە
+        (function () {
+            const act = {
+                tv: 'بینینی', te: 'دەستکاریکردنی',
+                td: 'سڕینەوەی', ts: 'گۆڕینی حاڵەتی'
+            };
+            Object.keys(act).forEach(p => PERM_TIERS.forEach(x => {
+                PERM_HELP[p + '_' + x.t] =
+                    'ڕێگە دەدات ' + act[p] + ' ئەو ئۆردەرانە بکات کە خاوەنەکەیان پلەی «' + x.role + '»ـە. ' +
+                    'بە کوژاندنەوە: ئەو ئۆردەرانەی ئەم پلەیە بۆی نییە، تەنانەت ئەگەر لە تیمەکەی خۆشیدا بن.';
+            }));
+        })();
+
         const PERM_KEYS_ALL = ['create_key', 'delete_key', 'view_orders', 'edit_order', 'delete_order', 'change_status', 'st_delivered', 'st_returned', 'st_del2ret', 'st_ret2del', 'distribute', 'pf_driver', 'pf_manager', 'pf_supervisor', 'pf_consultant', 'pf_member', 'pf_savings', 'view_savings', 'set_profit_rates', 'manage_wallets', 'manage_all_keys', 'manage_cities', 'manage_trash', 'view_passwords'];
         const PERM_SCOPE_KEYS = ['view_orders', 'edit_order', 'delete_order', 'change_status', 'distribute', 'set_profit_rates', 'manage_wallets'];
         const PERM_PROFIT_KEYS = ['pf_driver', 'pf_manager', 'pf_supervisor', 'pf_consultant', 'pf_member', 'pf_savings'];
-        const PERM_TOGGLE_KEYS = ['create_key', 'delete_key', 'st_delivered', 'st_returned', 'st_del2ret', 'st_ret2del', 'view_savings', 'manage_all_keys', 'manage_cities', 'manage_trash', 'view_passwords'];
+        const PERM_TOGGLE_KEYS = ['create_key', 'delete_key', 'st_delivered', 'st_returned', 'st_del2ret', 'st_ret2del', 'view_savings', 'manage_all_keys', 'manage_cities', 'manage_trash', 'view_passwords'].concat(PERM_TIER_KEYS);
+        PERM_KEYS_ALL.push.apply(PERM_KEYS_ALL, PERM_TIER_KEYS);
 
         // دەسەڵاتی بنەڕەتی هەر پلەیەک (فۆرماتی نوێ) — کلیلە کۆنەکان ئەمە وەردەگرن
         function defaultPermsForRole(role) {
@@ -1377,6 +1423,9 @@
             PERM_TOGGLE_KEYS.forEach(k => base[k] = false);
             PERM_SCOPE_KEYS.forEach(k => base[k] = 'none');
             PERM_PROFIT_KEYS.forEach(k => base[k] = 'none');
+            // سنووری پلە بە بنەڕەت کراوەیە — تا ڕەفتاری کلیلە کۆنەکان نەگۆڕێت.
+            // (پاشا/بەڕێوەبەر دەتوانن دواتر ئەوانەی ناویانەوێت بکوژێننەوە)
+            PERM_TIER_KEYS.forEach(k => base[k] = true);
             let allOn = (obj) => Object.assign(base, obj);
             let fullProfit = { pf_driver: 'both', pf_manager: 'both', pf_supervisor: 'both', pf_consultant: 'both', pf_member: 'both', pf_savings: 'both' };
             let allStatus = { st_delivered: true, st_returned: true, st_del2ret: true, st_ret2del: true };
@@ -1521,12 +1570,18 @@
         // ============ سنووری تیم (ژێردەستەکان بەپێی زنجیرەی دروستکەر) ============
         let allEmployeesLite = [];   // {code, creator, role} بۆ هەموو کارمەندان
         let myTeamCodesSet = new Set(); // کۆدی هەموو ئەندامانی تیمی بەڕێوەبەرەکەم (بێ خۆم)
+        let roleByCode = {};         // کۆد → پلە (بۆ سنووری پلە)
 
         // «تیم» = تەواوی ژێردەستەکانی بەڕێوەبەری سەرووی من (ڕەگی تیم).
         // بۆیە ڕاوێژکارێک کە بەڕێوەبەر دروستی کردوو، تەواوی تیمی ئەو بەڕێوەبەرە دەبینێت.
         function computeMyTeam() {
             let mine = new Set();
             let myCode = currentUser ? String(currentUser.code || '').trim() : '';
+            roleByCode = {};
+            allEmployeesLite.forEach(e => {
+                let c = String(e.code || '').trim();
+                if (c) roleByCode[c] = normalizeRole(e.role || '');
+            });
             if (myCode && allEmployeesLite.length) {
                 let creatorOf = {}, roleOf = {}, childrenByCreator = {};
                 let kingCode = globalKingCode ? String(globalKingCode).trim() : '';
@@ -1576,6 +1631,24 @@
 
         // ============ پشکنینی کردار لەسەر ئۆردەر (مەودا: نەدراوە/تیم/هەموان) ============
         // action: 'view' | 'edit' | 'delete' | 'status' | 'distribute'
+        // پلەی خاوەنی ئۆردەر → کورتکراوەی سنوور ('mgr'|'sup'|'con'|'mem')
+        // ئەگەر نەزانرا (یان پاشا بوو) null دەگەڕێنێتەوە → هیچ سنوورێک نییە
+        function tierOfCode(code) {
+            if (!code) return null;
+            let r = roleByCode[String(code).trim()];
+            return r ? (PERM_TIER_BY_ROLE[r] || null) : null;
+        }
+
+        // ئایا ڕێگەم پێدراوە ئەم کردارە لەسەر ئۆردەری ئەم پلەیە بکەم؟
+        // نەبوونی کلیلەکە = ڕێگەپێدراو (بۆ گونجاندن لەگەڵ کلیلە کۆنەکان)
+        function tierAllowed(action, sellerCode) {
+            let pfx = PERM_TIER_PREFIX[action];
+            if (!pfx) return true;                 // دابەشکردن سنووری پلەی نییە
+            let t = tierOfCode(sellerCode);
+            if (!t) return true;                   // پاشا/نەزانراو
+            return getMyPerms()[pfx + '_' + t] !== false;
+        }
+
         function canActOnOrder(o, action) {
             if (!o) return false;
             if (userRole === 'پاشا') return true;
@@ -1586,9 +1659,11 @@
             let scopeKey = { view: 'view_orders', edit: 'edit_order', delete: 'delete_order', status: 'change_status', distribute: 'distribute' }[action];
             if (!scopeKey) return false;
             let scope = permScope(scopeKey);
+            if (scope === 'none') return false;
+            // سنووری پلە: تەنانەت لە مەودای «هەموان»یشدا جێبەجێ دەبێت
+            if (!tierAllowed(action, o.seller_code)) return false;
             if (scope === 'all') return true;
-            if (scope === 'team') return isInMyTeam(o.seller_code);
-            return false; // نەدراوە
+            return isInMyTeam(o.seller_code);
         }
 
         // پشکنینی گۆڕینی حاڵەت بەپێی ژێردەسەڵاتەکان (بکات بە گەیشتوو/گەڕاوە، گەیشتوو↔گەڕاوە)
@@ -1659,12 +1734,24 @@
             }
             let seg = renderScopeSeg(mode, it.key, isKingEditor);
             let sub = '';
-            if (it.subs) {
-                sub = `<div class="perm-subs" id="subs-${mode}-${it.key}" style="display:none;">` + it.subs.map(s => `
+            if (it.subs || it.tiers) {
+                let inner = '';
+                if (it.subs) {
+                    inner += it.subs.map(s => `
                     <div class="perm-sub-row">
                         <span class="perm-sub-label"><span class="perm-txt">${s.label}</span>${_permQ(s.key)}</span>
                         ${_permSwitch(`perm-${mode}-${s.key}`, true)}
-                    </div>`).join('') + `</div>`;
+                    </div>`).join('');
+                }
+                if (it.tiers) {
+                    inner += `<div class="perm-tier-head"><i class='bx bx-sitemap'></i> لەسەر ئۆردەری کام پلە؟</div>`;
+                    inner += it.tiers.map(s => `
+                    <div class="perm-sub-row">
+                        <span class="perm-sub-label"><span class="perm-txt">${s.label}</span>${_permQ(s.key)}</span>
+                        ${_permSwitch(`perm-${mode}-${s.key}`, true)}
+                    </div>`).join('');
+                }
+                sub = `<div class="perm-subs" id="subs-${mode}-${it.key}" style="display:none;">${inner}</div>`;
             }
             if (it.fields) {
                 sub = `<div class="perm-subs" id="subs-${mode}-${it.key}" style="display:none;">` + it.fields.map(f => `
@@ -1812,7 +1899,7 @@
         // دەسەڵاتی پێشووی کلیلی چاکسازیکراو (بۆ پاراستنی دەسەڵاتە پاشا-دراوەکان کاتێک بەڕێوەبەر چاکسازی دەکات)
         let _editOrigPerms = null;
         // دەسەڵاتانەی بەڕێوەبەر بۆی هەیە بیانداتە کلیلی دروستکراوی خۆی (تیم-scoped، ناـمەترسیدار)
-        const PERM_EDITABLE_BY_MANAGER = ['create_key', 'delete_key', 'view_orders', 'edit_order', 'delete_order', 'change_status', 'st_delivered', 'st_returned', 'st_del2ret', 'st_ret2del', 'distribute', 'pf_driver', 'pf_manager', 'pf_supervisor', 'pf_consultant', 'pf_member', 'pf_savings', 'view_savings'];
+        const PERM_EDITABLE_BY_MANAGER = ['create_key', 'delete_key', 'view_orders', 'edit_order', 'delete_order', 'change_status', 'st_delivered', 'st_returned', 'st_del2ret', 'st_ret2del', 'distribute', 'pf_driver', 'pf_manager', 'pf_supervisor', 'pf_consultant', 'pf_member', 'pf_savings', 'view_savings'].concat(PERM_TIER_KEYS);
 
         function applyEditableSubset(base, collected) {
             let out = Object.assign({}, base);
@@ -3185,10 +3272,19 @@
             let roleFilterBox = document.getElementById('orders-role-filter');
             if (roleFilterBox) roleFilterBox.style.display = (currentOrdersTab === "team" && !selectedTeamMember) ? "flex" : "none";
 
+            // کاشی بینین بەپێی کۆدی فرۆشیار — تا بۆ هەر ئۆردەرێک دووبارە نەژمێردرێت
+            let _viewOk = {};
+
             let filteredOrders = allManagementOrdersArray.filter(o => {
                 let sellerCode = String(o.seller_code || "").trim().toLowerCase();
                 let myCode = String(currentUser ? currentUser.code : "").trim().toLowerCase();
                 let isMyOrder = (sellerCode === myCode);
+
+                // سنووری پلە + مەودا: ئۆردەری ئەو پلانەی ڕێگەم پێنەدراوە نابینم
+                if (!isMyOrder) {
+                    if (!(sellerCode in _viewOk)) _viewOk[sellerCode] = canActOnOrder(o, 'view');
+                    if (!_viewOk[sellerCode]) return false;
+                }
 
                 if (currentOrdersTab === "my" && !isMyOrder) return false;
                 if (currentOrdersTab === "team" && !selectedTeamMember && isMyOrder) return false;
@@ -3422,6 +3518,9 @@
                             if (tCode === myCode) return;
                             // مەودای 'team' → تەنها ژێردەستەکان؛ 'all' → هەمووان
                             if (myScope !== 'all' && !myTeamCodesSet.has(tCode)) return;
+                            // سنووری پلە: ئەگەر بینینی ئۆردەری ئەم پلەیە ڕێگەپێنەدراوە،
+                            // نە خۆی لە لیستی ئەندامان دەردەکەوێت و نە ئۆردەرەکانی دەهێنرێن
+                            if (!tierAllowed('view', tCode)) return;
                             teamMembersData.push(t);
                             if (!allowedCodes.includes(tCode)) allowedCodes.push(tCode);
                             if (rawCode && !allowedCodes.includes(rawCode)) allowedCodes.push(rawCode);
@@ -4973,26 +5072,58 @@
         // سکڕۆڵی سەرەوە بە بڕێکی کەم → دەستبەجێ دەگەڕێتەوە، پێویست ناکات
         // بگەڕێیتەوە سەرەتای لیستەکە.
         // ============================================================
-        const SH_RANGE = 92;    // ئەم بڕە سکڕۆڵە = گۆڕانی تەواو (٠ → ١)
+        // مەودای گۆڕان = بەرزی خودی توخنەکە، بۆیە جووڵەکە ١:١ـە لەگەڵ پەنجەدا:
+        // هەر پیکسڵێک سکڕۆڵ = هەمان پیکسڵ جووڵەی سەرەوەکە (وەک ئەپی فەیسبووک).
+        const SH_RANGE_MIN = 60;    // کەمترین مەودا (ئەگەر توخنەکە زۆر کورت بوو)
         const SH_TOP_ZONE = 6;     // نزیک سەرەوە → هەمیشە تەواو دەرکەوتوو
         const SH_SETTLE_MS = 120;   // دوای وەستانی سکڕۆڵ → جێگیربوونی نەرم
-        const SH_FADE_END = 0.55;  // کاڵبوونەوە زووتر لە بەرزی تەواو دەبێت
+        const SH_ALT_START = 0.6;   // شریتی ئامار تەنها لە کۆتاییدا دێتە ناوەوە
+
+        // هەر توخمێکی `sh-collapse` ناوەڕۆکەکەی دەخرێتە ناو `sh-inner`ـەوە:
+        //  • دەرەوە = بڕین + بەرزی
+        //  • ناوەوە = خلیسکان (بۆ ئەوەی ناوەڕۆکەکە نەبڕدرێت، بەڵکو بخلیسکێت)
+        function shInner(el) {
+            if (el.__shInner && el.__shInner.parentNode === el) return el.__shInner;
+            let inner = el.querySelector(':scope > .sh-inner');
+            if (!inner) {
+                inner = document.createElement('div');
+                inner.className = 'sh-inner';
+                while (el.firstChild) inner.appendChild(el.firstChild);
+                el.appendChild(inner);
+            }
+            el.__shInner = inner;
+            return inner;
+        }
 
         // ئەندازەی سروشتی توخمەکە (بەرزی + مارجنەکان) — کاش دەکرێت
         function shMeasure(el) {
-            const s = el.style;
-            const keep = [s.height, s.marginTop, s.marginBottom, s.opacity];
+            const inner = shInner(el);
+            const s = el.style, si = inner.style;
+            const keep = [s.height, s.marginTop, s.marginBottom, s.opacity, si.transform,
+                s.paddingTop, s.paddingBottom, s.borderTopWidth, s.borderBottomWidth];
             s.height = ''; s.marginTop = ''; s.marginBottom = ''; s.opacity = '';
+            s.paddingTop = ''; s.paddingBottom = '';
+            s.borderTopWidth = ''; s.borderBottomWidth = '';
+            si.transform = '';
             const hadClip = el.classList.contains('sh-clip');
             if (hadClip) el.classList.remove('sh-clip');
             const cs = getComputedStyle(el);
             const m = {
                 h: el.offsetHeight,
                 mt: parseFloat(cs.marginTop) || 0,
-                mb: parseFloat(cs.marginBottom) || 0
+                mb: parseFloat(cs.marginBottom) || 0,
+                // پادینگ و بۆردەر دەبێت ئەوانیش کەم بێنەوە — ئەگەرنا `border-box`
+                // ڕێگا نادات بەرزی لەوان کەمتر بێت و بۆشاییەک بەجێدەمێنێت
+                pt: parseFloat(cs.paddingTop) || 0,
+                pb: parseFloat(cs.paddingBottom) || 0,
+                bt: parseFloat(cs.borderTopWidth) || 0,
+                bb: parseFloat(cs.borderBottomWidth) || 0
             };
             if (hadClip) el.classList.add('sh-clip');
-            s.height = keep[0]; s.marginTop = keep[1]; s.marginBottom = keep[2]; s.opacity = keep[3];
+            s.height = keep[0]; s.marginTop = keep[1]; s.marginBottom = keep[2];
+            s.opacity = keep[3]; si.transform = keep[4];
+            s.paddingTop = keep[5]; s.paddingBottom = keep[6];
+            s.borderTopWidth = keep[7]; s.borderBottomWidth = keep[8];
             if (m.h > 0) el.__shM = m;
             return el.__shM || m;
         }
@@ -5006,32 +5137,52 @@
 
         /**
          * p = ٠ واتا تەواو دەرکەوتوو، p = ١ واتا تەواو چەمێنراوەتەوە.
-         * نرخە نێوانییەکان ڕاستەوخۆ بەپێی بڕی سکڕۆڵ دادەنرێن — بۆیە
-         * گۆڕانەکە لەگەڵ پەنجەدا دەڕوات و بە یەک پرتە ڕوونادات.
+         *
+         * ناوەڕۆکەکە **نابڕدرێت** — بەڵکو بەرەو سەرەوە دەخلیسکێت و لەژێر
+         * لێواری سەرەوەدا ون دەبێت، هاوکات بۆشاییەکەش دادەخرێت. هەموو
+         * جووڵەکان بەرەو یەک ئاراستەن، بۆیە بۆ چاو ئارامە.
+         *
+         * هیچ کاڵبوونەوەیەک نییە — وەک فەیسبووک، ڕەق دەڕوات و ڕەق دەگەڕێتەوە.
+         *
+         * rise=true بۆ ئەو توخمانەی دەردەکەون (شریتی ئامار) — لە خوارەوەوە
+         * بەرەو سەرەوە دێنە ناوەوە، هەمان ئاراستە.
          */
-        function shSet(el, p) {
+        function shSet(el, p, rise) {
             if (!el) return;
             p = p < 0 ? 0 : (p > 1 ? 1 : p);
             el.__shP = p;
+            const inner = shInner(el);
 
             if (p <= 0.0008) {
                 el.classList.remove('sh-clip');
                 el.style.height = '';
                 el.style.marginTop = '';
                 el.style.marginBottom = '';
+                el.style.paddingTop = '';
+                el.style.paddingBottom = '';
+                el.style.borderTopWidth = '';
+                el.style.borderBottomWidth = '';
                 el.style.opacity = '';
                 el.style.pointerEvents = '';
+                inner.style.transform = '';
                 return;
             }
 
             const m = el.__shM || shMeasure(el);
             const k = 1 - p;
+            const h = m.h * k;
+            const shift = m.h - h;          // ئەوەندەی لە دەست چووە
+
             el.classList.add('sh-clip');
-            el.style.height = (m.h * k).toFixed(1) + 'px';
+            el.style.height = h.toFixed(1) + 'px';
             el.style.marginTop = (m.mt * k).toFixed(1) + 'px';
             el.style.marginBottom = (m.mb * k).toFixed(1) + 'px';
-            el.style.opacity = (1 - shRamp(p, 0, SH_FADE_END)).toFixed(3);
-            el.style.pointerEvents = p > 0.6 ? 'none' : '';
+            el.style.paddingTop = ((m.pt || 0) * k).toFixed(1) + 'px';
+            el.style.paddingBottom = ((m.pb || 0) * k).toFixed(1) + 'px';
+            if (m.bt) el.style.borderTopWidth = (m.bt * k).toFixed(2) + 'px';
+            if (m.bb) el.style.borderBottomWidth = (m.bb * k).toFixed(2) + 'px';
+            el.style.pointerEvents = p > 0.5 ? 'none' : '';
+            inner.style.transform = 'translateY(' + (rise ? shift : -shift).toFixed(1) + 'px)';
         }
 
         const shRegistry = [];
@@ -5052,15 +5203,75 @@
             const els = () => (opts.hideEls || []).map(id => document.getElementById(id)).filter(Boolean);
             const alts = () => (opts.showEls || []).map(id => document.getElementById(id)).filter(Boolean);
 
+            // مەودای گۆڕان = بەرزی توخنی سەرەکی → جووڵەکە ١:١ لەگەڵ پەنجەدا
+            function range() {
+                const e = els()[0];
+                if (!e) return SH_RANGE_MIN;
+                const m = e.__shM || shMeasure(e);
+                return Math.max(SH_RANGE_MIN, m.h || SH_RANGE_MIN);
+            }
+
             // track = ڕاستەوخۆ لەگەڵ پەنجە (بێ ترانزیشن)
             // !track = جێگیربوونی نەرم بە ترانزیشنی CSS
             function paint(track) {
-                els().forEach(e => { e.classList.toggle('sh-track', track); shSet(e, state.p); });
-                alts().forEach(e => { e.classList.toggle('sh-track', track); shSet(e, 1 - state.p); });
+                // شریتی ئامار تەنها لە کۆتاییدا دێتە ناوەوە — تا کارتەکان و
+                // شریتەکە پێکەوە بە نیوەچڵی دەرنەکەون
+                // هەموویان بەرەو سەرەوە دەجووڵێن (خواروویان پێوە بەستراوە)،
+                // بۆیە هیچ شتێک بە پێچەوانەی ئەوی تر ناجووڵێت
+                const altP = 1 - shRamp(state.p, SH_ALT_START, 1);
+                els().forEach(e => { e.classList.toggle('sh-track', track); shSet(e, state.p, false); });
+                alts().forEach(e => { e.classList.toggle('sh-track', track); shSet(e, altP, false); });
             }
 
-            function setP(v, track) {
+            // ئەوەندە جێگای ستوونی کە بە p ـی دراودا بۆ لیستەکە دەکرێتەوە:
+            // چەمانەوەی سەرەوە جێگا دەکاتەوە، بەڵام دەرکەوتنی شریتی ئامار
+            // بەشێکی دەگرێتەوە — بۆیە هەردووکیان لەبەرچاو دەگیرێن.
+            function freedAt(p) {
+                let f = 0;
+                els().forEach(e => {
+                    const m = e.__shM || shMeasure(e);
+                    f += ((m.h || 0) + (m.mt || 0) + (m.mb || 0)) * p;
+                });
+                const ap = 1 - shRamp(p, SH_ALT_START, 1);
+                alts().forEach(e => {
+                    const m = e.__shM || shMeasure(e);
+                    f += ((m.h || 0) + (m.mt || 0) + (m.mb || 0)) * ap;
+                });
+                return f;
+            }
+
+            // ئەوەندەی سکڕۆڵی ماوە تا کۆتایی لیستەکە
+            function slackNow() {
+                return scroller.scrollHeight - scroller.clientHeight - scroller.scrollTop;
+            }
+
+            // ============================================================
+            // سنووری کۆتایی لیست — چارەسەری لەرزین (glitch)
+            // ------------------------------------------------------------
+            // چەمانەوەی سەرەوە جێگای لیستەکە فراوان دەکات، واتا `maxScroll`
+            // بەو ڕێژەیە کەم دەبێتەوە. لە کۆتایی لیستدا وێبگەڕ ناچار دەبێت
+            // `scrollTop` بگەڕێنێتەوە دواوە — ئەوەش وەک «سکڕۆڵی سەرەوە»
+            // دەخوێنرێتەوە، سەرەوەکە دەگەڕێتەوە، جێگا کەم دەبێتەوە،
+            // دیسان دەچەمێتەوە… دووچەرخەیەکی داخراوی لەرزۆک.
+            //
+            // بۆیە هەرگیز زیاتر لەوەی سکڕۆڵی ماوە ناچەمێتەوە. کاتێک لیستەکە
+            // کۆتایی هات، سەرەوەکە لەو ڕادەیەدا بێ لەرزە دەوەستێت.
+            // ============================================================
+            function capP(v, slack) {
+                if (!(v > state.p)) return v;   // کردنەوە جێگا دەگەڕێنێتەوە → سنووری ناوێت
+                const budget = freedAt(state.p) + Math.max(0, slack - 1);
+                if (freedAt(v) <= budget) return v;
+                let lo = state.p, hi = v;
+                for (let i = 0; i < 14; i++) {
+                    const mid = (lo + hi) / 2;
+                    if (freedAt(mid) <= budget) lo = mid; else hi = mid;
+                }
+                return lo;
+            }
+
+            function setP(v, track, slack) {
                 v = v < 0 ? 0 : (v > 1 ? 1 : v);
+                v = capP(v, slack === undefined ? slackNow() : slack);
                 if (track && Math.abs(v - state.p) < 0.0008) return;
                 state.p = v;
                 paint(track);
@@ -5070,7 +5281,7 @@
             function scheduleSettle() {
                 clearTimeout(state.settleT);
                 state.settleT = setTimeout(() => {
-                    if (state.p > 0 && state.p < 1) setP(state.dir > 0 ? 1 : 0, false);
+                    if (state.p > 0 && state.p < 1) setP(state.dir > 0 ? 1 : 0, false, slackNow());
                     else paint(false);
                 }, SH_SETTLE_MS);
             }
@@ -5078,8 +5289,8 @@
             state.reset = function () {
                 clearTimeout(state.settleT);
                 state.p = 0; state.dir = 0; state.lastY = scroller.scrollTop;
-                els().forEach(e => { e.__shM = null; e.classList.remove('sh-track'); shSet(e, 0); });
-                alts().forEach(e => { e.__shM = null; e.classList.remove('sh-track'); shSet(e, 1); });
+                els().forEach(e => { e.__shM = null; e.classList.remove('sh-track'); shSet(e, 0, false); });
+                alts().forEach(e => { e.__shM = null; e.classList.remove('sh-track'); shSet(e, 1, false); });
             };
 
             function onScroll() {
@@ -5088,12 +5299,13 @@
                     state.raf = 0;
                     const y = scroller.scrollTop;
                     const maxY = scroller.scrollHeight - scroller.clientHeight;
-                    const nearBottom = (maxY - y) < 8;
+                    const slack = maxY - y;             // ئەوەندەی سکڕۆڵی ماوە
+                    const nearBottom = slack < 8;
                     const dy = y - state.lastY;
 
                     if (y <= SH_TOP_ZONE) {
                         state.dir = -1;
-                        setP(0, true);
+                        setP(0, true, slack);
                         state.lastY = y;
                         scheduleSettle();
                         return;
@@ -5102,15 +5314,16 @@
                     if (dy === 0) return;
                     state.dir = dy > 0 ? 1 : -1;
 
+                    const R = range();
                     if (dy > 0) {
                         // چەماندنەوە تەنها دوای ئەو خاڵەی دیاری کراوە
                         const min = opts.minScroll ? opts.minScroll(scroller) : 0;
                         if (y >= min && (!opts.canHide || opts.canHide(scroller))) {
-                            setP(state.p + dy / SH_RANGE, true);
+                            setP(state.p + dy / R, true, slack);
                         }
                     } else {
                         // گەڕانەوە لە هەر شوێنێکەوە، بەپێی بڕی سەرکەوتن
-                        setP(state.p + dy / SH_RANGE, true);
+                        setP(state.p + dy / R, true, slack);
                     }
 
                     // ئەگەر لە بنی لیستەکەداین، گۆڕینی بەرزی سەرەوە لەوانەیە
@@ -5133,7 +5346,11 @@
                         alts().forEach(e => { e.__shM = null; });
                         if (state.p <= 0) return;
                         if (scroller.scrollHeight <= scroller.clientHeight + 1 ||
-                            (opts.canHide && !opts.canHide(scroller))) state.reset();
+                            (opts.canHide && !opts.canHide(scroller))) { state.reset(); return; }
+                        // لیستەکە کورتتر بووەتەوە بەڵام هێشتا سکڕۆڵ دەبێت:
+                        // ئەوەندە بمێنێتەوە کە بە سکڕۆڵی سەرەوە بگەڕێتەوە
+                        const lim = Math.min(1, scroller.scrollTop / range());
+                        if (state.p > lim + 0.0008) { state.lastY = scroller.scrollTop; setP(lim, false); }
                     }, 140);
                 });
                 mo.observe(scroller, { childList: true });
@@ -5153,18 +5370,19 @@
             // ئەوانەی لە مارکئەپدا شاراوە دەستپێدەکەن (شریتی ئامار):
             // یەکەم ئەندازە دەگیرێن، پاشان بە p=١ دادەنرێن — هەموو لە یەک
             // فرەیمدا، بۆیە هیچ ڕۆشنایەکی کاتی دەرناکەوێت.
+            document.querySelectorAll('.sh-collapse').forEach(shInner);
             document.querySelectorAll('.sh-collapse.sh-init-hidden').forEach(e => {
                 e.classList.remove('sh-init-hidden');
                 shMeasure(e);
-                shSet(e, 1);
+                shSet(e, 1, false);
             });
 
             // داشبۆرد: کارتەکانی ئامار → شریتی چڕ
             // تەنها ئەگەر لە ٣ ئۆردەر زیاتر هەبێت، و کاتێک ئۆردەری سێیەم گەیشتە سەرەوە
             registerScrollHide({
                 scroller: 'orders-list',
-                hideEls: ['stats-grid'],
-                showEls: ['stats-bar'],
+                hideEls: ['stats-grid-wrap'],
+                showEls: ['stats-bar-wrap'],
                 canHide: (sc) => sc.querySelectorAll('.modern-order-card').length > 3,
                 minScroll: (sc) => {
                     const cards = sc.querySelectorAll('.modern-order-card');
@@ -5186,6 +5404,7 @@
             registerScrollHide({ scroller: 'profit-users-list', hideEls: ['profit-filters-collapse'] });
             registerScrollHide({ scroller: 'wallet-users-list', hideEls: ['wallet-filters-collapse'] });
             registerScrollHide({ scroller: 'admin-cities-list', hideEls: ['cities-add-collapse'] });
+            registerScrollHide({ scroller: 'trash-container', hideEls: ['trash-head'] });
         }
 
         if (document.readyState === 'loading') {

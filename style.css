@@ -1190,15 +1190,29 @@ h2 i,
    ============================================================ */
 .sh-collapse {
   box-sizing: border-box;
+  /* هەرگیز نەچەمێتەوە لەلایەن فلێکسەوە — بەرزییەکەی بە JS دیاری دەکرێت */
+  flex-shrink: 0;
   /* تەنها بۆ جێگیربوونی کۆتایی — لەکاتی سکڕۆڵدا `sh-track` ئەمە دەکوژێنێتەوە
      تا گۆڕانەکە ڕاستەوخۆ لەگەڵ پەنجەدا بڕوات */
   transition: height 0.26s cubic-bezier(.25, .8, .35, 1),
     margin 0.26s cubic-bezier(.25, .8, .35, 1),
-    opacity 0.2s ease-out;
+    padding 0.26s cubic-bezier(.25, .8, .35, 1),
+    border-width 0.26s cubic-bezier(.25, .8, .35, 1);
+}
+
+/* چینی ناوەوە — ناوەڕۆکەکە دەخلیسکێت، نەک ببڕدرێت.
+   بەبێ ئەمە، کارتەکان لە خوارەوە دەبڕدران (وەک چەقۆ) کە ناشرین بوو. */
+.sh-inner {
+  transition: transform 0.26s cubic-bezier(.25, .8, .35, 1);
+  will-change: transform;
 }
 
 /* لەکاتی سکڕۆڵدا: هیچ ترانزیشنێک — نرخەکان هەر فرەیمێک ڕێک دەخرێن */
 .sh-collapse.sh-track {
+  transition: none;
+}
+
+.sh-collapse.sh-track > .sh-inner {
   transition: none;
 }
 
@@ -1219,7 +1233,9 @@ h2 i,
 
 /* کەسانێک ئەنیمەیشنیان پێ ناخۆشە — ڕاستەوخۆ بگۆڕدرێت */
 @media (prefers-reduced-motion: reduce) {
-  .sh-collapse {
+
+  .sh-collapse,
+  .sh-inner {
     transition: none;
   }
 }
@@ -6051,8 +6067,9 @@ body.keyboard-open #main-fab {
   overflow: hidden;
 }
 
-#edit-list-view > #edit-role-filter,
-#edit-list-view > .search-group {
+/* تێبینی: `>` نەما — چونکە فلتەر و گەڕان ئێستا لەناو `sh-collapse`ـدان */
+#edit-list-view #edit-role-filter,
+#edit-list-view .search-group {
   flex-shrink: 0;
 }
 
@@ -6123,7 +6140,7 @@ body.keyboard-open #main-fab {
 
 #profit-search-container,
 #wallet-search-container,
-#edit-list-view > .search-group {
+#edit-list-view .search-group {
   margin-bottom: 4px;
 }
 
@@ -6588,6 +6605,30 @@ body.no-glass .fab-wrapper .btn {
   background: #f8fafc;
   border: 1px solid #eef2f6;
   border-radius: 10px;
+}
+
+/* سەردێڕی بەشی «لەسەر ئۆردەری کام پلە؟» */
+.perm-tier-head {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin: 10px 0 4px;
+  padding-top: 8px;
+  border-top: 1px dashed #dfe6ee;
+  font-size: var(--fs-2xs);
+  font-weight: var(--font-bold);
+  color: var(--primary);
+}
+
+/* ئەگەر یەکەم شت بێت (بێ ژێری تر)، سنوور و بۆشایی ناوێت */
+.perm-subs > .perm-tier-head:first-child {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
+}
+
+.perm-tier-head i {
+  font-size: 14px;
 }
 .perm-sub-row,
 .perm-field-row {
