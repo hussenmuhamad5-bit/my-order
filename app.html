@@ -7735,6 +7735,11 @@
         // پاداشتی بەڕێوەبەر بۆ هەر دانەیەک، کاتێک ئەندامەکە تەنها بەڕێوەبەری هەیە
         const MANAGER_SOLO_BONUS = 1000;
 
+        // ---- پاشەکەوتی بنەڕەتی ----
+        const SAVINGS_HIGH = 1000, SAVINGS_BASE = 500;
+        // ئەم پلانە کاتێک ئۆردەرەکە هی خۆیان بێت، پاشەکەوتەکەیان ١٠٠٠ دینارە
+        const SAVINGS_HIGH_ROLES = ['بەڕێوەبەر', 'سەرپەرشت', 'ڕاوێژکار'];
+
         async function openDistributionModal(orderId) {
             closeModal(null, 'order-details-modal');
             distributingOrder = allGlobalOrdersData[orderId]; let o = distributingOrder;
@@ -7781,13 +7786,13 @@
                 // قازانجی ئەندام و پاشەکەوت (خۆکارانە پڕ دەکرێنەوە)
                 distData.memberProfit = (o.member_profit != null && !isNaN(parseFloat(o.member_profit)) && parseFloat(o.member_profit) > 0) ? parseFloat(o.member_profit) : 0;
                 // پاشەکەوتی بنەڕەتی (بۆ خاوەنی ئۆردەرەکە):
-                //  • بەڕێوەبەر — ئۆردەری خۆی            → ١٠٠٠
-                //  • ئەندام — سەرپەرشت یان ڕاوێژکاری نەبێت → ١٠٠٠
-                //  • هەموو حاڵەتەکانی تر                  → ٥٠٠
+                //  • بەڕێوەبەر / سەرپەرشت / ڕاوێژکار — ئۆردەری خۆیان → ١٠٠٠
+                //  • ئەندام — سەرپەرشت یان ڕاوێژکاری نەبێت            → ١٠٠٠
+                //  • هەموو حاڵەتەکانی تر                              → ٥٠٠
                 distData.savingsDefault =
-                    (sellerRole === 'بەڕێوەبەر') ? 1000
-                        : (sellerRole === 'ئەندام' && !(memberData.admin && memberData.consultant)) ? 1000
-                            : 500;
+                    SAVINGS_HIGH_ROLES.includes(sellerRole) ? SAVINGS_HIGH
+                        : (sellerRole === 'ئەندام' && !(memberData.admin && memberData.consultant)) ? SAVINGS_HIGH
+                            : SAVINGS_BASE;
 
                 isDistKingOrder = (memberData && memberData.role === "پاشا");
                 let isAuthorized = can('distribute_profit');
