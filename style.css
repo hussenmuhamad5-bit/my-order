@@ -1189,27 +1189,31 @@ h2 i,
    ئەگەرنا دڕۆپداونەکانی فلتەر دەبڕدران.
    ============================================================ */
 .sh-collapse {
-  transition: height 0.34s cubic-bezier(.32, .72, 0, 1),
-    opacity 0.22s ease,
-    margin 0.34s cubic-bezier(.32, .72, 0, 1),
-    transform 0.34s cubic-bezier(.32, .72, 0, 1);
+  box-sizing: border-box;
+  /* تەنها بۆ جێگیربوونی کۆتایی — لەکاتی سکڕۆڵدا `sh-track` ئەمە دەکوژێنێتەوە
+     تا گۆڕانەکە ڕاستەوخۆ لەگەڵ پەنجەدا بڕوات */
+  transition: height 0.26s cubic-bezier(.25, .8, .35, 1),
+    margin 0.26s cubic-bezier(.25, .8, .35, 1),
+    opacity 0.2s ease-out;
 }
 
-.sh-collapse.sh-anim,
-.sh-collapse.sh-hidden {
+/* لەکاتی سکڕۆڵدا: هیچ ترانزیشنێک — نرخەکان هەر فرەیمێک ڕێک دەخرێن */
+.sh-collapse.sh-track {
+  transition: none;
+}
+
+/* تەنها لەکاتی چەمانەوەدا دادەخرێت — ئەگەرنا دڕۆپداونەکانی فلتەر دەبڕدران */
+.sh-collapse.sh-clip {
   overflow: hidden;
 }
 
-.sh-collapse.sh-hidden {
+/* دۆخی سەرەتا پێش ئەوەی JS دەستی پێبکات (شریتی ئامار) */
+.sh-collapse.sh-init-hidden {
   height: 0;
+  margin-top: 0;
+  margin-bottom: 0;
   opacity: 0;
-  margin-top: 0 !important;
-  margin-bottom: 0 !important;
-  padding-top: 0 !important;
-  padding-bottom: 0 !important;
-  border-top-width: 0 !important;
-  border-bottom-width: 0 !important;
-  transform: translateY(-6px);
+  overflow: hidden;
   pointer-events: none;
 }
 
