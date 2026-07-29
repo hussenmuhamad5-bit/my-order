@@ -440,9 +440,17 @@
                     <!-- بۆ گونجاندن لەگەڵ updateCode/deleteCode (کۆدی هەڵبژێردراو) -->
                     <input type="hidden" id="search-code-input">
 
-                    <div id="edit-section" class="edit-section" style="display:none;">
-                        <button type="button" onclick="cancelEditFromList()"
-                            style="background:none; border:none; color:var(--primary); font-family:inherit; font-size:14px; font-weight:700; cursor:pointer; padding:0 0 12px 0; display:flex; align-items:center; gap:6px;"><i class='bx bx-right-arrow-alt'></i> گەڕانەوە بۆ لیست</button>
+                    <div id="edit-section" class="edit-section"
+                        style="border-top: none; padding-top: 0; display: none; background: #f8fafc; padding: 15px; border-radius: 12px; border: 1px solid #e2e8f0;">
+                        <div
+                            style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; gap:8px;">
+                            <label
+                                style="margin:0; font-size:14px; color:var(--text-main); flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">دەستکاری
+                                کلیلی: <span id="e-head-name" style="color:var(--primary);">...</span></label>
+                            <button class="btn"
+                                style="background:#e2e8f0; color:#475569; width:auto; height:32px; padding:0 12px; margin:0; font-size:20px; flex-shrink:0;"
+                                onclick="cancelEditFromList()"><i class='bx bx-x'></i></button>
+                        </div>
 
                         <label>ناوی سیانی</label>
                         <input type="text" id="e-name">
@@ -6842,6 +6850,8 @@
         function loadEditSectionFast(user) {
             let editSection = document.getElementById('edit-section');
 
+            let headName = document.getElementById('e-head-name');
+            if (headName) headName.innerText = user.full_name || user.code || '';
             document.getElementById('e-name').value = user.full_name;
             fillEditPassword(user);
 
@@ -7465,8 +7475,8 @@
             document.getElementById('wa-user-code').value = u.code;
 
             document.getElementById('wallet-users-list').style.display = 'none';
-            document.getElementById('wallet-search-container').style.display = 'none';
-            document.getElementById('wallet-role-tabs-container').style.display = 'none';
+            // هەموو ناوچەی سەرەوە (فلتەری پلە + گەڕان) پێکەوە دەشاردرێتەوە
+            document.getElementById('wallet-filters-collapse').style.display = 'none';
             document.getElementById('wallet-edit-section').style.display = 'flex';
             window.currentWalletCode = u.code;
             // لیستەکە شاردرایەوە → ڕاکێشان و پاشخانی سکڕۆڵ هەڵبوەشێنەوە
@@ -7551,8 +7561,7 @@
             document.getElementById('wallet-edit-section').style.display = 'none';
             document.getElementById('wa-user-code').value = "";
             document.getElementById('wallet-users-list').style.display = 'block';
-            document.getElementById('wallet-search-container').style.display = 'flex';
-            document.getElementById('wallet-role-tabs-container').style.display = 'flex';
+            document.getElementById('wallet-filters-collapse').style.display = '';
             // لیستەکە گەڕایەوە → پاشخان و ڕاکێشانەکە دووبارە دابنێ
             if (typeof resetAllScrollHide === 'function') resetAllScrollHide();
         }
@@ -7670,7 +7679,8 @@
             if (!u) return;
 
             document.getElementById('profit-users-list').style.display = 'none';
-            document.getElementById('profit-search-container').style.display = 'none';
+            // هەموو ناوچەی سەرەوە (فلتەری پلە + گەڕان) پێکەوە دەشاردرێتەوە
+            document.getElementById('profit-filters-collapse').style.display = 'none';
 
             document.getElementById('p-hidden-code').value = u.code;
             document.getElementById('p-name').innerText = u.name;
@@ -7693,7 +7703,7 @@
             document.getElementById('profit-edit-section').style.display = 'none';
             document.getElementById('p-hidden-code').value = "";
             document.getElementById('profit-users-list').style.display = 'block';
-            document.getElementById('profit-search-container').style.display = 'flex';
+            document.getElementById('profit-filters-collapse').style.display = '';
             // لیستەکە گەڕایەوە → پاشخان و ڕاکێشانەکە دووبارە دابنێ
             if (typeof resetAllScrollHide === 'function') resetAllScrollHide();
         }
@@ -7750,6 +7760,8 @@
             if (sc) { sc.value = u.name; sc.setAttribute('data-code', u.code); }
             document.getElementById('edit-list-view').style.display = 'none';
             loadEditSectionFast(u.data);
+            // لیستەکە شاردرایەوە → ڕاکێشان و پاشخانی سکڕۆڵ هەڵبوەشێنەوە
+            if (typeof resetAllScrollHide === 'function') resetAllScrollHide();
         }
 
         function cancelEditFromList() {
@@ -7761,6 +7773,8 @@
             if (sc) { sc.value = ""; sc.removeAttribute('data-code'); }
             document.getElementById('edit-list-view').style.display = 'flex';
             filterEditUsers();
+            // لیستەکە گەڕایەوە → پاشخان و ڕاکێشانەکە دووبارە دابنێ
+            if (typeof resetAllScrollHide === 'function') resetAllScrollHide();
             // گەڕانەوە بۆ هەمان شوێنی پێشووی لیستی کلیلەکان
             let listScroller = document.getElementById('edit-users-list');
             if (listScroller) listScroller.scrollTop = editListScrollTop;
