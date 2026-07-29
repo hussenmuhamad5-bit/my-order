@@ -18,7 +18,7 @@
 
     <div id="dashboard-screen" class="screen">
 
-        <div class="dashboard-header" style="display: flex; justify-content: space-between; align-items: center;">
+        <div class="dashboard-header" id="dash-head" style="display: flex; justify-content: space-between; align-items: center;">
             <span>ئامارەکانی من</span>
             <button type="button" onclick="triggerOrderScan()" class="dash-scan-btn" title="سکانی بارکۆد / QR">
                 <i class='bx bx-qr-scan' style="font-size: 18px;"></i>
@@ -56,7 +56,7 @@
 
         <!-- شریتی چڕی ئامار — لە جیاتی کارتەکان کاتێک لیستەکە سکڕۆڵ دەکرێت
              (تەنها ڕەنگ و ژمارە؛ هەمان کرداری کارتەکان لەسەریان) -->
-        <div class="sh-collapse sh-init-hidden" id="stats-bar-wrap">
+        <div class="sh-collapse sh-alt" id="stats-bar-wrap">
         <div class="stats-bar" id="stats-bar">
             <button type="button" class="sbar-seg sb-blue" onclick="goToFilteredOrders('ئامادە')"
                 title="ئامادە دەکرێت" aria-label="ئامادە دەکرێت">
@@ -284,7 +284,7 @@
             </svg>
         </div>
         <div id="admin-screen-content">
-            <div class="magic-tabs-wrapper">
+            <div class="magic-tabs-wrapper" id="admin-magic-tabs">
                 <div class="magic-tabs">
                     <div class="magic-slider" id="admin-tab-slider"></div>
                     <button class="magic-tab active" id="tab-create" onclick="switchAdminTab('create', this)">دروستکردن</button>
@@ -5074,337 +5074,341 @@
         // ============================================================
         // مەودای گۆڕان = بەرزی خودی توخنەکە، بۆیە جووڵەکە ١:١ـە لەگەڵ پەنجەدا:
         // هەر پیکسڵێک سکڕۆڵ = هەمان پیکسڵ جووڵەی سەرەوەکە (وەک ئەپی فەیسبووک).
-        const SH_RANGE_MIN = 60;    // کەمترین مەودا (ئەگەر توخنەکە زۆر کورت بوو)
-        const SH_TOP_ZONE = 6;     // نزیک سەرەوە → هەمیشە تەواو دەرکەوتوو
-        const SH_SETTLE_MS = 120;   // دوای وەستانی سکڕۆڵ → جێگیربوونی نەرم
-        const SH_ALT_START = 0.6;   // شریتی ئامار تەنها لە کۆتاییدا دێتە ناوەوە
+        // ============================================================
+        // شاردنەوەی سەرەوە لەکاتی سکڕۆڵ — بە شێوازی سایتی trio.dev
+        // ------------------------------------------------------------
+        // بنەمای سەرەکی: توخمەکانی سەرەوە **هەرگیز لە لەیئاوت دەرناچن**.
+        // لیستەکە بە `margin-top`ـێکی نێگەتیڤ دەخرێتە ژێریانەوە و بە
+        // `padding-top`ـێکی هاوتا ناوەڕۆکەکەی لە شوێنی خۆیدا دەمێنێتەوە:
+        //
+        //     margin-top : -H      → لیستەکە دەگاتە سەرەوەی ناوچەکە
+        //     padding-top: +H      → یەکەم بڕگە هێشتا لە ژێر سەرەوەکەیە
+        //
+        // بۆیە `scrollHeight` و `clientHeight` **هەرگیز ناگۆڕێن** — نە لە
+        // سەرەتا، نە لە ناوەڕاست، نە لە کۆتایی لیستدا. ئەوەش واتا ئەو
+        // گلیچەی لە کۆتایی لیستدا ڕوویدەدا (شاردنەوە جێگا دەکاتەوە →
+        // وێبگەڕ scrollTop دەگەڕێنێتەوە → وەک سکڕۆڵی سەرەوە دەخوێنرێتەوە
+        // → دووچەرخەی لەرزین) بە پێکهاتە **ئەستەمە** ڕووبدات.
+        //
+        // شاردنەوەکە خۆی تەنها ئەمەیە — ڕێک وەک `#header.header-hidden`
+        // لە trio.dev:
+        //     opacity: 0;  transform: translateY(-10px);
+        //     transition: opacity .4s ease-in-out, transform .4s ease-in-out;
+        // ============================================================
+        const SH_THRESHOLD = 60;   // پێش ئەم بڕەی سکڕۆڵ هیچ شتێک ناشاردرێتەوە
+        const SH_DEADZONE = 3;    // جووڵەی لەمە بچووکتر پشتگوێ دەخرێت (لەرزەی پەنجە)
 
-        // هەر توخمێکی `sh-collapse` ناوەڕۆکەکەی دەخرێتە ناو `sh-inner`ـەوە:
-        //  • دەرەوە = بڕین + بەرزی
-        //  • ناوەوە = خلیسکان (بۆ ئەوەی ناوەڕۆکەکە نەبڕدرێت، بەڵکو بخلیسکێت)
-        function shInner(el) {
-            if (el.__shInner && el.__shInner.parentNode === el) return el.__shInner;
-            let inner = el.querySelector(':scope > .sh-inner');
-            if (!inner) {
-                inner = document.createElement('div');
-                inner.className = 'sh-inner';
-                while (el.firstChild) inner.appendChild(el.firstChild);
-                el.appendChild(inner);
+        // توخمە خوشکەکانی نێوان `from` و `to` (بەبێ خودی `to`).
+        // نایانگرێتەوە:
+        //  • شریتە جێگرەوەکان (`sh-alt`) — لە لەیئاوتدا نین و
+        //    دەرکەوتنیان پێچەوانەی ناوچەکەیە
+        //  • بەشە شاراوەکان (تابە چالاکنەکراوەکانی ئەدمین)
+        function shBetween(from, to) {
+            const out = [];
+            let n = from;
+            while (n && n !== to) {
+                if (!n.classList.contains('sh-alt') &&
+                    getComputedStyle(n).display !== 'none') out.push(n);
+                n = n.nextElementSibling;
             }
-            el.__shInner = inner;
-            return inner;
+            return n === to ? out : [from];
         }
 
-        // ئەندازەی سروشتی توخمەکە (بەرزی + مارجنەکان) — کاش دەکرێت
-        function shMeasure(el) {
-            const inner = shInner(el);
-            const s = el.style, si = inner.style;
-            const keep = [s.height, s.marginTop, s.marginBottom, s.opacity, si.transform,
-                s.paddingTop, s.paddingBottom, s.borderTopWidth, s.borderBottomWidth];
-            s.height = ''; s.marginTop = ''; s.marginBottom = ''; s.opacity = '';
-            s.paddingTop = ''; s.paddingBottom = '';
-            s.borderTopWidth = ''; s.borderBottomWidth = '';
-            si.transform = '';
-            const hadClip = el.classList.contains('sh-clip');
-            if (hadClip) el.classList.remove('sh-clip');
-            const cs = getComputedStyle(el);
-            const m = {
-                h: el.offsetHeight,
-                mt: parseFloat(cs.marginTop) || 0,
-                mb: parseFloat(cs.marginBottom) || 0,
-                // پادینگ و بۆردەر دەبێت ئەوانیش کەم بێنەوە — ئەگەرنا `border-box`
-                // ڕێگا نادات بەرزی لەوان کەمتر بێت و بۆشاییەک بەجێدەمێنێت
-                pt: parseFloat(cs.paddingTop) || 0,
-                pb: parseFloat(cs.paddingBottom) || 0,
-                bt: parseFloat(cs.borderTopWidth) || 0,
-                bb: parseFloat(cs.borderBottomWidth) || 0
-            };
-            if (hadClip) el.classList.add('sh-clip');
-            s.height = keep[0]; s.marginTop = keep[1]; s.marginBottom = keep[2];
-            s.opacity = keep[3]; si.transform = keep[4];
-            s.paddingTop = keep[5]; s.paddingBottom = keep[6];
-            s.borderTopWidth = keep[7]; s.borderBottomWidth = keep[8];
-            if (m.h > 0) el.__shM = m;
-            return el.__shM || m;
+        // ئەو خوشکەی `from` کە سکڕۆڵەکە لەخۆدەگرێت (یان خۆیەتی) —
+        // ئەمە ئەو توخمەیە کە بۆ سەرەوە ڕادەکێشرێت
+        function shPullTarget(from, scroller) {
+            let n = from.nextElementSibling;
+            while (n && n !== scroller && !n.contains(scroller)) n = n.nextElementSibling;
+            return n || null;
         }
 
-        // ڕامپی خەتی: x لە نێوان a و b → ٠ بۆ ١
-        function shRamp(x, a, b) {
-            if (x <= a) return 0;
-            if (x >= b) return 1;
-            return (x - a) / (b - a);
+        // پاشخانێکی ڕەقی یەکپارچە لە ژێر ناوچەکەوە. بەبێ ئەمە ناوەڕۆکی
+        // لیستەکە لە بۆشایی نێوان توخمەکان و لە دوو کەناری پەڕەکەدا
+        // (کە لیستەکە بە مارجنی نێگەتیڤ فراوانە) دەردەکەوێت.
+        function shBackdrop(host) {
+            if (getComputedStyle(host).position === 'static') host.style.position = 'relative';
+            const d = document.createElement('div');
+            d.className = 'sh-backdrop';
+            host.insertBefore(d, host.firstChild);
+            return d;
         }
 
-        /**
-         * p = ٠ واتا تەواو دەرکەوتوو، p = ١ واتا تەواو چەمێنراوەتەوە.
-         *
-         * ناوەڕۆکەکە **نابڕدرێت** — بەڵکو بەرەو سەرەوە دەخلیسکێت و لەژێر
-         * لێواری سەرەوەدا ون دەبێت، هاوکات بۆشاییەکەش دادەخرێت. هەموو
-         * جووڵەکان بەرەو یەک ئاراستەن، بۆیە بۆ چاو ئارامە.
-         *
-         * هیچ کاڵبوونەوەیەک نییە — وەک فەیسبووک، ڕەق دەڕوات و ڕەق دەگەڕێتەوە.
-         *
-         * rise=true بۆ ئەو توخمانەی دەردەکەون (شریتی ئامار) — لە خوارەوەوە
-         * بەرەو سەرەوە دێنە ناوەوە، هەمان ئاراستە.
-         */
-        function shSet(el, p, rise) {
-            if (!el) return;
-            p = p < 0 ? 0 : (p > 1 ? 1 : p);
-            el.__shP = p;
-            const inner = shInner(el);
-
-            if (p <= 0.0008) {
-                el.classList.remove('sh-clip');
-                el.style.height = '';
-                el.style.marginTop = '';
-                el.style.marginBottom = '';
-                el.style.paddingTop = '';
-                el.style.paddingBottom = '';
-                el.style.borderTopWidth = '';
-                el.style.borderBottomWidth = '';
-                el.style.opacity = '';
-                el.style.pointerEvents = '';
-                inner.style.transform = '';
-                return;
-            }
-
-            const m = el.__shM || shMeasure(el);
-            const k = 1 - p;
-            const h = m.h * k;
-            const shift = m.h - h;          // ئەوەندەی لە دەست چووە
-
-            el.classList.add('sh-clip');
-            el.style.height = h.toFixed(1) + 'px';
-            el.style.marginTop = (m.mt * k).toFixed(1) + 'px';
-            el.style.marginBottom = (m.mb * k).toFixed(1) + 'px';
-            el.style.paddingTop = ((m.pt || 0) * k).toFixed(1) + 'px';
-            el.style.paddingBottom = ((m.pb || 0) * k).toFixed(1) + 'px';
-            if (m.bt) el.style.borderTopWidth = (m.bt * k).toFixed(2) + 'px';
-            if (m.bb) el.style.borderBottomWidth = (m.bb * k).toFixed(2) + 'px';
-            el.style.pointerEvents = p > 0.5 ? 'none' : '';
-            inner.style.transform = 'translateY(' + (rise ? shift : -shift).toFixed(1) + 'px)';
+        // سەری مارجن‌بۆکسی توخمێک، بەپێی سیستەمی `offsetTop`
+        function shMarginTop(el) {
+            return el.offsetTop - (parseFloat(getComputedStyle(el).marginTop) || 0);
         }
 
         const shRegistry = [];
 
         /**
          * scroller  — ئەو توخمەی سکڕۆڵ دەکات
-         * hideEls   — ئەوانەی دەچەمێنەوە
+         * hideEls   — سەرەتای هەر ناوچەیەک؛ هەر یەکێکیان تا ئەو خوشکەیان
+         *             دەگرێتەوە کە سکڕۆڵەکەی تێدایە (تابەکانی سەرەوەش)
          * showEls   — ئەوانەی لە جیاتییان دەردەکەون (شریتی ئامار)
-         * canHide   — فەنکشنێک: ئایا ئێستا بۆی هەیە بچەمێتەوە؟
-         * minScroll — فەنکشنێک: لە چەند پیکسڵەوە بۆی هەیە بچەمێتەوە
+         * canHide   — فەنکشنێک: ئایا ئێستا بۆی هەیە بشاردرێتەوە؟
+         * minScroll — فەنکشنێک: لە چەند پیکسڵەوە بۆی هەیە بشاردرێتەوە
          */
         function registerScrollHide(opts) {
             const scroller = document.getElementById(opts.scroller);
             if (!scroller || scroller.__shBound) return;
             scroller.__shBound = true;
 
-            const state = { p: 0, lastY: 0, dir: 0, raf: 0, settleT: 0 };
+            const state = { off: false, lastY: 0, raf: 0, moT: 0, zone: [], pulls: [], scroller: scroller };
             const els = () => (opts.hideEls || []).map(id => document.getElementById(id)).filter(Boolean);
             const alts = () => (opts.showEls || []).map(id => document.getElementById(id)).filter(Boolean);
 
-            // مەودای گۆڕان = بەرزی توخنی سەرەکی → جووڵەکە ١:١ لەگەڵ پەنجەدا
-            function range() {
-                const e = els()[0];
-                if (!e) return SH_RANGE_MIN;
-                const m = e.__shM || shMeasure(e);
-                return Math.max(SH_RANGE_MIN, m.h || SH_RANGE_MIN);
-            }
-
-            // track = ڕاستەوخۆ لەگەڵ پەنجە (بێ ترانزیشن)
-            // !track = جێگیربوونی نەرم بە ترانزیشنی CSS
-            function paint(track) {
-                // شریتی ئامار تەنها لە کۆتاییدا دێتە ناوەوە — تا کارتەکان و
-                // شریتەکە پێکەوە بە نیوەچڵی دەرنەکەون
-                // هەموویان بەرەو سەرەوە دەجووڵێن (خواروویان پێوە بەستراوە)،
-                // بۆیە هیچ شتێک بە پێچەوانەی ئەوی تر ناجووڵێت
-                const altP = 1 - shRamp(state.p, SH_ALT_START, 1);
-                els().forEach(e => { e.classList.toggle('sh-track', track); shSet(e, state.p, false); });
-                alts().forEach(e => { e.classList.toggle('sh-track', track); shSet(e, altP, false); });
-            }
-
-            // ئەوەندە جێگای ستوونی کە بە p ـی دراودا بۆ لیستەکە دەکرێتەوە:
-            // چەمانەوەی سەرەوە جێگا دەکاتەوە، بەڵام دەرکەوتنی شریتی ئامار
-            // بەشێکی دەگرێتەوە — بۆیە هەردووکیان لەبەرچاو دەگیرێن.
-            function freedAt(p) {
-                let f = 0;
-                els().forEach(e => {
-                    const m = e.__shM || shMeasure(e);
-                    f += ((m.h || 0) + (m.mt || 0) + (m.mb || 0)) * p;
-                });
-                const ap = 1 - shRamp(p, SH_ALT_START, 1);
-                alts().forEach(e => {
-                    const m = e.__shM || shMeasure(e);
-                    f += ((m.h || 0) + (m.mt || 0) + (m.mb || 0)) * ap;
-                });
-                return f;
-            }
-
-            // ئەوەندەی سکڕۆڵی ماوە تا کۆتایی لیستەکە
-            function slackNow() {
-                return scroller.scrollHeight - scroller.clientHeight - scroller.scrollTop;
-            }
-
-            // ============================================================
-            // سنووری کۆتایی لیست — چارەسەری لەرزین (glitch)
-            // ------------------------------------------------------------
-            // چەمانەوەی سەرەوە جێگای لیستەکە فراوان دەکات، واتا `maxScroll`
-            // بەو ڕێژەیە کەم دەبێتەوە. لە کۆتایی لیستدا وێبگەڕ ناچار دەبێت
-            // `scrollTop` بگەڕێنێتەوە دواوە — ئەوەش وەک «سکڕۆڵی سەرەوە»
-            // دەخوێنرێتەوە، سەرەوەکە دەگەڕێتەوە، جێگا کەم دەبێتەوە،
-            // دیسان دەچەمێتەوە… دووچەرخەیەکی داخراوی لەرزۆک.
-            //
-            // بۆیە هەرگیز زیاتر لەوەی سکڕۆڵی ماوە ناچەمێتەوە. کاتێک لیستەکە
-            // کۆتایی هات، سەرەوەکە لەو ڕادەیەدا بێ لەرزە دەوەستێت.
-            // ============================================================
-            function capP(v, slack) {
-                if (!(v > state.p)) return v;   // کردنەوە جێگا دەگەڕێنێتەوە → سنووری ناوێت
-                const budget = freedAt(state.p) + Math.max(0, slack - 1);
-                if (freedAt(v) <= budget) return v;
-                let lo = state.p, hi = v;
-                for (let i = 0; i < 14; i++) {
-                    const mid = (lo + hi) / 2;
-                    if (freedAt(mid) <= budget) lo = mid; else hi = mid;
+            // ---- دانانی ناوچەکان (جێگیر — تەنها کاتێک بەرزی گۆڕا) ----
+            function layout() {
+                const first = els()[0];
+                if (!first) return;
+                // شاشەکە دەرناکەوێت — پاشخانەکەشی بشارەوە، ئەگەرنا لەسەر
+                // بەشی چالاک دەمێنێتەوە (تابەکانی ئەدمین هاوبەشن)
+                if (!scroller.offsetParent) {
+                    if (state.bd) state.bd.style.display = 'none';
+                    return;
                 }
-                return lo;
+
+                // شریتی جێگرەوە لە لەیئاوتدا نییە — لەسەر هەمان شوێنی
+                // سەرەوەکە دادەنرێت، بۆیە بەرزی ناوچەکە ناگۆڕێت
+                alts().forEach(a => a.classList.add('sh-alt'));
+
+                // یەکەم جار: دیاریکردنی ئاستەکانی ڕاکێشان
+                if (!state.pulls.length) {
+                    els().forEach(from => {
+                        const target = shPullTarget(from, scroller);
+                        if (!target) return;
+                        const ct = getComputedStyle(target), cf = getComputedStyle(from);
+                        state.pulls.push({
+                            from: from, target: target, H: 0,
+                            tMT: parseFloat(ct.marginTop) || 0,
+                            tPT: parseFloat(ct.paddingTop) || 0,
+                            fMT: parseFloat(cf.marginTop) || 0
+                        });
+                    });
+                    if (!state.pulls.length) return;
+                }
+
+                // ============================================================
+                // ڕاکێشانی چین‌چین
+                // ------------------------------------------------------------
+                // ئامانج: لیستەکە بگاتە **سەری ڕووتی شاشە** (y=٠)، نەک تەنها
+                // ژێر تابەکان — ئەگەرنا کاتێک سەرەوەکە دەشاردرێتەوە بۆشاییەک
+                // لەسەرەوە دەمێنێتەوە.
+                //
+                // بۆیە هەموو ئەو جێگایەی پاراسترابوو دەبێت لە **پادینگی
+                // لیستەکە**دا بێت، نەک لە پادینگی بەرگەکانی نێوان — چونکە
+                // تەنها پادینگی لیستەکە لەگەڵ سکڕۆڵدا دەڕوات:
+                //
+                //   ئاستەکانی نێوان → تەنها مارجنی نێگەتیڤ، و جێگاکەیان بە
+                //                     مارجنی توخمی ئاستی داهاتوو دەپارێزرێت
+                //   ئاستی کۆتایی    → مارجنی نێگەتیڤ + پادینگ لەسەر لیستەکە
+                // ============================================================
+                const last = state.pulls.length - 1;
+                let changed = false;
+                state.pulls.forEach((p, i) => {
+                    // پێوەری سەرەوە: ئاستی یەکەم → سەری ڕووتی شاشە (پادینگی
+                    // شاشەکەش دەگرێتەوە)؛ ئاستەکانی تر → سەری مارجن‌بۆکس
+                    const ref = (i === 0) ? 0 : shMarginTop(p.from);
+                    const H = (p.target.offsetTop - ref) + p.H;
+                    if (!(H > 0) || Math.abs(H - p.H) < 0.5) return;
+                    p.H = H;
+                    changed = true;
+                    p.target.style.marginTop = (p.tMT - H) + 'px';
+                    if (i === last) {
+                        p.target.style.paddingTop = (p.tPT + H) + 'px';
+                    } else if (state.pulls[i + 1]) {
+                        const nx = state.pulls[i + 1];
+                        nx.from.style.marginTop = (nx.fMT + H) + 'px';
+                    }
+                });
+
+                // ============================================================
+                // بەرگە بڕەرەکانی نێوان
+                // ------------------------------------------------------------
+                // هەندێک شاشە بەرگەیەکی زیادەیان هەیە (وەک `#admin-screen-content`)
+                // کە لە ژێر پادینگی شاشەکەوە دەست پێدەکات و `overflow: hidden`ـە.
+                // ئەوان لیستەکە **دەبڕن**، بۆیە هەرچەندە لیستەکە بگاتە سەرەوە،
+                // بۆشاییەک بەجێدەمێنێتەوە. ئەوانیش بۆ سەرەوە ڕادەکێشرێن —
+                // بە پادینگی هاوتا، بۆیە ناوەڕۆکیان لە شوێنی خۆیدا دەمێنێتەوە.
+                // ============================================================
+                // پێوەر: شاشەکە خۆی — نەک `offsetParent`، چونکە هەندێک
+                // بەرگەی ناوەڕاست (`#cities-container`, `#edit-list-view`)
+                // خۆیان `position`ـیان هەیە و دەبوونە `offsetParent`
+                const host0 = scroller.closest('.screen') || scroller.offsetParent;
+                if (host0) {
+                    const hcs0 = getComputedStyle(host0);
+                    const top0 = host0.getBoundingClientRect().top + (parseFloat(hcs0.borderTopWidth) || 0);
+                    let n = scroller.parentElement;
+                    while (n && n !== host0) {
+                        const cs = getComputedStyle(n);
+                        if (cs.overflow !== 'visible' || cs.overflowY !== 'visible') {
+                            const over = n.getBoundingClientRect().top +
+                                (parseFloat(cs.borderTopWidth) || 0) - top0;
+                            if (over > 0.5) {
+                                if (n.__shClip === undefined) {
+                                    n.__shClipMT = parseFloat(cs.marginTop) || 0;
+                                    n.__shClipPT = parseFloat(cs.paddingTop) || 0;
+                                    n.__shClip = 0;
+                                }
+                                n.__shClip += over;
+                                n.style.marginTop = (n.__shClipMT - n.__shClip) + 'px';
+                                n.style.paddingTop = (n.__shClipPT + n.__shClip) + 'px';
+                            }
+                        }
+                        n = n.parentElement;
+                    }
+                }
+
+                const zone = [];
+                state.pulls.forEach(p => {
+                    shBetween(p.from, p.target).forEach(e => {
+                        e.classList.add('sh-over');
+                        e.classList.toggle('sh-off', state.off);
+                        zone.push(e);
+                    });
+                });
+                if (!zone.length) return;
+                // هەموو ناوچەکە پێکەوە دەشاردرێتەوە (وەک `#header`ـی trio.dev)،
+                // نەک تەنها یەک توخم — ئەگەرنا سەردێڕی نێوانیان بە تەنها
+                // لەسەر ناوەڕۆکی لیستەکە دەمێنێتەوە
+                state.zone = zone;
+
+                // ---- پاشخانی یەکپارچە ----
+                // لە سەری ڕووتی شاشەوە دەست پێدەکات (نەک لە توخمی یەکەمەوە)،
+                // چونکە لیستەکەش تا ئەوێ درێژ دەبێتەوە
+                if (!state.bd || !state.bd.isConnected) {
+                    state.bd = shBackdrop(scroller.closest('.screen') ||
+                        scroller.offsetParent || zone[0].parentNode);
+                    state.bd.classList.toggle('sh-off', state.off);
+                }
+                const host = state.bd.offsetParent || zone[0].parentNode;
+                const hcs = getComputedStyle(host);
+                const hr = host.getBoundingClientRect();
+                const hTop = hr.top + (parseFloat(hcs.borderTopWidth) || 0);
+                const sr = scroller.getBoundingClientRect();
+                const pt = parseFloat(getComputedStyle(scroller).paddingTop) || 0;
+                state.bd.style.display = '';
+                state.bd.style.top = '0px';
+                state.bd.style.left = (sr.left - hr.left) + 'px';
+                state.bd.style.width = sr.width + 'px';
+                state.bd.style.height = Math.max(0, (sr.top + pt) - hTop) + 'px';
+
+                if (changed) {
+                    // شریتی جێگرەوە لە سەری شاشەدا دەچەسپێت — چونکە کاتێک
+                    // دەردەکەوێت ناوچەکە ون بووە و لیستەکە تا ئەوێ هەڵدەکشێت.
+                    // بەڵام بۆشایی سەرەوە بە **پادینگ** دەپارێزرێت (نەک بە
+                    // `top`)، تا لیستەکە لە ژێریدا بە تەواوی داپۆشرێت.
+                    // بڕەکەی = شوێنی سروشتی سەرەتای ناوچەکە، بۆیە ژمارەکان
+                    // ڕێک لەو بەرزاییەوە دەست پێدەکەن کە سەردێڕەکە دەیکرد —
+                    // نەک بچەسپێن بە لێواری سەرەوەی شاشەوە.
+                    alts().forEach(a => {
+                        const z = els()[0];
+                        if (a.__shBasePT === undefined) {
+                            a.__shBasePT = parseFloat(getComputedStyle(a).paddingTop) || 0;
+                        }
+                        a.style.top = '0px';
+                        a.style.left = z.offsetLeft + 'px';
+                        a.style.width = z.offsetWidth + 'px';
+                        a.style.paddingTop = (a.__shBasePT + Math.max(0, z.offsetTop)) + 'px';
+                    });
+                }
             }
 
-            function setP(v, track, slack) {
-                v = v < 0 ? 0 : (v > 1 ? 1 : v);
-                v = capP(v, slack === undefined ? slackNow() : slack);
-                if (track && Math.abs(v - state.p) < 0.0008) return;
-                state.p = v;
-                paint(track);
-            }
-
-            // دوای وەستانی سکڕۆڵ: بەپێی ئاراستەی کۆتایی بە نەرمی تەواو دەبێت
-            function scheduleSettle() {
-                clearTimeout(state.settleT);
-                state.settleT = setTimeout(() => {
-                    if (state.p > 0 && state.p < 1) setP(state.dir > 0 ? 1 : 0, false, slackNow());
-                    else paint(false);
-                }, SH_SETTLE_MS);
+            function setOff(off) {
+                if (state.off === off) return;
+                state.off = off;
+                state.zone.forEach(e => e.classList.toggle('sh-off', off));
+                if (state.bd) state.bd.classList.toggle('sh-off', off);
+                alts().forEach(e => e.classList.toggle('sh-on', off));
             }
 
             state.reset = function () {
-                clearTimeout(state.settleT);
-                state.p = 0; state.dir = 0; state.lastY = scroller.scrollTop;
-                els().forEach(e => { e.__shM = null; e.classList.remove('sh-track'); shSet(e, 0, false); });
-                alts().forEach(e => { e.__shM = null; e.classList.remove('sh-track'); shSet(e, 1, false); });
+                setOff(false);
+                layout();
+                state.lastY = scroller.scrollTop;
             };
 
+            // ---- لۆجیکی سکڕۆڵ (ڕێک وەک `initHeaderScroll` لە trio.dev) ----
             function onScroll() {
                 if (state.raf) return;
                 state.raf = requestAnimationFrame(() => {
                     state.raf = 0;
                     const y = scroller.scrollTop;
-                    const maxY = scroller.scrollHeight - scroller.clientHeight;
-                    const slack = maxY - y;             // ئەوەندەی سکڕۆڵی ماوە
-                    const nearBottom = slack < 8;
                     const dy = y - state.lastY;
 
-                    if (y <= SH_TOP_ZONE) {
-                        state.dir = -1;
-                        setP(0, true, slack);
-                        state.lastY = y;
-                        scheduleSettle();
-                        return;
-                    }
+                    if (y <= SH_THRESHOLD) { setOff(false); state.lastY = y; return; }
+                    if (Math.abs(dy) < SH_DEADZONE) return;   // lastY نانوێکرێتەوە → کۆدەبێتەوە
 
-                    if (dy === 0) return;
-                    state.dir = dy > 0 ? 1 : -1;
-
-                    const R = range();
                     if (dy > 0) {
-                        // چەماندنەوە تەنها دوای ئەو خاڵەی دیاری کراوە
-                        const min = opts.minScroll ? opts.minScroll(scroller) : 0;
-                        if (y >= min && (!opts.canHide || opts.canHide(scroller))) {
-                            setP(state.p + dy / R, true, slack);
-                        }
+                        const min = opts.minScroll ? opts.minScroll(scroller) : SH_THRESHOLD;
+                        if (y > min && (!opts.canHide || opts.canHide(scroller))) setOff(true);
                     } else {
-                        // گەڕانەوە لە هەر شوێنێکەوە، بەپێی بڕی سەرکەوتن
-                        setP(state.p + dy / R, true, slack);
+                        setOff(false);
                     }
-
-                    // ئەگەر لە بنی لیستەکەداین، گۆڕینی بەرزی سەرەوە لەوانەیە
-                    // وێبگەڕ scrollTop ڕێکبخاتەوە — ئەوە سکڕۆڵی بەکارهێنەر نییە
-                    state.lastY = nearBottom ? scroller.scrollTop : y;
-                    scheduleSettle();
+                    state.lastY = y;
                 });
             }
 
             scroller.addEventListener('scroll', onScroll, { passive: true });
 
-            // ئەگەر لیستەکە کورت ببێتەوە (فلتەر، گەڕان، یان نوێکردنەوە) لەکاتێکدا
-            // سەرەوەکە شاراوەیە، ئیتر ناتوانرێت سکڕۆڵ بکرێت بۆ گەڕاندنەوەی —
-            // بۆیە خۆکارانە دەگەڕێتەوە.
+            // ناوەڕۆکی لیستەکە یان بەرزی سەرەوەکە گۆڕا → پێوانەکە نوێ بکەرەوە
             try {
                 const mo = new MutationObserver(() => {
                     clearTimeout(state.moT);
                     state.moT = setTimeout(() => {
-                        els().forEach(e => { e.__shM = null; });   // بەرزییە کاشکراوەکان نوێ دەبنەوە
-                        alts().forEach(e => { e.__shM = null; });
-                        if (state.p <= 0) return;
-                        if (scroller.scrollHeight <= scroller.clientHeight + 1 ||
-                            (opts.canHide && !opts.canHide(scroller))) { state.reset(); return; }
-                        // لیستەکە کورتتر بووەتەوە بەڵام هێشتا سکڕۆڵ دەبێت:
-                        // ئەوەندە بمێنێتەوە کە بە سکڕۆڵی سەرەوە بگەڕێتەوە
-                        const lim = Math.min(1, scroller.scrollTop / range());
-                        if (state.p > lim + 0.0008) { state.lastY = scroller.scrollTop; setP(lim, false); }
+                        layout();
+                        // ئەگەر ئیتر سکڕۆڵ نابێت، ناتوانرێت بە سکڕۆڵی سەرەوە
+                        // بگەڕێندرێتەوە — بۆیە خۆکارانە دەگەڕێتەوە
+                        if (state.off && (scroller.scrollHeight <= scroller.clientHeight + 1 ||
+                            (opts.canHide && !opts.canHide(scroller)))) setOff(false);
                     }, 140);
                 });
                 mo.observe(scroller, { childList: true });
+                mo.observe(els()[0] || scroller, { childList: true, attributes: true, attributeFilter: ['style'], subtree: true });
             } catch (e) { }
 
             shRegistry.push(state);
             return state;
         }
 
-        // دوای هەر ڕێندەرێکی نوێ یان گۆڕینی شاشە، هەموویان دەگەڕێنەوە دۆخی سەرەتا
         function resetAllScrollHide() {
             shRegistry.forEach(s => { try { s.reset(); } catch (e) { } });
         }
 
         // ---- تۆمارکردنی هەموو بەشەکان ----
         function initScrollHide() {
-            // ئەوانەی لە مارکئەپدا شاراوە دەستپێدەکەن (شریتی ئامار):
-            // یەکەم ئەندازە دەگیرێن، پاشان بە p=١ دادەنرێن — هەموو لە یەک
-            // فرەیمدا، بۆیە هیچ ڕۆشنایەکی کاتی دەرناکەوێت.
-            document.querySelectorAll('.sh-collapse').forEach(shInner);
-            document.querySelectorAll('.sh-collapse.sh-init-hidden').forEach(e => {
-                e.classList.remove('sh-init-hidden');
-                shMeasure(e);
-                shSet(e, 1, false);
-            });
-
             // داشبۆرد: کارتەکانی ئامار → شریتی چڕ
             // تەنها ئەگەر لە ٣ ئۆردەر زیاتر هەبێت، و کاتێک ئۆردەری سێیەم گەیشتە سەرەوە
             registerScrollHide({
                 scroller: 'orders-list',
-                hideEls: ['stats-grid-wrap'],
+                hideEls: ['dash-head'],
                 showEls: ['stats-bar-wrap'],
                 canHide: (sc) => sc.querySelectorAll('.modern-order-card').length > 3,
                 minScroll: (sc) => {
                     const cards = sc.querySelectorAll('.modern-order-card');
                     if (cards.length <= 3) return Infinity;
                     // ئەو شوێنەی سکڕۆڵ کە کارتی سێیەم دەگاتە سەرەوەی لیستەکە
+                    // (پادینگی سەروو = جێگای پاراستراوی ناوچەی سەرەوە)
+                    const pt = parseFloat(getComputedStyle(sc).paddingTop) || 0;
                     return sc.scrollTop +
-                        (cards[2].getBoundingClientRect().top - sc.getBoundingClientRect().top);
+                        (cards[2].getBoundingClientRect().top - sc.getBoundingClientRect().top - pt);
                 }
             });
 
-            // ئۆردەرەکان (داواکارییەکانم / ئۆردەری تیم): گەڕان + فلتەرەکان
-            registerScrollHide({ scroller: 'management-orders-list', hideEls: ['orders-filter-section'] });
+            // ئۆردەرەکان: تابەکان + گەڕان + فلتەرەکان — هەموو پێکەوە
+            registerScrollHide({ scroller: 'management-orders-list', hideEls: ['orders-magic-tabs'] });
 
             // جزدانەکەم: سەردێڕ + کارتەکانی باڵانس و پاشەکەوت
             registerScrollHide({ scroller: 'my-transactions-list', hideEls: ['wallet-head-collapse'] });
 
-            // پەڕەی ئەدمین
-            registerScrollHide({ scroller: 'edit-users-list', hideEls: ['edit-filters-collapse'] });
-            registerScrollHide({ scroller: 'profit-users-list', hideEls: ['profit-filters-collapse'] });
-            registerScrollHide({ scroller: 'wallet-users-list', hideEls: ['wallet-filters-collapse'] });
-            registerScrollHide({ scroller: 'admin-cities-list', hideEls: ['cities-add-collapse'] });
-            registerScrollHide({ scroller: 'trash-container', hideEls: ['trash-head'] });
+            // پەڕەی ئەدمین — تابەکانی سەرەوەش لەگەڵ ناوەڕۆکی هەر بەشێک.
+            // تابەکان لە شاشەدان و بەشەکان لە ژێریانەوە، بۆیە دوو ناوچەن:
+            // یەکەم تابەکان (بەشەکە ڕادەکێشێت)، دووەم فلتەری بەشەکە (لیستەکە).
+            registerScrollHide({ scroller: 'edit-users-list', hideEls: ['admin-magic-tabs', 'edit-filters-collapse'] });
+            registerScrollHide({ scroller: 'profit-users-list', hideEls: ['admin-magic-tabs', 'profit-filters-collapse'] });
+            registerScrollHide({ scroller: 'wallet-users-list', hideEls: ['admin-magic-tabs', 'wallet-filters-collapse'] });
+            registerScrollHide({ scroller: 'admin-cities-list', hideEls: ['admin-magic-tabs', 'cities-add-collapse'] });
+            registerScrollHide({ scroller: 'trash-container', hideEls: ['admin-magic-tabs', 'trash-head'] });
         }
 
         if (document.readyState === 'loading') {
@@ -6238,9 +6242,6 @@
             document.getElementById('section-cities').style.display = 'none';
             document.getElementById('section-trash').style.display = 'none';
 
-            // بەشی نوێ بە سەرەوەی دەرکەوتوو دەست پێدەکات
-            if (typeof resetAllScrollHide === 'function') resetAllScrollHide();
-
             if (tabName === 'create') {
                 document.getElementById('section-create-code').style.display = 'block';
             } else if (tabName === 'edit') {
@@ -6261,6 +6262,10 @@
                 document.getElementById('section-trash').style.display = 'flex';
                 loadTrash();
             }
+
+            // دوای دەرکەوتنی بەشەکە پێوانە دەکرێت — پێشتر ناتوانرێت،
+            // چونکە شاراوە بوو و بەرزییەکانی سفر بوون
+            if (typeof resetAllScrollHide === 'function') resetAllScrollHide();
         }
 
         const adminTabObserver = new IntersectionObserver((entries) => {

@@ -1181,88 +1181,146 @@ h2 i,
 }
 
 /* ============================================================
-   نەرمکردنەوەی سەرەوە لەکاتی سکڕۆڵ (sh = scroll-hide)
+/* ============================================================
+   شاردنەوەی سەرەوە لەکاتی سکڕۆڵ (sh = scroll-hide)
    ------------------------------------------------------------
-   بەرزی بە JS ئەندازە دەگیرێت و ئەنیمەیت دەکرێت، بۆیە لەگەڵ هەر
-   ناوەڕۆکێکی گۆڕاودا کاردەکات.
-   `overflow: hidden` تەنها لەکاتی ئەنیمەیشن و شاردنەوەدا دادەنرێت —
-   ئەگەرنا دڕۆپداونەکانی فلتەر دەبڕدران.
+   بە شێوازی شریتی سەرەوەی سایتی trio.dev:
+
+     • ناوچەی سەروو (`.sh-over`) لە لەیئاوتدا **دەمێنێتەوە** و تەنها
+       بە `opacity` + `translateY` دەشاردرێتەوە. بۆیە `scrollHeight`
+       و `clientHeight`ـی لیستەکە هەرگیز ناگۆڕێن — واتا ئەو گلیچەی
+       لە کۆتایی لیستدا ڕوویدەدا بە پێکهاتە ئەستەمە ڕووبدات.
+
+     • لیستەکە بە `margin-top`ـێکی نێگەتیڤ (لە JSـەوە) دەخرێتە ژێری
+       ناوچەکەوە، بۆیە ناوچەکە دەبێت پاشخانی ڕەقی هەبێت.
+
+   بەراورد بە trio.dev:
+       #header { transition: opacity .4s ease-in-out, transform .4s ease-in-out }
+       #header.header-hidden { opacity:0; transform:translateY(-10px); pointer-events:none }
    ============================================================ */
 .sh-collapse {
-  box-sizing: border-box;
-  /* هەرگیز نەچەمێتەوە لەلایەن فلێکسەوە — بەرزییەکەی بە JS دیاری دەکرێت */
+  /* هەرگیز نەچەمێتەوە لەلایەن فلێکسەوە */
   flex-shrink: 0;
-  /* تەنها بۆ جێگیربوونی کۆتایی — لەکاتی سکڕۆڵدا `sh-track` ئەمە دەکوژێنێتەوە
-     تا گۆڕانەکە ڕاستەوخۆ لەگەڵ پەنجەدا بڕوات */
-  transition: height 0.26s cubic-bezier(.25, .8, .35, 1),
-    margin 0.26s cubic-bezier(.25, .8, .35, 1),
-    padding 0.26s cubic-bezier(.25, .8, .35, 1),
-    border-width 0.26s cubic-bezier(.25, .8, .35, 1);
 }
 
-/* چینی ناوەوە — ناوەڕۆکەکە دەخلیسکێت، نەک ببڕدرێت.
-   بەبێ ئەمە، کارتەکان لە خوارەوە دەبڕدران (وەک چەقۆ) کە ناشرین بوو. */
-.sh-inner {
-  transition: transform 0.26s cubic-bezier(.25, .8, .35, 1);
-  will-change: transform;
+/* لیستەکان ئێستا تا سەرەوەی ناوچەکە درێژ دەبنەوە، بۆیە شریتی سکڕۆڵی
+   ڕەسەن لە تەنیشت گەڕان و فلتەرەکانەوە وەک هێڵێکی باریک دەردەکەوت.
+   (`::-webkit-scrollbar` هەبوو، بەڵام `scrollbar-width` نا) */
+#orders-list,
+#management-orders-list,
+#my-transactions-list,
+#admin-cities-list,
+#wallet-users-list,
+#profit-users-list {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
 
-/* لەکاتی سکڕۆڵدا: هیچ ترانزیشنێک — نرخەکان هەر فرەیمێک ڕێک دەخرێن */
-.sh-collapse.sh-track {
-  transition: none;
+.sh-over {
+  position: relative;
+  z-index: 20;
+  transition: opacity 0.4s ease-in-out, transform 0.4s ease-in-out;
+  will-change: opacity, transform;
 }
 
-.sh-collapse.sh-track > .sh-inner {
-  transition: none;
-}
-
-/* تەنها لەکاتی چەمانەوەدا دادەخرێت — ئەگەرنا دڕۆپداونەکانی فلتەر دەبڕدران */
-.sh-collapse.sh-clip {
-  overflow: hidden;
-}
-
-/* دۆخی سەرەتا پێش ئەوەی JS دەستی پێبکات (شریتی ئامار) */
-.sh-collapse.sh-init-hidden {
-  height: 0;
-  margin-top: 0;
-  margin-bottom: 0;
-  opacity: 0;
-  overflow: hidden;
+/* پاشخانێکی ڕەقی یەکپارچە لە ژێر هەموو ناوچەکەوە — بۆشایی نێوان
+   توخمەکان و دوو کەناری پەڕەکەش دەگرێتەوە (لیستەکان بە مارجنی
+   نێگەتیڤ فراوانن بۆ نەبڕانی سێبەر). بەبێ ئەمە ناوەڕۆکی لیستەکە
+   لەو بۆشاییانەدا دەردەکەوێت. */
+.sh-backdrop {
+  position: absolute;
+  z-index: 19;
+  background: var(--bg);
   pointer-events: none;
+  transition: opacity 0.4s ease-in-out;
+}
+
+.sh-backdrop.sh-off {
+  opacity: 0;
+}
+
+.sh-over.sh-off {
+  opacity: 0;
+  transform: translateY(-10px);
+  pointer-events: none;
+}
+
+/* شریتی جێگرەوە (ئاماری چڕ) — لە لەیئاوتدا نییە؛ شوێنەکەی لە JSـەوە
+   ڕێک لەسەر کارتەکان دادەنرێت و بە پێچەوانەی ئەوان دەردەکەوێت */
+.sh-alt {
+  position: absolute;
+  z-index: 21;
+  /* کاتێک ئەمە دەردەکەوێت، پاشخانی ناوچەکە ون بووە — بۆیە پێویستە
+     خۆی ڕەق بێت، ئەگەرنا لیستەکە لە ژێریدا دەردەکەوێت */
+  background: var(--bg);
+  opacity: 0;
+  transform: translateY(-10px);
+  pointer-events: none;
+  transition: opacity 0.4s ease-in-out, transform 0.4s ease-in-out;
+  will-change: opacity, transform;
+}
+
+.sh-alt.sh-on {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
 }
 
 /* کەسانێک ئەنیمەیشنیان پێ ناخۆشە — ڕاستەوخۆ بگۆڕدرێت */
 @media (prefers-reduced-motion: reduce) {
 
-  .sh-collapse,
-  .sh-inner {
+  .sh-over,
+  .sh-alt {
     transition: none;
   }
 }
 
+
 /* ---- شریتی چڕی ئامار (لە جیاتی کارتەکان) ---- */
+/* شریتەکە لە سەری شاشەدا دەچەسپێت. بۆشایی سەرەوەی لە JSـەوە دادەنرێت
+   (بەپێی شوێنی سروشتی سەردێڕەکە).
+
+   پێچەرەکە **هیچ پاشخانێکی نییە** — تەنها پیلەکان خۆیان دەبینرێن و
+   وەک شریتێکی سەربەخۆ لەسەر لیستەکە دەخولێنەوە. بۆیە پیلەکان دەبێت
+   ڕەنگی ڕەقیان هەبێت (نەک نیمچە شەفاف)، ئەگەرنا ئۆردەرەکان لە ژێریانەوە
+   دەردەکەون. */
+#stats-bar-wrap {
+  padding-bottom: 0;
+  background: none;
+  /* بۆشاییەکانی نێوان پیلەکان دەستلێدان ناگرن — سکڕۆڵ بۆ لیستەکە دەڕوات */
+  pointer-events: none;
+}
+
 .stats-bar {
   display: flex;
-  gap: 6px;
-  margin-bottom: 12px;
+  gap: 7px;
+  margin: 0;
 }
 
 .sbar-seg {
   flex: 1;
   min-width: 0;
-  height: 36px;
-  padding: 0 6px;
-  border: none;
-  border-radius: 11px;
+  height: 38px;
+  padding: 0 4px;
+  border: 1px solid transparent;
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: 7px;
   font-family: inherit;
   font-size: var(--fs-base);
-  font-weight: 700;
+  font-weight: 800;
   line-height: 1;
+  /* ژمارەکان هەموویان هەمان پانییان هەیە → شریتەکە نالەرزێت */
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+  letter-spacing: 0.2px;
   cursor: pointer;
+  /* پێچەرەکە `pointer-events: none`ـە — تەنها خودی پیلەکان کرتە دەگرن */
+  pointer-events: auto;
+  /* سێبەرێکی نەرم، چونکە ئێستا لەسەر لیستەکە دەخولێنەوە */
+  box-shadow: 0 2px 8px -3px rgba(15, 23, 42, 0.22);
   -webkit-tap-highlight-color: transparent;
   transition: transform 0.12s ease, filter 0.16s ease;
 }
@@ -1272,34 +1330,40 @@ h2 i,
   filter: brightness(0.95);
 }
 
+/* خاڵێکی ڕوون و ڕێک — پێشتر سێبەرێکی ٣px هەبوو کە دەیکردە گوڵۆپێکی
+   ١٥px و ناڕێکی دەکرد */
 .sbar-dot {
   width: 9px;
   height: 9px;
   border-radius: 50%;
   background: currentColor;
   flex-shrink: 0;
-  box-shadow: 0 0 0 3px currentColor;
-  opacity: 0.9;
 }
 
-/* هەمان ڕەنگەکانی کارتەکان، بەڵام کاڵ — تا ژمارەکان بەڕوونی بخوێنرێنەوە */
+/* هەمان ڕەنگەکانی کارتەکان، بەڵام کاڵ — تا ژمارەکان بەڕوونی بخوێنرێنەوە.
+   ڕەنگەکان **ڕەقن** (نەک `rgba`) چونکە پێچەرەکە پاشخانی نییە و
+   ئۆردەرەکان لە ژێریانەوە تێدەپەڕن. نرخەکان ڕێک هەمان دیمەنی پێشوون. */
 .sbar-seg.sb-blue {
-  background: rgba(36, 129, 204, 0.12);
+  background: #dfe9f1;
+  border-color: #b6d2e9;
   color: #2481cc;
 }
 
 .sbar-seg.sb-orange {
-  background: rgba(243, 156, 18, 0.14);
+  background: #f4e9da;
+  border-color: #eed0a7;
   color: #d98207;
 }
 
 .sbar-seg.sb-green {
-  background: rgba(46, 204, 113, 0.14);
+  background: #dcefe5;
+  border-color: #aedcc3;
   color: #1e9e57;
 }
 
 .sbar-seg.sb-red {
-  background: rgba(255, 77, 77, 0.12);
+  background: #f5e3e4;
+  border-color: #f0bcbd;
   color: #e03131;
 }
 
@@ -4298,13 +4362,15 @@ h2 i,
   display: flex !important;
   flex-direction: column;
   position: fixed;
-  top: 20px;
+  top: 0;
   left: 0;
   /* لێرەدا سفر کرا بۆ ئەوەی شاشەکە فراوان بێت */
   right: 0;
   /* لێرەدا سفر کرا */
   bottom: 0;
-  padding: 0 20px;
+  /* سەرەوە ئێستا پادینگە نەک شوێن — بۆیە کاتێک سەرەوەکە دەشاردرێتەوە
+     لیستەکە دەتوانێت تا سەری ڕووتی شاشە بڕوات (بۆشایی نامێنێتەوە) */
+  padding: 20px 20px 0;
   /* پادینگەکان هێنرانە ئێرە */
   overflow: hidden !important;
 }
@@ -4361,11 +4427,13 @@ h2 i,
   display: flex !important;
   flex-direction: column;
   position: fixed;
-  top: 20px;
+  top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  padding: 0 20px;
+  /* سەرەوە ئێستا پادینگە نەک شوێن — بۆیە کاتێک سەرەوەکە دەشاردرێتەوە
+     لیستەکە دەتوانێت تا سەری ڕووتی شاشە بڕوات (بۆشایی نامێنێتەوە) */
+  padding: 20px 20px 0;
   overflow: hidden !important;
 }
 
@@ -4895,11 +4963,13 @@ i.moc-avatar {
   display: flex !important;
   flex-direction: column;
   position: fixed;
-  top: 20px;
+  top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  padding: 0 20px;
+  /* سەرەوە ئێستا پادینگە نەک شوێن — بۆیە کاتێک سەرەوەکە دەشاردرێتەوە
+     لیستەکە دەتوانێت تا سەری ڕووتی شاشە بڕوات (بۆشایی نامێنێتەوە) */
+  padding: 20px 20px 0;
   overflow: hidden !important;
 }
 
@@ -6006,11 +6076,13 @@ body.keyboard-open #main-fab {
   display: flex !important;
   flex-direction: column;
   position: fixed;
-  top: 20px;
+  top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  padding: 0 20px;
+  /* سەرەوە ئێستا پادینگە نەک شوێن — بۆیە کاتێک سەرەوەکە دەشاردرێتەوە
+     لیستەکە دەتوانێت تا سەری ڕووتی شاشە بڕوات (بۆشایی نامێنێتەوە) */
+  padding: 20px 20px 0;
   overflow: hidden !important;
 }
 
