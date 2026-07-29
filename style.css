@@ -1255,15 +1255,30 @@ h2 i,
   background: var(--bg);
   opacity: 0;
   transform: translateY(-10px);
+  /* `pointer-events: none` لەسەر باوان بەس نییە: هەر منداڵێک خۆی
+     `auto` دابنێت، دووبارە کرتە دەگرێت — تەنانەت کاتێک باوانەکەی
+     بەتەواوی نەبینراوە. `visibility` هەموو نەوەکان دەگرێتەوە.
+     دواخستنی 0.4s تا ون‌بوونە نەرمەکە هەر ببینرێت. */
+  visibility: hidden;
   pointer-events: none;
-  transition: opacity 0.4s ease-in-out, transform 0.4s ease-in-out;
+  transition: opacity 0.4s ease-in-out, transform 0.4s ease-in-out,
+    visibility 0s linear 0.4s;
   will-change: opacity, transform;
 }
 
 .sh-alt.sh-on {
   opacity: 1;
   transform: translateY(0);
+  visibility: visible;
   pointer-events: auto;
+  transition: opacity 0.4s ease-in-out, transform 0.4s ease-in-out,
+    visibility 0s;
+}
+
+/* بەربەستی دووەم — ڕوون دەکاتەوە کە پیلەکان تەنها کاتێک کرتە دەگرن
+   کە شریتەکە بەڕاستی دەرکەوتبێت */
+.sh-alt:not(.sh-on) .sbar-seg {
+  pointer-events: none;
 }
 
 /* کەسانێک ئەنیمەیشنیان پێ ناخۆشە — ڕاستەوخۆ بگۆڕدرێت */
@@ -2907,6 +2922,148 @@ h2 i,
   font-size: 14px;
   opacity: 0.8;
   flex-shrink: 0;
+}
+
+/* =========================================
+   هەنگاوەکانی گەیاندن — لە سەرەوەی مۆداڵی زانیاری ئۆردەر
+   -----------------------------------------------------
+   هێڵی پێشکەوتن بە `clip-path` دەکشێت نەک بە بەرزی، بۆیە
+   هیچ layoutێک دووبارە حیساب ناکرێتەوە لەکاتی جووڵەدا.
+   ========================================= */
+
+.osteps-card {
+  background: #fff;
+  border: 1px solid #e9eef4;
+  border-radius: var(--r-md);
+  padding: 14px 14px 12px;
+  margin-bottom: 14px;
+}
+
+.osteps-head {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 12px;
+  font-size: var(--fs-md);
+  font-weight: var(--font-bold);
+  color: #64748b;
+}
+
+.osteps-head i {
+  font-size: 16px;
+}
+
+.osteps {
+  /* یەک سەرچاوە بۆ ئەندازەی خاڵ و هێڵ — هەردووکیان لێرەوە دەخوێنرێنەوە،
+     بۆیە هەرگیز لە یەکتر لانادەن */
+  --pad: 30px;      /* بۆشایی لای ڕیزەکان */
+  --dot: 12px;      /* تیرەی خاڵ */
+  --dot-x: 4px;     /* دووری لێواری خاڵ لە سەرەتای بۆکسەکە */
+  --dot-top: 9px;   /* بەرزی خاڵ لەناو ڕیزەکەیدا */
+  --rail-w: 2px;
+  position: relative;
+  padding-inline-start: var(--pad);
+}
+
+/* --rail-top / --rail-bot لە JSـەوە دادەنرێن: هێڵەکە ڕێک لە ناوەندی
+   یەکەم خاڵەوە دەست پێدەکات و لە ناوەندی خاڵی کۆتایی دەوەستێت */
+.osteps-rail,
+.osteps-fill {
+  position: absolute;
+  top: var(--rail-top, 15px);
+  bottom: var(--rail-bot, 25px);
+  inset-inline-start: calc(var(--dot-x) + (var(--dot) - var(--rail-w)) / 2);
+  width: var(--rail-w);
+  border-radius: var(--rail-w);
+}
+
+.osteps-rail {
+  background: #e2e8f0;
+}
+
+.osteps-fill {
+  background: var(--primary);
+  clip-path: inset(0 0 100% 0);
+  transition: clip-path 900ms cubic-bezier(0.77, 0, 0.175, 1);
+}
+
+.osteps.run .osteps-fill {
+  clip-path: inset(0 0 var(--rest, 50%) 0);
+}
+
+.osteps.is-returned .osteps-fill {
+  background: #dc3545;
+}
+
+.ostep {
+  position: relative;
+  padding: 4px 0 15px;
+}
+
+.ostep:last-child {
+  padding-bottom: 0;
+}
+
+.ostep::before {
+  content: '';
+  position: absolute;
+  box-sizing: border-box;   /* ئەگەرنا چوارچێوەکە ٤px فراوانتری دەکات و لە هێڵەکە لادەدات */
+  top: var(--dot-top);
+  inset-inline-start: calc(var(--dot-x) - var(--pad));
+  width: var(--dot);
+  height: var(--dot);
+  border-radius: 50%;
+  background: #fff;
+  border: 2px solid #e2e8f0;
+  transition: background-color 260ms cubic-bezier(0.23, 1, 0.32, 1),
+    border-color 260ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.ostep[data-done]::before {
+  background: var(--primary);
+  border-color: var(--primary);
+}
+
+.ostep[data-current]::before {
+  background: #fff;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 4px rgba(36, 129, 204, 0.16);
+}
+
+.ostep[data-returned]::before {
+  background: #fff;
+  border-color: #dc3545;
+  box-shadow: 0 0 0 4px rgba(220, 53, 69, 0.16);
+}
+
+.ostep-t {
+  font-size: var(--fs-md);
+  font-weight: var(--font-bold);
+  color: var(--text-main);
+}
+
+.ostep[data-idle] .ostep-t {
+  color: #94a3b8;
+  font-weight: var(--font-semibold);
+}
+
+.ostep[data-returned] .ostep-t {
+  color: #dc3545;
+}
+
+.ostep-s {
+  font-size: var(--fs-xs);
+  color: #94a3b8;
+  min-height: 15px;
+}
+
+/* کەسانێک ئەنیمەیشنیان پێ ناخۆشە — هێڵەکە ڕاستەوخۆ پڕ دەبێت */
+@media (prefers-reduced-motion: reduce) {
+
+  .osteps-fill,
+  .ostep::before {
+    transition: none;
+  }
 }
 
 /* =========================================
@@ -6452,7 +6609,121 @@ body.no-glass .fab-wrapper .btn {
   font-size: 11px;
 }
 
+/* ============ دابەشکردنی پارەی جزدان بەپێی خولی چاوەڕوانی ============ */
+/* لەناو خودی کارتی باڵانس/پاشەکەوتدایە نەک کارتێکی سەربەخۆ — چونکە
+   بەشی دەستکاری بەرزییەکی سنووردار هەیە و کارتێکی زیادە دوگمەکانی
+   خوارەوەی (وەک «دواین جوڵە داراییەکان») لە دیدەوە دەردەکات */
+.wsplit {
+  margin-top: 7px;
+  padding-top: 6px;
+  border-top: 1px dashed #e2e8f0;
+}
+
+.wsplit:empty {
+  display: none;
+}
+
+.wsplit-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 5px;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.7;
+  white-space: nowrap;
+}
+
+.wsplit-row b {
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.wsplit-row.is-ready {
+  color: #047857;
+}
+
+.wsplit-row.is-pending {
+  color: #b45309;
+}
+
+.whold-note-line {
+  font-size: 10.5px;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-bottom: 12px;
+  line-height: 1.5;
+}
+
+.whold-note-line:empty {
+  display: none;
+  margin-bottom: 0;
+}
+
 /* ============ چیپسی هۆکارە باوەکانی گەڕاندنەوەی ئۆردەر ============ */
+/* بۆکسی هۆکار تەنها کاتێک دەردەکەوێت کە حاڵەتی نوێ «گەڕاوەتەوە» بێت.
+   دوای هەڵبژاردنی هۆکارێک، ئەوانی تر دەکشێنەوە و تەنها هەڵبژێردراوەکە دەمێنێتەوە. */
+.rr-anim {
+  opacity: 0;
+  transform: translateY(-6px);
+  transition: opacity 0.18s ease, transform 0.18s cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.rr-anim.rr-in {
+  opacity: 1;
+  transform: none;
+}
+
+.rr-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.rr-input {
+  display: block;
+  width: 100%;
+  height: 42px;
+  border: 1px solid #fecaca;
+  border-radius: 10px;
+  background: #fff;
+  font-family: inherit;
+  font-size: 13px;
+  padding: 0 10px;
+  margin-bottom: 10px;
+  outline: none;
+  color: #b91c1c;
+  transition: border-color 0.15s ease, opacity 0.18s ease,
+    transform 0.18s cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.rr-input:focus {
+  border-color: #f87171;
+}
+
+/* دوگمەی گەڕاندنەوەی لیستی تەواوی هۆکارەکان */
+.rr-change {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: none;
+  border: none;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  color: #64748b;
+  cursor: pointer;
+  padding: 2px 0;
+  margin-bottom: 10px;
+}
+
+.rr-change:active {
+  transform: scale(0.97);
+}
+
 .reason-chip {
   background: #fff;
   border: 1px solid #fecaca;
@@ -6463,7 +6734,9 @@ body.no-glass .fab-wrapper .btn {
   padding: 6px 11px;
   border-radius: 20px;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease,
+    box-shadow 0.15s ease, opacity 0.16s ease,
+    transform 0.16s cubic-bezier(0.23, 1, 0.32, 1);
   line-height: 1.4;
 }
 
@@ -6481,6 +6754,25 @@ body.no-glass .fab-wrapper .btn {
   color: #fff;
   border-color: #dc2626;
   box-shadow: 0 3px 8px rgba(220, 38, 38, 0.25);
+}
+
+/* دوو قۆناغ: سەرەتا دەتوێتەوە، پاشان لە ڕیزبەندی دەردەچێت */
+.reason-chip.rr-gone {
+  opacity: 0;
+  transform: scale(0.92);
+  pointer-events: none;
+}
+
+.reason-chip.rr-hid {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rr-anim,
+  .rr-input,
+  .reason-chip {
+    transition: none;
+  }
 }
 
 /* ============ ڕووکاری دەسەڵاتەکان (Permissions UI) ============ */
