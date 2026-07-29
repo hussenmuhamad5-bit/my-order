@@ -5157,16 +5157,42 @@
             const els = () => (opts.hideEls || []).map(id => document.getElementById(id)).filter(Boolean);
             const alts = () => (opts.showEls || []).map(id => document.getElementById(id)).filter(Boolean);
 
+            // ============================================================
+            // هەڵوەشاندنەوە
+            // ------------------------------------------------------------
+            // هەموو ڕاکێشانەکان دەگەڕێنێتەوە دۆخی سروشتی خۆیان. پێویستە
+            // کاتێک لیستەکە دەشاردرێتەوە بەڵام بەشەکە هێشتا کراوەیە —
+            // وەک کردنەوەی فۆرمی دەستکاری لە «قازانجەکان»/«جزدانەکان»:
+            //   • بەرگەکە بە ڕاکێشراوی دەمێنێتەوە → فۆرمەکە دەچێتە ژێر تابەکان
+            //   • پاشخانەکە لەسەر فۆرمەکە دەمێنێتەوە (z-index بەرزترە)
+            // ============================================================
+            function teardown() {
+                const lastIdx = state.pulls.length - 1;
+                state.pulls.forEach((p, i) => {
+                    if (!p.H) return;
+                    p.H = 0;
+                    p.target.style.marginTop = p.tMT ? p.tMT + 'px' : '';
+                    if (i === lastIdx) {
+                        p.target.style.paddingTop = p.tPT ? p.tPT + 'px' : '';
+                    } else if (state.pulls[i + 1]) {
+                        const nx = state.pulls[i + 1];
+                        nx.from.style.marginTop = nx.fMT ? nx.fMT + 'px' : '';
+                    }
+                });
+                state.zone.forEach(e => e.classList.remove('sh-off'));
+                alts().forEach(e => e.classList.remove('sh-on'));
+                state.off = false;
+                if (state.bd) state.bd.style.display = 'none';
+            }
+            state.teardown = teardown;
+
             // ---- دانانی ناوچەکان (جێگیر — تەنها کاتێک بەرزی گۆڕا) ----
             function layout() {
                 const first = els()[0];
                 if (!first) return;
-                // شاشەکە دەرناکەوێت — پاشخانەکەشی بشارەوە، ئەگەرنا لەسەر
-                // بەشی چالاک دەمێنێتەوە (تابەکانی ئەدمین هاوبەشن)
-                if (!scroller.offsetParent) {
-                    if (state.bd) state.bd.style.display = 'none';
-                    return;
-                }
+                // لیستەکە دەرناکەوێت (شاشەیەکی تر، یان فۆرمی دەستکاری کراوەتەوە)
+                // → هەموو شتێک بگەڕێتەوە دۆخی سروشتی
+                if (!scroller.offsetParent) { teardown(); return; }
 
                 // شریتی جێگرەوە لە لەیئاوتدا نییە — لەسەر هەمان شوێنی
                 // سەرەوەکە دادەنرێت، بۆیە بەرزی ناوچەکە ناگۆڕێت
@@ -5277,17 +5303,21 @@
                 // لە سەری ڕووتی شاشەوە دەست پێدەکات (نەک لە توخمی یەکەمەوە)،
                 // چونکە لیستەکەش تا ئەوێ درێژ دەبێتەوە
                 if (!state.bd || !state.bd.isConnected) {
-                    state.bd = shBackdrop(scroller.closest('.screen') ||
-                        scroller.offsetParent || zone[0].parentNode);
+                    // بەرگەکەی هەڵدەگیرێت — `offsetParent` بەکارنایەت، چونکە
+                    // ئەگەر پاشخانەکە `display:none` بێت (دوای هەڵوەشاندنەوە)
+                    // ئەوا `null` دەگەڕێنێتەوە و شوێنەکەی ٢٠px هەڵە دەبێت
+                    state.bdHost = scroller.closest('.screen') ||
+                        scroller.offsetParent || zone[0].parentNode;
+                    state.bd = shBackdrop(state.bdHost);
                     state.bd.classList.toggle('sh-off', state.off);
                 }
-                const host = state.bd.offsetParent || zone[0].parentNode;
+                state.bd.style.display = '';
+                const host = state.bdHost;
                 const hcs = getComputedStyle(host);
                 const hr = host.getBoundingClientRect();
                 const hTop = hr.top + (parseFloat(hcs.borderTopWidth) || 0);
                 const sr = scroller.getBoundingClientRect();
                 const pt = parseFloat(getComputedStyle(scroller).paddingTop) || 0;
-                state.bd.style.display = '';
                 state.bd.style.top = '0px';
                 state.bd.style.left = (sr.left - hr.left) + 'px';
                 state.bd.style.width = sr.width + 'px';
@@ -7439,6 +7469,8 @@
             document.getElementById('wallet-role-tabs-container').style.display = 'none';
             document.getElementById('wallet-edit-section').style.display = 'flex';
             window.currentWalletCode = u.code;
+            // لیستەکە شاردرایەوە → ڕاکێشان و پاشخانی سکڕۆڵ هەڵبوەشێنەوە
+            if (typeof resetAllScrollHide === 'function') resetAllScrollHide();
         }
 
         // کاشی جوڵە داراییەکان بۆ هەر بەکارهێنەرێک (بۆ ئەوەی دووبارە لۆد نەبێتەوە)
@@ -7521,6 +7553,8 @@
             document.getElementById('wallet-users-list').style.display = 'block';
             document.getElementById('wallet-search-container').style.display = 'flex';
             document.getElementById('wallet-role-tabs-container').style.display = 'flex';
+            // لیستەکە گەڕایەوە → پاشخان و ڕاکێشانەکە دووبارە دابنێ
+            if (typeof resetAllScrollHide === 'function') resetAllScrollHide();
         }
 
         async function saveDirectWallet() {
@@ -7650,6 +7684,8 @@
             }
 
             document.getElementById('profit-edit-section').style.display = 'block';
+            // لیستەکە شاردرایەوە → ڕاکێشان و پاشخانی سکڕۆڵ هەڵبوەشێنەوە
+            if (typeof resetAllScrollHide === 'function') resetAllScrollHide();
         }
 
         // گەڕانەوە بۆ لیستەکە
@@ -7658,6 +7694,8 @@
             document.getElementById('p-hidden-code').value = "";
             document.getElementById('profit-users-list').style.display = 'block';
             document.getElementById('profit-search-container').style.display = 'flex';
+            // لیستەکە گەڕایەوە → پاشخان و ڕاکێشانەکە دووبارە دابنێ
+            if (typeof resetAllScrollHide === 'function') resetAllScrollHide();
         }
 
         // ============ لیستی کلیلەکان لە بەشی چاکسازی (وەک بەشی قازانجەکان) ============
