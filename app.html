@@ -399,6 +399,14 @@
                         <datalist id="datalist-u-manager"></datalist>
                     </div>
 
+                    <!-- کۆدی پۆستە — تەنها بۆ بەڕێوەبەر. لەسەر وەسڵی هەموو
+                         ئۆردەرەکانی تیمەکەی دەنووسرێت (سەرپەرشت، ڕاوێژکار، ئەندام). -->
+                    <div id="wrapper-u-postal" style="display: none;">
+                        <label>کۆدی پۆستە <span style="font-weight:400; color:var(--text-secondary); font-size:12px;">(لەسەر وەسڵ دەردەکەوێت)</span></label>
+                        <input type="text" id="u-postal" class="form-input" maxlength="40"
+                            placeholder="کۆدی پۆستە بنووسە..." autocomplete="off" style="width:100%; margin-bottom:15px;">
+                    </div>
+
                     <div id="wrapper-u-admin">
                         <div class="switch-group">
                             <label>سەرپەرشتی هەیە؟</label>
@@ -573,6 +581,13 @@
                             <input type="text" id="e-manager" list="datalist-e-manager" class="form-input"
                                 style="display: none; width:100%; margin-bottom:15px;">
                             <datalist id="datalist-e-manager"></datalist>
+                        </div>
+
+                        <!-- کۆدی پۆستە — تەنها بۆ بەڕێوەبەر، هەرکاتێک دەگۆڕدرێت -->
+                        <div id="wrapper-e-postal" style="display: none;">
+                            <label>کۆدی پۆستە <span style="font-weight:400; color:var(--text-secondary); font-size:12px;">(لەسەر وەسڵ دەردەکەوێت)</span></label>
+                            <input type="text" id="e-postal" class="form-input" maxlength="40"
+                                placeholder="کۆدی پۆستە بنووسە..." autocomplete="off" style="width:100%; margin-bottom:15px;">
                         </div>
 
                         <div id="wrapper-e-admin">
@@ -2439,10 +2454,14 @@
             let wrapManager = document.getElementById(`wrapper-${prefix}-manager`);
             let wrapAdmin = document.getElementById(`wrapper-${prefix}-admin`);
             let wrapConsultant = document.getElementById(`wrapper-${prefix}-consultant`);
+            let wrapPostal = document.getElementById(`wrapper-${prefix}-postal`);
 
             if (wrapManager) wrapManager.style.display = 'none';
             if (wrapAdmin) wrapAdmin.style.display = 'none';
             if (wrapConsultant) wrapConsultant.style.display = 'none';
+            // کۆدی پۆستە تەنها بەڕێوەبەر هەیەتی — ئەوانی تر هی بەڕێوەبەرەکەیان
+            // وەردەگرن، بۆیە خانەیەکیان نییە
+            if (wrapPostal) wrapPostal.style.display = (selectedRole === 'بەڕێوەبەر') ? 'block' : 'none';
 
             if (!selectedRole) return;
 
@@ -2988,6 +3007,32 @@
                 showToast("کێشە لە پاشەکەوتکردنی ناوەکە ڕوویدا", "error");
             } finally {
                 if (btn) { btn.disabled = false; btn.innerHTML = "<i class='bx bx-save'></i> پاشەکەوتکردن"; }
+            }
+        }
+
+        // ============================================================
+        // کۆدی پۆستە بۆ وەسڵ
+        // ------------------------------------------------------------
+        // کۆدەکە هی بەڕێوەبەرەکەیە. سەرپەرشت و ڕاوێژکار و ئەندام هی
+        // بەڕێوەبەرەکەیان وەردەگرن؛ بەڕێوەبەر خۆی هی خۆی.
+        //
+        // لەکاتی تۆمارکردنی ئۆردەردا لە داتابەیسەوە دەهێنرێت (نەک لە
+        // سێشنەوە) — سێشنەکە ڕەنگە کۆن بێت، و ئەم کۆدە دەچێتە سەر وەسڵ.
+        // کاش ناکرێت: بەڕێوەبەر ڕەنگە هەر ئێستا گۆڕیبێتی.
+        // ============================================================
+        async function postalCodeForMyOrders() {
+            if (!currentUser) return '';
+            const target = (normalizeRole(userRole) === 'بەڕێوەبەر')
+                ? String(currentUser.code || '').trim()
+                : String(currentUser.manager || '').trim();
+            if (!target) return '';
+            try {
+                const { data } = await supabase.from('employees')
+                    .select('postal_code').eq('code', target).single();
+                return String((data && data.postal_code) || '').trim();
+            } catch (e) {
+                console.warn('postalCodeForMyOrders:', e);
+                return '';
             }
         }
 
@@ -5436,10 +5481,14 @@
                     hours = String(hours).padStart(2, '0');
                     let fullDateString = `${year}-${month}-${day} ${hours}:${minutes}:${seconds} ${ampm}`;
 
+                    // کۆدی پۆستەی بەڕێوەبەرەکە — وێنەیەکی لەسەر ئۆردەرەکە دەمێنێتەوە
+                    const postalForOrder = await postalCodeForMyOrders();
+
                     const { data: created, error } = await supabase.from('orders').insert([{
                         date: fullDateString,
                         seller_name: receiptDisplayName(),
                         seller_code: currentUser.code,
+                        postal_code: postalForOrder || null,
                         address: address,
                         city: city,
                         customer_name: customerName,
@@ -7787,6 +7836,10 @@
                 updateFormByRole('edit');
             }
 
+            // کۆدی پۆستەی ئێستا (دوای updateFormByRole، چونکە ئەوە خانەکە پیشان/دەشارێتەوە)
+            let postalEdit = document.getElementById('e-postal');
+            if (postalEdit) postalEdit.value = String(user.postal_code || '');
+
             // بارکردنی دەسەڵاتەکان دوای updateFormByRole (ئەوەی هەیەتی، نەک بنەڕەتی پلە)
             _editOrigPerms = normalizePerms(user.permissions, user.role); // پاراستنی دەسەڵاتە پاشا-دراوەکان
             setPermToggles('edit', _editOrigPerms);
@@ -7887,6 +7940,10 @@
             let code = getSecureCode();
 
             try {
+                // کۆدی پۆستە تەنها بۆ بەڕێوەبەر — پلەکانی تر هی بەڕێوەبەرەکەیان وەردەگرن
+                let postalEl = document.getElementById('u-postal');
+                let postalVal = (role === 'بەڕێوەبەر' && postalEl) ? String(postalEl.value || '').trim() : '';
+
                 let insertData = {
                     code: code,
                     password: "",
@@ -7895,6 +7952,7 @@
                     manager: managerVal,
                     admin: adminVal,
                     consultant: consultantVal,
+                    postal_code: postalVal || null,
                     creator: creatorCode,
                     telegram_status: hasTelegram,
                     permissions: sanitizePermsForSave('create', collectPermToggles('create')),
@@ -7973,12 +8031,18 @@
             showToast("خەریکی نوێکردنەوە...", "loading");
 
             try {
+                // کۆدی پۆستە: بەڕێوەبەر هەرکاتێک دەیگۆڕێت. ئەگەر پلەکە
+                // بەڕێوەبەر نەبێت، پاک دەکرێتەوە — ئەگەرنا کۆدێکی بێ‌خاوەن دەمێنێتەوە
+                let postalElE = document.getElementById('e-postal');
+                let postalValE = (role === 'بەڕێوەبەر' && postalElE) ? String(postalElE.value || '').trim() : '';
+
                 let updateData = {
                     full_name: name,
                     role: role,
                     manager: managerVal,
                     admin: adminVal,
                     consultant: consultantVal,
+                    postal_code: postalValE || null,
                     telegram_status: hasTelegram,
                     permissions: sanitizePermsForSave('edit', collectPermToggles('edit'))
                 };
