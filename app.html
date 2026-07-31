@@ -199,7 +199,27 @@
 
         <!-- کاڵای دیاری — بێ پارە بۆ کڕیار. لە کۆی کاڵاکان و ژمارەی دانەکان
              ناژمێردرێت، بۆیە قازانجی بەڕێوەبەر/سەرپەرشت/ڕاوێژکار ناگۆڕێت.
-             تەنها لە قازانجی خاوەنی ئۆردەرەکە کەم دەکات. -->
+             تەنها لە قازانجی خاوەنی ئۆردەرەکە کەم دەکات.
+             وەک ژمارەی دووەمی مۆبایل، بە سویچ دەردەکەوێت — زۆربەی
+             ئۆردەرەکان دیاریان نییە، بۆیە بە بنەڕەت شاراوەیە. -->
+        <div class="switch-group">
+            <label>کاڵای دیاری هەیە؟</label>
+            <label class="switch">
+                <input type="checkbox" id="switch-gift" onchange="toggleGiftSection(this.checked)">
+                <div class="slider">
+                    <div class="circle"><svg class="cross" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="4">
+                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                        </svg><svg class="checkmark" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="4">
+                            <polyline points="20 6 9 17 4 12"></polyline>
+                        </svg></div>
+                </div>
+            </label>
+        </div>
+
+        <div id="gift-section" style="display: none;">
         <div class="cart-wrapper gift-wrapper">
             <label class="gift-label"><i class='bx bx-gift'></i> کاڵای دیاری</label>
             <div class="hist-anchor">
@@ -229,6 +249,7 @@
         </div>
 
         <ul id="gift-list" class="cart-list gift-list"></ul>
+        </div>
 
 
         <label>وێنەی کاڵاکان (دەتوانیت چەندین وێنە هەڵبژێریت)</label>
@@ -477,8 +498,11 @@
                     <!-- بۆ گونجاندن لەگەڵ updateCode/deleteCode (کۆدی هەڵبژێردراو) -->
                     <input type="hidden" id="search-code-input">
 
+                    <!-- بۆشایی لێرە دانانرێت: `padding`ی ناوهێڵ کورتکراوەیە و
+                         `padding-bottom`ـی ستایلشیت دەشکێنێت، بۆیە دوگمەی
+                         سڕینەوە دەکەوتە ژێر شریتی خوارەوە. لە style.cssـدایە. -->
                     <div id="edit-section" class="edit-section"
-                        style="border-top: none; padding-top: 0; display: none; background: #f8fafc; padding: 15px; border-radius: 12px; border: 1px solid #e2e8f0;">
+                        style="border-top: none; display: none; background: #f8fafc; border-radius: 12px; border: 1px solid #e2e8f0;">
                         <div
                             style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; gap:8px;">
                             <label
@@ -1463,7 +1487,13 @@
             {
                 id: 'orders', title: 'ئۆردەرەکان', icon: 'bx-package', items: [
                     { key: 'view_orders', type: 'scope', label: 'بینینی ئۆردەر', tiers: tierSubs('view') },
-                    { key: 'edit_order', type: 'scope', label: 'دەستکاری ئۆردەر', tiers: tierSubs('edit') },
+                    {
+                        key: 'edit_order', type: 'scope', label: 'دەستکاری ئۆردەر',
+                        tiers: tierSubs('edit'), subs: [
+                            { key: 'ed_prep', label: 'لە حاڵەتی ئامادە دەکرێت' },
+                            { key: 'ed_onway', label: 'لە حاڵەتی لە ڕێگایە' },
+                        ]
+                    },
                     { key: 'delete_order', type: 'scope', label: 'سڕینەوەی ئۆردەر', tiers: tierSubs('delete') },
                     {
                         key: 'change_status', type: 'scope', label: 'گۆڕینی حاڵەت',
@@ -1508,7 +1538,7 @@
             create_key: 'ڕێگە دەدات کلیلی نوێ دروست بکات و کلیلە دروستکراوەکانی خۆی دەستکاری بکات. بە کوژاندنەوە: بەشی چاکسازی نابینێت.',
             delete_key: 'ڕێگە دەدات کلیلی دروستکراوی خۆی بسڕێتەوە. بە کوژاندنەوە: تەنها کلیلی نوێ (بێ‌پاسوۆرد، بێ‌ئۆردەر، بێ‌پارە) دەسڕێتەوە.',
             view_orders: 'بینینی ئۆردەرەکان. تیم = تەنها تیمی خۆی، هەموان = هەمووان. بە نەدان: ناوی فرۆشیار لە جوڵە دارایی/ئۆردەر دەشاردرێتەوە.',
-            edit_order: 'دەستکاری ئۆردەر — تەنها لە حاڵەتی «ئامادە دەکرێت». تیم/هەموان مەودای کارکردن دیاری دەکات.',
+            edit_order: 'دەستکاری ئۆردەر. تیم/هەموان مەودای کارکردن دیاری دەکات، ژێرەکان دیاری دەکەن لە کام حاڵەتدا ڕێگەپێدراوە. ئۆردەری گەیشتوو یان گەڕاوە هەرگیز دەستکاری ناکرێت.',
             delete_order: 'سڕینەوەی ئۆردەر — تەنها لە حاڵەتی «ئامادە دەکرێت». تیم/هەموان مەودای کارکردن دیاری دەکات.',
             change_status: 'گۆڕینی حاڵەتی ئۆردەر. مەودا (تیم/هەموان) دیاری دەکات لەسەر کام ئۆردەر، ژێرەکان دیاری دەکەن کام گۆڕین ڕێگەپێدراوە.',
             distribute: 'دابەشکردنی قازانج لەسەر ئۆردەری گەیشتوو. بۆ هەر خانەیەک دیاری دەکەیت زیاد/کەم/هەردوو یان هیچ.',
@@ -1520,6 +1550,8 @@
             manage_trash: 'کردنەوەی تەنەکەی خۆڵ، بینینی هەموو شتە سڕاوەکان و گەڕاندنەوەیان. پاشا هەمیشە ئەم دەسەڵاتەی هەیە.',
             view_passwords: 'بینینی پاسوۆردی ئەو بەکارهێنەرانەی دەیانبینێت، و گۆڕینیان لە بەشی چاکسازی. دەسەڵاتێکی زۆر هەستیارە — تەنها بە کەسی متمانەپێکراو بیدە.',
             // ژێرەکان و خانەکان
+            ed_prep: 'ڕێگە دەدات ئۆردەری «ئامادە دەکرێت» دەستکاری بکات.',
+            ed_onway: 'ڕێگە دەدات ئۆردەری «لە ڕێگایە» دەستکاری بکات. بە کوژاندنەوە: هەرکاتێک ئۆردەرێک بەڕێکرا، چیتر ناگۆڕدرێت.',
             st_delivered: 'ڕێگە دەدات ئۆردەر بکرێت بە «گەیشتووە» (پارە دابەش دەکات).',
             st_returned: 'ڕێگە دەدات ئۆردەر بکرێت بە «گەڕاوەتەوە» (پارە دەگەڕێنێتەوە).',
             st_del2ret: 'ڕێگە دەدات ئۆردەری گەیشتوو بگۆڕدرێت بۆ گەڕاوە.',
@@ -1543,10 +1575,10 @@
             }));
         })();
 
-        const PERM_KEYS_ALL = ['create_key', 'delete_key', 'view_orders', 'edit_order', 'delete_order', 'change_status', 'st_delivered', 'st_returned', 'st_del2ret', 'st_ret2del', 'distribute', 'pf_driver', 'pf_manager', 'pf_supervisor', 'pf_consultant', 'pf_member', 'pf_savings', 'view_savings', 'set_profit_rates', 'manage_wallets', 'manage_all_keys', 'manage_cities', 'manage_trash', 'view_passwords'];
+        const PERM_KEYS_ALL = ['create_key', 'delete_key', 'view_orders', 'edit_order', 'ed_prep', 'ed_onway', 'delete_order', 'change_status', 'st_delivered', 'st_returned', 'st_del2ret', 'st_ret2del', 'distribute', 'pf_driver', 'pf_manager', 'pf_supervisor', 'pf_consultant', 'pf_member', 'pf_savings', 'view_savings', 'set_profit_rates', 'manage_wallets', 'manage_all_keys', 'manage_cities', 'manage_trash', 'view_passwords'];
         const PERM_SCOPE_KEYS = ['view_orders', 'edit_order', 'delete_order', 'change_status', 'distribute', 'set_profit_rates', 'manage_wallets'];
         const PERM_PROFIT_KEYS = ['pf_driver', 'pf_manager', 'pf_supervisor', 'pf_consultant', 'pf_member', 'pf_savings'];
-        const PERM_TOGGLE_KEYS = ['create_key', 'delete_key', 'st_delivered', 'st_returned', 'st_del2ret', 'st_ret2del', 'view_savings', 'manage_all_keys', 'manage_cities', 'manage_trash', 'view_passwords'];
+        const PERM_TOGGLE_KEYS = ['create_key', 'delete_key', 'ed_prep', 'ed_onway', 'st_delivered', 'st_returned', 'st_del2ret', 'st_ret2del', 'view_savings', 'manage_all_keys', 'manage_cities', 'manage_trash', 'view_passwords'];
         PERM_KEYS_ALL.push.apply(PERM_KEYS_ALL, PERM_TIER_KEYS);
 
         // دەسەڵاتی بنەڕەتی هەر پلەیەک (فۆرماتی نوێ) — کلیلە کۆنەکان ئەمە وەردەگرن
@@ -1559,6 +1591,11 @@
             // سنووری پلە بە بنەڕەت کراوەیە — تا ڕەفتاری کلیلە کۆنەکان نەگۆڕێت.
             // (پاشا/بەڕێوەبەر دەتوانن دواتر ئەوانەی ناویانەوێت بکوژێننەوە)
             PERM_TIER_KEYS.forEach(k => base[k] = 'all');
+            // دەستکاری لە حاڵەتی «ئامادە دەکرێت» ڕەفتاری کۆنە، بۆیە بە بنەڕەت
+            // کراوەیە. بەڵام «لە ڕێگایە» داخراوە — دوای بەڕێکردنی ئۆردەر
+            // گۆڕانکاری مەترسیدارە، بۆیە دەبێت بە ئەنقەست بدرێت.
+            base.ed_prep = true;
+            base.ed_onway = false;
             let allOn = (obj) => Object.assign(base, obj);
             let fullProfit = { pf_driver: 'both', pf_manager: 'both', pf_supervisor: 'both', pf_consultant: 'both', pf_member: 'both', pf_savings: 'both' };
             let allStatus = { st_delivered: true, st_returned: true, st_del2ret: true, st_ret2del: true };
@@ -1567,7 +1604,7 @@
                     create_key: true, delete_key: true, view_orders: 'all', edit_order: 'all', delete_order: 'all',
                     change_status: 'all', distribute: 'all', view_savings: true,
                     set_profit_rates: 'all', manage_wallets: 'all', manage_all_keys: true, manage_cities: true,
-                    manage_trash: true, view_passwords: true
+                    manage_trash: true, view_passwords: true, ed_prep: true, ed_onway: true
                 }, allStatus, fullProfit));
             }
             if (role === 'بەڕێوەبەر') {
@@ -1855,6 +1892,19 @@
             if (toDelivered) return curReturned ? stOn('st_ret2del') : stOn('st_delivered');
             if (toReturned) return curDelivered ? stOn('st_del2ret') : stOn('st_returned');
             return true; // گۆڕین بۆ ئامادە/لەڕێگا — تەنها مەودای change_status پێویستە
+        }
+
+        // ئایا ئەم ئۆردەرە لە حاڵەتی ئێستایدا دەستکاری دەکرێت؟
+        // ------------------------------------------------------------
+        // هەر حاڵەتێک دەسەڵاتی خۆی هەیە. گەیشتوو و گەڕاوە هەرگیز دەستکاری
+        // ناکرێن — پارەکە دابەش کراوە. ئەمە جیایە لە `canActOnOrder(o,'edit')`
+        // کە مەودا (تیم/هەموان/پلە) دەپشکنێت؛ هەردووکیان پێویستن.
+        function canEditInStatus(o) {
+            if (userRole === 'پاشا') return true;
+            let s = String((o && o.status) || 'ئامادە دەکرێت');
+            if (s.includes('ڕێگا')) return permOn('ed_onway');
+            if (s.includes('ئامادە')) return permOn('ed_prep');
+            return false;   // گەیشتوو / گەڕاوە
         }
 
         // ئایا مۆدی دەستکاریکردنی خانەیەکی قازانج ڕێگە بەم گۆڕانکارییە دەدات؟
@@ -3966,6 +4016,7 @@
 
             cart = [];
             giftCart = [];
+            syncGiftSwitch();
             updateCartUI();
             uploadedImageUrls = [];
             clearPendingUploads();
@@ -3991,8 +4042,61 @@
             });
         }
 
+        function orderGiftLines(o, withPrice) {
+            const names = String(o.gift_names || '').split('\n').map(s => s.trim()).filter(Boolean);
+            const qtys = String(o.gift_qtys || '').split('\n');
+            const prices = String(o.gift_prices || '').split('\n');
+            if (!names.length) return [];
+            return names.map((n, i) => {
+                const q = (qtys[i] || '').trim() || '1';
+                if (!withPrice) return `• ${n} × ${q}`;
+                const p = parseFloat(prices[i] || 0);
+                return `• ${n} × ${q} — ${isNaN(p) ? '' : p.toLocaleString('en-US')}`;
+            });
+        }
+
         function orderImageLinks(o) {
             return String(o.image_url || '').split(',').map(s => s.trim()).filter(Boolean);
+        }
+
+        // خاوەنی ئۆردەر و سلسیلەی سەرۆکایەتییەکەی، وەک دەق.
+        // هەمان یاسای بۆکسی فرۆشیار: ئەگەر دەسەڵاتی بینینی ئۆردەری ئەم
+        // فرۆشیارە نەبێت، ناوەکەی بەهیچ شێوەیەک کۆپی ناکرێت.
+        function orderOwnerLines(o) {
+            const code = String(o.seller_code || '').trim();
+            if (!code) return [];
+            try { if (!canActOnOrder(o, 'view')) return []; } catch (e) { }
+
+            const nameOf = (c) => {
+                const e = employeeByCode[String(c || '').trim()];
+                return (e && e.full_name) ? e.full_name : String(c || '').trim();
+            };
+
+            const s = employeeByCode[code];
+            const L = [];
+            const role = s ? (normalizeRole(s.role) || 'ئەندام') : '';
+            L.push(`🧑‍💼 خاوەنی ئۆردەر: ${s && s.full_name ? s.full_name : code}${role ? ` (${role})` : ''}`);
+            L.push(`🆔 کۆد: ${code}`);
+            if (!s) return L;   // تۆمارەکەی هێشتا نەهاتووە یان سڕاوەتەوە
+
+            const chain = [
+                ['بەڕێوەبەر', s.manager],
+                ['سەرپەرشت', s.admin],
+                ['ڕاوێژکار', s.consultant]
+            ].filter(([, c]) => c);
+
+            // سلسیلە نەبوو → هیچ نانووسرێت (بەڕێوەبەر سەرووی خۆی نییە)
+            chain.forEach(([label, c]) => L.push(`${label}: ${nameOf(c)}`));
+            return L;
+        }
+
+        // قازانجی خاوەنی ئۆردەر — وەک ئەوەی لە زانیاری داواکاریدا پیشان دەدرێت
+        function orderMemberProfit(o) {
+            if (o.member_profit != null && String(o.member_profit).trim() !== '' && !isNaN(parseFloat(o.member_profit))) {
+                return parseFloat(o.member_profit);
+            }
+            return Number(o.grand_total || 0) - Number(o.delivery_price || 0)
+                - Number(o.items_total || 0) - Number(o.gift_total || 0);
         }
 
         function buildOrderCopyText(o, mode) {
@@ -4013,7 +4117,11 @@
                 if (o.notes) { L.push(COPY_SEP); L.push(`📝 ${o.notes}`); }
             } else {
                 if (o.order_code) L.push(`🧾 ئۆردەر: ${o.order_code}`);
-                if (o.status) L.push(`🔖 دۆخ: ${o.status}`);
+
+                // خاوەنی ئۆردەر و سلسیلەکەی
+                const owner = orderOwnerLines(o);
+                if (owner.length) { L.push(COPY_SEP); L.push(...owner); }
+
                 L.push(COPY_SEP);
                 if (o.customer_name) L.push(`👤 کڕیار: ${o.customer_name}`);
                 const phones = [o.phone1, o.phone2].filter(Boolean).join(' / ');
@@ -4021,10 +4129,16 @@
                 if (o.address) L.push(`📍 ${o.address}`);
                 const items = orderItemLines(o, true);
                 if (items.length) { L.push(COPY_SEP); L.push('📦 کاڵاکان:'); L.push(...items); }
+                const gifts = orderGiftLines(o, true);
+                if (gifts.length) { L.push(COPY_SEP); L.push('🎁 کاڵای دیاری:'); L.push(...gifts); }
                 L.push(COPY_SEP);
-                L.push(`کۆی کاڵاکان: ${Number(o.items_total || 0).toLocaleString('en-US')} د.ع`);
+                // کاڵاکان و دیاریەکان پێکەوە — بەم شێوەیە حیسابەکە ڕێک دەبێت:
+                // کۆی گشتی − گەیاندن − ئەم ژمارەیە = قازانجی ئۆردەر
+                const goodsTotal = Number(o.items_total || 0) + Number(o.gift_total || 0);
+                L.push(`کۆی کاڵاکان: ${goodsTotal.toLocaleString('en-US')} د.ع`);
                 L.push(`گەیاندن: ${Number(o.delivery_price || 0).toLocaleString('en-US')} د.ع`);
                 L.push(`💰 کۆی گشتی: ${total} د.ع`);
+                L.push(`📈 قازانجی ئۆردەر: ${orderMemberProfit(o).toLocaleString('en-US')} د.ع`);
                 if (o.notes) { L.push(COPY_SEP); L.push(`📝 تێبینی: ${o.notes}`); }
                 const dt = formatDateTimeKurdish(o.date || o.created_at);
                 if (dt) L.push(`📅 ${dt}`);
@@ -4033,7 +4147,9 @@
             if (imgs.length) {
                 L.push(COPY_SEP);
                 L.push('🖼 وێنەکان:');
-                L.push(...imgs);
+                // ژمارە لە ڕیزێکی سەربەخۆدا پێش هەر لینکێک — ئەگەرنا لینکە
+                // درێژەکان بەیەکەوە دەلکێن و نازانرێت کامیان لە کوێ کۆتایی دێت
+                imgs.forEach((u, i) => { L.push(`${i + 1}-`); L.push(u); });
             }
             return L.join('\n');
         }
@@ -4214,7 +4330,7 @@
             // سڕینەوە تەنها لە «ئامادە دەکرێت»؛ دەستکاری لە «ئامادە دەکرێت» یان «لەڕێگادایە» — بەپێی مەودا
             let isOnWay = (o.status || "").includes("ڕێگا");
             let actionButtonsHtml = "";
-            let canEditOrder = canActOnOrder(o, 'edit') && (isPreparing || isOnWay);
+            let canEditOrder = canActOnOrder(o, 'edit') && canEditInStatus(o);
             let canDeleteOrder = canActOnOrder(o, 'delete') && isPreparing;
             if (canEditOrder || canDeleteOrder) {
                 let editBtn = canEditOrder ? `<button class="btn" style="background:#ffc107; color:#000; flex:1; font-size:14px; padding:10px;" onclick="editOrder('${o.id}')"><i class='bx bx-edit'></i> دەستکاریکردن</button>` : '';
@@ -5058,10 +5174,12 @@
                 showToast("دەسەڵاتت نییە بۆ دەستکاریکردنی ئەم ئۆردەرە!", "error");
                 return;
             }
-            // دەستکاری تەنها لە حاڵەتی «ئامادە دەکرێت» یان «لەڕێگادایە»
-            let stEdit = o.status || "";
-            if (!(stEdit.includes("ئامادە") || stEdit.includes("ڕێگا"))) {
-                showToast("تەنها ئۆردەری «ئامادە دەکرێت» یان «لەڕێگادایە» دەستکاری دەکرێت!", "error");
+            // پارێزەری نووسین: هەر حاڵەتێک دەسەڵاتی خۆی هەیە
+            if (!canEditInStatus(o)) {
+                let stEdit = String(o.status || "");
+                showToast(stEdit.includes("ڕێگا")
+                    ? "دەسەڵاتت نییە بۆ دەستکاریکردنی ئۆردەری «لە ڕێگایە»!"
+                    : "ئەم ئۆردەرە لەم حاڵەتەدا دەستکاری ناکرێت!", "error");
                 return;
             }
 
@@ -5144,6 +5262,8 @@
                 let p = parseInt(gPrices[i]) / q || 0;
                 giftCart.push({ name: gNames[i].trim(), qty: q, unitPrice: p });
             }
+            // ئۆردەرێک کە دیاری هەیە، سویچەکەی بە کراوەیی دەکرێتەوە
+            syncGiftSwitch();
             document.getElementById('amount-received').value = (o.amount_received != null && o.amount_received !== "") ? o.amount_received : "";
             updateCartUI();
 
@@ -5244,6 +5364,16 @@
             // نرخی دیاری لە قازانجی خاوەنی ئۆردەرەکە دەردەچێت — هی
             // بەڕێوەبەر/سەرپەرشت/ڕاوێژکار بەپێی ژمارەی دانەن، بۆیە ناگۆڕێن
             let memberProfit = amountReceived - deliveryPrice - itemsTotal - giftTotal;
+
+            // دوایین پارێزەر پێش نووسین: حاڵەتی ئۆردەرەکە ڕەنگە لەکاتی
+            // پڕکردنەوەی فۆرمەکەدا لەلایەن کەسێکی ترەوە گۆڕابێت
+            if (editingOrderId) {
+                const nowO = allGlobalOrdersData[editingOrderId];
+                if (nowO && !canEditInStatus(nowO)) {
+                    showToast("حاڵەتی ئۆردەرەکە گۆڕاوە — چیتر دەستکاری ناکرێت!", "error");
+                    return;
+                }
+            }
 
             showToast(editingOrderId ? "خەریکی نوێکردنەوە..." : "خەریکی ناردنی ئۆردەرەکەم...", "loading");
 
@@ -6212,21 +6342,45 @@
             });
         }, true);
 
-        // `pointerdown` + `preventDefault()` ڕێگری لە `click`ی دواتر ناکات.
-        // پانێڵەکە یەکسەر دادەخرێت، بۆیە ئەو کرتەیە دەکەوێتە سەر ئەوەی
-        // لە ژێریدایە (دوگمەی «زیادکردن بۆ سەبەتە»، ئایتمێکی لیست، ...).
-        // بۆیە یەک کرتەی داهاتوو دەخنکێنرێت.
-        function histSwallowNextClick() {
-            let t = null;
-            const kill = (ev) => {
-                ev.preventDefault();
-                ev.stopPropagation();
-                window.removeEventListener('click', kill, true);
-                clearTimeout(t);
-            };
-            window.addEventListener('click', kill, true);
-            t = setTimeout(() => window.removeEventListener('click', kill, true), 500);
+        // ============================================================
+        // کرتە لە پانێڵی مێژوو
+        // ------------------------------------------------------------
+        // پێشتر ڕیزەکان لەسەر `pointerdown` کاریان دەکرد، تا بۆکسەکە
+        // فۆکەس لەدەست نەدات. بەڵام ئەوە واتای ئەوەیە کە یەکەم بەرکەوتنی
+        // پەنجە هەڵدەبژێرێت — پانێڵەکە هەرگیز ناتوانرێت سکرۆڵ بکرێت.
+        //
+        // ئێستا کردارەکان لەسەر `click`ن. وێبگەڕ خۆی جیاوازی لەنێوان
+        // کرتە و سکرۆڵدا دەکات: سکرۆڵ هیچ کرتەیەک دروست ناکات.
+        //
+        // فۆکەس بەم شێوەیە دەپارێزرێت: `mousedown` لەسەر پانێڵەکە
+        // preventDefault دەکرێت. لە کاتی سکرۆڵدا هیچ `mousedown`ێک
+        // دروست نابێت، بۆیە ڕێگری لە سکرۆڵ ناکات — بەڵام لە کاتی
+        // کرتەدا فۆکەس (و کیبۆردەکە) لەجێی خۆی دەمێننەوە.
+        // ============================================================
+        function histKeepFocus(p) {
+            if (p._histFocusGuard) return;
+            p._histFocusGuard = true;
+            p.addEventListener('mousedown', ev => {
+                if (!ev.target.closest('input, textarea, select')) ev.preventDefault();
+            });
         }
+
+        // پارێزەری زیادە: ئەگەر پەنجە زیاتر لە ١٠px جوڵا، ئەوا سکرۆڵ بووە
+        // نەک کرتە — تەنانەت ئەگەر وێبگەڕ کرتەیەکیش دروست بکات.
+        const HIST_TAP_SLOP = 10;
+        function histTapGuard(p) {
+            if (p._histTapGuard) return;
+            p._histTapGuard = true;
+            let sx = 0, sy = 0;
+            p.addEventListener('pointerdown', ev => { sx = ev.clientX; sy = ev.clientY; p._histMoved = false; });
+            p.addEventListener('pointermove', ev => {
+                if (Math.abs(ev.clientX - sx) > HIST_TAP_SLOP || Math.abs(ev.clientY - sy) > HIST_TAP_SLOP) p._histMoved = true;
+            });
+        }
+        const histWasScroll = (el) => {
+            const p = el.closest('.hist-panel');
+            return !!(p && p._histMoved);
+        };
 
         function renderHistPanel(p, opts) {
             const rows = opts.rows;
@@ -6248,28 +6402,32 @@
 
             p.innerHTML = html;
             p.classList.add('open');
+            histKeepFocus(p);
+            histTapGuard(p);
 
-            // pointerdown بەکاردێت نەک click — تا بۆکسەکە فۆکەس لەدەست نەدات
+            // کردارەکان لەسەر click — تا سکرۆڵکردن هەڵبژاردن نەبێت
             p.querySelectorAll('[data-hist-pick]').forEach(el => {
-                el.addEventListener('pointerdown', ev => {
+                el.addEventListener('click', ev => {
                     if (ev.target.closest('[data-hist-del]')) return;
+                    if (histWasScroll(el)) return;
                     ev.preventDefault();
-                    histSwallowNextClick();
+                    ev.stopPropagation();
                     opts.onPick(el.getAttribute('data-hist-pick'));
                 });
             });
             p.querySelectorAll('[data-hist-del]').forEach(el => {
-                el.addEventListener('pointerdown', ev => {
+                el.addEventListener('click', ev => {
+                    if (histWasScroll(el)) return;
                     ev.preventDefault();
                     ev.stopPropagation();
-                    histSwallowNextClick();
                     opts.onDelete(el.getAttribute('data-hist-del'));
                 });
             });
             const clearBtn = p.querySelector('[data-hist-clear]');
-            if (clearBtn) clearBtn.addEventListener('pointerdown', ev => {
+            if (clearBtn) clearBtn.addEventListener('click', ev => {
+                if (histWasScroll(clearBtn)) return;
                 ev.preventDefault();
-                histSwallowNextClick();
+                ev.stopPropagation();
                 opts.onClear();
             });
         }
@@ -6950,6 +7108,35 @@
             if (isChecked) { input.style.display = 'block'; } else { input.style.display = 'none'; input.value = ''; }
         }
 
+        // بەشی کاڵای دیاری — وەک ژمارەی دووەمی مۆبایل بە سویچ دەردەکەوێت.
+        // کوژاندنەوەی سویچەکە هەموو دیارییە زیادکراوەکان لادەبات، ئەگەرنا
+        // دیاری شاراوە لە قازانجەکە کەم دەکات و کەس نایبینێت.
+        function toggleGiftSection(isChecked) {
+            let box = document.getElementById('gift-section');
+            if (box) box.style.display = isChecked ? 'block' : 'none';
+            if (isChecked) return;
+
+            giftCart = [];
+            ['gift-name', 'gift-price'].forEach(id => {
+                let el = document.getElementById(id);
+                if (el) el.value = '';
+            });
+            let q = document.getElementById('gift-qty');
+            if (q) q.value = 1;
+            try { closeAllHistPanels(); } catch (e) { }
+            updateCartUI();
+        }
+
+        // سویچەکە بەپێی ئەوەی دیاری هەیە یان نا ڕێک دەخرێت (لە پاککردنەوە،
+        // دەستکاریکردن و گەڕاندنەوەی فۆرمەکەدا بەکاردێت)
+        function syncGiftSwitch() {
+            let on = (giftCart && giftCart.length > 0);
+            let sw = document.getElementById('switch-gift');
+            if (sw) sw.checked = on;
+            let box = document.getElementById('gift-section');
+            if (box) box.style.display = on ? 'block' : 'none';
+        }
+
         function applyEditState(inputId, value) {
             let input = document.getElementById(inputId); let switchBtn = document.getElementById('switch-' + inputId);
             if (value && value.trim() !== "") { switchBtn.checked = true; input.style.display = 'block'; input.value = value; }
@@ -7225,6 +7412,8 @@
             });
 
             cart = backupOrderState.cart;
+            giftCart = backupOrderState.giftCart || [];
+            syncGiftSwitch();
             updateCartUI();
 
             if (backupOrderState.uploadedImageUrl) {
