@@ -1702,6 +1702,10 @@
 
         // ============ سنووری تیم (ژێردەستەکان بەپێی زنجیرەی دروستکەر) ============
         let allEmployeesLite = [];   // {code, creator, role} بۆ هەموو کارمەندان
+        // تۆماری تەواوی هەموو کارمەندان (کۆد → تۆمار). بۆکسی زانیاری فرۆشیار
+        // لێرەوە دروست دەکرێت بەبێ هیچ داواکارییەکی نوێ — ئەگەرنا ناوەڕۆکی
+        // مۆداڵەکە دوای کردنەوەی دەگۆڕا و شاشەکە پرتەی دەکرد لە مۆبایل.
+        let employeeByCode = {};
         let myTeamCodesSet = new Set(); // کۆدی هەموو ئەندامانی تیمی بەڕێوەبەرەکەم (بێ خۆم)
         let myLineCodesSet = new Set(); // تەنها لقی ستوونی خۆم: باوان + خۆم + ژێرەکانم
         let roleByCode = {};         // کۆد → پلە (بۆ سنووری پلە)
@@ -3869,6 +3873,13 @@
                     if (allEmp) {
                         // نوێکردنەوەی سنووری تیم لە هەمان داتا
                         allEmployeesLite = allEmp.map(e => ({ code: String(e.code || "").trim(), creator: String(e.creator || "").trim(), role: e.role }));
+                        // هەمان داتا بۆ بۆکسی فرۆشیار خەزن دەکرێت، بۆ ئەوەی
+                        // کردنەوەی ئۆردەرێک هیچ داواکارییەکی نوێی نەوێت
+                        employeeByCode = {};
+                        allEmp.forEach(e => {
+                            let c = String(e.code || "").trim();
+                            if (c) employeeByCode[c] = e;
+                        });
                         computeMyTeam();
                         allEmp.forEach(t => {
                             let tCode = String(t.code || "").trim();
@@ -4191,8 +4202,14 @@
 
             // بۆکسی زانیاری فرۆشیار — تەنها ئەگەر دەسەڵاتی بینینی ئۆردەری ئەم فرۆشیارەی هەبێت
             // ئەگەر دەسەڵاتی بینین نەبوو، ناوی فرۆشیار بەهیچ شێوەیەک پیشان نادرێت
+            // کارتەکە لە بیرگەوە دروست دەکرێت و لەگەڵ ناوەڕۆکەکەی تردا
+            // یەکجار دەنەخشێنرێت. بەم شێوەیە هیچ گۆڕانێکی بەرزی دوای
+            // کردنەوەی مۆداڵ نییە — ئەوە بوو دەبووە هۆی پرتەکە.
             let canViewSeller = canActOnOrder(o, 'view');
-            let sellerInfoPlaceholder = (isOwner || !canViewSeller) ? "" : '<div id="seller-info-box" style="margin-bottom:15px;"></div>';
+            let showSeller = !isOwner && canViewSeller;
+            let sellerHtmlNow = showSeller ? (sellerInfoFromMemory(o.seller_code) || "") : "";
+            let sellerInfoPlaceholder = showSeller
+                ? `<div id="seller-info-box" style="margin-bottom:15px;">${sellerHtmlNow}</div>` : "";
 
             // سڕینەوە تەنها لە «ئامادە دەکرێت»؛ دەستکاری لە «ئامادە دەکرێت» یان «لەڕێگادایە» — بەپێی مەودا
             let isOnWay = (o.status || "").includes("ڕێگا");
@@ -4304,6 +4321,9 @@
                 }
             }
 
+            // مێژوو ئەگەر پێشتر هاتبێت، ڕاستەوخۆ دەنەخشێنرێت
+            let cachedLogs = orderLogsCache[String(o.id)];
+
             let reasonInfoHtml = "";
             if (o.return_reason && o.status === 'گەڕاوەتەوە') {
                 reasonInfoHtml = `
@@ -4378,7 +4398,7 @@
             ${statusChangerHtml}
             <div class="detail-section" style="margin-top:14px;">
                 <div class="detail-label"><i class='bx bx-history'></i> مێژووی کردارەکان</div>
-                <div id="order-log-box" class="order-log-box"></div>
+                <div id="order-log-box" class="order-log-box">${cachedLogs ? orderLogsHtml(cachedLogs) : ORDER_LOG_SKELETON}</div>
             </div>
             ${actionButtonsHtml}
         `;
@@ -4389,8 +4409,11 @@
             document.getElementById('order-details-modal').classList.add('show');
             runOrderSteps();
 
-            loadOrderLogs(o.id, o);
-            if (!isOwner && canViewSeller) loadSellerInfo(o.seller_code);
+            // تەنها ئەوەی لە بیرگەدا نەبوو بە داواکاری دەهێنرێت
+            if (cachedLogs) { try { fillOrderStepTimes(cachedLogs, o); } catch (e) { } }
+            else loadOrderLogs(o.id, o);
+
+            if (showSeller) { if (!sellerHtmlNow) loadSellerInfo(o.seller_code); }
             else if (isOwnerDeleted(o.seller_code)) showOwnerDeletedBanner(o.seller_code);
         }
 
@@ -4545,27 +4568,28 @@
             } catch (e) { return String(iso || ''); }
         }
 
-        async function loadOrderLogs(orderId, order) {
-            const box = document.getElementById('order-log-box');
-            if (!box) return;
-            box.innerHTML = `<div class="order-log-empty"><i class='bx bx-loader-alt bx-spin'></i> بارکردن...</div>`;
-            try {
-                const { data, error } = await supabase.from('order_logs')
-                    .select('*')
-                    .eq('order_id', String(orderId))
-                    .order('id', { ascending: false })
-                    .limit(50);
-                if (error) throw error;
+        // کاشی مێژووی کردارەکان (id ئۆردەر → تۆمارەکان). کردنەوەی دووەمی
+        // هەمان ئۆردەر ڕاستەوخۆ دەکرێتەوە، بەبێ گۆڕانی بەرزی دوای کردنەوە.
+        let orderLogsCache = {};
 
-                // هەمان تۆمارەکان کاتی هەنگاوەکانی سەرەوەش پڕ دەکەنەوە
-                if (order) { try { fillOrderStepTimes(data, order); } catch (e) { } }
+        // شوێنی حازر بۆ مێژوو: هەمان پێکهاتەی ڕیزی ڕاستەقینە بەکاردێت،
+        // بۆیە بەرزییەکەی ڕێک هی سێ ڕیزی ڕاستەقینەیە و کاتێک تۆمارەکان
+        // دێن، نەخشەی مۆداڵ بەزەحمەت دەجوڵێت.
+        const ORDER_LOG_SKELETON = `<div class="olog-skel">` + [0, 1, 2].map(() => `
+            <div class="olog-row">
+                <span class="olog-dot"></span>
+                <div class="olog-body">
+                    <div class="olog-top"><b class="olog-bar w40"></b></div>
+                    <div class="olog-detail"><span class="olog-bar w70"></span></div>
+                    <div class="olog-time"><span class="olog-bar w30"></span></div>
+                </div>
+            </div>`).join('') + `</div>`;
 
-                if (!data || data.length === 0) {
-                    box.innerHTML = `<div class="order-log-empty"><i class='bx bx-info-circle'></i> هێشتا هیچ کردارێک تۆمار نەکراوە</div>`;
-                    return;
-                }
-
-                box.innerHTML = data.map(l => {
+        function orderLogsHtml(data) {
+            if (!data || data.length === 0) {
+                return `<div class="order-log-empty"><i class='bx bx-info-circle'></i> هێشتا هیچ کردارێک تۆمار نەکراوە</div>`;
+            }
+            return data.map(l => {
                     const meta = LOG_ACTION_META[l.action] || { icon: 'bx-dots-horizontal-rounded', color: '#64748b', label: l.action };
                     const who = histEsc(l.user_name || l.user_code || 'نەزانراو');
                     const detail = histEsc(l.detail || meta.label);
@@ -4584,7 +4608,26 @@
                             <div class="olog-time"><i class='bx bx-time-five'></i> ${histEsc(formatLogTime(l.created_at))}</div>
                         </div>
                     </div>`;
-                }).join('');
+            }).join('');
+        }
+
+        async function loadOrderLogs(orderId, order) {
+            const box = document.getElementById('order-log-box');
+            if (!box) return;
+            try {
+                const { data, error } = await supabase.from('order_logs')
+                    .select('*')
+                    .eq('order_id', String(orderId))
+                    .order('id', { ascending: false })
+                    .limit(50);
+                if (error) throw error;
+
+                orderLogsCache[String(orderId)] = data || [];
+
+                // هەمان تۆمارەکان کاتی هەنگاوەکانی سەرەوەش پڕ دەکەنەوە
+                if (order) { try { fillOrderStepTimes(data, order); } catch (e) { } }
+
+                box.innerHTML = orderLogsHtml(data);
             } catch (e) {
                 console.warn('loadOrderLogs:', e);
                 box.innerHTML = `<div class="order-log-empty"><i class='bx bx-error-circle'></i> نەتوانرا مێژوو باربکرێت</div>`;
@@ -4639,68 +4682,43 @@
         }
 
         // بارکردن و پیشاندانی زانیاری فرۆشیار و سلسیلەی سەرۆکایەتییەکەی
-        // ناوەڕۆک بە کشانەوەیەکی نەرم دادەنرێت نەک بە پەڕینێکی چڕ
+        // ------------------------------------------------------------
+        // ئەم بۆکسە لە سەرەوەی مۆداڵەکەیە، بۆیە هەر گۆڕانێکی بەرزی هەموو
+        // ناوەڕۆکی ژێری پاڵ دەدات. بەرزی ئەنیمەیت ناکرێت — هەر فرەیمێکی
+        // ئەنیمەیشنی بەرزی، نەخشەی تەواوی مۆداڵ لە نوێوە دادەڕێژێت و
+        // لەسەر مۆبایل ئەوە دەبێتە پرتەیەکی سپی. تەنها ئۆپاسیتی، کە
+        // هیچ کاریگەرییەکی لەسەر نەخشە نییە.
         function revealSellerBox(box, html) {
             if (!box) return;
             box.innerHTML = html;
             if (!html) return;
-            const h = box.scrollHeight;
-            if (!h) return;
-            box.style.overflow = 'hidden';
-            box.style.height = '0px';
-            // فرەیمێک چاوەڕێ دەکرێت، ئەگەرنا وێبگەڕ هەردوو بەرزییەکە
-            // لە یەک فرەیمدا دەبینێت و هیچ کشانەوەیەک نابێت
+            box.style.opacity = '0';
             requestAnimationFrame(() => {
-                box.style.transition = 'height 0.24s cubic-bezier(0.23, 1, 0.32, 1)';
-                box.style.height = h + 'px';
+                box.style.transition = 'opacity 0.2s ease';
+                box.style.opacity = '1';
                 setTimeout(() => {
-                    box.style.height = '';
-                    box.style.overflow = '';
+                    box.style.opacity = '';
                     box.style.transition = '';
-                }, 280);
+                }, 240);
             });
         }
 
-        async function loadSellerInfo(sellerCode) {
-            let box = document.getElementById('seller-info-box');
-            if (!box || !sellerCode) return;
-
-            // ئەگەر پێشتر بارکرابێت، ڕاستەوخۆ لە کاشەوە پیشانی بدە بەبێ بارکردنەوە
-            if (sellerInfoCache[sellerCode]) {
-                box.innerHTML = sellerInfoCache[sellerCode];
-                return;
-            }
-
-            // سپینەر لێرە دانانرێت: ئەم بۆکسە لە سەرەوەی مۆداڵەکەیە و
-            // هەر گۆڕانێکی بەرزی، هەموو ناوەڕۆکی ژێری پاڵ دەدات. بۆیە
-            // بەتاڵ دەمێنێتەوە و دواتر بە نەرمی دەکشێتەوە.
-            try {
-                const { data: seller } = await supabase.from('employees').select('*').eq('code', sellerCode).single();
-                // فرۆشیارەکە نەدۆزرایەوە — ڕەنگە کلیلەکەی سڕابێتەوە
-                if (!seller) {
-                    revealSellerBox(box, await deletedOwnerNotice(sellerCode));
-                    return;
-                }
-
-                let codes = [seller.manager, seller.admin, seller.consultant].filter(Boolean);
-                let nameMap = {};
-                if (codes.length > 0) {
-                    const { data: hier } = await supabase.from('employees').select('code, full_name').in('code', codes);
-                    (hier || []).forEach(h => { nameMap[h.code] = h.full_name; });
-                }
-
-                let role = normalizeRole(seller.role) || "ئەندام";
-                let mkRow = (icon, label, val) => val ? `
+        // کارتی فرۆشیار لە تۆمارێکی کارمەندەوە. `nameMap` ناوی سلسیلەکەیە
+        // (کۆد → ناو)؛ هەر کۆدێکی تێدا نەبێت، خودی کۆدەکە پیشان دەدرێت.
+        function sellerCardHtml(seller, nameMap) {
+            nameMap = nameMap || {};
+            let role = normalizeRole(seller.role) || "ئەندام";
+            let mkRow = (icon, label, val) => val ? `
                     <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-top:1px dashed rgba(255,255,255,0.25); font-size:13px;">
                         <span style="opacity:0.9;"><i class='bx ${icon}'></i> ${label}</span>
                         <strong>${val}</strong>
                     </div>` : "";
 
-                let managerName = seller.manager ? (nameMap[seller.manager] || seller.manager) : "";
-                let adminName = seller.admin ? (nameMap[seller.admin] || seller.admin) : "";
-                let consultantName = seller.consultant ? (nameMap[seller.consultant] || seller.consultant) : "";
+            let managerName = seller.manager ? (nameMap[seller.manager] || seller.manager) : "";
+            let adminName = seller.admin ? (nameMap[seller.admin] || seller.admin) : "";
+            let consultantName = seller.consultant ? (nameMap[seller.consultant] || seller.consultant) : "";
 
-                let finalHtml = `
+            return `
                 <div style="background:linear-gradient(135deg, #1d6fa5, #2481cc); color:#fff; border-radius:14px; padding:15px; box-shadow:0 8px 20px rgba(36,129,204,0.25);">
                     <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px;">
                         ${avatarHtml(seller.avatar, seller.full_name, 46)}
@@ -4717,7 +4735,55 @@
                     ${mkRow('bx-medal', 'ڕاوێژکار', consultantName)}
                     ${(!managerName && !adminName && !consultantName) ? `<div style="padding-top:6px; border-top:1px dashed rgba(255,255,255,0.25); font-size:12px; opacity:0.8;">سلسیلەی سەرۆکایەتی نییە</div>` : ""}
                 </div>`;
-                sellerInfoCache[sellerCode] = finalHtml; // خەزنکردن لە کاش
+        }
+
+        // کارتی فرۆشیار لە بیرگەوە — بەبێ داواکاری. `null` دەگەڕێنێتەوە
+        // ئەگەر داتاکە هێشتا نەهاتبێت، ئەوجا بە داواکاری دەهێنرێت.
+        function sellerInfoFromMemory(sellerCode) {
+            let code = String(sellerCode || '').trim();
+            if (!code) return null;
+            if (sellerInfoCache[code]) return sellerInfoCache[code];
+
+            let seller = employeeByCode[code];
+            if (!seller) return null;
+
+            let nameMap = {};
+            [seller.manager, seller.admin, seller.consultant].filter(Boolean).forEach(c => {
+                let h = employeeByCode[String(c).trim()];
+                if (h) nameMap[c] = h.full_name;
+            });
+
+            let html = sellerCardHtml(seller, nameMap);
+            sellerInfoCache[code] = html;
+            return html;
+        }
+
+        // ڕێڕەوی پاشەکەوت: تەنها کاتێک بەکاردێت کە فرۆشیارەکە لە بیرگەدا نەبێت
+        // (بۆ نموونە کردنەوەی ئۆردەرێک لە جوڵە داراییەکانەوە پێش بارکردنی لیستەکە)
+        async function loadSellerInfo(sellerCode) {
+            let box = document.getElementById('seller-info-box');
+            if (!box || !sellerCode) return;
+
+            let ready = sellerInfoFromMemory(sellerCode);
+            if (ready) { box.innerHTML = ready; return; }
+
+            try {
+                const { data: seller } = await supabase.from('employees').select('*').eq('code', sellerCode).single();
+                // فرۆشیارەکە نەدۆزرایەوە — ڕەنگە کلیلەکەی سڕابێتەوە
+                if (!seller) {
+                    revealSellerBox(box, await deletedOwnerNotice(sellerCode));
+                    return;
+                }
+
+                let codes = [seller.manager, seller.admin, seller.consultant].filter(Boolean);
+                let nameMap = {};
+                if (codes.length > 0) {
+                    const { data: hier } = await supabase.from('employees').select('code, full_name').in('code', codes);
+                    (hier || []).forEach(h => { nameMap[h.code] = h.full_name; });
+                }
+
+                let finalHtml = sellerCardHtml(seller, nameMap);
+                sellerInfoCache[String(sellerCode).trim()] = finalHtml; // خەزنکردن لە کاش
                 revealSellerBox(box, finalHtml);
             } catch (e) {
                 box.innerHTML = "";
@@ -4765,6 +4831,8 @@
                 opts = opts || {};
                 const oid = String((order && (order.id != null ? order.id : order)) || '');
                 if (!oid) return;
+                // کاشی مێژوو کۆن بوو — جاری داهاتوو لە نوێوە دەهێنرێت
+                try { delete orderLogsCache[oid]; } catch (e) { }
                 await supabase.from('order_logs').insert([{
                     order_id: oid,
                     order_code: (order && order.order_code) ? String(order.order_code) : null,

@@ -3114,6 +3114,24 @@ h2 i,
   position: relative;
 }
 
+/* شوێنی حازری مێژوو — هەمان پێکهاتەی ڕیزی ڕاستەقینە، بۆیە کاتێک
+   تۆمارەکان دێن بەرزییەکە بەزەحمەت دەگۆڕێت و مۆداڵەکە ناجوڵێت */
+.olog-skel .olog-dot {
+  background: #e8eef5;
+}
+
+.olog-bar {
+  display: inline-block;
+  height: 9px;
+  border-radius: 5px;
+  background: #e8eef5;
+  vertical-align: middle;
+}
+
+.olog-bar.w30 { width: 30%; }
+.olog-bar.w40 { width: 40%; }
+.olog-bar.w70 { width: 70%; }
+
 .olog-row + .olog-row {
   border-top: 1px solid #eef2f7;
 }
@@ -5192,12 +5210,20 @@ i.moc-avatar {
   justify-content: center;
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.3s ease;
+  /* visibility: تەنها opacity:0 وا ناکات وێبگەڕ وازی لە نەخشاندنی
+     ناوەڕۆکەکە بهێنێت — مۆداڵی زانیاری داواکاری زیاتر لە ١٧٠٠px ناوەڕۆکی
+     هەیە کە بەردەوام لە بیرگەی GPU دەمایەوە. بە visibility، کاتێک داخراوە
+     هیچ ناوەڕۆکێکی نانەخشێنرێت. دواخستنی 0.3s وا دەکات لە کاتی داخستندا
+     ئەنیمەیشنی ڕۆچوونەکە تەواو ببینرێت. */
+  visibility: hidden;
+  transition: opacity 0.3s ease, visibility 0s linear 0.3s;
 }
 
 .modal-overlay.show {
   opacity: 1;
   pointer-events: auto;
+  visibility: visible;
+  transition: opacity 0.3s ease, visibility 0s;
 }
 
 .modal-content {
