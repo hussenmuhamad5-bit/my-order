@@ -5212,9 +5212,10 @@ i.moc-avatar {
      ناوەڕۆکەکە بهێنێت — مۆداڵی زانیاری داواکاری زیاتر لە ١٧٠٠px ناوەڕۆکی
      هەیە کە بەردەوام لە بیرگەی GPU دەمایەوە. بە visibility، کاتێک داخراوە
      هیچ ناوەڕۆکێکی نانەخشێنرێت. دواخستنەکە وا دەکات لە کاتی داخستندا
-     ئەنیمەیشنی ڕۆچوونەکە تەواو ببینرێت. */
+     ئەنیمەیشنی ڕۆچوونەکە تەواو ببینرێت — بۆیە دەبێت یەکسان بێت بە
+     ماوەی داخستن (0.13s). */
   visibility: hidden;
-  transition: visibility 0s linear 0.26s;
+  transition: visibility 0s linear 0.13s;
 }
 
 /* پاشخانە تاریکەکە لێرەیە، نەک لەسەر خودی مۆداڵەکە.
@@ -5232,7 +5233,8 @@ i.moc-avatar {
   height: 100%;
   background: rgba(15, 23, 42, 0.78);
   opacity: 0;
-  transition: opacity 0.26s ease;
+  /* داخستن خێراترە لە کردنەوە — ئەوە کاری ئاسایی ڕووکارە */
+  transition: opacity 0.13s ease-in;
 }
 
 .modal-overlay.show {
@@ -5243,6 +5245,7 @@ i.moc-avatar {
 
 .modal-overlay.show::before {
   opacity: 1;
+  transition: opacity 0.17s ease-out;
 }
 
 .modal-content {
@@ -5259,9 +5262,10 @@ i.moc-avatar {
   overflow-y: auto;
   /* translate3d نەک translateY: چینی GPU لە سەرەتاوە دروست دەکات، نەک
      لە ناوەڕاستی ئەنیمەیشندا. دروستکردنی چین لەکاتی جوڵەدا ئەوە بوو کە
-     وای دەکرد کارتەکان بنەخشێنرێن بەڵام پاشخانی سپی مۆداڵ نا. */
-  transform: translate3d(0, 20px, 0);
-  transition: transform 0.26s cubic-bezier(0.22, 1, 0.36, 1);
+     وای دەکرد کارتەکان بنەخشێنرێن بەڵام پاشخانی سپی مۆداڵ نا.
+     مەودای ١٢px (نەک ٢٠) — مەودای کورتتر خێراتر هەست پێدەکرێت. */
+  transform: translate3d(0, 12px, 0);
+  transition: transform 0.13s cubic-bezier(0.4, 0, 1, 1);
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
 }
 
@@ -5292,6 +5296,9 @@ i.moc-avatar {
 
 .modal-overlay.show .modal-content {
   transform: translate3d(0, 0, 0);
+  /* کردنەوە ١٧٠ملی‌چرکە بە کێڤێکی بڕیاردەر — خێرا دەست پێدەکات و
+     دەوەستێت، بێ کلکێکی درێژ کە وا دەکات خاو هەست پێبکرێت */
+  transition: transform 0.17s cubic-bezier(0.25, 0.9, 0.3, 1);
 }
 
 .modal-header {
@@ -5381,12 +5388,14 @@ i.moc-avatar {
   max-height: 90vh;
   object-fit: contain;
   border-radius: 16px;
-  transform: scale(0.9);
-  transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  transform: scale(0.92);
+  transition: transform 0.13s cubic-bezier(0.4, 0, 1, 1);
 }
 
 .modal-overlay.show .image-zoom-content {
   transform: scale(1);
+  /* هەمان خێرایی مۆداڵەکانی تر، لەگەڵ باونسێکی سووک */
+  transition: transform 0.19s cubic-bezier(0.2, 0.9, 0.3, 1.15);
 }
 
 /* ================= گەلەری وێنە (Lightbox) ================= */

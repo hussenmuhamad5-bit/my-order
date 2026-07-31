@@ -7643,6 +7643,11 @@
 
             let isKing = (userRole === "پاشا");
             let managerVal = "", adminVal = "", consultantVal = "";
+            // خانە میراتییەکان لە تۆماری خودی دروستکەرەوە دێن، نەک لە لیستی
+            // هەڵبژاردن. لیستەکان تەنها ژێردەستەکان لەخۆ دەگرن، بۆیە کۆدی
+            // خودی دروستکەر (یان سەرووەکانی) هەرگیز تێیدا نییە — پشکنینیان
+            // بەرامبەر بەو لیستانە ڕێگری لە دروستکردنی کلیل دەکرد.
+            let inheritedAdmin = false, inheritedConsultant = false;
 
             if (isKing) {
                 managerVal = document.getElementById('u-manager') ? (document.getElementById('u-manager').getAttribute('data-code') || "") : "";
@@ -7656,6 +7661,8 @@
                 // زنجیرەی سەروو بە میرات دەبردرێت — نەک بە هەڵبژاردنی دروستکەر
                 let ch = inheritedChain(role);
                 managerVal = ch.manager;
+                inheritedAdmin = ch.lockAdmin;
+                inheritedConsultant = ch.lockConsultant;
                 adminVal = ch.lockAdmin ? ch.admin
                     : (document.getElementById('u-admin') ? (document.getElementById('u-admin').getAttribute('data-code') || "") : "");
                 consultantVal = ch.lockConsultant ? ch.consultant
@@ -7666,8 +7673,8 @@
             }
 
             if (isKing && managerVal && !availableManagers.some(m => m.code === managerVal)) { showToast("⚠️ تکایە بەڕێوەبەرێک لە لیستەکە هەڵبژێرە.", "error"); return; }
-            if (adminVal && !availableAdmins.some(a => a.code === adminVal)) { showToast("⚠️ تکایە سەرپەرشتێک لە لیستەکە هەڵبژێرە.", "error"); return; }
-            if (consultantVal && !availableConsultants.some(c => c.code === consultantVal)) { showToast("⚠️ تکایە ڕاوێژکارێک لە لیستەکە هەڵبژێرە.", "error"); return; }
+            if (!inheritedAdmin && adminVal && !availableAdmins.some(a => a.code === adminVal)) { showToast("⚠️ تکایە سەرپەرشتێک لە لیستەکە هەڵبژێرە.", "error"); return; }
+            if (!inheritedConsultant && consultantVal && !availableConsultants.some(c => c.code === consultantVal)) { showToast("⚠️ تکایە ڕاوێژکارێک لە لیستەکە هەڵبژێرە.", "error"); return; }
             if (!name) { showToast("تکایە ناوی سیانی بنووسە!", "error"); return; }
 
             // جادووە نوێیەکە: وەرگرتنی کات و بەروار بە شێوازی 12 کاتژمێری
@@ -7748,6 +7755,8 @@
             let managerVal = document.getElementById('e-manager') ? (document.getElementById('e-manager').getAttribute('data-code') || "") : "";
             let adminVal = document.getElementById('e-admin') ? (document.getElementById('e-admin').getAttribute('data-code') || "") : "";
             let consultantVal = document.getElementById('e-consultant') ? (document.getElementById('e-consultant').getAttribute('data-code') || "") : "";
+            // وەک دروستکردن: خانە میراتییەکان لە لیستی هەڵبژاردندا نین
+            let inheritedAdmin = false, inheritedConsultant = false;
 
             // پاککردنەوەی خانەکانی سەروو بەپێی پلە (وەک دروستکردن) — تا نرخی کۆنی هەڵە خەزن نەبێت
             // بەڕێوەبەر: هیچ سەروویەکی نییە؛ سەرپەرشت: بێ سەرپەرشت/ڕاوێژکار؛ ڕاوێژکار: بێ ڕاوێژکار
@@ -7758,6 +7767,8 @@
             } else {
                 let ch = inheritedChain(role);
                 managerVal = ch.manager;
+                inheritedAdmin = ch.lockAdmin;
+                inheritedConsultant = ch.lockConsultant;
                 if (ch.lockAdmin) adminVal = ch.admin;
                 if (ch.lockConsultant) consultantVal = ch.consultant;
                 if (role === "سەرپەرشت") { adminVal = ""; consultantVal = ""; }
@@ -7767,8 +7778,8 @@
             if (!code || !name) { showToast("تکایە ناوی سیانی بنووسە", "error"); return; }
 
             if (isKing && managerVal && !availableManagers.some(m => m.code === managerVal)) { showToast("⚠️ تکایە بەڕێوەبەرێک لە لیستەکە هەڵبژێرە.", "error"); return; }
-            if (adminVal && !availableAdmins.some(a => a.code === adminVal)) { showToast("⚠️ تکایە سەرپەرشتێک لە لیستەکە هەڵبژێرە.", "error"); return; }
-            if (consultantVal && !availableConsultants.some(c => c.code === consultantVal)) { showToast("⚠️ تکایە ڕاوێژکارێک لە لیستەکە هەڵبژێرە.", "error"); return; }
+            if (!inheritedAdmin && adminVal && !availableAdmins.some(a => a.code === adminVal)) { showToast("⚠️ تکایە سەرپەرشتێک لە لیستەکە هەڵبژێرە.", "error"); return; }
+            if (!inheritedConsultant && consultantVal && !availableConsultants.some(c => c.code === consultantVal)) { showToast("⚠️ تکایە ڕاوێژکارێک لە لیستەکە هەڵبژێرە.", "error"); return; }
 
             showToast("خەریکی نوێکردنەوە...", "loading");
 
