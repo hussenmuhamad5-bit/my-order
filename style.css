@@ -5203,31 +5203,53 @@ i.moc-avatar {
      GPU لە هەر فرەیمێکدا دەبوو تەواوی شاشە لە نوێوە بلێر بکاتەوە.
      پاشخانەکە ٧٠٪ ڕەق بوو بۆیە بلێرەکە بەزەحمەت دەبینرا — لە جیاتی ئەوە
      تۆزێک تۆختر کرا (0.78) تا هەمان کاریگەریی جیاکردنەوە بدات. */
-  background: rgba(15, 23, 42, 0.78);
   z-index: 2000;
   display: flex;
   align-items: center;
   justify-content: center;
-  opacity: 0;
   pointer-events: none;
   /* visibility: تەنها opacity:0 وا ناکات وێبگەڕ وازی لە نەخشاندنی
      ناوەڕۆکەکە بهێنێت — مۆداڵی زانیاری داواکاری زیاتر لە ١٧٠٠px ناوەڕۆکی
      هەیە کە بەردەوام لە بیرگەی GPU دەمایەوە. بە visibility، کاتێک داخراوە
-     هیچ ناوەڕۆکێکی نانەخشێنرێت. دواخستنی 0.3s وا دەکات لە کاتی داخستندا
+     هیچ ناوەڕۆکێکی نانەخشێنرێت. دواخستنەکە وا دەکات لە کاتی داخستندا
      ئەنیمەیشنی ڕۆچوونەکە تەواو ببینرێت. */
   visibility: hidden;
-  transition: opacity 0.3s ease, visibility 0s linear 0.3s;
+  transition: visibility 0s linear 0.26s;
+}
+
+/* پاشخانە تاریکەکە لێرەیە، نەک لەسەر خودی مۆداڵەکە.
+   پێشتر ئۆپاسیتیی تەواوی مۆداڵەکە ئەنیمەیت دەکرا، واتا GPU لە هەر
+   فرەیمێکدا دەبوو هەموو ناوەڕۆکەکە (زیاتر لە ١٧٠٠px، لەگەڵ گرادیێنت و
+   سێبەر) بە شەفافییەوە تێکەڵ بکات. لەسەر مۆبایل ئەوە هێندە قورس بوو کە
+   هەندێک بەش دەنەخشێنران و هەندێکیان نا — ئەوە بوو ئەو گلیچەی دەیبینی.
+   ئێستا تەنها ڕووبەرێکی ڕەنگی تەخت فەید دەبێت. */
+.modal-overlay::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(15, 23, 42, 0.78);
+  opacity: 0;
+  transition: opacity 0.26s ease;
 }
 
 .modal-overlay.show {
-  opacity: 1;
   pointer-events: auto;
   visibility: visible;
-  transition: opacity 0.3s ease, visibility 0s;
+  transition: visibility 0s;
+}
+
+.modal-overlay.show::before {
+  opacity: 1;
 }
 
 .modal-content {
   background: #ffffff;
+  /* لەسەر پاشخانە تاریکەکە (::before) دەمێنێتەوە */
+  position: relative;
+  z-index: 1;
   width: 90%;
   max-width: 430px;
   /* ماکس ویدت 430px */
@@ -5235,8 +5257,11 @@ i.moc-avatar {
   border-radius: 20px;
   padding: 16px;
   overflow-y: auto;
-  transform: translateY(20px);
-  transition: transform 0.3s ease;
+  /* translate3d نەک translateY: چینی GPU لە سەرەتاوە دروست دەکات، نەک
+     لە ناوەڕاستی ئەنیمەیشندا. دروستکردنی چین لەکاتی جوڵەدا ئەوە بوو کە
+     وای دەکرد کارتەکان بنەخشێنرێن بەڵام پاشخانی سپی مۆداڵ نا. */
+  transform: translate3d(0, 20px, 0);
+  transition: transform 0.26s cubic-bezier(0.22, 1, 0.36, 1);
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
 }
 
@@ -5266,7 +5291,7 @@ i.moc-avatar {
 }
 
 .modal-overlay.show .modal-content {
-  transform: translateY(0);
+  transform: translate3d(0, 0, 0);
 }
 
 .modal-header {
@@ -5350,6 +5375,8 @@ i.moc-avatar {
 }
 
 .image-zoom-content {
+  position: relative;
+  z-index: 1;
   max-width: 95%;
   max-height: 90vh;
   object-fit: contain;
@@ -5366,8 +5393,13 @@ i.moc-avatar {
 /* بلێر لابرا — پاشخانەکە ٩٢٪ ڕەقە بۆیە نەدەبینرا، بەڵام لەگەڵ
    ئەنیمەیشنی ئۆپاسیتیی .modal-overlay دەبووە هۆی پرتە کاتی کردنەوەی گەلەری */
 .gallery-modal {
-  background: rgba(0, 0, 0, 0.94) !important;
+  background: transparent !important;
   padding: 0;
+}
+
+/* پاشخانی گەلەری، هەروەک هی مۆداڵەکانی تر، لە ::beforeـەوە فەید دەبێت */
+.gallery-modal::before {
+  background: rgba(0, 0, 0, 0.94);
 }
 
 .gallery-viewport {
