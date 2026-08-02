@@ -130,7 +130,7 @@
         <input type="text" id="address-details" placeholder="گەڕەک، کۆڵان، نزیکترین شوێن...">
 
         <label>ژمارەی مۆبایل</label>
-        <input type="tel" id="phone1" placeholder="07..." value="07" oninput="formatPhone(this)">
+        <input type="tel" id="phone1" dir="auto" placeholder="07..." value="07" oninput="formatPhone(this)">
 
         <div class="switch-group">
             <label>ژمارەی مۆبایلی تر؟</label>
@@ -148,7 +148,7 @@
                 </div>
             </label>
         </div>
-        <input type="tel" id="phone2" placeholder="07..." value="07" oninput="formatPhone(this)" style="display: none;">
+        <input type="tel" id="phone2" dir="auto" placeholder="07..." value="07" oninput="formatPhone(this)" style="display: none;">
 
         <label>کڕیار هەژماری پەیوەندی ئینتەرنێتی هەیە؟</label>
         <div class="segmented-control social-segmented">
@@ -1047,7 +1047,7 @@
 
         <div id="orders-filter-section" class="sh-collapse">
             <div class="search-group" style="margin-bottom: 12px; margin-top: 5px; position: relative;">
-                <input class="search-input" type="search" id="orders-search-input"
+                <input class="search-input" type="search" id="orders-search-input" dir="auto"
                     placeholder="گەڕان بەناو، مۆبایل، یان کۆد..." oninput="applyOrderFilters()" autocomplete="off" style="padding-left: 48px;" />
                 <button type="button" onclick="triggerOrderScan()" class="scan-search-btn" title="سکانی بارکۆد / QR">
                     <i class='bx bx-qr-scan'></i>
@@ -4104,6 +4104,50 @@
             return String(o.image_url || '').split(',').map(s => s.trim()).filter(Boolean);
         }
 
+        function getEmployeeByCode(code) {
+            if (!code) return null;
+            let key = String(code).trim();
+            if (!key) return null;
+            if (employeeByCode[key]) return employeeByCode[key];
+            let lkey = key.toLowerCase();
+            let foundKey = Object.keys(employeeByCode).find(k => k.toLowerCase() === lkey);
+            return foundKey ? employeeByCode[foundKey] : null;
+        }
+
+        async function ensureSellerLoaded(sellerCode) {
+            if (!sellerCode) return;
+            let code = String(sellerCode).trim();
+            if (!code) return;
+
+            let s = getEmployeeByCode(code);
+            if (!s && typeof supabase !== 'undefined') {
+                try {
+                    const { data: seller } = await supabase.from('employees').select('*').eq('code', code).maybeSingle();
+                    if (seller) {
+                        let c = String(seller.code || '').trim();
+                        if (c) employeeByCode[c] = seller;
+                        s = seller;
+                    }
+                } catch (e) { }
+            }
+
+            if (s) {
+                let chainCodes = [s.manager, s.admin, s.consultant]
+                    .filter(Boolean)
+                    .map(c => String(c).trim());
+                let missing = chainCodes.filter(c => !getEmployeeByCode(c));
+                if (missing.length > 0 && typeof supabase !== 'undefined') {
+                    try {
+                        const { data: hier } = await supabase.from('employees').select('*').in('code', missing);
+                        (hier || []).forEach(h => {
+                            let hc = String(h.code || '').trim();
+                            if (hc) employeeByCode[hc] = h;
+                        });
+                    } catch (e) { }
+                }
+            }
+        }
+
         // خاوەنی ئۆردەر و سلسیلەی سەرۆکایەتییەکەی، وەک دەق.
         // هەمان یاسای بۆکسی فرۆشیار: ئەگەر دەسەڵاتی بینینی ئۆردەری ئەم
         // فرۆشیارە نەبێت، ناوەکەی بەهیچ شێوەیەک کۆپی ناکرێت.
@@ -4113,21 +4157,26 @@
             try { if (!canActOnOrder(o, 'view')) return []; } catch (e) { }
 
             const nameOf = (c) => {
-                const e = employeeByCode[String(c || '').trim()];
+                const e = getEmployeeByCode(c);
                 return (e && e.full_name) ? e.full_name : String(c || '').trim();
             };
 
-            const s = employeeByCode[code];
+            const s = getEmployeeByCode(code);
             const L = [];
-            const role = s ? (normalizeRole(s.role) || 'ئەندام') : '';
-            L.push(`🧑‍💼 خاوەنی ئۆردەر: ${s && s.full_name ? s.full_name : code}${role ? ` (${role})` : ''}`);
+            const role = s ? (normalizeRole(s.role) || 'ئەندام') : (normalizeRole(o.seller_role || '') || 'ئەندام');
+            const ownerName = (s && s.full_name) ? s.full_name : (o.seller_name || code);
+
+            L.push(`🧑‍💼 خاوەنی ئۆردەر: ${ownerName}${role ? ` (${role})` : ''}`);
             L.push(`🆔 کۆد: ${code}`);
-            if (!s) return L;   // تۆمارەکەی هێشتا نەهاتووە یان سڕاوەتەوە
+
+            const managerCode = s ? s.manager : (o.seller_manager || '');
+            const adminCode = s ? s.admin : (o.seller_admin || '');
+            const consultantCode = s ? s.consultant : (o.seller_consultant || '');
 
             const chain = [
-                ['بەڕێوەبەر', s.manager],
-                ['سەرپەرشت', s.admin],
-                ['ڕاوێژکار', s.consultant]
+                ['بەڕێوەبەر', managerCode],
+                ['سەرپەرشت', adminCode],
+                ['ڕاوێژکار', consultantCode]
             ].filter(([, c]) => c);
 
             // سلسیلە نەبوو → هیچ نانووسرێت (بەڕێوەبەر سەرووی خۆی نییە)
@@ -4265,6 +4314,10 @@
             const srcBtn = copyMenuBtn;
             closeCopyMenu();
             if (!o) { showToast("زانیاری ئۆردەرەکە نەدۆزرایەوە", "error"); return; }
+
+            if (o.seller_code) {
+                await ensureSellerLoaded(o.seller_code);
+            }
 
             const text = buildOrderCopyText(o, mode);
             const ok = await copyTextToClipboard(text);
