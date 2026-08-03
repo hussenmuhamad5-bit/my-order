@@ -132,7 +132,10 @@
         <input type="text" id="address-details" placeholder="گەڕەک، کۆڵان، نزیکترین شوێن...">
 
         <label>ژمارەی مۆبایل</label>
-        <input type="text" inputmode="tel" id="phone1" dir="ltr" placeholder="07..." value="07" oninput="formatPhone(this)" style="text-align: left; direction: ltr;">
+        <div class="phone-field" id="phone1-field">
+            <input type="text" inputmode="tel" id="phone1" dir="ltr" placeholder="07..." value="07" oninput="formatPhone(this)" onpaste="handlePhonePaste(event)" style="text-align: left; direction: ltr;">
+            <button type="button" class="phone-paste-btn" onclick="pastePhone('phone1')" title="پەیستکردنی ژمارە" aria-label="پەیستکردنی ژمارەی مۆبایل"><i class='bx bx-paste'></i></button>
+        </div>
 
         <div class="switch-group">
             <label>ژمارەی مۆبایلی تر؟</label>
@@ -150,7 +153,10 @@
                 </div>
             </label>
         </div>
-        <input type="text" inputmode="tel" id="phone2" dir="ltr" placeholder="07..." value="07" oninput="formatPhone(this)" style="display: none; text-align: left; direction: ltr;">
+        <div class="phone-field" id="phone2-field" style="display: none;">
+            <input type="text" inputmode="tel" id="phone2" dir="ltr" placeholder="07..." value="07" oninput="formatPhone(this)" onpaste="handlePhonePaste(event)" style="text-align: left; direction: ltr;">
+            <button type="button" class="phone-paste-btn" onclick="pastePhone('phone2')" title="پەیستکردنی ژمارە" aria-label="پەیستکردنی ژمارەی مۆبایلی دووەم"><i class='bx bx-paste'></i></button>
+        </div>
 
         <label>کڕیار هەژماری پەیوەندی ئینتەرنێتی هەیە؟</label>
         <div class="segmented-control social-segmented">
@@ -4118,14 +4124,127 @@
         let editingOrderId = null;
         let editOrderOrigin = null; // شاشە و شوێنی سکرۆڵی سەرەتا پێش دەستکاریکردنی ئۆردەر (بۆ گەڕانەوە)
 
+        // ============================================================
+        // گەڕانەوە بۆ ئەو شوێنەی دەستکاریی لێوە دەستی پێکرد
+        // ------------------------------------------------------------
+        // ئۆردەر لە چەند شوێنێکەوە دەکرێتەوە: پەڕەی سەرەکی، ئۆردەری
+        // تیم، جزدانەکەم (بە کرتەکردنی جووڵەیەکی دارایی)، و پەڕەی
+        // ئەدمین. پێشتر داخستن هەمیشە دەگەڕایەوە پەڕەی سەرەکی —
+        // بەکارهێنەر شوێنەکەی خۆی لەدەست دەدا.
+        // ============================================================
+        const SCREEN_NAV = {
+            'dashboard-screen': 'nav-dashboard',
+            'orders-management-screen': 'nav-orders-management',
+            'wallet-screen': 'nav-wallet',
+            'admin-screen': 'nav-admin',
+            'settings-screen': 'nav-settings'
+        };
+
+        const SCREEN_SCROLLER = {
+            'dashboard-screen': 'orders-list',
+            'orders-management-screen': 'management-orders-list',
+            'wallet-screen': 'my-transactions-list'
+        };
+
+        function activeScreenId() {
+            let el = document.querySelector('.screen.active');
+            return el ? el.id : 'dashboard-screen';
+        }
+
+        function scrollerForScreen(screenId) {
+            // پەڕەی ئەدمین چەند تابێکی هەیە — ئەوەی دەبینرێت هەڵدەبژێردرێت
+            if (screenId === 'admin-screen') {
+                const tabs = ['edit-users-list', 'profit-users-list', 'wallet-users-list',
+                    'admin-cities-list', 'trash-container'];
+                for (const id of tabs) {
+                    let el = document.getElementById(id);
+                    if (el && el.offsetParent !== null) return id;
+                }
+                return null;
+            }
+            return SCREEN_SCROLLER[screenId] || null;
+        }
+
+        function captureEditOrigin() {
+            let screenId = activeScreenId();
+            if (screenId === 'order-screen') return;   // پێشتر گیراوە
+            let listId = scrollerForScreen(screenId);
+            let el = listId ? document.getElementById(listId) : null;
+            editOrderOrigin = {
+                screenId: screenId,
+                listId: listId,
+                scrollTop: el ? el.scrollTop : 0,
+                navId: SCREEN_NAV[screenId] || null
+            };
+        }
+
+        // reload=true دوای پاشەکەوتکردن (داتاکە گۆڕاوە)، false دوای داخستن
+        function returnFromEdit(reload) {
+            let origin = editOrderOrigin;
+            editOrderOrigin = null;
+
+            let fab = document.getElementById('fab-checkbox');
+            if (fab) fab.checked = false;
+
+            if (!origin) {
+                switchScreen('dashboard-screen');
+                if (reload) {
+                    isDashboardDataLoaded = false;
+                    isManagementDataLoaded = false;
+                    fetchOrders();
+                }
+                return;
+            }
+
+            switchScreen(origin.screenId, origin.navId ? document.getElementById(origin.navId) : null);
+
+            // هەندێک لیست دوای گەڕانەوە دووبارە دەنەخشێنرێن (وەک جزدان)،
+            // بۆیە سکرۆڵەکە چەند جارێک دادەنرێتەوە — بەڵام تەنها ئەگەر
+            // لیستەکە گەڕابێتەوە سەرەوە، نەک ئەگەر بەکارهێنەر خۆی جوڵاندبێتی
+            const restoreScroll = (force) => {
+                let el = origin.listId ? document.getElementById(origin.listId) : null;
+                if (!el) return;
+                if (force || el.scrollTop === 0) el.scrollTop = origin.scrollTop;
+            };
+
+            if (!reload) {
+                restoreScroll(true);
+                requestAnimationFrame(() => restoreScroll(false));
+                setTimeout(() => restoreScroll(false), 350);
+                return;
+            }
+
+            // شاشەی گەڕاوە خۆی نوێ دەکرێتەوە؛ ئەوی تر بە کۆن دادەنرێت
+            let p = null;
+            if (origin.screenId === 'orders-management-screen') {
+                isManagementDataLoaded = true; isDashboardDataLoaded = false;
+                p = loadManagementOrders();
+            } else if (origin.screenId === 'dashboard-screen') {
+                isDashboardDataLoaded = true; isManagementDataLoaded = false;
+                p = fetchOrders();
+            } else {
+                // جزدان/ئەدمین: داتای ئۆردەرەکان کۆن بووە، دواتر نوێ دەبێتەوە
+                isDashboardDataLoaded = false; isManagementDataLoaded = false;
+            }
+            Promise.resolve(p).then(() => {
+                restoreScroll(true);
+                requestAnimationFrame(() => restoreScroll(false));
+                setTimeout(() => restoreScroll(false), 350);
+            });
+        }
+
         function toggleOrderScreen(checkboxElement) {
             if (checkboxElement.checked) {
                 if (editingOrderId !== null) {
                     resetOrderForm();
                 }
+                // ئۆردەری نوێ لە پەڕەی سەرەکییەوە — شوێنی گەڕانەوەی خۆی
+                captureEditOrigin();
                 switchScreen('order-screen');
             } else {
-                switchScreen('dashboard-screen');
+                // داخستن/پاشگەزبوونەوە — گەڕانەوە بۆ هەمان شوێن، نەک پەڕەی سەرەکی
+                resetOrderForm();
+                returnFromEdit(false);
             }
         }
 
@@ -4153,7 +4272,7 @@
 
             let phone2Switch = document.getElementById('switch-phone2');
             if (phone2Switch) phone2Switch.checked = false;
-            document.getElementById('phone2').style.display = 'none';
+            inputHost(document.getElementById('phone2')).style.display = 'none';
 
             document.getElementById('order-notes').value = '';
             document.querySelectorAll('.social-check').forEach(cb => cb.checked = false);
@@ -5537,15 +5656,9 @@
 
             editingOrderId = orderId;
 
-            // خەزنکردنی شاشە و شوێنی سکرۆڵی سەرەتا بۆ گەڕانەوە دوای دەستکاری
-            let mgmtActiveEdit = document.getElementById('orders-management-screen').classList.contains('active');
-            let originListId = mgmtActiveEdit ? 'management-orders-list' : 'orders-list';
-            let originListEl = document.getElementById(originListId);
-            editOrderOrigin = {
-                screenId: mgmtActiveEdit ? 'orders-management-screen' : 'dashboard-screen',
-                listId: originListId,
-                scrollTop: originListEl ? originListEl.scrollTop : 0
-            };
+            // خەزنکردنی شاشە و شوێنی سکرۆڵی سەرەتا بۆ گەڕانەوە دوای دەستکاری.
+            // هەر شاشەیەک بێت — سەرەکی، تیم، جزدان، یان ئەدمین
+            captureEditOrigin();
 
             closeModal(null, 'order-details-modal');
 
@@ -5575,11 +5688,11 @@
             let switchPhone2 = document.getElementById('switch-phone2');
             if (o.phone2) {
                 if (switchPhone2) switchPhone2.checked = true;
-                phone2Input.style.display = 'block';
+                inputHost(phone2Input).style.display = 'block';
                 phone2Input.value = o.phone2;
             } else {
                 if (switchPhone2) switchPhone2.checked = false;
-                phone2Input.style.display = 'none';
+                inputHost(phone2Input).style.display = 'none';
                 phone2Input.value = "07";
             }
 
@@ -5833,30 +5946,15 @@
                 }
 
                 let wasEditing = !!editingOrderId;
-                let origin = editOrderOrigin;
-                editOrderOrigin = null;
                 resetOrderForm();
-                document.getElementById('fab-checkbox').checked = false;
 
-                if (wasEditing && origin) {
-                    // دەستکاری: گەڕانەوە بۆ هەمان شاشە و هەمان شوێنی سکرۆڵ (نەک پەڕەی سەرەکی)
-                    let mgmt = (origin.screenId === 'orders-management-screen');
-                    // شاشەی سەرەتا خۆمان نوێ دەکەینەوە (بەبێ سپینەر)؛ ئەوی تر بە کۆن دادەنێین
-                    if (mgmt) { isManagementDataLoaded = true; isDashboardDataLoaded = false; }
-                    else { isDashboardDataLoaded = true; isManagementDataLoaded = false; }
-                    if (mgmt) switchScreen('orders-management-screen', document.getElementById('nav-orders-management'));
-                    else switchScreen('dashboard-screen');
-                    let reload = mgmt ? loadManagementOrders() : fetchOrders();
-                    Promise.resolve(reload).then(() => {
-                        let el = document.getElementById(origin.listId);
-                        if (el) el.scrollTop = origin.scrollTop;
-                    });
+                if (wasEditing) {
+                    // دەستکاری: گەڕانەوە بۆ هەمان شاشە و هەمان شوێنی سکرۆڵ
+                    returnFromEdit(true);
                 } else {
-                    // ئۆردەری نوێ: وەک جاران بۆ پەڕەی سەرەکی
-                    switchScreen('dashboard-screen');
-                    isDashboardDataLoaded = false;
-                    isManagementDataLoaded = false;
-                    fetchOrders();
+                    // ئۆردەری نوێ: هەمیشە بۆ پەڕەی سەرەکی، تا ئۆردەرە نوێیەکە ببینرێت
+                    editOrderOrigin = null;
+                    returnFromEdit(true);
                 }
 
             } catch (err) {
@@ -6922,6 +7020,95 @@
             input.value = num.toLocaleString('en-US');
         }
 
+        // ============================================================
+        // ناساندنەوەی ژمارەی مۆبایلی عێراقی
+        // ------------------------------------------------------------
+        // خانەکە هەمیشە بە `07`ـەوە دەستپێدەکات و لە ١١ ژمارە تێناپەڕێت،
+        // بۆیە پەیستکردنی ژمارەیەکی تەواو دەیکردە ٠٧ + ٠٧٥٠... و
+        // دوایی دەبڕدرا. لێرەدا هەر شێوەیەکی ژمارە دەگۆڕدرێت بۆ یەک
+        // شێوەی ستاندارد: 07XXXXXXXXX
+        //
+        //   07501234567        →  07501234567
+        //   +964 750 705 9725  →  07507059725
+        //   +9647507059725     →  07507059725
+        //   009647507059725    →  07507059725
+        //   7507059725         →  07507059725
+        //
+        // ئەگەر ژمارەکە نەناسرایەوە `null` دەگەڕێنێتەوە — هیچ شتێکی
+        // نادروست دانانرێت، چونکە ژمارەی هەڵە لە ژمارەی نەبوو خراپترە.
+        // ============================================================
+        function normalizeIraqiMobile(raw) {
+            if (!raw) return null;
+            const txt = toEnglishDigits(String(raw));
+
+            const build = (str) => {
+                let d = String(str).replace(/\D/g, '');
+                if (!d) return null;
+                if (d.startsWith('00964')) d = d.slice(5);
+                else if (d.startsWith('964')) d = d.slice(3);
+                d = d.replace(/^0+/, '');
+                return /^7\d{9}$/.test(d) ? '0' + d : null;
+            };
+
+            // هەموو دەقەکە وەک یەک ژمارە
+            const whole = build(txt);
+            if (whole) return whole;
+
+            // ئەگەرنا: دەقەکە دەکرێت بە پارچە لەسەر پیتەکان، و هەر
+            // پارچەیەک بە تەنها تاقی دەکرێتەوە. بەم شێوەیە «ژمارەکەم
+            // 07501234567 سوپاس» کاردەکات، بەڵام ژمارەیەکی ١٢ ژمارەیی
+            // ناکرێت بە ١١ — ژمارەی هەڵە لە ژمارەی نەبوو خراپترە.
+            const parts = txt.split(/[^\d+\s\-().]+/);
+            for (const p of parts) {
+                const r = build(p);
+                if (r) return r;
+            }
+            return null;
+        }
+
+        // Ctrl+V / پەیستی دەستی — ژمارەکە ڕێک دەخرێت لە جیاتی ئەوەی
+        // بخرێتە پاڵ `07`ـەکەی خانەکەوە
+        function handlePhonePaste(e) {
+            const input = e.target;
+            const cd = e.clipboardData || window.clipboardData;
+            if (!cd) return;
+            const n = normalizeIraqiMobile(cd.getData('text'));
+            if (!n) return;              // نەناسرایەوە → ڕەفتاری ئاسایی + formatPhone
+            e.preventDefault();
+            input.value = n;
+        }
+
+        // دوگمەی پەیست — کلیپبۆرد دەخوێنێتەوە و ژمارەکە ڕێک دەخات
+        async function pastePhone(id) {
+            const input = document.getElementById(id);
+            if (!input) return;
+
+            let text = '';
+            try {
+                if (navigator.clipboard && navigator.clipboard.readText) {
+                    text = await navigator.clipboard.readText();
+                }
+            } catch (err) { text = ''; }
+
+            // هەندێک وێبڤیو (تێلیگرام) ڕێگە بە خوێندنەوەی کلیپبۆرد نادات
+            if (!text) {
+                input.focus();
+                try { input.setSelectionRange(0, input.value.length); } catch (e) { }
+                showToast('کلیپبۆرد ناخوێندرێتەوە — بە دەست پەیست بکە', 'info');
+                return;
+            }
+
+            const n = normalizeIraqiMobile(text);
+            if (!n) {
+                showToast('ژمارەیەکی دروستی مۆبایل لە کلیپبۆرد نەدۆزرایەوە', 'error');
+                return;
+            }
+
+            input.value = n;
+            input.focus();
+            showToast('ژمارەکە دانرا: ' + n, 'success');
+        }
+
         // ژمارەی دانە: تەنها ژمارە بە ئینگلیزی، بەتاڵی ڕێگەپێدراوە لە کاتی نووسیندا
         function formatQtyInput(input) {
             input.value = toEnglishDigits(input.value).replace(/\D/g, '');
@@ -7498,9 +7685,19 @@
             renderImagePreviews();
         }
 
+        // خانەی مۆبایل لەناو `.phone-field`ـدایە (لەبەر دوگمەی پەیست)،
+        // بۆیە شاردنەوە دەبێت لەسەر پێچەکە بێت نەک لەسەر خودی خانەکە —
+        // ئەگەرنا دوگمەکە بە تەنها دەمێنێتەوە
+        function inputHost(input) {
+            if (!input) return null;
+            return (input.closest && input.closest('.phone-field')) || input;
+        }
+
         function toggleInput(inputId, isChecked) {
             let input = document.getElementById(inputId);
-            if (isChecked) { input.style.display = 'block'; } else { input.style.display = 'none'; input.value = ''; }
+            if (!input) return;
+            let host = inputHost(input);
+            if (isChecked) { host.style.display = 'block'; } else { host.style.display = 'none'; input.value = ''; }
         }
 
         // بەشی کاڵای دیاری — وەک ژمارەی دووەمی مۆبایل بە سویچ دەردەکەوێت.
@@ -7798,7 +7995,7 @@
 
             phone2Input.value = backupOrderState.phone2;
             if (phone2Switch) phone2Switch.checked = backupOrderState.switchPhone2;
-            phone2Input.style.display = backupOrderState.switchPhone2 ? 'block' : 'none';
+            inputHost(phone2Input).style.display = backupOrderState.switchPhone2 ? 'block' : 'none';
 
             notesInput.value = backupOrderState.notes;
 
