@@ -1447,13 +1447,17 @@
             <h2 style="text-align: center; margin-bottom: 12px; font-size: 20px;"><i class='bx bx-wallet'></i> جزدانەکەم
             </h2>
             <div class="wallet-card">
-                <h3>پارەی بەردەست (باڵانس)</h3>
+                <h3>کۆی باڵانس</h3>
                 <h1 id="my-wallet-balance">0 د.ع</h1>
+                <!-- دابەشکردن بۆ ئەندام: چەندی ئێستا دەکرێت وەربگیرێت -->
+                <div id="my-bal-split" class="mw-split"></div>
             </div>
             <div class="wallet-card savings" id="my-wallet-savings-container" style="display: none;">
-                <h3>پاشەکەوت</h3>
+                <h3>کۆی پاشەکەوت</h3>
                 <h1 id="my-wallet-savings">0 د.ع</h1>
+                <div id="my-sav-split" class="mw-split"></div>
             </div>
+            <div id="my-hold-note" class="mw-hold-note"></div>
         </div>
         <h3
             style="margin-top: 12px; margin-bottom: 6px; font-size: 14px; color:#1e293b; border-bottom: 2px solid #e2e8f0; padding-bottom: 6px;">
@@ -4634,6 +4638,17 @@
             // مێژوو ئەگەر پێشتر هاتبێت، ڕاستەوخۆ دەنەخشێنرێت
             let cachedLogs = orderLogsCache[String(o.id)];
 
+            // ---- دابەشکردنی قازانج ----
+            // هەرکەسێک بتوانێت ئەم ئۆردەرە ببینێت، یان دەسەڵاتی دابەشکردنی
+            // قازانجی هەبێت، دەبێت بزانێت پارەکە چۆن دابەشکرا
+            let canSeeProfitSplit = canActOnOrder(o, 'view') || can('distribute_profit');
+            let isDeliveredOrReturned = /گەیشت|گەڕا/.test(String(o.status || ''));
+            let profitSplitHtml = (canSeeProfitSplit && isDeliveredOrReturned) ? `
+            <div class="detail-row">
+                <span class="detail-label"><i class='bx bx-pie-chart-alt-2'></i> دابەشکردنی قازانج</span>
+                <div id="order-profit-box" class="oprofit-box">${OPROFIT_SKELETON}</div>
+            </div>` : "";
+
             let reasonInfoHtml = "";
             if (o.return_reason && o.status === 'گەڕاوەتەوە') {
                 reasonInfoHtml = `
@@ -4704,6 +4719,7 @@
                     </div>
                 </div>
             </div>
+            ${profitSplitHtml}
             ${changerInfoHtml}
             ${statusChangerHtml}
             <div class="detail-section" style="margin-top:14px;">
@@ -4723,8 +4739,150 @@
             if (cachedLogs) { try { fillOrderStepTimes(cachedLogs, o); } catch (e) { } }
             else loadOrderLogs(o.id, o);
 
+            if (profitSplitHtml) loadOrderProfitBreakdown(o);
+
             if (showSeller) { if (!sellerHtmlNow) loadSellerInfo(o.seller_code); }
             else if (isOwnerDeleted(o.seller_code)) showOwnerDeletedBanner(o.seller_code);
+        }
+
+        // ============================================================
+        // دابەشکردنی قازانجی ئۆردەر — کێ چەندی بەرکەوت
+        // ------------------------------------------------------------
+        // سەرچاوەکە خودی `transactions`ـە، نەک ژمێریاریەکی نوێ: هەرچی
+        // بەڕاستی خرایە جزدانی خەڵک، هەر ئەوە پیشان دەدرێت.
+        //
+        // شۆفێر جووڵەی دارایی نییە (پارەکەی لە دەرەوەی سیستەمەکە
+        // دەدرێت)، بۆیە بە دەرهاوێشتە دەدۆزرێتەوە. لە کاتی دابەشکردندا:
+        //
+        //     پاشا = کۆی گشتی − (شۆفێر + هەموو ئەوانی تر)
+        //
+        // کەواتە کۆی هەموو جووڵەکان == کۆی گشتی − شۆفێر، واتە:
+        //
+        //     شۆفێر = کۆی گشتی − کۆی جووڵەکان
+        //
+        // ئۆردەری گەڕاوە جووڵەی پێچەوانەی هەیە، بۆیە **کۆی پوخت** بۆ هەر
+        // کەسێک دەژمێردرێت؛ ئەگەر سفر بوو، ئەوە قازانجەکە گەڕێندراوەتەوە.
+        // ============================================================
+        const OPROFIT_SKELETON = `<div class="oprofit-note"><i class='bx bx-loader-alt bx-spin'></i> هێنانی دابەشکردن...</div>`;
+        const OPROFIT_ROLE_RANK = { 'بەڕێوەبەر': 2, 'سەرپەرشت': 3, 'ڕاوێژکار': 4, 'ئەندام': 5 };
+
+        let orderProfitCache = {};
+        let profitEmpCache = {};
+
+        // ئەندامی ئاسایی `employeeByCode`ـی پڕ نییە (تەنها لە شاشەی
+        // بەڕێوەبردندا پڕ دەکرێتەوە)، بۆیە ئەوانەی کەمن بە یەک داواکاری
+        // دەهێنرێن و خەزن دەکرێن
+        async function resolveProfitEmployees(codes) {
+            let out = {}, missing = [];
+            (codes || []).forEach(c => {
+                let k = String(c || '').trim();
+                if (!k || out[k]) return;
+                let e = employeeByCode[k] || profitEmpCache[k];
+                if (e) out[k] = e; else if (!missing.includes(k)) missing.push(k);
+            });
+            if (missing.length) {
+                try {
+                    const { data } = await supabase.from('employees').select('code, full_name, role').in('code', missing);
+                    (data || []).forEach(e => {
+                        let k = String(e.code || '').trim();
+                        if (k) { profitEmpCache[k] = e; out[k] = e; }
+                    });
+                } catch (e) { }
+            }
+            return out;
+        }
+
+        function oprofitRow(icon, label, badge, amount, cls) {
+            // ئەگەر ناوەکە هەمان پلەکە بێت، دووبارەکردنەوەی مانای نییە
+            if (badge && badge === label) badge = '';
+            return `<div class="oprofit-row ${cls || ''}">
+                        <span class="oprofit-who"><i class='bx ${icon}'></i> <span class="oprofit-name">${label}</span>${badge ? `<span class="oprofit-badge">${badge}</span>` : ''}</span>
+                        <b class="oprofit-amt" dir="ltr">${Math.round(amount).toLocaleString()}</b>
+                    </div>`;
+        }
+
+        async function buildProfitBreakdownHtml(o, txs) {
+            if (!txs || txs.length === 0) {
+                return `<div class="oprofit-note"><i class='bx bx-info-circle'></i> هێشتا قازانجی ئەم ئۆردەرە دابەش نەکراوە</div>`;
+            }
+
+            // کۆی پوخت بۆ هەر (کەس + جزدان)
+            let net = {};
+            txs.forEach(t => {
+                let code = String(t.user_code || '').trim();
+                if (!code) return;
+                let isSav = (t.wallet_type === 'savings' || t.type === 'پاشەکەوتی ئۆردەر');
+                let k = code + '|' + (isSav ? 's' : 'b');
+                if (!net[k]) net[k] = { code: code, isSav: isSav, amount: 0 };
+                net[k].amount += parseFloat(t.amount || 0);
+            });
+            let entries = Object.values(net).filter(e => Math.round(e.amount) !== 0);
+
+            if (entries.length === 0) {
+                return `<div class="oprofit-note is-returned"><i class='bx bx-undo'></i> قازانجەکە گەڕێندراوەتەوە — هیچ کەسێک پارەیەکی لەم ئۆردەرەی نەماوە</div>`;
+            }
+
+            const emp = await resolveProfitEmployees(entries.map(e => e.code));
+            const kingCode = globalKingCode ? String(globalKingCode).trim() : '';
+            entries.forEach(e => {
+                let u = emp[e.code];
+                e.name = (u && u.full_name) ? u.full_name : e.code;
+                e.role = u ? normalizeRole(u.role) : '';
+                e.isKing = (e.role === 'پاشا') || (!!kingCode && e.code === kingCode);
+            });
+
+            // ڕیزبەندی: خاوەنی ئۆردەر → سیلسیلەی سەرەوەی → پاشا لە کۆتایی
+            const rank = (e) => e.isKing ? 100 : (e.code === String(o.seller_code || '').trim() ? 0 : (OPROFIT_ROLE_RANK[e.role] || 50));
+            entries.sort((a, b) => (rank(a) - rank(b)) || ((a.isSav ? 1 : 0) - (b.isSav ? 1 : 0)));
+
+            let html = '';
+            entries.forEach(e => {
+                if (e.isSav) {
+                    html += oprofitRow('bx-piggy-bank', `پاشەکەوتی ${e.name}`, '', e.amount, 'is-savings');
+                } else if (e.isKing) {
+                    html += oprofitRow('bx-crown', e.name, 'پاشا', e.amount, 'is-king');
+                } else {
+                    html += oprofitRow('bx-user', e.name, e.role || '', e.amount, '');
+                }
+            });
+
+            // شۆفێر — بە دەرهاوێشتە (بڕوانە سەرەوە)
+            let base = (o.amount_received != null && parseFloat(o.amount_received) > 0)
+                ? parseFloat(o.amount_received) : parseFloat(o.grand_total || 0);
+            let distributed = entries.reduce((s, e) => s + e.amount, 0);
+            let driver = base - distributed;
+            if (Math.round(driver) !== 0) {
+                html += oprofitRow('bx-cycling', 'شۆفێری گەیاندن', '', driver, 'is-driver');
+            }
+
+            html += `<div class="oprofit-row is-total">
+                        <span class="oprofit-who">کۆی گشتی</span>
+                        <b class="oprofit-amt" dir="ltr">${Math.round(base).toLocaleString()} د.ع</b>
+                     </div>`;
+            return html;
+        }
+
+        async function loadOrderProfitBreakdown(o) {
+            const box = document.getElementById('order-profit-box');
+            if (!box || !o) return;
+            try {
+                let txs = orderProfitCache[o.id];
+                if (!txs) {
+                    const { data, error } = await supabase
+                        .from('transactions')
+                        .select('user_code, amount, type, wallet_type')
+                        .eq('order_id', String(o.id));
+                    if (error) throw error;
+                    txs = data || [];
+                    orderProfitCache[o.id] = txs;
+                }
+                let html = await buildProfitBreakdownHtml(o, txs);
+                // لەوانەیە مۆداڵەکە داخرابێت و ئۆردەرێکی تر کرابێتەوە
+                const cur = document.getElementById('order-profit-box');
+                if (cur === box) box.innerHTML = html;
+            } catch (e) {
+                box.innerHTML = `<div class="oprofit-note"><i class='bx bx-error-circle'></i> نەتوانرا دابەشکردنەکە بهێنرێت</div>`;
+            }
         }
 
         // نیشانەی «خاوەنەکەی سڕاوەتەوە» کاتێک بۆکسی فرۆشیار پیشان نادرێت
@@ -8588,6 +8746,10 @@
                 let canSeeSavings = can('view_savings');
                 document.getElementById('my-wallet-savings-container').style.display = canSeeSavings ? 'block' : 'none';
 
+                // پارەی ئامادە — بەبێ چاوەڕوانی، چونکە هەموو مێژووی جووڵەکان
+                // دەخوێنێتەوە و لیستی خوارەوە نابێت لەبەر ئەوە دوابکەوێت
+                loadMyWalletSplit(me ? me.balance : 0, me ? me.savings : 0, canSeeSavings);
+
                 const { data: txsRaw } = await supabase.from('transactions').select('*').eq('user_code', currentUser.code).order('created_at', { ascending: false }).limit(50);
                 // ئەگەر دەسەڵاتی پاشەکەوت نەبوو، جوڵەکانی پاشەکەوت لە لیستەکە دەشاردرێنەوە
                 let txs = (txsRaw || []).filter(tx => canSeeSavings || !(tx.wallet_type === 'savings' || tx.type === 'پاشەکەوتی ئۆردەر'));
@@ -8975,6 +9137,77 @@
                 delete walletHoldCache[code];
                 loadWalletHoldSplit(code, true);
             } catch (e) { showToast("کێشەیەک ڕوویدا", "error"); }
+        }
+
+        // ============================================================
+        // «جزدانەکەم» — پارەی بەردەستی خودی ئەندام
+        // ------------------------------------------------------------
+        // ئەندام دەبێت بزانێت لە کۆی باڵانسەکەی چەندی **ئێستا** دەکرێت
+        // وەریبگرێت. هەمان حیسابی لای ئەدمین بەکاردێت (splitWalletByHold)
+        // تا هەردوو لا هەمان ژمارە ببینن.
+        // ============================================================
+        function mwSplitHtml(b, label) {
+            const n = (v) => Math.round(v).toLocaleString();
+            const neg = Math.round(b.ready) < 0;
+            const icon = neg ? 'bx-error-circle' : 'bx-check-shield';
+            let html = `<div class="mw-split-row is-ready${neg ? ' is-neg' : ''}">
+                            <span><i class='bx ${icon}'></i> ${neg ? 'قەرز' : label}</span>
+                            <b dir="ltr">${n(b.ready)}</b>
+                        </div>`;
+            // «لە چاوەڕوانیدا» تەنها کاتێک دەردەکەوێت کە شتێکی تێدابێت
+            if (Math.round(b.pending) !== 0) {
+                html += `<div class="mw-split-row is-pending">
+                            <span><i class='bx bx-time-five'></i> لە چاوەڕوانیدا</span>
+                            <b dir="ltr">${n(b.pending)}</b>
+                        </div>`;
+            }
+            return html;
+        }
+
+        function renderMyWalletSplit(s, canSeeSavings) {
+            const bal = document.getElementById('my-bal-split');
+            const sav = document.getElementById('my-sav-split');
+            const note = document.getElementById('my-hold-note');
+            if (!bal || !sav || !note) return;
+
+            bal.innerHTML = mwSplitHtml(s.bal, 'دەتوانیت وەریبگریت');
+            sav.innerHTML = canSeeSavings ? mwSplitHtml(s.sav, 'دەتوانیت وەریبگریت') : '';
+
+            // ئەگەر پاشەکەوت نابینرێت، ئۆردەرە چاوەڕوانەکانی ئەویش نابێت
+            // بخرێنە ژمارەکانەوە — ئەندام شتێک دەبینێت کە لێی تێناگات
+            const n = canSeeSavings ? Math.max(s.bal.pendingN, s.sav.pendingN) : s.bal.pendingN;
+            const dues = canSeeSavings ? [s.bal.due, s.sav.due] : [s.bal.due];
+            const due = dues.filter(x => x).sort((a, b) => a - b)[0];
+
+            let html = '';
+            if (n && due) {
+                const d = Math.max(1, Math.ceil((due - Date.now()) / DAY_MS));
+                html = `<div class="mw-hold-row"><i class='bx bx-time-five'></i> ${n} ئۆردەرت لە خولی ${PAYOUT_HOLD_DAYS} ڕۆژدایە · نزیکترین ${d} ڕۆژی ماوە</div>`;
+            } else {
+                html = `<div class="mw-hold-row"><i class='bx bx-check-circle'></i> هەموو پارەکەت ئامادەیە</div>`;
+            }
+
+            if (Math.round(s.bal.ready) < 0 || (canSeeSavings && Math.round(s.sav.ready) < 0)) {
+                html += `<div class="mw-hold-row is-debt"><i class='bx bx-error-circle'></i> قەرزت هەیە — لە ئۆردەری داهاتوو دەبڕدرێت</div>`;
+            }
+            note.innerHTML = html;
+        }
+
+        async function loadMyWalletSplit(balance, savings, canSeeSavings) {
+            const note = document.getElementById('my-hold-note');
+            if (!note || !currentUser) return;
+            note.innerHTML = `<div class="mw-hold-row"><i class='bx bx-loader-alt bx-spin'></i> حیسابکردنی پارەی ئامادە...</div>`;
+            try {
+                const txs = await fetchAllUserTx(currentUser.code);
+                renderMyWalletSplit(splitWalletByHold(txs, balance, savings), canSeeSavings);
+            } catch (e) {
+                // ژمارە هەڵە پیشاندان لە هیچ پیشاندان خراپترە
+                const bal = document.getElementById('my-bal-split');
+                const sav = document.getElementById('my-sav-split');
+                if (bal) bal.innerHTML = '';
+                if (sav) sav.innerHTML = '';
+                note.innerHTML = `<div class="mw-hold-row"><i class='bx bx-error-circle'></i> نەتوانرا پارەی ئامادە حیساب بکرێت</div>`;
+            }
         }
 
         async function loadWalletHoldSplit(code, force) {
