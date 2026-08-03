@@ -183,7 +183,7 @@
                                 d="M9 1v16M1 9h16"></path>
                         </svg>
                     </button>
-                    <input type="text" inputmode="numeric" id="item-qty" value="1" min="1" class="qty-input" placeholder="دانە" style="text-align: center;">
+                    <input type="text" inputmode="numeric" id="item-qty" value="1" min="1" class="qty-input" placeholder="دانە" style="text-align: center;" oninput="formatQtyInput(this)">
                     <button type="button" class="qty-btn minus-btn" onclick="updateQty(-1)">
                         <svg class="qty-icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none"
                             viewBox="0 0 18 18">
@@ -237,7 +237,7 @@
                                     stroke-width="2" d="M9 1v16M1 9h16"></path>
                             </svg>
                         </button>
-                        <input type="text" inputmode="numeric" id="gift-qty" value="1" min="1" class="qty-input" placeholder="دانە" style="text-align: center;">
+                        <input type="text" inputmode="numeric" id="gift-qty" value="1" min="1" class="qty-input" placeholder="دانە" style="text-align: center;" oninput="formatQtyInput(this)">
                         <button type="button" class="qty-btn minus-btn" onclick="updateGiftQty(-1)">
                             <svg class="qty-icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none"
                                 viewBox="0 0 18 18">
@@ -6746,10 +6746,12 @@
         }
 
         function toEnglishDigits(str) {
-            if (!str) return '';
+            if (str === null || str === undefined) return '';
             return String(str)
-                .replace(/[٠-٩]/g, d => String.fromCharCode(d.charCodeAt(0) - 1632))
-                .replace(/[۰-۹]/g, d => String.fromCharCode(d.charCodeAt(0) - 1776));
+                .replace(/[٠-٩]/g, d => String.fromCharCode(d.charCodeAt(0) - 0x0660 + 48))
+                .replace(/[۰-۹]/g, d => String.fromCharCode(d.charCodeAt(0) - 0x06F0 + 48))
+                .replace(/[०-९]/g, d => String.fromCharCode(d.charCodeAt(0) - 0x0966 + 48))
+                .replace(/[٫٬، ‎‏‪-‮⁦-⁩]/g, '');
         }
 
         function formatPriceInput(input) {
@@ -6760,6 +6762,11 @@
             }
             let num = parseInt(raw, 10);
             input.value = num.toLocaleString('en-US');
+        }
+
+        // ژمارەی دانە: تەنها ژمارە بە ئینگلیزی، بەتاڵی ڕێگەپێدراوە لە کاتی نووسیندا
+        function formatQtyInput(input) {
+            input.value = toEnglishDigits(input.value).replace(/\D/g, '');
         }
 
         function formatPhone(input) {
