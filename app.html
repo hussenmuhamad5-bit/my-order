@@ -332,6 +332,112 @@
                 <input type="text" inputmode="numeric" id="amount-received" placeholder="بڕی پارەی وەرگیراو بنووسە..." oninput="formatPriceInput(this); updateCartUI();"
                     style="width:100%; height:45px; padding:0 16px; font-family:inherit; font-size:15px; border:1px solid #e2e8f0; border-radius:10px; background:#f8fafc; box-sizing:border-box;">
             </div>
+
+            <!-- پارەی پێشوەخت — کڕیار بە FastPay/FIB/بانک پارەی داوە، یان
+                 خاوەنی ئۆردەرەکە لە جزدانی خۆیەوە دەیدات. بەهەردوو حاڵەت
+                 شۆفێر تەنها ئەوەی ماوە وەردەگرێت، و کۆی گشتی و دابەشکردنی
+                 قازانج بە هیچ شێوەیەک ناگۆڕێن. -->
+            <div class="switch-group" style="margin-top:14px; padding-top:12px; border-top:1px dashed #ccc;">
+                <label style="font-size:13px; color:#475569; font-weight:700;">پارە پێشوەخت دراوە؟</label>
+                <label class="switch">
+                    <input type="checkbox" id="switch-prepaid" onchange="togglePrepaidSection(this.checked)">
+                    <div class="slider">
+                        <div class="circle"><svg class="cross" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="4">
+                                <line x1="18" y1="6" x2="6" y2="18"></line>
+                                <line x1="6" y1="6" x2="18" y2="18"></line>
+                            </svg><svg class="checkmark" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="4">
+                                <polyline points="20 6 9 17 4 12"></polyline>
+                            </svg></div>
+                    </div>
+                </label>
+            </div>
+
+            <div id="prepaid-section" style="display:none;">
+                <label style="font-size:13px; color:#475569; font-weight:700; display:block; margin:8px 0 6px;">شێوازی
+                    پارەدان</label>
+
+                <!-- پارەدان لە جزدانی خودی خاوەنی ئۆردەر — تەنها لە پارەی
+                     «ئامادە» (ئەوەی خولی چاوەڕوانی تەواوکردووە) -->
+                <label class="wallet-pay-opt" id="wallet-pay-opt">
+                    <input type="radio" name="prepaid_method" value="wallet" onchange="onWalletPaySelected()">
+                    <span class="wpo-box">
+                        <i class='bx bx-wallet'></i>
+                        <span class="wpo-txt">
+                            <b>لە جزدانی خۆم کەم بکرێتەوە</b>
+                            <small id="wallet-pay-ready">پارەی ئامادە: —</small>
+                        </span>
+                        <i class='bx bx-check-circle wpo-tick'></i>
+                    </span>
+                </label>
+
+                <!-- کاتێک ئۆردەری کەسێکی تر دەستکاری دەکرێت — جزدانی ئەو
+                     دەستی لێ نادرێت -->
+                <div class="wallet-pay-lock" id="wallet-pay-lock" style="display:none;">
+                    <i class='bx bx-lock-alt'></i>
+                    <span>پارەکە لە جزدانی خاوەنی ئۆردەرەکەوە دراوە — تەنها خۆی دەتوانێت بیگۆڕێت.</span>
+                </div>
+
+                <div class="segmented-control pay-segmented" id="prepaid-method-tabs" style="margin-bottom:14px;">
+                    <label><input type="radio" name="prepaid_method" value="fastpay"
+                            onchange="updateCartUI()"><span>FastPay</span></label>
+                    <label><input type="radio" name="prepaid_method" value="fib"
+                            onchange="updateCartUI()"><span>FIB</span></label>
+                    <label><input type="radio" name="prepaid_method" value="bank"
+                            onchange="updateCartUI()"><span>بانک</span></label>
+                    <label><input type="radio" name="prepaid_method" value="other"
+                            onchange="updateCartUI()"><span>تر</span></label>
+                </div>
+
+                <div class="sal-field" id="prepaid-field">
+                    <div class="sal-head">
+                        <label style="margin:0;">بڕی پارەی پێشوەخت دراو</label>
+                        <button type="button" class="sal-max" id="prepaid-all-btn" onclick="prepaidAll()">هەمووی: <b
+                                id="prepaid-max">0</b></button>
+                    </div>
+                    <input type="text" inputmode="numeric" id="prepaid-amount"
+                        placeholder="بڕی پێشوەخت دراو بنووسە..." oninput="formatPriceInput(this); updateCartUI();">
+                    <div class="sal-err" id="prepaid-err"></div>
+                </div>
+
+                <!-- سکرینشۆتی پارەدان — مەرجە، ئەگەرنا هیچ بەڵگەیەک نییە
+                     کە پارەکە بەڕاستی دراوە. لە پارەدانی جزداندا پێویست
+                     نییە، چونکە خودی جووڵەی جزدان بەڵگەکەیە -->
+                <div id="pay-proof-wrap">
+                <label style="font-size:13px; color:#475569; font-weight:700; display:block; margin:12px 0 6px;">
+                    سکرینشۆتی پارەدان <span style="color:#dc2626;">*</span>
+                </label>
+                <div class="pay-proof" id="pay-proof-box" onclick="pickPaymentProof()">
+                    <div class="pay-proof-empty" id="pay-proof-empty">
+                        <i class='bx bx-image-add'></i>
+                        <span>وێنەی پارەدانەکە هەڵبژێرە</span>
+                    </div>
+                    <div class="pay-proof-thumb" id="pay-proof-thumb" style="display:none;">
+                        <img id="pay-proof-img" alt="سکرینشۆتی پارەدان">
+                        <button type="button" class="pay-proof-del" onclick="event.stopPropagation(); removePaymentProof()"
+                            aria-label="سڕینەوەی وێنە"><i class='bx bx-x'></i></button>
+                    </div>
+                    <div class="pay-proof-load" id="pay-proof-load" style="display:none;">
+                        <i class='bx bx-loader-alt bx-spin'></i> <span id="pay-proof-pct">0%</span>
+                    </div>
+                </div>
+                <div class="sal-err" id="pay-proof-err"></div>
+                <input id="pay-proof-file" type="file" accept="image/*" style="display:none;"
+                    onchange="handlePaymentProof(this)">
+                </div>
+            </div>
+
+            <div id="sum-prepaid-row"
+                style="display:none; justify-content:space-between; margin-top:10px; color:#0f766e; font-size:14px;">
+                <span><i class='bx bx-check-shield'></i> پارەی پێشوەخت دراو:</span>
+                <strong>− <span id="sum-prepaid">0</span> دینار</strong>
+            </div>
+            <div id="sum-cod-row" class="prepaid-cod" style="display:none;">
+                <span><i class='bx bx-cycling'></i> شۆفێر لە کڕیار وەریدەگرێت</span>
+                <span class="prepaid-cod-amt"><span id="sum-cod" dir="ltr">0</span> د.ع</span>
+                <span class="paid-stamp" id="sum-cod-badge">پارە بەتەواوی دراوە</span>
+            </div>
         </div>
 
         <button class="btn btn-send-order" onclick="submitOrder()"><span class="bso-txt">ناردنی داواکاری</span> <i
@@ -859,12 +965,21 @@
                         style="background:rgba(36,129,204,0.05); border:1px solid rgba(36,129,204,0.2); padding:15px; border-radius:12px; margin-bottom:20px;">
                         <h4 style="margin:0 0 10px 0; color:var(--primary);"><i class='bx bx-map-pin'></i> زیادکردنی شار
                         </h4>
-                        <input type="text" id="c-name" placeholder="ناوی شار (نموونە: هەولێر)">
+                        <!-- ناوی شار: لەکاتی نووسیندا شارە هاوشێوەکان پیشان
+                             دەدرێن، و ئەگەر ناوەکە پێشتر تۆمار کرابێت
+                             ڕاستەوخۆ ئاگادار دەکرێتەوە و زیادکردن ڕادەگیرێت -->
+                        <div id="c-name-wrapper" style="position:relative;">
+                            <input type="text" id="c-name" placeholder="ناوی شار (نموونە: هەولێر)" autocomplete="off"
+                                oninput="onCityNameInput()" onfocus="onCityNameInput()">
+                            <div class="city-suggest" id="c-name-suggest"></div>
+                        </div>
+                        <div class="city-dupe" id="c-name-dupe" style="display:none;"></div>
                         <div style="display:flex; gap:10px;">
                             <input type="number" id="c-real" placeholder="نرخی شۆفێر">
                             <input type="number" id="c-display" placeholder="نرخی لای ئەندام">
                         </div>
-                        <button class="btn" style="margin-top:0;" onclick="addCity()"><i class='bx bx-plus'></i>
+                        <button class="btn" id="c-add-btn" style="margin-top:0;" onclick="addCity()"><i
+                                class='bx bx-plus'></i>
                             زیادکردن</button>
                     </div>
                     <h4 style="margin:0 0 10px 0; color:#333;">لیستی شارەکان</h4>
@@ -3280,6 +3395,10 @@
             // === ئەم دێڕە کێشەی جزدان چارەسەر دەکات ===
             if (screenId === 'wallet-screen') loadMyWalletData();
 
+            // فۆرمی ئۆردەر: پارەی ئامادەی جزدان لەوانەیە لەم ماوەیەدا
+            // گۆڕابێت (ئۆردەرێکی تر، مووچە...) — بۆیە دووبارە دەهێنرێت
+            if (screenId === 'order-screen') walletReadyState.loaded = false;
+
             if (screenId === 'admin-screen' && !isAdminDataLoaded) {
                 document.getElementById('admin-screen-content').style.display = 'none';
                 document.getElementById('admin-loading-spinner').style.display = 'flex';
@@ -3449,6 +3568,7 @@
                             <p class="moc-price"><span dir="ltr">${total}</span><em>د.ع</em></p>
                         </div>
                         <div class="moc-meta">
+                            ${paidStampHtml(o)}
                             <span class="moc-chip"><i class='bx bx-calendar'></i><span dir="ltr">${explicitDateOnly} · ${explicitTimeOnly}</span></span>
                             <span class="moc-chip"><i class='bx bx-map'></i>${city}</span>
                             <span class="moc-chip"><i class='bx bx-history'></i>${relativeTime}</span>
@@ -3729,6 +3849,7 @@
                 </div>
                 <div class="mocc-bottom">
                     <div class="mocc-meta">
+                        ${paidStampHtml(o)}
                         <span class="mocc-chip"><i class='bx bx-calendar'></i><span dir="ltr">${dateTime}</span></span>
                         <span class="mocc-chip mocc-chip-plain"><i class='bx bx-map'></i>${city}</span>
                         <span class="mocc-chip mocc-chip-plain"><i class='bx bx-history'></i>${relTime}</span>
@@ -4165,16 +4286,27 @@
             return SCREEN_SCROLLER[screenId] || null;
         }
 
+        // مۆدالی «دواین جوڵە داراییەکان» — ئۆردەر لەوێشەوە دەکرێتەوە،
+        // بۆیە دەبێت لەگەڵ شاشەکەدا بگەڕێتەوە
+        function txModalOpen() {
+            let m = document.getElementById('wallet-transactions-modal');
+            return !!(m && m.classList.contains('show'));
+        }
+
         function captureEditOrigin() {
             let screenId = activeScreenId();
             if (screenId === 'order-screen') return;   // پێشتر گیراوە
             let listId = scrollerForScreen(screenId);
             let el = listId ? document.getElementById(listId) : null;
+            let txBody = document.getElementById('wallet-tx-modal-body');
             editOrderOrigin = {
                 screenId: screenId,
                 listId: listId,
                 scrollTop: el ? el.scrollTop : 0,
-                navId: SCREEN_NAV[screenId] || null
+                navId: SCREEN_NAV[screenId] || null,
+                txModal: txModalOpen(),
+                txCode: window.currentWalletCode || '',
+                txScrollTop: txBody ? txBody.scrollTop : 0
             };
         }
 
@@ -4207,10 +4339,26 @@
                 if (force || el.scrollTop === 0) el.scrollTop = origin.scrollTop;
             };
 
+            // مۆدالی جوڵە داراییەکان: لە کاتی دەستکاریدا داخرابوو،
+            // بۆیە دەکرێتەوە و شوێنی سکرۆڵەکەشی دەگەڕێتەوە
+            const restoreTxModal = () => {
+                if (!origin.txModal) return;
+                if (origin.txCode) window.currentWalletCode = origin.txCode;
+                if (!window.currentWalletCode) return;
+                openWalletTransactionsModal();
+                const put = () => {
+                    let b = document.getElementById('wallet-tx-modal-body');
+                    if (b && b.scrollTop === 0) b.scrollTop = origin.txScrollTop;
+                };
+                requestAnimationFrame(put);
+                setTimeout(put, 350);
+            };
+
             if (!reload) {
                 restoreScroll(true);
                 requestAnimationFrame(() => restoreScroll(false));
                 setTimeout(() => restoreScroll(false), 350);
+                restoreTxModal();
                 return;
             }
 
@@ -4230,6 +4378,9 @@
                 restoreScroll(true);
                 requestAnimationFrame(() => restoreScroll(false));
                 setTimeout(() => restoreScroll(false), 350);
+                // ئۆردەرەکە گۆڕاوە → لیستی جوڵەکان بە نوێی دەهێنرێتەوە
+                if (origin.txModal && origin.txCode) delete walletTxCache[origin.txCode];
+                restoreTxModal();
             });
         }
 
@@ -4250,6 +4401,8 @@
 
         function resetOrderForm() {
             editingOrderId = null;
+            editingOrderWalletPaid = 0;
+            walletPayLocked = false;
             let h2 = document.querySelector('#order-screen h2');
             if (h2) h2.innerHTML = "<i class='bx bx-cart-add'></i> ئۆردەری نوێ";
 
@@ -4277,6 +4430,7 @@
             document.getElementById('order-notes').value = '';
             document.querySelectorAll('.social-check').forEach(cb => cb.checked = false);
             document.getElementById('amount-received').value = '';
+            applyPrepaidState(0, '', '');
 
             cart = [];
             giftCart = [];
@@ -4412,11 +4566,260 @@
                 - Number(o.items_total || 0) - Number(o.gift_total || 0);
         }
 
+        // ============================================================
+        // پارەی پێشوەخت دراو (FastPay / FIB / بانک / جزدان)
+        // ------------------------------------------------------------
+        // کڕیار لەوانەیە پێشتر پارەکەی دابێت، بۆیە شۆفێر تەنها ئەوەی
+        // ماوە وەردەگرێت — زۆرجار سفر. بەڵام **کۆی گشتی ناگۆڕێت**:
+        // پارەکە هەر گەیشتووەتە کۆمپانیاکە، تەنها لە ڕێگەیەکی تر.
+        // بۆیە قازانج و دابەشکردنەکەی بە هیچ شێوەیەک کاریگەر نابن.
+        //
+        //     کۆی گشتی − پێشوەخت دراو = ئەوەی شۆفێر وەریدەگرێت
+        //
+        // شێوازی «جزدان» هەمان لۆجیکی هەیە، بەڵام سەرچاوەی پارەکە
+        // جزدانی خودی خاوەنی ئۆردەرەکەیە: کاتێک ئۆردەرەکە دەنێردرێت
+        // بڕەکە لە باڵانسی کەم دەکرێتەوە و وەک جووڵەیەکی دارایی تۆمار
+        // دەکرێت. ئەگەر ئۆردەرەکە بگەڕێتەوە یان بسڕدرێتەوە، پارەکە
+        // خۆکارانە دەگەڕێتەوە جزدانەکەی.
+        // ============================================================
+        const PAYMENT_METHODS = [
+            { value: 'fastpay', label: 'FastPay' },
+            { value: 'fib', label: 'FIB' },
+            { value: 'bank', label: 'بانک' },
+            { value: 'other', label: 'تر' },
+            { value: 'wallet', label: 'جزدان' }
+        ];
+
+        // جۆری جووڵەی دارایی بۆ پارەدان لە جزدان و گەڕاندنەوەی
+        const WALLET_PAY_TYPE = 'پارەدانی ئۆردەر لە جزدان';
+        const WALLET_REFUND_TYPE = 'گەڕانەوەی پارەی جزدان';
+        const isWalletPayTx = (t) => !!t && (t.type === WALLET_PAY_TYPE || t.type === WALLET_REFUND_TYPE);
+
+        // ئایا ئەم ئۆردەرە لە جزدانەوە پارەی دراوە؟
+        function orderWalletPaid(o) {
+            return (o && String(o.payment_method || '').toLowerCase() === 'wallet') ? orderPrepaid(o) : 0;
+        }
+
+        // ============================================================
+        // ئەنجینی پارەدان لە جزدان
+        // ------------------------------------------------------------
+        // تاقە شوێن بۆ کەمکردنەوە/گەڕاندنەوەی پارەی جزدان لەسەر ئۆردەرێک.
+        // دووبارە بانگکردنی زیانی نییە (idempotent): هەمیشە سەرەتا ئەوەی
+        // پێشتر لەم ئۆردەرەدا دراوە دەخوێنێتەوە، پاشان تەنها جیاوازییەکە
+        // جێبەجێ دەکات:
+        //     desired = 0  → گەڕاندنەوەی تەواو
+        //     desired = X  → کۆتاییەکەی دەبێتە تەنها X
+        // بۆیە سڕینەوە/گەڕانەوە/دەستکاری هەموویان دەتوانن بانگی بکەن
+        // بەبێ ترسی دووجار بڕین یان دووجار گەڕاندنەوە.
+        // ============================================================
+        async function walletPaidOnOrder(orderId, memberCode) {
+            const { data, error } = await supabase.from('transactions')
+                .select('amount, type').eq('order_id', String(orderId)).eq('user_code', memberCode);
+            if (error) throw error;
+            let paid = 0;
+            (data || []).forEach(t => { if (isWalletPayTx(t)) paid -= parseFloat(t.amount || 0); });
+            return paid;
+        }
+
+        async function syncOrderWalletPayment(orderId, orderCode, memberCode, desiredAmount) {
+            if (!orderId || !memberCode) return 0;
+            const want = Math.max(0, Math.round(parseFloat(desiredAmount) || 0));
+            const paid = await walletPaidOnOrder(orderId, memberCode);
+            const delta = want - paid;                 // + = بڕینی زیاتر، − = گەڕاندنەوە
+            if (Math.abs(delta) < 0.5) return paid;
+
+            const { data: u, error: uErr } = await supabase.from('employees')
+                .select('balance').eq('code', memberCode).single();
+            if (uErr) throw uErr;
+            if (!u) throw new Error('کارمەند نەدۆزرایەوە: ' + memberCode);
+
+            const oldBal = parseFloat(u.balance || 0);
+            const newBal = oldBal - delta;
+
+            const { error: upErr } = await supabase.from('employees')
+                .update({ balance: newBal }).eq('code', memberCode);
+            if (upErr) throw upErr;
+
+            const { error: txErr } = await supabase.from('transactions').insert({
+                user_code: memberCode,
+                order_id: String(orderId),
+                amount: -delta,
+                type: delta > 0 ? WALLET_PAY_TYPE : WALLET_REFUND_TYPE,
+                description: delta > 0
+                    ? `پارەدان لە جزدان بۆ ئۆردەری ${orderCode || orderId}`
+                    : `گەڕانەوەی پارەی جزدان لە ئۆردەری ${orderCode || orderId}`,
+                created_by: userName,
+                wallet_type: 'balance',
+                old_balance: oldBal,
+                new_balance: newBal
+            });
+            // ئەگەر جووڵەکە نەنووسرا، باڵانسەکە دەگەڕێتەوە دۆخی پێشوو —
+            // ئەگەرنا پارەیەک دەبڕدرێت کە هیچ تۆمارێکی نییە
+            if (txErr) {
+                await supabase.from('employees').update({ balance: oldBal }).eq('code', memberCode);
+                throw txErr;
+            }
+
+            invalidateWalletCaches(memberCode);
+            return want;
+        }
+
+        // پاککردنەوەی هەموو کاشەکانی جزدان بۆ ئەم کەسە
+        function invalidateWalletCaches(code) {
+            try {
+                delete walletTxCache[code];
+                delete walletHoldCache[code];
+            } catch (e) { }
+            if (currentUser && String(code) === String(currentUser.code)) {
+                walletReadyState.loaded = false;
+                isWalletDataLoaded = false;
+            }
+        }
+
+        // ============================================================
+        // لای فۆرمەکە — چەند پارەیەکی ئامادە هەیە بۆ خەرجکردن
+        // ------------------------------------------------------------
+        // تەنها «ئامادە» بەکاردێت (ئەوەی خولی ١٠ ڕۆژەی تەواوکردووە).
+        // پارەی لە چاوەڕوانیدا ڕەنگە ئۆردەرەکانی بگەڕێنەوە و باڵانس
+        // بکەوێتە ژێر سفرەوە، بۆیە خەرج ناکرێت.
+        // ============================================================
+        let walletReadyState = { code: null, amount: 0, loaded: false, loading: false };
+        let editingOrderWalletPaid = 0;   // ئەوەی پێشتر لەم ئۆردەرەدا دراوە
+        let walletPayLocked = false;      // ئۆردەری کەسێکی ترە — دەستی لێ نادرێت
+
+        async function fetchWalletReady(code) {
+            const { data: u, error } = await supabase.from('employees')
+                .select('balance, savings').eq('code', code).single();
+            if (error) throw error;
+            const txs = await fetchAllUserTx(code);
+            const s = splitWalletByHold(txs, u ? u.balance : 0, u ? u.savings : 0);
+            return Math.max(0, Math.round(s.bal.ready));
+        }
+
+        async function ensureWalletReady(force) {
+            const code = currentUser && currentUser.code;
+            if (!code) return 0;
+            if (!force && walletReadyState.loaded && walletReadyState.code === code) return walletReadyState.amount;
+            if (walletReadyState.loading) return walletReadyState.amount;
+
+            walletReadyState.loading = true;
+            renderWalletPayOption();
+            try {
+                const ready = await fetchWalletReady(code);
+                walletReadyState = { code: code, amount: ready, loaded: true, loading: false };
+            } catch (e) {
+                console.warn('fetchWalletReady:', e);
+                walletReadyState = { code: code, amount: 0, loaded: false, loading: false, failed: true };
+            }
+            renderWalletPayOption();
+            updateCartUI();
+            return walletReadyState.amount;
+        }
+
+        // هەڵبژاردنی «لە جزدانی خۆم» — هەمیشە ژمارەیەکی تازە دەهێنێت،
+        // چونکە لەوانەیە لە ئامێرێکی تر پارەکەی خەرجکرابێت
+        function onWalletPaySelected() {
+            walletReadyState.failed = false;
+            updateCartUI();
+            ensureWalletReady(true);
+        }
+
+        // ئەوپەڕی بڕی خەرجکردن: پارەی ئامادە + ئەوەی پێشتر لەم ئۆردەرەدا
+        // بڕدراوە (چونکە ئەوە پێشتر لە باڵانسەکە دەرچووە)
+        function walletPayLimit() {
+            return Math.max(0, walletReadyState.amount) + Math.max(0, editingOrderWalletPaid);
+        }
+
+        // ئایا ئەم بەکارهێنەرە بۆی هەیە لە جزدانی خۆی بدات؟
+        // تەنها بۆ ئۆردەری خۆی — نە هی کەسانی تر
+        function walletPayAllowed() {
+            if (!currentUser) return false;
+            if (!editingOrderId) return true;
+            const o = allGlobalOrdersData[editingOrderId];
+            return !o || String(o.seller_code || '') === String(currentUser.code);
+        }
+
+        // نوێکردنەوەی دیمەنی بژاردەی جزدان لە فۆرمەکەدا
+        function renderWalletPayOption() {
+            const opt = document.getElementById('wallet-pay-opt');
+            const lock = document.getElementById('wallet-pay-lock');
+            const info = document.getElementById('wallet-pay-ready');
+            if (!opt) return;
+
+            const allowed = walletPayAllowed();
+            opt.style.display = allowed ? 'block' : 'none';
+            if (lock) lock.style.display = walletPayLocked ? 'flex' : 'none';
+
+            // ئۆردەری کەسێکی تر کە لە جزدانەوە پارەی دراوە: هیچ بەشێکی
+            // پارەدانەکە دەستکاری ناکرێت، ئەگەرنا جزدانی ئەو تێک دەچێت
+            const amtInp = document.getElementById('prepaid-amount');
+            const allBtn = document.getElementById('prepaid-all-btn');
+            const tabs = document.getElementById('prepaid-method-tabs');
+            const swPre = document.getElementById('switch-prepaid');
+            if (amtInp) amtInp.disabled = walletPayLocked;
+            if (allBtn) allBtn.disabled = walletPayLocked;
+            if (swPre) swPre.disabled = walletPayLocked;
+            if (tabs) {
+                tabs.style.pointerEvents = walletPayLocked ? 'none' : '';
+                tabs.style.opacity = walletPayLocked ? '0.55' : '';
+            }
+
+            if (!allowed || !info) return;
+
+            const limit = walletPayLimit();
+            if (walletReadyState.loading) {
+                info.innerText = 'حیسابکردنی پارەی ئامادە...';
+                info.classList.remove('is-low');
+            } else if (walletReadyState.failed) {
+                info.innerText = 'نەتوانرا پارەی ئامادە حیساب بکرێت';
+                info.classList.add('is-low');
+            } else {
+                info.innerText = 'پارەی ئامادە: ' + limit.toLocaleString() + ' د.ع';
+                info.classList.toggle('is-low', limit <= 0);
+            }
+            opt.classList.toggle('is-off', !walletReadyState.loading && !walletReadyState.failed && limit <= 0);
+        }
+
+        function paymentMethodLabel(v) {
+            const m = PAYMENT_METHODS.find(x => x.value === String(v || '').trim().toLowerCase());
+            return m ? m.label : '';
+        }
+
+        function orderPrepaid(o) {
+            const n = parseFloat(o && o.prepaid_amount);
+            return (!isNaN(n) && n > 0) ? n : 0;
+        }
+
+        function orderFullValue(o) {
+            return (o && o.amount_received != null && parseFloat(o.amount_received) > 0)
+                ? parseFloat(o.amount_received) : Number((o && o.grand_total) || 0);
+        }
+
+        // ئۆردەرە کۆنەکان `cod_amount`یان نییە → دەگەڕێتەوە سەر کۆی گشتی.
+        // لایەنی سەلامەت ئەوەیە کە زیاتر وەربگیرێت نەک کەمتر
+        function orderCod(o) {
+            const c = parseFloat(o && o.cod_amount);
+            if (!isNaN(c)) return c;
+            return Math.max(0, orderFullValue(o) - orderPrepaid(o));
+        }
+
+        function orderIsPrepaid(o) { return orderPrepaid(o) > 0; }
+        function orderPaidLabel(o) { return orderCod(o) <= 0 ? 'پارە دراوە' : 'بەشێک دراوە'; }
+
+        // چیپی «پارە دراوە» — لە کارتەکان و زانیاری ئۆردەردا
+        function paidStampHtml(o) {
+            if (!orderIsPrepaid(o)) return '';
+            return `<span class="paid-stamp${orderCod(o) > 0 ? ' is-part' : ''}"><i class='bx bx-check-shield'></i>${orderPaidLabel(o)}</span>`;
+        }
+
         function buildOrderCopyText(o, mode) {
             if (!o) return '';
             const L = [];
             const imgs = orderImageLinks(o);
             const total = Number(o.grand_total || 0).toLocaleString('en-US');
+            const prePaid = orderPrepaid(o);
+            const codLeft = orderCod(o);
+            const payLbl = paymentMethodLabel(o.payment_method);
 
             if (mode === 'customer') {
                 L.push(`👋 بەخێربێیت ${String(o.customer_name || '').trim()}`.trim());
@@ -4426,7 +4829,13 @@
                 if (items.length) { L.push('📦 کاڵاکان:'); L.push(...items); L.push(COPY_SEP); }
                 if (o.address) L.push(`📍 ${o.address}`);
                 if (o.phone1) L.push(`📱 ${o.phone1}`);
-                L.push(`💰 بڕی پارە: ${total} د.ع`);
+                if (prePaid > 0) {
+                    L.push(`💰 کۆی گشتی: ${total} د.ع`);
+                    L.push(`✅ پارەی دراو${payLbl ? ` (${payLbl})` : ''}: ${prePaid.toLocaleString('en-US')} د.ع`);
+                    L.push(`🚚 لە کاتی گەیشتن دەیدەیت: ${codLeft.toLocaleString('en-US')} د.ع`);
+                } else {
+                    L.push(`💰 بڕی پارە: ${total} د.ع`);
+                }
                 if (o.notes) { L.push(COPY_SEP); L.push(`📝 ${o.notes}`); }
             } else {
                 if (o.order_code) L.push(`🧾 ئۆردەر: ${o.order_code}`);
@@ -4451,6 +4860,10 @@
                 L.push(`کۆی کاڵاکان: ${goodsTotal.toLocaleString('en-US')} د.ع`);
                 L.push(`گەیاندن: ${Number(o.delivery_price || 0).toLocaleString('en-US')} د.ع`);
                 L.push(`💰 کۆی گشتی: ${total} د.ع`);
+                if (prePaid > 0) {
+                    L.push(`✅ پێشوەخت دراو${payLbl ? ` (${payLbl})` : ''}: ${prePaid.toLocaleString('en-US')} د.ع`);
+                    L.push(`🚚 وەرگرتن لە کڕیار: ${codLeft.toLocaleString('en-US')} د.ع`);
+                }
                 L.push(`📈 قازانجی ئۆردەر: ${orderMemberProfit(o).toLocaleString('en-US')} د.ع`);
                 if (o.notes) { L.push(COPY_SEP); L.push(`📝 تێبینی: ${o.notes}`); }
                 const dt = formatDateTimeKurdish(o.date || o.created_at);
@@ -4813,7 +5226,7 @@
                 <div class="detail-value" dir="ltr" style="text-align:right;">${formatDateTimeKurdish(o.date || o.created_at)}</div>
             </div>
             <div class="detail-row">
-                <span class="detail-label"><i class='bx bx-wallet'></i> دراوی داواکاری</span>
+                <span class="detail-label"><i class='bx bx-wallet'></i> دراوی داواکاری ${paidStampHtml(o)}</span>
                 <div style="background:#fff; padding:15px; border-radius:10px; margin-top:5px; border:1px solid #e2e8f0; box-shadow:0 2px 5px rgba(0,0,0,0.02);">
                     <div style="display:flex; justify-content:space-between; margin-bottom:8px; color:#555; font-size:14px;">
                         <span>کۆی نرخی کاڵاکان:</span>
@@ -4831,11 +5244,24 @@
                         <span><i class='bx bx-trending-up'></i> قازانجی ئۆردەر:</span>
                         <strong>${detailProfit.toLocaleString()} دینار</strong>
                     </div>
+                    ${orderIsPrepaid(o) ? `<div style="display:flex; justify-content:space-between; margin-bottom:8px; color:#0f766e; font-size:14px;">
+                        <span><i class='bx bx-check-shield'></i> پارەی پێشوەخت دراو${paymentMethodLabel(o.payment_method) ? ` (${paymentMethodLabel(o.payment_method)})` : ''}:</span>
+                        <strong>${orderPrepaid(o).toLocaleString()} دینار</strong>
+                    </div>` : ''}
                     <hr style="border:0; border-top:1px dashed #ccc; margin:10px 0;">
                     <div style="display:flex; justify-content:space-between; color:var(--primary); font-size:18px; font-weight:bold;">
                         <span>کۆی گشتی:</span>
                         <span dir="ltr">${Number(o.grand_total || 0).toLocaleString()} د.ع</span>
                     </div>
+                    ${orderIsPrepaid(o) ? `<div class="prepaid-cod${orderCod(o) <= 0 ? ' is-full' : ''}" style="margin-top:12px;">
+                        <span><i class='bx bx-cycling'></i> شۆفێر لە کڕیار وەریدەگرێت</span>
+                        <span class="prepaid-cod-amt" dir="ltr">${orderCod(o).toLocaleString()} د.ع</span>
+                    </div>` : ''}
+                    ${orderIsPrepaid(o) && o.payment_proof_url ? `<div style="margin-top:10px;">
+                        <span style="font-size:12px; color:#64748b; display:block; margin-bottom:6px;"><i class='bx bx-receipt'></i> سکرینشۆتی پارەدان</span>
+                        <img src="${o.payment_proof_url}" loading="lazy" class="pay-proof-view"
+                            onclick="openImageGallery(['${o.payment_proof_url}'], 0)">
+                    </div>` : ''}
                 </div>
             </div>
             ${profitSplitHtml}
@@ -5455,6 +5881,9 @@
             grand_total: 'کۆی گشتی',
             amount_received: 'بڕی وەرگیراو',
             member_profit: 'قازانجی ئەندام',
+            prepaid_amount: 'پارەی پێشوەخت دراو',
+            payment_method: 'شێوازی پارەدان',
+            payment_proof_url: 'سکرینشۆتی پارەدان',
             notes: 'تێبینی',
             image_url: 'وێنەکان'
         };
@@ -5521,18 +5950,33 @@
                 return;
             }
 
-            // کاتێک دەیکات بە گەڕاوەتەوە، با پارەکان ببڕێتەوە
-            if (newStatus === "گەڕاوەتەوە" && o.status === "گەیشتووە") {
+            // کاتێک دەیکات بە گەڕاوەتەوە، با پارەکان ببڕێتەوە.
+            // ئۆردەری پێش گەیشتنیش لێرەوە تێدەپەڕێت — چونکە لەوانەیە
+            // خاوەنەکەی لە جزدانی خۆیەوە پارەی دابێت، و ئەو پارەیە دەبێت
+            // بگەڕێتەوە. ئەگەر هیچ جووڵەیەکی دارایی نەبێت، هیچ ڕوونادات
+            if (newStatus === "گەڕاوەتەوە" && o.status !== "گەڕاوەتەوە") {
                 if (!reason) { showToast("تکایە هۆکاری گەڕانەوە بە ڕوونی بنووسە!", "error"); return; }
                 showToast("گەڕاندنەوەی پارەکان...", "loading");
                 closeModal(null, 'order-details-modal');
 
                 try {
+                    // پارەی جزدانی خاوەنەکەی بە تەواوی دەگەڕێتەوە.
+                    // بەجیا لە قازانجەکان دەکرێت، چونکە خۆی تۆمارێکی
+                    // «چەندی دراوە» هەیە و دووبارە گەڕاندنەوە ناکات
+                    let walletBack = 0;
+                    if (orderWalletPaid(o) > 0 && o.seller_code) {
+                        walletBack = await walletPaidOnOrder(o.id, o.seller_code);
+                        await syncOrderWalletPayment(o.id, o.order_code, o.seller_code, 0);
+                    }
                     // === لۆجیکی نوێ: گەڕاندنەوە بەپێی «کۆی پوخت» (net) بۆ هەر بەکارهێنەر و هەر جزدان ===
                     // بۆ هەر (بەکارهێنەر + جزدان)، کۆی هەموو جووڵەکانی ئەم ئۆردەرە کۆدەکەینەوە، پاشان ئەو کۆیە دەبڕینەوە
                     // تا دەگاتە 0. ئەمە idempotent ـە: دوای گەڕاندنەوە کۆی پوخت = 0، بۆیە دووبارە کلیک هیچ زیانێک ناگەیەنێت،
                     // هەروەها ئەگەر ئۆردەرێک بە هەڵە چەند جار گەیشتوو کرابێت، تەنها جارێک بۆ 0 دەگەڕێتەوە (خۆچاککردن).
-                    const { data: txs } = await supabase.from('transactions').select('*').eq('order_id', String(o.id));
+                    const { data: txsAll } = await supabase.from('transactions').select('*').eq('order_id', String(o.id));
+                    // جووڵەکانی پارەدانی جزدان لێرەدا نایەنە ژماردن — پێشتر
+                    // بە تەواوی گەڕێندرانەوە، و ئەگەر دووبارە بژمێردرێن
+                    // پارەکە دووجار دەگەڕێتەوە
+                    const txs = (txsAll || []).filter(t => !isWalletPayTx(t));
                     if (txs && txs.length > 0) {
                         let netMap = {}; // key: `${user_code}|${wallet}` -> کۆی پوخت
                         for (let tx of txs) {
@@ -5572,13 +6016,21 @@
                         if (revertTxs.length > 0) await supabase.from('transactions').insert(revertTxs);
                     }
                     await supabase.from('orders').update({ status: newStatus, return_reason: reason, status_changed_by: userName }).eq('id', orderId);
+                    const backNote = walletBack > 0
+                        ? ` ${Math.round(walletBack).toLocaleString()} د.ع گەڕایەوە جزدانی خاوەنەکەی.`
+                        : '';
                     await logOrderAction(o, 'status', {
                         from: o.status, to: newStatus,
-                        detail: `ئۆردەرەکەی کردە گەڕاوە و پارەکان بڕدران. هۆکار: ${reason}`
+                        detail: `ئۆردەرەکەی کردە گەڕاوە و پارەکان بڕدران.${backNote} هۆکار: ${reason}`
                     });
-                    showToast("حاڵەت گۆڕدرا و پارەکان بڕدران!", "success");
+                    showToast(walletBack > 0
+                        ? `حاڵەت گۆڕدرا — ${Math.round(walletBack).toLocaleString()} د.ع گەڕایەوە جزدان!`
+                        : "حاڵەت گۆڕدرا و پارەکان بڕدران!", "success");
                     refreshOrdersKeepScroll();
-                } catch (e) { showToast("هەڵە لە گەڕانەوەدا ڕوویدا", "error"); }
+                } catch (e) {
+                    console.error('return order:', e);
+                    showToast("هەڵە لە گەڕانەوەدا ڕوویدا", "error");
+                }
                 return;
             }
 
@@ -5617,15 +6069,27 @@
             showToast("خەریکی سڕینەوە...", "loading");
 
             try {
+                // ئەگەر لە جزدانەوە پارەی دراوە، پێش سڕینەوە دەگەڕێتەوە —
+                // ئۆردەری سڕاو نابێت پارەی کەسێکی لەگەڵ خۆیدا ببات.
+                // ئەگەر بگەڕێندرێتەوە لە تەنەکەی خۆڵ، دیسان دەبڕدرێت
+                let delWalletBack = 0;
+                if (ordDel && orderWalletPaid(ordDel) > 0 && ordDel.seller_code) {
+                    delWalletBack = await walletPaidOnOrder(orderId, ordDel.seller_code);
+                    await syncOrderWalletPayment(orderId, ordDel.order_code, ordDel.seller_code, 0);
+                }
+
                 // پێش سڕینەوە تۆمار دەکرێت — تا دیار بێت کێ سڕیویەتییەوە
                 await logOrderAction(ordDel || { id: orderId }, 'delete', {
                     from: ordDel ? ordDel.status : null,
                     detail: 'ئۆردەرەکەی سڕییەوە'
+                        + (delWalletBack > 0 ? ` — ${Math.round(delWalletBack).toLocaleString()} د.ع گەڕایەوە جزدان` : '')
                 });
 
                 await deleteWithActor('orders', orderId);
 
-                showToast("🗑️ سڕایەوە — بۆ ٣٠ ڕۆژ لە تەنەکەی خۆڵدایە", "success");
+                showToast(delWalletBack > 0
+                    ? `🗑️ سڕایەوە — ${Math.round(delWalletBack).toLocaleString()} د.ع گەڕایەوە جزدانەکەت`
+                    : "🗑️ سڕایەوە — بۆ ٣٠ ڕۆژ لە تەنەکەی خۆڵدایە", "success");
 
                 refreshOrdersKeepScroll();
             } catch (err) {
@@ -5656,11 +6120,21 @@
 
             editingOrderId = orderId;
 
+            // پارەی جزدان: ئەوەی پێشتر لەم ئۆردەرەدا بڕدراوە دەکرێت
+            // دووبارە دابەش بکرێت، بەڵام تەنها لەلایەن خودی خاوەنەکەیەوە.
+            // بۆ کەسانی تر قوفڵ دەکرێت — جزدانی کەسێکی تر دەستی لێ نادرێت
+            editingOrderWalletPaid = orderWalletPaid(o);
+            walletPayLocked = editingOrderWalletPaid > 0
+                && String(o.seller_code || '') !== String(currentUser.code);
+
             // خەزنکردنی شاشە و شوێنی سکرۆڵی سەرەتا بۆ گەڕانەوە دوای دەستکاری.
             // هەر شاشەیەک بێت — سەرەکی، تیم، جزدان، یان ئەدمین
             captureEditOrigin();
 
             closeModal(null, 'order-details-modal');
+            // مۆدالی جوڵە داراییەکان لەسەر فۆڕمی دەستکاری دەمایەوە —
+            // دادەخرێت، و لە `returnFromEdit`ـدا دەکرێتەوە
+            closeModal(null, 'wallet-transactions-modal');
 
             let customerInput = document.getElementById('customerName');
             let switchCustomer = document.getElementById('switch-customer');
@@ -5730,6 +6204,7 @@
             // ئۆردەرێک کە دیاری هەیە، سویچەکەی بە کراوەیی دەکرێتەوە
             syncGiftSwitch();
             document.getElementById('amount-received').value = (o.amount_received != null && o.amount_received !== "") ? o.amount_received : "";
+            applyPrepaidState(o.prepaid_amount, o.payment_method, o.payment_proof_url);
             updateCartUI();
 
             document.getElementById('order-notes').value = o.notes || "";
@@ -5825,6 +6300,88 @@
                 return;
             }
 
+            // ---- پشکنینی پارەی پێشوەخت دراو ----
+            const prepaidOn = !!(document.getElementById('switch-prepaid') || {}).checked;
+            let prepaidAmount = prepaidOn ? readMoneyInput('prepaid-amount') : 0;
+            let paymentMethod = prepaidOn ? formPaymentMethod() : '';
+
+            // ئۆردەری کەسێکی تر کە لە جزدانەوە پارەی دراوە: پارەدانەکەی
+            // وەک خۆی دەمێنێتەوە، دەستی لێ نادرێت
+            const editedOrder = editingOrderId ? allGlobalOrdersData[editingOrderId] : null;
+            if (walletPayLocked && editedOrder) {
+                prepaidAmount = orderPrepaid(editedOrder);
+                paymentMethod = 'wallet';
+            }
+
+            const isWalletPay = prepaidOn && paymentMethod === 'wallet';
+            // خاوەنی جزدانەکە — هەمیشە خاوەنی ئۆردەرەکەیە، نەک ئەوەی
+            // دەستکاری دەکات
+            const walletOwnerCode = editedOrder
+                ? String(editedOrder.seller_code || '')
+                : String(currentUser.code);
+
+            if (prepaidOn && !walletPayLocked) {
+                if (prepaidAmount <= 0) {
+                    showToast("تکایە بڕی پارەی پێشوەخت دراو بنووسە!", "error");
+                    return;
+                }
+                if (!paymentMethod) {
+                    showToast("تکایە شێوازی پارەدان هەڵبژێرە! (جزدان / FastPay / FIB / بانک / تر)", "error");
+                    return;
+                }
+                if (isWalletPay) {
+                    // پارەدان لە جزدان: بەڵگە پێویست نییە (خودی جووڵەکە
+                    // بەڵگەکەیە)، بەڵام دەبێت پارەکە بەڕاستی ئامادە بێت.
+                    // باڵانسەکە **لەم ساتەدا** دووبارە دەپشکنرێت — لەوانەیە
+                    // لەکاتی پڕکردنەوەی فۆرمەکەدا گۆڕابێت
+                    if (walletOwnerCode !== String(currentUser.code)) {
+                        showToast("تەنها خاوەنی ئۆردەرەکە دەتوانێت لە جزدانی خۆی بدات!", "error");
+                        return;
+                    }
+                    showToast("پشکنینی جزدان...", "loading");
+                    let freshReady = 0;
+                    try {
+                        freshReady = await fetchWalletReady(currentUser.code);
+                    } catch (e) {
+                        showToast("نەتوانرا باڵانسی جزدانت بپشکنرێت — دووبارە هەوڵبدە", "error");
+                        return;
+                    }
+                    walletReadyState = { code: currentUser.code, amount: freshReady, loaded: true, loading: false };
+                    renderWalletPayOption();
+
+                    // ئەوەی پێشتر لەم ئۆردەرەدا بڕدراوە دەگەڕێتەوە ناو
+                    // بەردەستەکە، چونکە پێشتر لە باڵانسەکە دەرچووە
+                    const limit = freshReady + Math.max(0, editingOrderWalletPaid);
+                    if (limit <= 0) {
+                        showToast("⚠️ پارەی ئامادەت لە جزداندا نییە — ناتوانیت لە جزدانەوە بیدەیت.", "error");
+                        return;
+                    }
+                    if (prepaidAmount > limit) {
+                        showToast(`⚠️ لە جزدانت تەنها ${limit.toLocaleString()} د.ع ئامادەیە! ئەوەی ماوە دەبێت بە دەست بدرێت بە شۆفێر.`, "error");
+                        return;
+                    }
+                } else {
+                    if (paymentProofBusy) {
+                        showToast("چاوەڕێ بکە — سکرینشۆتی پارەدان هێشتا دەنێردرێت...", "info");
+                        return;
+                    }
+                    // بەڵگە مەرجە — بەبێ ئەو، هیچ شتێک نییە کە پارەدانەکە بسەلمێنێت
+                    if (!paymentProofUrl) {
+                        const perr = document.getElementById('pay-proof-err');
+                        if (perr) perr.innerText = 'سکرینشۆتی پارەدان پێویستە';
+                        showToast("⚠️ پێویستە سکرینشۆتی پارەدانەکە ئەپلۆد بکەیت!", "error");
+                        return;
+                    }
+                }
+            }
+            if (prepaidAmount > amountReceived) {
+                showToast("⚠️ پارەی پێشوەخت دراو زیاترە لە کۆی گشتی! ناتوانرێت تۆمار بکرێت.", "error");
+                return;
+            }
+            if (!prepaidOn) paymentMethod = '';
+            // پارەدانی جزدان سکرینشۆتی نییە
+            const savedProofUrl = isWalletPay ? null : (paymentProofUrl || null);
+
             // کۆی گشتی = پارەی وەرگیراو لە کڕیار
             let grandTotal = Number(amountReceived);
             // نرخی دیاری لە قازانجی خاوەنی ئۆردەرەکە دەردەچێت — هی
@@ -5860,6 +6417,9 @@
                         delivery_price: deliveryPrice,
                         grand_total: grandTotal,
                         amount_received: amountReceived,
+                        prepaid_amount: prepaidAmount,
+                        payment_method: prepaidAmount > 0 ? paymentMethod : null,
+                        payment_proof_url: prepaidAmount > 0 ? savedProofUrl : null,
                         member_profit: memberProfit,
                         gift_names: giftNames,
                         gift_qtys: giftQtys,
@@ -5874,6 +6434,25 @@
                     const { error } = await supabase.from('orders').update(updatedFields).eq('id', editingOrderId);
 
                     if (error) throw error;
+
+                    // ڕێکخستنەوەی پارەی جزدان: ئەگەر بڕەکە گۆڕابێت جیاوازییەکە
+                    // دەبڕدرێت، و ئەگەر شێوازەکە لە جزدانەوە گۆڕدرابێت،
+                    // هەموو پارەکە دەگەڕێتەوە
+                    if (!walletPayLocked && (isWalletPay || editingOrderWalletPaid > 0)) {
+                        try {
+                            await syncOrderWalletPayment(
+                                editingOrderId,
+                                (beforeEdit && beforeEdit.order_code) || editingOrderId,
+                                walletOwnerCode,
+                                isWalletPay ? prepaidAmount : 0
+                            );
+                            editingOrderWalletPaid = isWalletPay ? prepaidAmount : 0;
+                        } catch (e) {
+                            console.error('syncOrderWalletPayment (edit):', e);
+                            showToast("⚠️ ئۆردەرەکە نوێکرایەوە، بەڵام پارەی جزدان ڕێک نەخرا — تکایە دووبارە پاشەکەوتی بکە!", "error");
+                            return;
+                        }
+                    }
 
                     const changed = diffOrderFields(beforeEdit, updatedFields);
                     await logOrderAction(
@@ -5924,6 +6503,9 @@
                         delivery_price: deliveryPrice,
                         grand_total: grandTotal,
                         amount_received: amountReceived,
+                        prepaid_amount: prepaidAmount,
+                        payment_method: prepaidAmount > 0 ? paymentMethod : null,
+                        payment_proof_url: prepaidAmount > 0 ? savedProofUrl : null,
                         member_profit: memberProfit,
                         gift_names: giftNames,
                         gift_qtys: giftQtys,
@@ -5938,9 +6520,30 @@
 
                     if (error) throw error;
                     const newRow = (created && created[0]) ? created[0] : { id: null, order_code: orderCode };
+
+                    // بڕینی پارەکە لە جزدان — دوای دروستبوونی ئۆردەرەکە،
+                    // چونکە جووڵەکە بە ناسنامەی ئۆردەرەکەوە دەبەسترێتەوە.
+                    // ئەگەر بڕینەکە سەرکەوتوو نەبوو، پارەدانەکە لەسەر
+                    // ئۆردەرەکە هەڵدەوەشێتەوە تا ئۆردەرێک نەمێنێتەوە کە
+                    // بڵێت پارەی دراوە بەڵام هیچ پارەیەکی نەبڕدرابێت
+                    if (isWalletPay && newRow.id) {
+                        try {
+                            await syncOrderWalletPayment(newRow.id, orderCode, currentUser.code, prepaidAmount);
+                        } catch (e) {
+                            console.error('syncOrderWalletPayment (create):', e);
+                            try {
+                                await supabase.from('orders')
+                                    .update({ prepaid_amount: 0, payment_method: null, payment_proof_url: null })
+                                    .eq('id', newRow.id);
+                            } catch (e2) { console.error(e2); }
+                            showToast("⚠️ ئۆردەرەکە تۆمار کرا، بەڵام پارەکە لە جزدان نەبڕدرا — وەک پارە نەدراو تۆمار کرا.", "error");
+                        }
+                    }
+
                     await logOrderAction(newRow, 'create', {
                         to: "ئامادە دەکرێت",
                         detail: "ئۆردەرەکەی دروستکرد"
+                            + (isWalletPay ? ` — ${prepaidAmount.toLocaleString()} د.ع لە جزدانی خۆی دا` : '')
                     });
                     showToast("بە سەرکەوتوویی تۆمار کرا!", "success");
                 }
@@ -7199,6 +7802,162 @@
             return cityObj ? Number(cityObj.display_price || 0) : 5000;
         }
 
+        // ---- پارەی پێشوەخت دراو: خوێندنەوە لە فۆڕمەکە ----
+        function readMoneyInput(id) {
+            const el = document.getElementById(id);
+            if (!el) return 0;
+            const raw = toEnglishDigits(el.value).replace(/,/g, '').replace(/\D/g, '');
+            return parseFloat(raw) || 0;
+        }
+
+        // کۆی گشتی وەک لە بۆکسەکەدا دەردەکەوێت — دەبێت هەمان لۆجیکی
+        // دێڕی `grandTotal`ی ناو updateCartUI بێت
+        function formGrandTotal() {
+            const received = readMoneyInput('amount-received');
+            if (received > 0) return received;
+            const itemsTotal = cart.reduce((s, i) => s + (i.qty * i.unitPrice), 0);
+            return itemsTotal + (cart.length > 0 ? getFormDeliveryPrice() : 0);
+        }
+
+        function formPrepaidAmount() {
+            const sw = document.getElementById('switch-prepaid');
+            if (!sw || !sw.checked) return 0;
+            return readMoneyInput('prepaid-amount');
+        }
+
+        function formPaymentMethod() {
+            const sw = document.getElementById('switch-prepaid');
+            if (!sw || !sw.checked) return '';
+            const r = document.querySelector('input[name="prepaid_method"]:checked');
+            return r ? r.value : '';
+        }
+
+        // تاقە شوێن بۆ ڕێکخستنی دۆخی پێشوەخت — لە دەستکاری، پاککردنەوە،
+        // و کوژاندنەوەی سویچەکەوە بانگ دەکرێت
+        // پێش `applyPrepaidState` ڕاگەیەنراون، چونکە ئەو دەستیان لێدەدات
+        // و `let` هەڵناگیرێت (TDZ)
+        let paymentProofUrl = '';
+        let paymentProofBusy = false;
+
+        function applyPrepaidState(amount, method, proofUrl) {
+            const amt = parseFloat(amount) || 0;
+            const sw = document.getElementById('switch-prepaid');
+            const box = document.getElementById('prepaid-section');
+            const inp = document.getElementById('prepaid-amount');
+            if (sw) sw.checked = amt > 0;
+            if (box) box.style.display = amt > 0 ? 'block' : 'none';
+            if (inp) {
+                inp.value = amt > 0 ? String(amt) : '';
+                if (amt > 0) formatPriceInput(inp);
+            }
+            const m = String(method || '').trim().toLowerCase();
+            document.querySelectorAll('input[name="prepaid_method"]').forEach(r => { r.checked = (r.value === m); });
+            const err = document.getElementById('prepaid-err');
+            if (err) err.innerText = '';
+            const f = document.getElementById('prepaid-field');
+            if (f) f.classList.remove('is-over');
+            const perr = document.getElementById('pay-proof-err');
+            if (perr) perr.innerText = '';
+            paymentProofBusy = false;
+            setPaymentProof(amt > 0 ? (proofUrl || '') : '');
+            // بژاردەی جزدان و بۆکسی سکرینشۆت بەپێی شێوازەکە ڕێک دەخرێن
+            const proofWrap = document.getElementById('pay-proof-wrap');
+            if (proofWrap) proofWrap.style.display = (m === 'wallet') ? 'none' : 'block';
+            renderWalletPayOption();
+            if (m === 'wallet') ensureWalletReady();
+        }
+
+        function togglePrepaidSection(isChecked) {
+            const box = document.getElementById('prepaid-section');
+            if (box) box.style.display = isChecked ? 'block' : 'none';
+            // کوژاندنەوە = سڕینەوەی هەموو زانیارییەکانی پارەدان
+            if (!isChecked) applyPrepaidState(0, '');
+            updateCartUI();
+        }
+
+        function prepaidAll() {
+            const el = document.getElementById('prepaid-amount');
+            if (!el) return;
+            // لە جزداندا «هەمووی» = ئەوەندەی جزدان هەڵیدەگرێت، نەک کۆی گشتی
+            const cap = formPaymentMethod() === 'wallet'
+                ? Math.min(formGrandTotal(), walletPayLimit())
+                : formGrandTotal();
+            el.value = cap.toLocaleString('en-US');
+            updateCartUI();
+        }
+
+        // ============================================================
+        // سکرینشۆتی پارەدان — بەڵگەی ئەوەی پارەکە بەڕاستی دراوە.
+        // مەرجە کاتێک سویچی پێشوەخت کراوەیە. هەمان پایپلاینی وێنەکانی
+        // کاڵا بەکاردێت (compressImage + uploadImage)، بەڵام یەک وێنە
+        // و ستوونێکی جیای خۆی هەیە.
+        // ============================================================
+        function pickPaymentProof() {
+            if (paymentProofBusy) return;
+            const f = document.getElementById('pay-proof-file');
+            if (f) f.click();
+        }
+
+        function renderPaymentProof() {
+            const empty = document.getElementById('pay-proof-empty');
+            const thumb = document.getElementById('pay-proof-thumb');
+            const load = document.getElementById('pay-proof-load');
+            const img = document.getElementById('pay-proof-img');
+            const box = document.getElementById('pay-proof-box');
+            if (!empty || !thumb || !load || !box) return;
+
+            const hasImg = !!paymentProofUrl;
+            empty.style.display = (!hasImg && !paymentProofBusy) ? 'flex' : 'none';
+            thumb.style.display = (hasImg && !paymentProofBusy) ? 'block' : 'none';
+            load.style.display = paymentProofBusy ? 'flex' : 'none';
+            box.classList.toggle('has-img', hasImg && !paymentProofBusy);
+            if (hasImg && img) img.src = paymentProofUrl;
+        }
+
+        function setPaymentProof(url) {
+            paymentProofUrl = url || '';
+            paymentProofBusy = false;
+            const err = document.getElementById('pay-proof-err');
+            if (err && paymentProofUrl) err.innerText = '';
+            renderPaymentProof();
+        }
+
+        function removePaymentProof() {
+            setPaymentProof('');
+        }
+
+        async function handlePaymentProof(input) {
+            const file = (input.files || [])[0];
+            input.value = '';
+            if (!file || !/^image\//i.test(file.type || '')) return;
+
+            paymentProofBusy = true;
+            renderPaymentProof();
+            const pct = document.getElementById('pay-proof-pct');
+            const track = p => { if (pct) pct.innerText = Math.round(p * 100) + '%'; };
+
+            try {
+                const blob = await compressImage(file);
+                track(0.15);
+                const name = 'payproof-' + Date.now() + '.jpg';
+                let url;
+                try {
+                    url = await uploadImage(blob, name, track);
+                } catch (e) {
+                    // ئینتەرنێتی مۆبایل زۆرجار یەکەم جار سەرکەوتوو نابێت
+                    track(0.15);
+                    url = await uploadImage(blob, name, track);
+                }
+                setPaymentProof(url);
+                showToast("سکرینشۆتی پارەدان نێردرا", "success");
+            } catch (err) {
+                console.error('payment proof upload failed:', err);
+                paymentProofBusy = false;
+                renderPaymentProof();
+                showToast("وێنەکە نەنێردرا — دووبارە هەوڵ بدەوە", "error");
+            }
+        }
+
         function updateCartUI() {
             let list = document.getElementById('cart-list');
             if (!list) return;
@@ -7245,6 +8004,69 @@
                 sumProfitEl.innerText = orderProfit.toLocaleString();
                 sumProfitEl.parentElement.style.color = orderProfit < 0 ? '#dc2626' : '#059669';
             }
+
+            // ---- پارەی پێشوەخت دراو ----
+            // تەنها پیشاندانە: نە کۆی گشتی و نە قازانج دەستیان لێ نادرێت
+            const prepaid = formPrepaidAmount();
+            const codAmount = Math.max(0, grandTotal - prepaid);
+            const isPre = prepaid > 0;
+
+            // پارەدان لە جزدان: سکرینشۆت پێویست نییە، و بڕەکە لە پارەی
+            // ئامادەی جزدان زیاتر نابێت
+            const isWalletPay = formPaymentMethod() === 'wallet';
+            const proofWrap = document.getElementById('pay-proof-wrap');
+            if (proofWrap) proofWrap.style.display = isWalletPay ? 'none' : 'block';
+            renderWalletPayOption();
+            // یەکەم جار کە جزدان هەڵدەبژێردرێت، پارەی ئامادە دەهێنرێت.
+            // `failed` ڕێگری لە خولی هەوڵدانەوەی بێکۆتا دەکات — دوای
+            // شکستێک تەنها بە کرداری بەکارهێنەر دووبارە هەوڵدەدرێتەوە
+            if (isWalletPay && !walletReadyState.loaded && !walletReadyState.loading && !walletReadyState.failed) {
+                ensureWalletReady();
+            }
+
+            // ئەوپەڕی بڕ: بۆ جزدان لە کۆی گشتی و پارەی ئامادە زیاتر نابێت
+            const prepaidCap = isWalletPay ? Math.min(grandTotal, walletPayLimit()) : grandTotal;
+            const maxEl = document.getElementById('prepaid-max');
+            if (maxEl) maxEl.innerText = prepaidCap.toLocaleString();
+
+            const prepRow = document.getElementById('sum-prepaid-row');
+            const prepEl = document.getElementById('sum-prepaid');
+            if (prepEl) prepEl.innerText = prepaid.toLocaleString();
+            if (prepRow) {
+                prepRow.style.display = isPre ? 'flex' : 'none';
+                const prepLbl = prepRow.querySelector('span');
+                if (prepLbl) {
+                    prepLbl.innerHTML = isWalletPay
+                        ? `<i class='bx bx-wallet'></i> لە جزدانی خۆم دەبڕدرێت:`
+                        : `<i class='bx bx-check-shield'></i> پارەی پێشوەخت دراو:`;
+                }
+            }
+
+            const codRow = document.getElementById('sum-cod-row');
+            const codEl = document.getElementById('sum-cod');
+            const codBadge = document.getElementById('sum-cod-badge');
+            if (codEl) codEl.innerText = codAmount.toLocaleString();
+            if (codRow) {
+                codRow.style.display = isPre ? 'flex' : 'none';
+                codRow.classList.toggle('is-full', codAmount <= 0);
+            }
+            if (codBadge) {
+                codBadge.innerText = codAmount <= 0 ? 'پارە بەتەواوی دراوە' : 'بەشێکی پارە دراوە';
+                codBadge.classList.toggle('is-part', codAmount > 0);
+            }
+
+            // هەڵە بە سوور نیشان دەدرێت، بەزۆر ناگۆڕدرێت — وەک فۆرمی مووچە
+            const pf = document.getElementById('prepaid-field');
+            const pe = document.getElementById('prepaid-err');
+            let pmsg = '';
+            if (prepaid > grandTotal) pmsg = `لە کۆی گشتی زیاترە (زۆرترین ${grandTotal.toLocaleString()})`;
+            else if (isWalletPay && prepaid > walletPayLimit()) {
+                pmsg = walletPayLimit() > 0
+                    ? `لە پارەی ئامادەی جزدانت زیاترە (زۆرترین ${walletPayLimit().toLocaleString()})`
+                    : 'پارەی ئامادەت لە جزداندا نییە';
+            }
+            if (pf) pf.classList.toggle('is-over', !!pmsg);
+            if (pe) pe.innerText = pmsg;
         }
 
 
@@ -8794,6 +9616,9 @@
             if (wrapper && !wrapper.contains(e.target)) {
                 if (box) box.style.display = 'none';
             }
+            // هەمان شت بۆ پێشنیاری ناوی شار لە بەشی ئەدمین
+            let cWrap = document.getElementById('c-name-wrapper');
+            if (cWrap && !cWrap.contains(e.target)) hideCityNameSuggest();
         });
 
         let cityWarningTimeout = null;
@@ -9074,7 +9899,12 @@
 
                 // پاداشت/سزا/مووچە/دەستکاری — لە خولی چاوەڕوانیدا نین،
                 // یەکسەر دەچنە سەر «ئامادە»
-                if (!t.order_id) {
+                //
+                // پارەدانی ئۆردەر لە جزدانیش هەروەها: پارەکە **ئێستا** لە
+                // جزدانەکە دەرچووە، بۆیە نابێت وەک پارەی «لە چاوەڕوانیدا»
+                // بژمێردرێت — ئەگەرنا «ئامادە» بەردەوام دەبێت لە پیشاندانی
+                // پارەیەک کە پێشتر خەرجکراوە و دەکرێت دووجار خەرج بکرێت
+                if (!t.order_id || isWalletPayTx(t)) {
                     if (amt >= 0) b.bonus += amt; else b.cut += amt;
                     return;
                 }
@@ -9842,15 +10672,166 @@
             } catch (e) { showToast("کێشەیەک ڕوویدا", "error"); }
         }
 
+        // ============================================================
+        // ناساندنی شاری دووبارە
+        // ------------------------------------------------------------
+        // «هەولێر» و «هەولير» و «هه‌ولێر » هەموویان یەک شارن، بەڵام بۆ
+        // کۆمپیوتەر سێ ژمارەی جیاوازن. بۆیە پێش بەراوردکردن ناوەکە
+        // یەکخراو دەکرێتەوە: پیتە عەرەبییەکان دەکرێن بە کوردی، بۆشایی
+        // زیادە و نیشانەکان لادەبرێن.
+        // ئەمە **تەنها بۆ بەراوردکردنە** — ناوەکە وەک خۆی تۆمار دەکرێت
+        // ============================================================
+        function normCityName(s) {
+            return String(s || '')
+                .replace(/[\u200b-\u200f\u061c\u0640]/g, '')   // نیشانە نەبینراوەکان و ـ
+                .replace(/[\u064b-\u0652\u0670]/g, '')          // خاڵ و زیرەکییەکان
+                .replace(/[\u064a\u0649\ufef1-\ufef4]/g, '\u06cc')   // ي ى → ی
+                .replace(/[\u0643\ufed9-\ufedc]/g, '\u06a9')          // ك → ک
+                .replace(/[\u0623\u0625\u0622]/g, '\u0627')           // أ إ آ → ا
+                .replace(/[\u0624\u0626]/g, '\u0621')                  // ؤ ئ → ء
+                .replace(/[\u0629\u06c0]/g, '\u06d5')                  // ة → ە
+                .replace(/\u0647(?=\s|$)/g, '\u06d5')     // «هەڵەبجه» = «هەڵەبجە»
+                .replace(/\s+/g, ' ')
+                .trim()
+                .toLowerCase();
+        }
+
+        // ئاستی دووەم: پیتە کوردییە هاوشێوەکانیش یەک دەکرێنەوە.
+        // «هەولير»/«هەولێر» و «رانیە»/«ڕانیە» زۆرجار بە هەڵە جیا
+        // دەنووسرێن. بەڵام ئەمانە **ڕێک وەک یەک نین**، بۆیە تەنها
+        // ئاگادارکردنەوەیەکن — زیادکردن ڕاناگیرێت
+        function looseCityName(s) {
+            return normCityName(s)
+                .replace(/ێ/g, 'ی')   // ێ → ی
+                .replace(/ڕ/g, 'ر')   // ڕ → ر
+                .replace(/ۆ/g, 'و')   // ۆ → و
+                .replace(/ڵ/g, 'ل')   // ڵ → ل
+                .replace(/ھ/g, 'ه');  // ھ → ه
+        }
+
+        // ئەو شارەی ڕێک هەمان ناوی هەیە (بەبێ ئەوەی خۆی) — زیادکردن ڕادەگرێت
+        function findCityByName(name, exceptId) {
+            const n = normCityName(name);
+            if (!n) return null;
+            return dbCitiesList.find(c =>
+                normCityName(c.name) === n && (exceptId == null || String(c.id) !== String(exceptId))
+            ) || null;
+        }
+
+        // شاری هاوشێوە — تەنها ئاگادارکردنەوە، نەک ڕاگرتن
+        function findSimilarCity(name, exceptId) {
+            const l = looseCityName(name);
+            const n = normCityName(name);
+            if (!l) return null;
+            return dbCitiesList.find(c =>
+                looseCityName(c.name) === l && normCityName(c.name) !== n
+                && (exceptId == null || String(c.id) !== String(exceptId))
+            ) || null;
+        }
+
+        // لەکاتی نووسینی ناوی شار: پێشنیارەکان + ئاگادارکردنەوەی دووبارە
+        function onCityNameInput() {
+            const inp = document.getElementById('c-name');
+            const box = document.getElementById('c-name-suggest');
+            const dupBox = document.getElementById('c-name-dupe');
+            const addBtn = document.getElementById('c-add-btn');
+            if (!inp || !box) return;
+
+            const raw = inp.value.trim();
+            const n = normCityName(raw);
+            const l = looseCityName(raw);
+            const exact = n ? findCityByName(raw) : null;
+            const similar = (!exact && n) ? findSimilarCity(raw) : null;
+            const hit = exact || similar;
+
+            // «پێشتر تۆمار کراوە» → ڕاگرتن. «هاوشێوە» → تەنها ئاگادارکردنەوە
+            if (dupBox) {
+                if (hit) {
+                    dupBox.classList.toggle('is-warn', !exact);
+                    dupBox.innerHTML = `<i class='bx ${exact ? 'bx-error-circle' : 'bx-info-circle'}'></i>
+                        <span class="cd-txt">${exact
+                            ? `«${histEsc(exact.name)}» پێشتر تۆمار کراوە`
+                            : `شارێکی زۆر هاوشێوە هەیە: «${histEsc(similar.name)}»`}
+                            <span class="cd-sub">شۆفێر: ${Number(hit.real_price || 0).toLocaleString()} | ئەندام: ${Number(hit.display_price || 0).toLocaleString()}</span>
+                        </span>
+                        <button type="button" class="cd-btn" onclick="openEditCityModal('${hit.id}')">دەستکاری</button>`;
+                    dupBox.style.display = 'flex';
+                } else {
+                    dupBox.style.display = 'none';
+                    dupBox.innerHTML = '';
+                }
+            }
+            // تەنها ناوی ڕێک وەک یەک زیادکردن ڕادەگرێت
+            if (addBtn) addBtn.classList.toggle('is-blocked', !!exact);
+
+            // پێشنیارەکان — بە پێوانەی نەرم دەگەڕێت، وەک بەشی گەڕان.
+            // کاتێک ناوەکە ڕێک هەمان شارە، لیستەکە پیشان نادرێت — چونکە
+            // بانەری سوور هەمان زانیاری بە ڕوونتر دەڵێت و لیستەکە
+            // دەیشارێتەوە
+            const matches = exact ? [] : (l
+                ? dbCitiesList.filter(c => looseCityName(c.name).includes(l))
+                : dbCitiesList.slice());
+            if (!matches.length) {
+                box.style.display = 'none';
+                box.innerHTML = '';
+                return;
+            }
+            box.innerHTML = matches.slice(0, 30).map(c => {
+                const isExact = normCityName(c.name) === n;
+                return `<div class="city-suggest-item${isExact ? ' is-exact' : ''}" onmousedown="event.preventDefault(); pickExistingCity('${c.id}')">
+                    <i class='bx ${isExact ? 'bx-error-circle' : 'bx-map'}'></i>
+                    <span class="csi-name">${histEsc(c.name)}${isExact ? ' — پێشتر هەیە' : ''}</span>
+                    <span class="csi-price">${Number(c.real_price || 0).toLocaleString()} / ${Number(c.display_price || 0).toLocaleString()}</span>
+                </div>`;
+            }).join('');
+            box.style.display = 'block';
+        }
+
+        // کلیک لەسەر پێشنیارێک = ئەم شارە هەیە، بۆیە دەستکاری دەکرێت
+        // نەک دووبارە تۆمار بکرێتەوە
+        function pickExistingCity(id) {
+            hideCityNameSuggest();
+            openEditCityModal(id);
+        }
+
+        function hideCityNameSuggest() {
+            const box = document.getElementById('c-name-suggest');
+            if (box) box.style.display = 'none';
+        }
+
+        function resetCityForm() {
+            document.getElementById('c-name').value = "";
+            document.getElementById('c-real').value = "";
+            document.getElementById('c-display').value = "";
+            hideCityNameSuggest();
+            const dupBox = document.getElementById('c-name-dupe');
+            if (dupBox) { dupBox.style.display = 'none'; dupBox.innerHTML = ''; }
+            const addBtn = document.getElementById('c-add-btn');
+            if (addBtn) addBtn.classList.remove('is-blocked');
+        }
+
         async function addCity() {
             // پشکنینی ئاسایش: کلیلەکە هەیە + دەسەڵاتی بەڕێوەبردنی شارەکان هەیە
             if (!await ensureAuthorized('manage_cities')) return;
             let name = document.getElementById('c-name').value.trim(); let realP = document.getElementById('c-real').value; let dispP = document.getElementById('c-display').value;
             if (!name || !realP || !dispP) return showToast("هەموو خانەکان پڕبکەرەوە", "error");
+
             showToast("زیادکردن...", "loading");
             try {
+                // دووبارە لە داتابەیسەوە دەپشکنرێت — لەوانەیە کەسێکی تر
+                // هەمان شاری زیادکردبێت لەو ماوەیەدا
+                await loadDBCities();
+                const dupe = findCityByName(name);
+                if (dupe) {
+                    onCityNameInput();
+                    renderAdminCities();
+                    showToast(`«${dupe.name}» پێشتر تۆمار کراوە — دووبارە زیاد ناکرێت!`, "error");
+                    return;
+                }
+
                 await supabase.from('cities').insert([{ name: name, real_price: parseFloat(realP), display_price: parseFloat(dispP) }]);
-                showToast("سەرکەوتوو بوو", "success"); document.getElementById('c-name').value = ""; document.getElementById('c-real').value = ""; document.getElementById('c-display').value = "";
+                showToast("سەرکەوتوو بوو", "success");
+                resetCityForm();
                 await loadDBCities(); renderAdminCities();
             } catch (e) { showToast("هەڵە هەیە", "error"); }
         }
@@ -10055,6 +11036,10 @@
                     ${trashRow('گەیاندن', money(p.delivery_price) + ' د.ع', { ltr: true })}
                     ${trashRow('کۆی گشتی', money(p.grand_total) + ' د.ع', { ltr: true, strong: true })}
                     ${trashRow('قازانجی ئەندام', money(p.member_profit) + ' د.ع', { ltr: true })}
+                    ${orderIsPrepaid(p) ? `
+                    ${trashRow('پارەی پێشوەخت دراو', money(orderPrepaid(p)) + ' د.ع', { ltr: true })}
+                    ${trashRow('شێوازی پارەدان', paymentMethodLabel(p.payment_method))}
+                    ${trashRow('وەرگرتن لە کڕیار', money(orderCod(p)) + ' د.ع', { ltr: true })}` : ''}
                 </div>`;
 
             } else if (r.source_table === 'employees') {
@@ -10154,6 +11139,22 @@
                 if (data === 'ok') {
                     showToast("بە سەرکەوتوویی گەڕێندرایەوە!", "success");
                     if (fromModal) closeModal(null, 'trash-detail-modal');
+
+                    // ئۆردەرێک کە لە جزدانەوە پارەی درابوو: لەکاتی سڕینەوەدا
+                    // پارەکەی گەڕێندرایەوە، بۆیە ئێستا کە گەڕاوەتەوە دەبێت
+                    // دیسان ببڕدرێت — ئەگەرنا ئۆردەرێک دەمێنێتەوە کە دەڵێت
+                    // پارەی دراوە بەڵام هیچ پارەیەکی نەدراوە
+                    if (item && item.source_table === 'orders') {
+                        const p = item.payload || {};
+                        if (orderWalletPaid(p) > 0 && p.seller_code && p.id) {
+                            try {
+                                await syncOrderWalletPayment(p.id, p.order_code, p.seller_code, orderWalletPaid(p));
+                            } catch (e) {
+                                console.error('syncOrderWalletPayment (restore):', e);
+                                showToast("⚠️ ئۆردەرەکە گەڕایەوە، بەڵام پارەکە لە جزدان نەبڕدرایەوە!", "error");
+                            }
+                        }
+                    }
                     // ئەگەر کلیلێک گەڕایەوە، لیستی ئەندامان نوێ بکەرەوە
                     if (item && item.source_table === 'employees') {
                         try { await loadTeamScope(); } catch (e) { }
@@ -10210,6 +11211,14 @@
             if (!name || !realP || !dispP) return showToast("هەموو خانەکان پڕبکەرەوە", "error");
             showToast("پاشەکەوتکردن...", "loading");
             try {
+                // ناوگۆڕین نابێت ببێتە هۆی دروستبوونی شاری دووبارە
+                await loadDBCities();
+                const dupe = findCityByName(name, id);
+                if (dupe) {
+                    renderAdminCities();
+                    showToast(`«${dupe.name}» پێشتر تۆمار کراوە — دوو شار بە یەک ناو نابێت!`, "error");
+                    return;
+                }
                 await supabase.from('cities').update({ name: name, real_price: parseFloat(realP), display_price: parseFloat(dispP) }).eq('id', id);
                 showToast("سەرکەوتوو بوو", "success");
                 closeModal(null, 'edit-city-modal');
@@ -10220,10 +11229,22 @@
 
         function renderAdminCities() {
             let list = document.getElementById('admin-cities-list'); let html = "";
+
+            // شارە دووبارەکانی پێشوو — ئەوانەی پێش دانانی ئەم پشکنینە
+            // تۆمار کرابوون. نیشانە دەکرێن تا بەڕێوەبەر پاکیان بکاتەوە
+            let seen = {};
+            let dupeIds = {};
             dbCitiesList.forEach(c => {
-                html += `<div style="background:#fff; border:1px solid #e2e8f0; padding:10px 15px; border-radius:10px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
+                const n = normCityName(c.name);
+                if (!n) return;
+                if (seen[n]) { dupeIds[c.id] = true; dupeIds[seen[n]] = true; }
+                else seen[n] = c.id;
+            });
+
+            dbCitiesList.forEach(c => {
+                html += `<div style="background:#fff; border:1px solid ${dupeIds[c.id] ? 'rgba(220,38,38,0.35)' : '#e2e8f0'}; padding:10px 15px; border-radius:10px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
                     <div>
-                        <strong style="color:var(--primary);">${c.name}</strong><br>
+                        <strong style="color:var(--primary);">${c.name}</strong>${dupeIds[c.id] ? `<span class="city-dupe-tag"><i class='bx bx-copy'></i> دووبارە</span>` : ''}<br>
                         <span style="font-size:11px; color:#64748b;">شۆفێر: ${Number(c.real_price || 0).toLocaleString()} | ئەندام: ${Number(c.display_price || 0).toLocaleString()}</span>
                     </div>
                     <div style="display:flex; gap:8px;">
@@ -10412,8 +11433,19 @@
                     <div class="dinfo-chain">${chainHtml}</div>` : ''}
                 </div>`;
 
+                // ئاگادارکردنەوەی پارەی پێشوەخت — ئەوەی قازانج دابەش دەکات
+                // دەبێت بزانێت شۆفێر نەقدێکی کەمتری داوەتەوە، لەکاتێکدا
+                // پۆتی دابەشکردن بەئەنقەست نەگۆڕاوە
+                let distPrepaid = orderPrepaid(o);
+                let distPayHtml = distPrepaid > 0 ? `
+                <div class="dist-prepaid-note">
+                    <div><i class='bx bx-check-shield'></i> پێشوەخت دراوە${paymentMethodLabel(o.payment_method) ? ` (${paymentMethodLabel(o.payment_method)})` : ''}: <b dir="ltr">${distPrepaid.toLocaleString()} د.ع</b></div>
+                    <div><i class='bx bx-cycling'></i> نەقد لە شۆفێرەوە: <b dir="ltr">${orderCod(o).toLocaleString()} د.ع</b></div>
+                    <div class="dist-prepaid-hint">کۆی گشتی وەک خۆی دەمێنێتەوە — دابەشکردنی قازانج ناگۆڕێت.</div>
+                </div>` : '';
+
                 let b = document.getElementById('profit-modal-body');
-                b.innerHTML = `<div style="background:#f8fafc; padding:15px; border-radius:12px; border:1px dashed #cbd5e1; margin-bottom:15px; text-align:center;"><span style="font-size:12px; color:#64748b;">کۆی گشتی وەرگیراو لە کڕیار</span><h2 style="margin:5px 0 0 0; color:#10b981;" dir="ltr">${distData.grandTotal.toLocaleString()} د.ع</h2></div>
+                b.innerHTML = `<div style="background:#f8fafc; padding:15px; border-radius:12px; border:1px dashed #cbd5e1; margin-bottom:15px; text-align:center;"><span style="font-size:12px; color:#64748b;">کۆی گشتی وەرگیراو لە کڕیار</span><h2 style="margin:5px 0 0 0; color:#10b981;" dir="ltr">${distData.grandTotal.toLocaleString()} د.ع</h2>${distPayHtml}</div>
                 ${distInfoHtml}
                 <div class="dist-input-row">
                     <label><i class='bx bx-car'></i> نرخی گەیاندن (شۆفێر)</label>
@@ -10596,11 +11628,29 @@
             try {
                 // پاراستن: ئەگەر ئەم ئۆردەرە پێشتر پارەی بۆ دابەشکرابێت و نەگەڕابێتەوە (کۆی پوخت > 0)،
                 // ڕێگری لە دووبارە دابەشکردن دەکات تا پارە چەند جار زیاد نەکرێت.
-                const { data: existingTxs } = await supabase.from('transactions').select('amount').eq('order_id', String(o.id));
+                const { data: existingTxsAll } = await supabase.from('transactions').select('amount, type').eq('order_id', String(o.id));
+                // پارەدانی جزدان لەم پشکنینەدا نایەتە ژماردن — ژمارەیەکی
+                // نێگەتیڤە و دەیشارێتەوە کە قازانجەکان پێشتر دابەشکراون
+                const existingTxs = (existingTxsAll || []).filter(t => !isWalletPayTx(t));
                 if (existingTxs && existingTxs.length > 0) {
                     let existingNet = existingTxs.reduce((s, t) => s + parseFloat(t.amount || 0), 0);
                     if (existingNet > 0.01) {
                         showToast("ئەم ئۆردەرە پێشتر پارەی بۆ دابەشکراوە! بۆ دابەشکردنەوە، سەرەتا بیکە بە گەڕاوە.", "error");
+                        if (confirmBtn) { confirmBtn.disabled = false; confirmBtn.innerHTML = "<i class='bx bx-check-circle'></i> تەسدیقکردن و تۆمارکردن"; }
+                        return;
+                    }
+                }
+
+                // دووپاتکردنەوەی پارەی جزدان: ئۆردەرێکی گەڕاوە کە دووبارە
+                // دەکرێتە گەیشتوو، پارەی جزدانەکەی پێشتر گەڕێندراوەتەوە —
+                // بۆیە دەبێت دیسان ببڕدرێت. بۆ ئۆردەری ئاسایی هیچ ناکات،
+                // چونکە پێشتر بڕدراوە
+                if (orderWalletPaid(o) > 0 && o.seller_code) {
+                    try {
+                        await syncOrderWalletPayment(o.id, oCode, o.seller_code, orderWalletPaid(o));
+                    } catch (e) {
+                        console.error('syncOrderWalletPayment (distribute):', e);
+                        showToast("نەتوانرا پارەی جزدانی خاوەنی ئۆردەرەکە ڕێک بخرێت — دووبارە هەوڵبدە", "error");
                         if (confirmBtn) { confirmBtn.disabled = false; confirmBtn.innerHTML = "<i class='bx bx-check-circle'></i> تەسدیقکردن و تۆمارکردن"; }
                         return;
                     }
