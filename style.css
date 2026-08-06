@@ -8600,11 +8600,15 @@ body.no-glass .fab-wrapper .btn {
   bottom: 0;
   width: 100%;
   max-width: 620px;
-  height: 100%;
-  max-height: 100%;
+  /* بەقەد ناوەڕۆکەکەی — بە چیپەکان تەنها نیوەی شاشە دەگرێت،
+     بە ڕۆژژمێری مەودای دڵخوازەوە تا ٩٢vh فراوان دەبێت */
+  height: auto;
+  max-height: 92vh;
   display: flex;
   flex-direction: column;
   background: #fff;
+  border-radius: var(--r-lg) var(--r-lg) 0 0;
+  overflow: hidden;
   transform: translate3d(-50%, 100%, 0);
   transition: transform .22s cubic-bezier(0.32, 0.72, 0, 1);
 }
@@ -8670,8 +8674,12 @@ body.fsheet-open {
   cursor: pointer;
 }
 
+#filter-sheet.is-custom .fsheet-panel {
+  height: 92vh;
+}
+
 .fsheet-body {
-  flex: 1;
+  flex: 0 1 auto;
   min-height: 0;
   display: flex;
   flex-direction: column;
@@ -8722,8 +8730,10 @@ body.fsheet-open {
 .fcal-wrap {
   display: flex;
   flex-direction: column;
-  flex: 1;
-  min-height: 0;
+  /* بەقەد ناوەڕۆکەکەی، نەک بەقەد شوێنی بەردەست — بە `flex: 1`
+     بەرزییەکەی دەبڕدرایەوە، و مەودای لکاندنی سەردێڕەکە لەگەڵی
+     کورت دەبووەوە */
+  flex: 0 0 auto;
   gap: var(--sp-2);
 }
 
@@ -9016,4 +9026,41 @@ body.fsheet-open {
   color: #fff;
   font-size: var(--fs-lg);
   font-weight: var(--font-bold);
+}
+
+/* ڕۆژژمێر تەنها لە «مەودای دڵخواز» — لەسەر مۆبایل بەردەوام دەرکەوتنی
+   شوێنێکی زۆر دەگرت و پێشدانراوەکانی دەخستە خوارەوەی شاشە */
+.fcal-wrap {
+  display: none;
+}
+
+#filter-sheet.is-custom .fcal-wrap {
+  display: flex;
+}
+
+/* ناوچەی گەڕان دەبێت لەسەروو باری پرێنتەوە بێت.
+   `.sh-over` (سیستەمی شاردنەوە بە سکرۆڵ) `will-change: transform`ـی
+   هەیە، واتا ناوچەیەکی ستاکینگی داخراو دروست دەکات — بۆیە
+   `z-index: 60`ی پانێڵی گەڕانە پێشووەکان لەناویدا دەگیرێت و
+   ناتوانێت بەسەر برا دواترەکانیدا زاڵ بێت. چارەسەر: خودی
+   ناوچەکە بەرزتر دادەنرێت. */
+#orders-filter-section {
+  position: relative;
+  z-index: 25;
+}
+
+/* سەردێڕی لکاوی ڕۆژژمێر — بۆکسەکانی بەروار و «ئەمڕۆ» لە سەرەوە
+   دەمێننەوە کاتێک مانگەکان بە ستوونی سکرۆڵ دەکەن */
+.fcal-sticky {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  padding: 4px 0 8px;
+  background: #fff;
+  /* سێبەری یەکەم بۆشایی ١٦px ی سەرەوەی سکرۆڵەرەکە دادەپۆشێت،
+     ئەگەرنا ڕیزێکی ڕۆژ لە سەروویەوە دەردەکەوێت */
+  box-shadow: 0 -16px 0 0 #fff, 0 8px 10px -8px rgba(15, 23, 42, .18);
 }

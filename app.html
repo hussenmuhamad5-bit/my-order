@@ -1387,27 +1387,32 @@
                 </div>
 
                 <div class="fcal-wrap">
-                    <div class="fcal-inputs">
-                        <label class="fcal-in">
-                            <span>لە</span>
-                            <input type="text" id="fcal-from" inputmode="numeric" autocomplete="off"
-                                placeholder="ڕۆژ/مانگ/ساڵ" dir="ltr">
-                        </label>
-                        <label class="fcal-in">
-                            <span>بۆ</span>
-                            <input type="text" id="fcal-to" inputmode="numeric" autocomplete="off"
-                                placeholder="ڕۆژ/مانگ/ساڵ" dir="ltr">
-                        </label>
-                    </div>
+                    <!-- بۆکسەکانی بەروار و «ئەمڕۆ» دەلکێن بە سەرەوەی
+                         پەنجەرەی سکرۆڵەوە، تا لەکاتی گەڕان بەناو
+                         مانگەکاندا هەمیشە بەردەست بن -->
+                    <div class="fcal-sticky">
+                        <div class="fcal-inputs">
+                            <label class="fcal-in">
+                                <span>لە</span>
+                                <input type="text" id="fcal-from" inputmode="numeric" autocomplete="off"
+                                    placeholder="ڕۆژ/مانگ/ساڵ" dir="ltr">
+                            </label>
+                            <label class="fcal-in">
+                                <span>بۆ</span>
+                                <input type="text" id="fcal-to" inputmode="numeric" autocomplete="off"
+                                    placeholder="ڕۆژ/مانگ/ساڵ" dir="ltr">
+                            </label>
+                        </div>
 
-                    <div class="fcal-nav" id="fcal-nav">
-                        <button type="button" class="fcal-arrow" onclick="fcalShift(-1)" aria-label="مانگی پێشوو">
-                            <i class='bx bx-chevron-right'></i>
-                        </button>
-                        <button type="button" class="fcal-today" onclick="fcalGoToday()">ئەمڕۆ</button>
-                        <button type="button" class="fcal-arrow" onclick="fcalShift(1)" aria-label="مانگی داهاتوو">
-                            <i class='bx bx-chevron-left'></i>
-                        </button>
+                        <div class="fcal-nav" id="fcal-nav">
+                            <button type="button" class="fcal-arrow" onclick="fcalShift(-1)" aria-label="مانگی پێشوو">
+                                <i class='bx bx-chevron-right'></i>
+                            </button>
+                            <button type="button" class="fcal-today" onclick="fcalGoToday()">ئەمڕۆ</button>
+                            <button type="button" class="fcal-arrow" onclick="fcalShift(1)" aria-label="مانگی داهاتوو">
+                                <i class='bx bx-chevron-left'></i>
+                            </button>
+                        </div>
                     </div>
 
                     <div class="fcal" id="fcal" dir="ltr"></div>
@@ -10449,6 +10454,14 @@
         let fcalDragEdge = null;    // 'from' | 'to' لەکاتی ڕاکێشانی لێوار
         let fcalDragMoved = false;  // ڕاکێشان ڕاستەقینە بوو؟ (نەک تەنها پەنجەلێدان)
 
+        // ڕۆژژمێر تەنها لە «مەودای دڵخواز» دەردەکەوێت — لەسەر مۆبایل
+        // شوێنێکی زۆر دەگرێت، و بۆ ٩٠٪ی حاڵەتەکان پێشدانراوێک بەسە
+        function fsSyncCalOpen() {
+            let on = (fsDraft.preset === 'custom');
+            document.getElementById('filter-sheet').classList.toggle('is-custom', on);
+            return on;
+        }
+
         // ---------- کردنەوە و داخستن ----------
         function openFilterSheet() {
             // دۆخی جێبەجێکراو کۆپی دەکرێت — پاشگەزبوونەوە هیچ ناگۆڕێت
@@ -10472,7 +10485,8 @@
             fcalBackMonths = 12;
 
             fsRenderChips();
-            fcalRender();
+            let calOn = fsSyncCalOpen();
+            if (calOn) fcalRender();
             fsSyncInputs();
             fsRenderSummary();
 
@@ -10481,7 +10495,7 @@
             document.body.classList.add('fsheet-open');
             document.addEventListener('keydown', fsKeydown, true);
             // ئەمڕۆ لە سەرەوە — لە دۆخی ستوونی مانگی ئێستا دەهێنرێتە سەرەوە
-            requestAnimationFrame(() => fcalScrollToMonth(fcalFocus, 'auto'));
+            if (calOn) requestAnimationFrame(() => fcalScrollToMonth(fcalFocus, 'auto'));
         }
 
         function closeFilterSheet() {
@@ -10493,7 +10507,7 @@
         function resetFilterSheet() {
             fsDraft = { status: 'all', preset: 'all', from: null, to: null };
             fcalHover = null; fcalFocus = fdKey(fdToday());
-            fsRenderChips(); fcalPaint(); fsSyncInputs(); fsRenderSummary();
+            fsRenderChips(); fsSyncCalOpen(); fcalPaint(); fsSyncInputs(); fsRenderSummary();
         }
 
         // ---------- چیپەکان ----------
@@ -10525,8 +10539,15 @@
                 fcalFocus = fsDraft.from;
                 fcalAlign(fsDraft.from);
             }
-            fsRenderChips(); fcalRender(); fsSyncInputs(); fsRenderSummary();
-            if (fsDraft.from) fcalScrollToMonth(fsDraft.from, 'smooth');
+            fsRenderChips();
+            let calOn = fsSyncCalOpen();
+            if (calOn) fcalRender();
+            fsSyncInputs(); fsRenderSummary();
+            // ڕۆژژمێرەکە تازە دەرکەوت — مانگی ئێستا (یان سەرەتای مەودا)
+            // دەهێنرێتە سەرەوە. پەنجەرەکە تازە بەرزی گۆڕیوە، بۆیە دوو
+            // فرەیم چاوەڕوان دەکەین تا لەیئاوتەکە بچەسپێت.
+            if (calOn) requestAnimationFrame(() => requestAnimationFrame(
+                () => fcalScrollToMonth(fsDraft.from || fcalFocus, 'auto')));
         }
 
         // ---------- نەخشاندنی ڕۆژژمێر ----------
@@ -10764,8 +10785,12 @@
             let box = document.getElementById('fsheet-body');
             let el = box && box.querySelector(`.fcm[data-m="${fdMonthKey(d)}"]`);
             if (!box || !el) return;
+            // سەردێڕی لکاو (بۆکسەکانی بەروار) شوێن دەگرێت لە سەرەوە،
+            // بۆیە مانگەکە بۆ ژێری دەبرێت نەک بۆ ژێر پەنجەرەکە
+            let stick = box.querySelector('.fcal-sticky');
+            let pad = stick ? stick.offsetHeight : 0;
             let top = el.getBoundingClientRect().top - box.getBoundingClientRect().top + box.scrollTop;
-            box.scrollTo({ top: Math.max(0, top - 6), behavior: behavior || 'auto' });
+            box.scrollTo({ top: Math.max(0, top - pad - 14), behavior: behavior || 'auto' });
         }
 
         // ---------- بۆکسی نووسینی بەروار ----------
@@ -10872,6 +10897,10 @@
         function fsRenderSummary() {
             let el = document.getElementById('fsheet-sum');
             if (!el) return;
+            if (fsDraft.preset === 'custom' && !fsDraft.from) {
+                el.innerHTML = `<i class='bx bx-calendar'></i> <em>بەروارێک هەڵبژێرە</em>`;
+                return;
+            }
             if (fsDraft.preset === 'all' || (!fsDraft.from && !fsDraft.to)) {
                 el.innerHTML = `<i class='bx bx-calendar'></i> هەموو کاتێک`;
                 return;
