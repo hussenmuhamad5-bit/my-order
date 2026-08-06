@@ -33,6 +33,12 @@
                         </button>
                     </div>
                 </div>
+
+                <!-- پەیستکردنی کۆد و پاسوۆرد پێکەوە (لە بەشی چاکسازی کۆپی کراون) -->
+                <button type="button" class="paste-creds" id="paste-creds-btn" onclick="pasteLoginCreds()">
+                    <svg fill="none" viewBox="0 0 24 24" width="17" height="17"><path stroke-width="1.6" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" d="M9 4.5h6M9 4.5a1.5 1.5 0 0 0-1.5 1.5v.5h9V6A1.5 1.5 0 0 0 15 4.5M7.5 6.5H6.5A1.5 1.5 0 0 0 5 8v11a1.5 1.5 0 0 0 1.5 1.5h11A1.5 1.5 0 0 0 19 19V8a1.5 1.5 0 0 0-1.5-1.5h-1"></path><path stroke-width="1.6" stroke="currentColor" stroke-linecap="round" d="M8.5 11.5h7M8.5 15h5"></path></svg>
+                    <span>پەیستکردنی کۆد و پاسوۆرد</span>
+                </button>
             </div>
 
             <!-- ============================================================
@@ -331,6 +337,8 @@
             if (passGroup) passGroup.style.display = 'none';
             if (loginBtn) loginBtn.style.display = 'none';
             if (panel) panel.classList.add('show');
+            const pasteBtn = document.getElementById('paste-creds-btn');
+            if (pasteBtn) pasteBtn.style.display = 'none';
 
             const sub = document.getElementById('pw-setup-sub');
             if (sub) {
@@ -352,6 +360,8 @@
             if (passGroup) passGroup.style.display = '';
             if (loginBtn) loginBtn.style.display = '';
             if (panel) panel.classList.remove('show');
+            const pasteBtn = document.getElementById('paste-creds-btn');
+            if (pasteBtn) pasteBtn.style.display = '';
             resetSetupForm();
         }
 
@@ -495,6 +505,98 @@
                 btn.disabled = false;
             }
         }
+
+        // ============================================================
+        // پەیستکردنی کۆد و پاسوۆرد پێکەوە
+        // ------------------------------------------------------------
+        // لە بەشی «چاکسازی»ی ئەپەکە دوگمەی کۆپی ئەم فۆرماتە دروست دەکات:
+        //     کۆد: 12345
+        //     وشەی نهێنی: abcdef
+        // لێرەش هەردوو خانەکە پێی پڕ دەکرێنەوە. فۆرماتە سادەکانی تریش
+        // (کۆد|پاسوۆرد، یان دوو هێڵ) قبوڵ دەکرێن.
+        // ============================================================
+        function parseAccountPaste(text) {
+            if (!text) return null;
+            const raw = String(text).replace(/\r/g, '').trim();
+            if (!raw) return null;
+
+            let code = '', pass = '';
+
+            // ١) فۆرماتی ناونیشاندار — «کۆد: ...» / «وشەی نهێنی: ...»
+            raw.split('\n').forEach(function (ln) {
+                const m = /^\s*([^:：]{1,24})\s*[:：]\s*(.*)$/.exec(ln);
+                if (!m) return;
+                const label = m[1].trim().toLowerCase();
+                const val = m[2].trim();
+                if (!val) return;
+                if (/کۆد|کود|code/.test(label)) { if (!code) code = val; }
+                else if (/نهێنی|نهيني|پاسوۆرد|پاسورد|pass/.test(label)) { if (!pass) pass = val; }
+            });
+            if (code) return { code: code, pass: pass };
+
+            // ٢) بێ ناونیشان — دوو پارچە بە هێڵی نوێ، |، فاریزە یان بۆشایی
+            const parts = raw.split(/[|,;]+|\s+/).map(function (s) { return s.trim(); }).filter(Boolean);
+            if (parts.length >= 2) return { code: parts[0], pass: parts.slice(1).join(' ') };
+            if (parts.length === 1) return { code: parts[0], pass: '' };
+            return null;
+        }
+
+        // دانانی ئەو زانیارییەی پەیست کرا لەناو خانەکان
+        function applyPastedCreds(text, announce) {
+            const info = parseAccountPaste(text);
+            if (!info || !info.code) {
+                if (announce) showMsg("❌ لەناو کلیپبۆرد هیچ کۆدێک نەدۆزرایەوە.");
+                return false;
+            }
+            const codeEl = document.getElementById('login-code');
+            const passEl = document.getElementById('login-pass');
+            if (codeEl) codeEl.value = info.code;
+            if (passEl) passEl.value = info.pass || '';
+
+            // کۆدەکە گۆڕا → پانێڵی دانانی پاسوۆرد هەڵبوەشێنەوە،
+            // پاشان پشکنینی ئاسایی کۆدەکە دەستپێدەکاتەوە
+            if (setupUser) exitSetupMode();
+            onLoginCodeInput();
+            return true;
+        }
+
+        async function pasteLoginCreds() {
+            let text = '';
+            try {
+                if (navigator.clipboard && navigator.clipboard.readText) {
+                    text = await navigator.clipboard.readText();
+                }
+            } catch (e) { text = ''; }
+
+            if (!text) {
+                // هەندێ وێبگەڕ ڕێگە بە خوێندنەوەی کلیپبۆرد نادەن —
+                // پەیستی دەستی لەناو خانەی کۆدیش هەمان کار دەکات
+                const codeEl = document.getElementById('login-code');
+                if (codeEl) { codeEl.focus(); try { codeEl.select(); } catch (e) { } }
+                showMsg("⚠️ نەتوانرا کلیپبۆرد بخوێندرێتەوە.\nتکایە بە دەست لەناو خانەی کۆد پەیست بکە — پاسوۆردەکەش خۆکارانە دادەنرێت.");
+                return;
+            }
+            applyPastedCreds(text, true);
+        }
+
+        // پەیستی دەستی لەناو خانەی کۆد: ئەگەر پاسوۆردیشی تێدابوو،
+        // هەردووکیان جیا دەکرێنەوە. ئەگەرنا پەیستی ئاسایی وەک خۆی دەمێنێت.
+        (function bindCodePaste() {
+            const codeEl = document.getElementById('login-code');
+            if (!codeEl) return;
+            codeEl.addEventListener('paste', function (ev) {
+                let t = '';
+                try { t = (ev.clipboardData || window.clipboardData).getData('text'); } catch (e) { }
+                if (!t) return;
+                // تەنها دەقی ڕێکخراو دەگیرێت (هێڵی نوێ یان |) — ئەگەرنا
+                // پەیستی ئاسایی، نەوەک بە هەڵە ووشەیەک بکرێت بە پاسوۆرد
+                if (!/[\n|]/.test(t.trim())) return;
+                const info = parseAccountPaste(t);
+                if (!info || !info.code || !info.pass) return;   // تەنها کۆد → پەیستی ئاسایی
+                ev.preventDefault();
+                applyPastedCreds(t, false);
+            });
+        })();
 
         async function performLogin() {
             // لە دۆخی دانانی پاسوۆردا، دوگمەی چوونەژوورەوە شاردراوەتەوە —

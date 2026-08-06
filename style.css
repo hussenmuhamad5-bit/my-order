@@ -462,6 +462,37 @@ input::placeholder {
   color: var(--primary);
 }
 
+/* دوگمەی پەیستکردنی کۆد و پاسوۆرد پێکەوە */
+.paste-creds {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  width: 100%;
+  height: 38px;
+  margin-bottom: 4px;
+  padding: 0 12px;
+  font-family: inherit;
+  font-size: var(--fs-sm, 13px);
+  font-weight: 600;
+  color: var(--text-secondary);
+  background: none;
+  border: 1px dashed #cbd5e1;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: color 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+}
+
+.paste-creds:hover {
+  color: var(--primary);
+  border-color: var(--primary);
+}
+
+.paste-creds:active {
+  transform: scale(0.99);
+  background: rgba(36, 129, 204, 0.06);
+}
+
 /* =========================================
    پەڕەی چوونەژوورەوە — پشکنینی کۆد و دانانی
    پاسوۆردی یەکەم جار
@@ -2355,6 +2386,39 @@ h2 i,
 /* بۆکسی بێ دوگمەی کۆپی (گۆڕینی پاسوۆرد) — تەنها لای ڕاست بۆشایی */
 .pass-field.no-copy input {
   padding: 0 42px 0 14px;
+}
+
+/* بۆکسی بێ دوگمەی چاو (کۆدی چوونەژوورەوە) — تەنها لای چەپ بۆشایی */
+.pass-field.no-eye input {
+  padding: 0 14px 0 42px;
+}
+
+/* کۆدەکە تەنها بۆ خوێندنەوەیە — بە ڕەنگێکی کاڵتر جیا دەکرێتەوە */
+.pass-field input[readonly] {
+  background: #f1f5f9;
+  color: var(--text-main);
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+/* دوگمەی «چوونەژوورەوە بەم ئەکاونتە» لە بەشی چاکسازی */
+.login-as-btn {
+  width: 100%;
+  margin: 0 0 6px 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: #0f172a;
+  color: #fff;
+}
+
+.login-as-btn i {
+  font-size: 19px;
+}
+
+.login-as-btn:active {
+  transform: scale(0.98);
 }
 
 /* دوگمەی کۆپی — لای چەپ، وەک شوێنی ئایکۆنی پەڕەی چوونەژوورەوە */
@@ -7633,6 +7697,28 @@ body.no-glass .fab-wrapper .btn {
   transform: scale(0.98);
 }
 
+/* ---- جزدان بۆ بینین بەتەنها ---- */
+/* کاتێک دەسەڵاتی «بەڕێوەبردنی جزدان» نییە، لە جیاتی دوگمەکان
+   ئەم ڕیزە دەردەکەوێت تا ڕوون بێت کە بۆشاییەکە هەڵە نییە */
+.wview-only {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 4px;
+  padding: 10px;
+  border-radius: 8px;
+  background: #f1f5f9;
+  border: 1px dashed #cbd5e1;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.wview-only i {
+  font-size: 15px;
+}
+
 /* ---- مۆداڵی پێدانی مووچە ---- */
 .segmented-control input:disabled + span {
   opacity: 0.35;
@@ -8196,4 +8282,738 @@ body.no-glass .fab-wrapper .btn {
   .btn.btn-send-order:active::before {
     animation: none;
   }
+}
+/* ==========================================================
+   قوفڵی پرێنت
+   ----------------------------------------------------------
+   دوای پرێنتکردنی وەسڵ، ئۆردەرەکە قوفڵ دەبێت تا بارکۆدەکەی
+   سکان دەکرێت. سێ دۆخ هەیە: قوفڵ (سوور)، کراوە (سەوز)، و
+   هێشتا پرێنت نەکراوە (بێلایەن).
+   ========================================================== */
+
+/* نیشانەی سەر کارتی ئۆردەر — تەنها بۆ ئەوانەی هێشتا قوفڵن */
+.print-stamp {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: var(--fs-2xs);
+  font-weight: var(--font-bold);
+  padding: 2px 8px;
+  border-radius: var(--r-full);
+  background: rgba(124, 58, 237, 0.12);
+  color: #6d28d9;
+  border: 1px solid rgba(124, 58, 237, 0.28);
+  white-space: nowrap;
+}
+
+/* ---------- کارتی دۆخی پرێنت لەناو وردەکاریی ئۆردەر ---------- */
+.plock-card {
+  margin: 14px 0;
+  padding: 12px 14px;
+  border-radius: var(--r-md);
+  border: 1px solid var(--line, #e6e8ec);
+  background: #fff;
+}
+
+.plock-card.is-locked {
+  background: rgba(124, 58, 237, 0.06);
+  border-color: rgba(124, 58, 237, 0.28);
+}
+
+.plock-card.is-open {
+  background: rgba(16, 185, 129, 0.06);
+  border-color: rgba(16, 185, 129, 0.26);
+}
+
+.plock-card.is-idle {
+  background: #f8fafc;
+  border-color: #e2e8f0;
+}
+
+.plock-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--fs-md);
+  font-weight: var(--font-bold);
+}
+
+.plock-card.is-locked .plock-head { color: #6d28d9; }
+.plock-card.is-open .plock-head   { color: #059669; }
+.plock-card.is-idle .plock-head   { color: var(--text-secondary); }
+
+.plock-head i { font-size: var(--icon-sm); }
+
+.plock-meta {
+  margin-top: 5px;
+  font-size: var(--fs-xs);
+  color: var(--text-secondary);
+}
+
+.plock-note {
+  margin-top: 6px;
+  font-size: var(--fs-xs);
+  line-height: 1.6;
+  color: var(--text-secondary);
+}
+
+.plock-btn {
+  width: 100%;
+  margin-top: 10px;
+  padding: 10px;
+  font-size: var(--fs-md);
+  font-weight: var(--font-bold);
+  border-radius: var(--r-sm);
+}
+
+.plock-btn-scan  { background: #0891b2; }
+.plock-btn-mark  { background: #7c3aed; }
+
+/* شکاندنی قوفڵ بەبێ سکان — دەرچەیەکی ناڕێکە، بۆیە کوێرتر و
+   بە دەوری تەنها، نەک دوگمەیەکی پڕ بە ڕەنگ */
+.plock-btn-break {
+  background: transparent;
+  color: #e11d48;
+  border: 1px solid rgba(225, 29, 72, 0.35);
+}
+
+/* ---------- باری نیشانەکردنی کۆمەڵ ---------- */
+.pbulk-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  margin-bottom: var(--sp-3);
+}
+
+.pbulk-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  width: 100%;
+}
+
+.pbulk-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  height: 38px;
+  padding: 0 12px;
+  border: 1px solid transparent;
+  border-radius: var(--r-sm);
+  font-size: var(--fs-sm);
+  font-weight: var(--font-bold);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.pbulk-start {
+  background: rgba(124, 58, 237, 0.1);
+  color: #6d28d9;
+  border-color: rgba(124, 58, 237, 0.25);
+}
+
+.pbulk-all {
+  background: #fff;
+  color: var(--text-secondary);
+  border-color: #cbd5e1;
+}
+
+.pbulk-go {
+  flex: 1;
+  background: #7c3aed;
+  color: #fff;
+}
+
+.pbulk-go:disabled {
+  background: #cbd5e1;
+  color: #f8fafc;
+  cursor: default;
+}
+
+.pbulk-cancel {
+  width: 38px;
+  padding: 0;
+  background: #fff;
+  color: #64748b;
+  border-color: #cbd5e1;
+  font-size: var(--icon-md);
+}
+
+/* ---------- کارتەکان لە مۆدی هەڵبژاردن ---------- */
+.modern-order-card.pbulk-pick {
+  border: 1.5px dashed rgba(124, 58, 237, 0.4);
+}
+
+.modern-order-card.pbulk-pick.is-on {
+  border-style: solid;
+  border-color: #7c3aed;
+  background: rgba(124, 58, 237, 0.06);
+}
+
+/* ئەوانەی ناتوانرێن هەڵبژێردرێن (پرێنتکراو، گەیشتوو، گەڕاوە) */
+.modern-order-card.pbulk-off {
+  opacity: 0.42;
+  cursor: default;
+}
+
+.pbulk-tick {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: var(--r-full);
+  border: 1.5px solid #cbd5e1;
+  background: #fff;
+  color: transparent;
+  font-size: 15px;
+}
+
+.modern-order-card.pbulk-pick.is-on .pbulk-tick {
+  background: #7c3aed;
+  border-color: #7c3aed;
+  color: #fff;
+}
+
+/* ==========================================================
+   فلتەری ئۆردەرەکان — دوگمە + شیتی تەواوی شاشە
+   ----------------------------------------------------------
+   پێشتر دوو دڕۆپداونی گەورە هەمیشە شوێنیان لە سەرەوەی لیستەکە
+   دەگرت. ئێستا کراونەتە ئایکۆنێک لە تەنیشت بۆکسی گەڕان.
+   ========================================================== */
+
+.search-row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  margin: 5px 0 12px;
+}
+
+.search-row .search-group {
+  flex: 1;
+  min-width: 0;
+  margin-bottom: 0;
+}
+
+.filter-btn {
+  position: relative;
+  flex: 0 0 auto;
+  width: 45px;
+  height: 45px;
+  padding: 0;
+  border: 1px solid #e2e8f0;
+  border-radius: var(--r-sm);
+  background: #f8fafc;
+  color: var(--text-secondary);
+  font-size: 22px;
+  cursor: pointer;
+  transition: all .2s ease;
+}
+
+.filter-btn:active {
+  transform: scale(0.94);
+}
+
+.filter-btn.is-on {
+  border-color: var(--primary);
+  background: rgba(36, 129, 204, 0.1);
+  color: var(--primary);
+}
+
+.filter-badge {
+  position: absolute;
+  top: -5px;
+  left: -5px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: var(--r-full);
+  background: var(--primary);
+  color: #fff;
+  font-size: var(--fs-2xs);
+  font-weight: var(--font-bold);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--bg);
+}
+
+/* چیپی فلتەرە چالاکەکان — دوای داخستنی شیتەکە دیار دەمێنێتەوە */
+.active-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.afchip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 30px;
+  padding: 0 6px 0 10px;
+  border: 1px solid rgba(36, 129, 204, 0.25);
+  border-radius: var(--r-full);
+  background: rgba(36, 129, 204, 0.1);
+  color: var(--primary);
+  font-size: var(--fs-xs);
+  font-weight: var(--font-bold);
+  cursor: pointer;
+}
+
+.afchip i {
+  font-size: 15px;
+  opacity: .7;
+}
+
+/* ---------------- شیتەکە ---------------- */
+.fsheet {
+  position: fixed;
+  inset: 0;
+  z-index: 2400;
+  visibility: hidden;
+  transition: visibility 0s linear .18s;
+}
+
+.fsheet.show {
+  visibility: visible;
+  transition: visibility 0s;
+}
+
+.fsheet-scrim {
+  position: absolute;
+  inset: 0;
+  background: rgba(15, 23, 42, .55);
+  opacity: 0;
+  transition: opacity .16s ease-in;
+}
+
+.fsheet.show .fsheet-scrim {
+  opacity: 1;
+  transition: opacity .2s ease-out;
+}
+
+.fsheet-panel {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  width: 100%;
+  max-width: 620px;
+  height: 100%;
+  max-height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  transform: translate3d(-50%, 100%, 0);
+  transition: transform .22s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+.fsheet.show .fsheet-panel {
+  transform: translate3d(-50%, 0, 0);
+}
+
+/* لەسەر شاشەی پان شیتەکە دەبێتە پەنجەرەیەکی ناوەڕاست */
+@media (min-width: 640px) {
+  .fsheet-panel {
+    max-width: 900px;
+    height: auto;
+    max-height: 88vh;
+    bottom: 6vh;
+    border-radius: var(--r-lg);
+    overflow: hidden;
+  }
+}
+
+body.fsheet-open {
+  overflow: hidden;
+}
+
+.fsheet-head {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2);
+  padding: 12px 14px;
+  padding-top: calc(12px + env(safe-area-inset-top, 0px));
+  border-bottom: 1px solid #eef2f5;
+}
+
+.fsheet-title {
+  font-size: var(--fs-lg);
+  font-weight: var(--font-bold);
+  color: var(--text-main);
+}
+
+.fsheet-x {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: #f1f5f9;
+  color: #475569;
+  font-size: 22px;
+  cursor: pointer;
+}
+
+.fsheet-reset {
+  height: 36px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: #dc2626;
+  font-size: var(--fs-md);
+  font-weight: var(--font-bold);
+  cursor: pointer;
+}
+
+.fsheet-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  padding: 14px;
+  gap: var(--sp-4);
+}
+
+.fsec-t {
+  font-size: var(--fs-xs);
+  font-weight: var(--font-bold);
+  color: var(--text-secondary);
+  letter-spacing: .04em;
+  margin-bottom: var(--sp-2);
+}
+
+.fchips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* ئامانجی دەستلێدان ≥ ٤٤px */
+.fchip {
+  min-height: 44px;
+  padding: 0 16px;
+  border: 1px solid #e2e8f0;
+  border-radius: var(--r-full);
+  background: #f8fafc;
+  color: var(--text-main);
+  font-size: var(--fs-md);
+  font-weight: var(--font-semibold);
+  cursor: pointer;
+  transition: all .15s ease;
+}
+
+.fchip:active {
+  transform: scale(0.96);
+}
+
+.fchip.is-on {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+}
+
+/* ---------------- ڕۆژژمێر ---------------- */
+.fcal-wrap {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  gap: var(--sp-2);
+}
+
+.fcal-inputs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--sp-2);
+}
+
+.fcal-in {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 44px;
+  padding: 0 10px;
+  border: 1px solid #e2e8f0;
+  border-radius: var(--r-sm);
+  background: #f8fafc;
+  margin: 0;
+}
+
+.fcal-in > span {
+  flex: 0 0 auto;
+  font-size: var(--fs-xs);
+  font-weight: var(--font-bold);
+  color: var(--text-secondary);
+}
+
+.fcal-in input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font-size: var(--fs-md);
+  text-align: left;
+}
+
+.fcal-in input.is-bad {
+  color: #dc2626;
+}
+
+.fcal-in:focus-within {
+  border-color: var(--primary);
+  background: #fff;
+}
+
+.fcal-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2);
+}
+
+.fcal-arrow {
+  width: 44px;
+  height: 40px;
+  padding: 0;
+  border: 1px solid #e2e8f0;
+  border-radius: var(--r-sm);
+  background: #f8fafc;
+  color: #475569;
+  font-size: 20px;
+  cursor: pointer;
+}
+
+.fcal-today {
+  flex: 1;
+  height: 40px;
+  border: 1px solid #e2e8f0;
+  border-radius: var(--r-sm);
+  background: #fff;
+  color: var(--primary);
+  font-size: var(--fs-md);
+  font-weight: var(--font-bold);
+  cursor: pointer;
+}
+
+/* لە دۆخی ستوونی ئارەستەکان مانایان نییە — سکرۆڵ کارەکە دەکات */
+.fcal-nav.is-vert .fcal-arrow {
+  display: none;
+}
+
+/* تەنها یەک سکرۆڵەر لەناو شیتەکەدا هەیە (`.fsheet-body`).
+   ڕۆژژمێرەکە سکرۆڵی خۆی نییە — دوو سکرۆڵی تێکەڵ لەسەر پەنجە
+   تێکەڵاوی دروست دەکات. */
+.fcal {
+  display: grid;
+  grid-template-columns: repeat(var(--fcal-cols, 1), 1fr);
+  gap: var(--sp-4);
+  align-content: start;
+  padding-bottom: 4px;
+}
+
+/* مۆبایل: مانگەکان بە ستوونی سکرۆڵ دەکەن، ئەمڕۆ لە سەرەوە */
+.fcal.is-vert {
+  grid-template-columns: 1fr;
+}
+
+.fcal-more {
+  width: 100%;
+  height: 38px;
+  border: 1px dashed #cbd5e1;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: var(--fs-sm);
+  font-weight: var(--font-semibold);
+  cursor: pointer;
+}
+
+.fcm-t {
+  text-align: center;
+  font-size: var(--fs-md);
+  font-weight: var(--font-bold);
+  color: var(--text-main);
+  margin-bottom: 6px;
+}
+
+.fcm-w,
+.fcm-g {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+}
+
+.fcm-w {
+  margin-bottom: 2px;
+}
+
+.fcm-w span {
+  text-align: center;
+  font-size: var(--fs-2xs);
+  font-weight: var(--font-bold);
+  color: #94a3b8;
+  padding: 4px 0;
+}
+
+.fcm-g {
+  row-gap: 2px;
+}
+
+/* خانەی ڕۆژ — ئامانجی دەستلێدان ≥ ٤٤px لەسەر مۆبایل */
+.fcd {
+  position: relative;
+  display: block;
+  width: 100%;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font-family: inherit;
+  font-size: var(--fs-md);
+  color: var(--text-main);
+  cursor: pointer;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.fcd.is-void {
+  pointer-events: none;
+}
+
+/* بەندی مەودا — بەبێ بۆشایی ئاسۆیی، بۆیە مەودا بە هێڵێکی یەکگرتوو
+   دەردەکەوێت نەک چەند خشتەیەکی جیا */
+.fcd::before {
+  content: '';
+  position: absolute;
+  inset: 2px 0;
+  background: transparent;
+  transition: background .12s ease;
+}
+
+.fcd.is-in::before,
+.fcd.is-start::before,
+.fcd.is-end::before {
+  background: rgba(36, 129, 204, 0.13);
+}
+
+.fcd.is-start::before {
+  left: 3px;
+  border-radius: var(--r-sm) 0 0 var(--r-sm);
+}
+
+.fcd.is-end::before {
+  right: 3px;
+  border-radius: 0 var(--r-sm) var(--r-sm) 0;
+}
+
+.fcd.is-only::before {
+  inset: 2px 3px;
+  border-radius: var(--r-sm);
+}
+
+/* پێشبینینی هۆڤەر — کاڵتر و بە لێواری پچڕاو، تا لە هەڵبژاردنی
+   تەواوکراو جیا بکرێتەوە */
+.fcd.is-preview::before {
+  background: rgba(36, 129, 204, 0.07);
+  outline: 1px dashed rgba(36, 129, 204, 0.4);
+  outline-offset: -1px;
+}
+
+.fcd > span {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 44px;
+  border-radius: var(--r-sm);
+}
+
+.fcd.is-today > span {
+  box-shadow: inset 0 0 0 1.5px rgba(36, 129, 204, 0.45);
+  font-weight: var(--font-bold);
+}
+
+.fcd.is-start > span,
+.fcd.is-end > span {
+  background: var(--primary);
+  color: #fff;
+  font-weight: var(--font-bold);
+  box-shadow: none;
+}
+
+/* کێرسەری تەختەکلیل */
+.fcd.is-cur > span {
+  outline: 2px solid var(--primary);
+  outline-offset: -2px;
+}
+
+/* لێوارەکان دەکێشرێن بۆ ڕێکخستنەوەی مەودا */
+.fcd.is-start,
+.fcd.is-end {
+  touch-action: none;
+}
+
+.fcal.is-dragging .fcd {
+  cursor: grabbing;
+}
+
+@media (hover: hover) {
+  .fcd:not(.is-void):not(.is-start):not(.is-end):hover > span {
+    background: #eef2f7;
+  }
+}
+
+/* ---------------- پێی شیتەکە ---------------- */
+.fsheet-foot {
+  flex-shrink: 0;
+  padding: 12px 14px;
+  padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+  border-top: 1px solid #eef2f5;
+  background: #fff;
+}
+
+.fsheet-sum {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-bottom: 10px;
+  font-size: var(--fs-md);
+  font-weight: var(--font-semibold);
+  color: var(--text-secondary);
+}
+
+.fsheet-sum i {
+  font-size: var(--icon-sm);
+  color: var(--primary);
+}
+
+.fsheet-sum b {
+  color: var(--primary);
+}
+
+.fsheet-sum em {
+  font-style: normal;
+  color: #94a3b8;
+}
+
+/* دوگمەی گەورەی پەسەندکردن — هەمیشە لە خوارەوە دیارە */
+.fsheet-apply {
+  width: 100%;
+  height: var(--btn-h);
+  border-radius: var(--r-md);
+  background: var(--primary);
+  color: #fff;
+  font-size: var(--fs-lg);
+  font-weight: var(--font-bold);
 }
