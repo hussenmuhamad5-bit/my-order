@@ -3649,6 +3649,123 @@
             return teamMemberByCode.get(String(code || "").trim().toLowerCase()) || null;
         }
 
+        // ============================================================
+        // نەخشاندنی پەنجەرەیی (windowing) بۆ لیستی بەڕێوەبردن
+        // ------------------------------------------------------------
+        // کێشەکە: کاتێک تاب/پلە/بەش دەگۆڕدرا، هەموو ~١١٠٠ کارتەکە بەیەکەوە
+        // دەخرانە ناو DOMـەوە (~٣٠ هەزار توخم) لە یەک `innerHTML`ـدا — ئەمە
+        // بۆ چەند چرکەیەک شاشەکەی فریز دەکرد.
+        //
+        // چارەسەر: هەموو داتاکە لە بیرگەدا دەمێنێتەوە (خێرایە)، بەڵام تەنها
+        // ٤٠ کارت لە جارێکدا دەخرێنە ناو DOM. کاتێک بەکارهێنەر سکرۆڵ دەکات،
+        // `IntersectionObserver` بەشی داهاتوو دەخاتە سەری. هیچ گۆڕانێکی
+        // دیزاین نییە — هەمان کارت، هەمان ڕیزبەندی، تەنها بە کۆمەڵ دەنەخشێن.
+        //
+        // ژمارەکان (بەجی ڕۆژ/ئەندام) ڕاستن چونکە لە بیرگەدا هەموو داتاکەمان
+        // هەیە — بۆیە پێویست بە داواکاریی سێرڤەر ناکات.
+        // ============================================================
+        const MGMT_CHUNK = 40;
+        let _mgmtPlan = [];          // ڕیزی «توکن»ەکان: {c:ئۆردەر} کارت، {m,mo} ئەندام، {d}/{h} HTML
+        let _mgmtRendered = 0;       // چەند توکن تا ئێستا نەخشێنراون
+        let _mgmtShowMember = false;
+        let _mgmtIO = null;
+
+        function _mgmtResetWindow() {
+            if (_mgmtIO) { _mgmtIO.disconnect(); _mgmtIO = null; }
+            _mgmtPlan = [];
+            _mgmtRendered = 0;
+        }
+
+        function _mgmtStart(list, plan, showMember) {
+            _mgmtPlan = plan;
+            _mgmtRendered = 0;
+            _mgmtShowMember = showMember;
+            list.innerHTML = '';
+            _mgmtRenderMore(list);       // یەکەم کۆمەڵ
+            _mgmtEnsureSentinel(list);   // چاودێری سکرۆڵ بۆ ئەوانی تر
+            updatePrintBulkBar();
+        }
+
+        function _mgmtRenderMore(list) {
+            if (_mgmtRendered >= _mgmtPlan.length) { _mgmtFinish(); return; }
+            let html = '';
+            let cards = 0;
+            let i = _mgmtRendered;
+            // تەنها کارتەکان (نەک ناوبڕی ڕۆژ/سەردێڕ) بۆ قەبارەی کۆمەڵ دەژمێردرێن
+            while (i < _mgmtPlan.length && cards < MGMT_CHUNK) {
+                let it = _mgmtPlan[i];
+                if (it.c) { html += buildMgmtOrderCard(it.c, _mgmtShowMember); cards++; }
+                else if (it.m) { html += buildMemberCard(it.m, it.mo); cards++; }
+                else html += it.d || it.h || '';
+                i++;
+            }
+            _mgmtRendered = i;
+            let s = document.getElementById('mgmt-render-sentinel');
+            if (s) s.insertAdjacentHTML('beforebegin', html);
+            else list.insertAdjacentHTML('beforeend', html);
+            if (_mgmtRendered >= _mgmtPlan.length) _mgmtFinish();
+        }
+
+        function _mgmtEnsureSentinel(list) {
+            if (_mgmtRendered >= _mgmtPlan.length) return;   // هیچی تر نەماوە
+            let s = document.getElementById('mgmt-render-sentinel');
+            if (!s) {
+                s = document.createElement('div');
+                s.id = 'mgmt-render-sentinel';
+                s.setAttribute('aria-hidden', 'true');
+                s.style.cssText = 'height:1px; width:100%; margin:0; padding:0;';
+            }
+            list.appendChild(s);   // هەمیشە دوایین توخم
+            if (!_mgmtIO) {
+                _mgmtIO = new IntersectionObserver(ents => {
+                    if (ents.some(e => e.isIntersecting)) _mgmtRenderMore(list);
+                }, { root: list, rootMargin: '700px 0px' });
+            }
+            _mgmtIO.observe(s);
+        }
+
+        function _mgmtFinish() {
+            if (_mgmtIO) { _mgmtIO.disconnect(); _mgmtIO = null; }
+            let s = document.getElementById('mgmt-render-sentinel');
+            if (s) s.remove();
+        }
+
+        // دوای نوێکردنەوە (وەک گۆڕینی حاڵەت) شوێنی سکرۆڵ دەپارێزرێت — بۆیە
+        // پێویستە بەقەد ئەو شوێنە کارت بنەخشێنرێن، نەک تەنها یەک کۆمەڵ
+        function _mgmtRenderUntilScroll(list, targetTop) {
+            let guard = 0;
+            while (_mgmtRendered < _mgmtPlan.length &&
+                   list.scrollHeight < targetTop + list.clientHeight + 200 &&
+                   guard++ < 200) {
+                _mgmtRenderMore(list);
+            }
+        }
+
+        // کارتی ئەندام — پێشتر لەناو `applyOrderFilters` دروست دەکرا، ئێستا
+        // فەنکشنێکی جیایە تا بتوانرێت بە کۆمەڵ (lazy) دروست بکرێت
+        function buildMemberCard(member, memberOrders) {
+            let count = memberOrders.length;
+            let memberBadges = statusCountBadges(memberOrders);
+            return `
+                        <div class="team-member-card" style="flex-direction:column; align-items:stretch;" onclick="viewTeamMemberOrders('${member.code}')">
+                            <div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
+                                <div class="tm-info">
+                                    ${avatarHtml(member.avatar, member.full_name, 40)}
+                                    <div class="tm-details">
+                                        <h4>${member.full_name || "بێ ناو"}</h4>
+                                        <p>کۆد: <span dir="ltr">${member.code}</span> | پلە: ${normalizeRole(member.role) || "ئەندام"}</p>
+                                    </div>
+                                </div>
+                                <div class="tm-stats">
+                                    <span class="tm-count">${count}</span>
+                                    <span class="tm-label">داواکاری</span>
+                                </div>
+                            </div>
+                            ${memberBadges ? `<div style="display:flex; gap:5px; flex-wrap:wrap; padding-top:10px; margin-top:2px; border-top:1px dashed #eef2f5;">${memberBadges}</div>` : ''}
+                        </div>
+                    `;
+        }
+
 
         // گۆڕاوەکان بۆ سەیڤکردنی داتا لە مێشکی ئەپەکە
         let isDashboardDataLoaded = false;
@@ -4406,7 +4523,9 @@
                 return true;
             });
 
-            let newListHTML = '';
+            // نەخشاندنی کۆن (هەموو کارتەکان بەیەکەوە) نەماوە — لەجیاتی ئەوە
+            // «پلانێک» دروست دەکرێت و بە کۆمەڵی ٤٠ کارتی نەخشێنراو دەردەکەوێت
+            _mgmtResetWindow();
 
             if (currentOrdersTab === "team" && teamViewMode === "members" && !selectedTeamMember) {
                 if (teamMembersData.length === 0) {
@@ -4414,7 +4533,7 @@
                     return;
                 }
 
-                let membersShown = 0;
+                let memberPlan = [];
 
                 teamMembersData.forEach(member => {
                     let mCode = String(member.code || "").trim().toLowerCase();
@@ -4437,63 +4556,42 @@
                     else if (searchVal && memberMatchSearch && statusFilter === "all" && dateType === "all") shouldShow = true;
                     else if (!searchVal && statusFilter === "all" && dateType === "all") shouldShow = true;
 
-                    if (shouldShow) {
-                        membersShown++;
-                        let memberBadges = statusCountBadges(memberOrders);
-                        newListHTML += `
-                        <div class="team-member-card" style="flex-direction:column; align-items:stretch;" onclick="viewTeamMemberOrders('${member.code}')">
-                            <div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
-                                <div class="tm-info">
-                                    ${avatarHtml(member.avatar, member.full_name, 40)}
-                                    <div class="tm-details">
-                                        <h4>${member.full_name || "بێ ناو"}</h4>
-                                        <p>کۆد: <span dir="ltr">${member.code}</span> | پلە: ${normalizeRole(member.role) || "ئەندام"}</p>
-                                    </div>
-                                </div>
-                                <div class="tm-stats">
-                                    <span class="tm-count">${count}</span>
-                                    <span class="tm-label">داواکاری</span>
-                                </div>
-                            </div>
-                            ${memberBadges ? `<div style="display:flex; gap:5px; flex-wrap:wrap; padding-top:10px; margin-top:2px; border-top:1px dashed #eef2f5;">${memberBadges}</div>` : ''}
-                        </div>
-                    `;
-                    }
+                    // کارتەکە بە کۆمەڵ (lazy) لە `buildMemberCard` دروست دەبێت
+                    if (shouldShow) memberPlan.push({ m: member, mo: memberOrders });
                 });
 
-                if (membersShown === 0) {
+                if (memberPlan.length === 0) {
                     list.innerHTML = '<p style="text-align:center; color:#888; margin-top:40px;">هیچ ئەنجامێک نەدۆزرایەوە.</p>';
-                } else {
-                    list.innerHTML = newListHTML;
+                    return;
                 }
+                _mgmtStart(list, memberPlan, false);
                 return;
             }
+
+            let plan = [];
 
             if (currentOrdersTab === "team" && selectedTeamMember) {
                 let selCode = String(selectedTeamMember).trim().toLowerCase();
                 let mName = (teamMemberOf(selCode) || {}).full_name || selectedTeamMember;
-                newListHTML += `
+                plan.push({ h: `
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; background:rgba(36,129,204,0.08); padding:10px 15px; border-radius:12px; border:1px solid rgba(36,129,204,0.15);">
                     <div style="font-size:13px; font-weight:700; color:var(--primary);">
                         <i class='bx bx-folder-open'></i> ئۆردەرەکانی: ${mName}
                     </div>
                     <button onclick="backToTeamList()" style="background:#fff; border:1px solid #cbd5e1; padding:5px 10px; border-radius:8px; font-size:11px; font-weight:bold; color:#475569; cursor:pointer;"><i class='bx bx-right-arrow-alt'></i> گەڕانەوە</button>
                 </div>
-            `;
+            ` });
             }
 
             if (filteredOrders.length === 0) {
-                list.innerHTML = newListHTML + '<p style="text-align:center; color:#888; margin-top:40px;">هیچ داواکارییەک نەدۆزرایەوە.</p>';
+                let head = plan.length ? plan[0].h : '';
+                list.innerHTML = head + '<p style="text-align:center; color:#888; margin-top:40px;">هیچ داواکارییەک نەدۆزرایەوە.</p>';
                 return;
             }
 
             // کۆکردنەوەی ئۆردەرەکان بەپێی ڕۆژ لە هەموو لیستە هاموارەکان (داواکارییەکانم، هەموو، ئۆردەری ئەندام)
             // لە دۆخی «هەموو»ی تیم (بێ چوونە ناو ئەندامێک) وێنەی ئەندامەکە لەسەر هەر ئۆردەرێک پیشان دەدرێت
             let showMemberCol = (currentOrdersTab === "team" && !selectedTeamMember);
-            let showDayDividers = true;
-            let ymdStr = (d) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
-            let todayStr = ymdStr(new Date());
-            let ydObj = new Date(); ydObj.setDate(ydObj.getDate() - 1); let yesterdayStr = ymdStr(ydObj);
 
             let dayGroups = []; let dayMap = {};
             filteredOrders.forEach(o => {
@@ -4503,9 +4601,9 @@
             });
 
             dayGroups.forEach(group => {
-                if (showDayDividers) {
-                    let dl = formatDayLabel(group.day);
-                    newListHTML += `
+                // ناوبڕی ڕۆژ + ژمارەکان یەکجار دەژمێردرێن (لە بیرگەوە، هەموو ڕیزەکان)
+                let dl = formatDayLabel(group.day);
+                plan.push({ d: `
                     <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin:12px 0 7px 0; padding-bottom:6px; border-bottom:1px dashed #e2e8f0;">
                         <div style="display:flex; align-items:center; gap:5px; font-size:12px; font-weight:700; color:#334155;">
                             <i class='bx bx-calendar-event' style="color:var(--primary); font-size:15px;"></i>
@@ -4513,16 +4611,13 @@
                             ${dl.sub ? `<span dir="ltr" style="font-size:10px; font-weight:600; color:#94a3b8;">${dl.sub}</span>` : ''}
                         </div>
                         <div style="display:flex; align-items:center; gap:5px; flex-wrap:wrap; justify-content:flex-end;">${statusCountBadges(group.orders)}</div>
-                    </div>`;
-                }
+                    </div>` });
 
-                group.orders.forEach(o => {
-                    newListHTML += buildMgmtOrderCard(o, showMemberCol);
-                });
+                // کارتەکان بە کۆمەڵ (lazy) لە `buildMgmtOrderCard` دروست دەبن
+                group.orders.forEach(o => plan.push({ c: o }));
             });
 
-            list.innerHTML = newListHTML;
-            updatePrintBulkBar();
+            _mgmtStart(list, plan, showMemberCol);
         }
 
         async function loadManagementOrders() {
@@ -6229,10 +6324,14 @@
             let el = document.getElementById(listId);
             let saved = el ? el.scrollTop : 0;
             let p = mgmtActive ? loadManagementOrders() : fetchOrders();
-            // دوای تەواوبوونی دووبارە بارکردن، گەڕاندنەوەی شوێنی سکرۆڵ
+            // دوای تەواوبوونی دووبارە بارکردن، گەڕاندنەوەی شوێنی سکرۆڵ.
+            // لیستی بەڕێوەبردن پەنجەرەییە (windowed)، بۆیە دەبێت بەقەد ئەو
+            // شوێنە کارت بنەخشێنرێن پێش گەڕاندنەوەی سکرۆڵ — نەک تەنها یەک کۆمەڵ.
             Promise.resolve(p).then(() => {
                 let el2 = document.getElementById(listId);
-                if (el2) el2.scrollTop = saved;
+                if (!el2) return;
+                if (mgmtActive && saved > 0) _mgmtRenderUntilScroll(el2, saved);
+                el2.scrollTop = saved;
             });
         }
 
