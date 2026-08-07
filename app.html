@@ -6328,44 +6328,34 @@
             }
         }
 
-        // کارتی دۆخی پرێنت لەناو وردەکاریی ئۆردەر
+        // کارتی دۆخی پرێنت لەناو وردەکاریی ئۆردەر — تەنها ئاگاداری، بەبێ دوگمە.
+        // پرێنت و سکان و لابردنی قوفڵ هەموو لە دەرەوەی ئەپەکە دەکرێن
+        // (سیستەمی گەیاندن)، بۆیە ئێرە تەنها دۆخەکە نیشان دەدات:
+        //   • قوفڵ  → پرێنت کراوە، هێشتا سکان نەکراوە (کێ و کەی)
+        //   • کراوە → پرێنت و سکان کراوە (کێ و کەی)
         function printBoxHtml(o) {
             const locked = isPrintLocked(o);
             const printed = !!o.printed_at;
-            const mayMark = canMarkPrint(o) && isPrintableStatus(o);
 
+            // پرێنت کراوە، هێشتا سکان نەکراوە — تەنها ئاگاداری
             if (locked) {
-                const scanBtn = mayMark
-                    ? `<button class="btn plock-btn plock-btn-scan" onclick="triggerOrderScan()"><i class='bx bx-qr-scan'></i> سکانی بارکۆد بۆ لابردنی قوفڵ</button>` : '';
-                const breakBtn = canBreakPrintLock(o)
-                    ? `<button class="btn plock-btn plock-btn-break" onclick="breakPrintLock('${o.id}')"><i class='bx bx-lock-open-alt'></i> شکاندنی قوفڵ بەبێ سکان</button>` : '';
                 return `<div class="plock-card is-locked">
                     <div class="plock-head"><i class='bx bx-lock-alt'></i> پرێنت کراوە — قوفڵە</div>
                     <div class="plock-meta">لەلایەن <b>${histEsc(o.printed_by || 'نەزانراو')}</b> · ${histEsc(formatLogTime(o.printed_at))}</div>
                     <div class="plock-note">تا بارکۆدەکەی سکان نەکرێت، هیچ کەس دەستکاری، سڕینەوە یان گۆڕینی حاڵەتی ناکات.</div>
-                    ${scanBtn}${breakBtn}
                 </div>`;
             }
 
+            // پرێنت و سکان کراوە — تەنها زانیاری (کێ و کەی)
             if (printed) {
-                // وەسڵ ڕەنگە کوێر ببێت یان لەدەست بچێت — پرێنتی دووبارە
-                // قوفڵێکی نوێ دادەنێت، بۆیە دیسان سکانی پێویستە
-                const again = mayMark
-                    ? `<button class="btn plock-btn plock-btn-mark" onclick="markOrderPrinted('${o.id}')"><i class='bx bx-printer'></i> پرێنتی دووبارە و قوفڵکردنەوە</button>` : '';
                 return `<div class="plock-card is-open">
                     <div class="plock-head"><i class='bx bx-lock-open-alt'></i> پرێنت کراوە و سکان کراوە</div>
                     <div class="plock-meta">پرێنت: <b>${histEsc(o.printed_by || 'نەزانراو')}</b> · ${histEsc(formatLogTime(o.printed_at))}</div>
                     <div class="plock-meta">سکان: <b>${histEsc(o.print_scanned_by || 'نەزانراو')}</b> · ${histEsc(formatLogTime(o.print_scanned_at))}</div>
-                    ${again}
                 </div>`;
             }
 
-            if (!mayMark) return '';
-            return `<div class="plock-card is-idle">
-                <div class="plock-head"><i class='bx bx-printer'></i> وەسڵی پرێنت</div>
-                <div class="plock-note">دوای پرێنتکردنی وەسڵەکە لێرەدا نیشانەی بکە — ئۆردەرەکە قوفڵ دەبێت تا سکانی دەکەیت.</div>
-                <button class="btn plock-btn plock-btn-mark" onclick="markOrderPrinted('${o.id}')"><i class='bx bx-check-square'></i> نیشانەکردن وەک پرێنتکراو</button>
-            </div>`;
+            return '';
         }
 
         // ============================================================
