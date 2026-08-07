@@ -1296,7 +1296,7 @@
             <div class="search-row">
                 <div class="search-group">
                     <input class="search-input" type="search" id="orders-search-input" dir="auto"
-                        placeholder="گەڕان بەناو، مۆبایل، یان کۆد..." oninput="applyOrderFilters()" autocomplete="off"
+                        placeholder="گەڕان بەناو، مۆبایل، یان کۆد..." oninput="debouncedOrderFilters()" autocomplete="off"
                         style="padding-left: 48px;" />
                     <button type="button" onclick="triggerOrderScan()" class="scan-search-btn"
                         title="سکانی بارکۆد / QR">
@@ -2801,7 +2801,15 @@
 
             // پشکنینی دوورەپەڕ: هەموو ٦٠ چرکە دڵنیابوونەوە کە کلیلەکە هێشتا هەیە
             // (ئەگەر سڕایەوە → دەرچوونی خۆکار، تەنانەت ئەگەر بەکارهێنەر هیچ نەکات)
-            setInterval(() => { try { ensureAccountActive(); } catch (e) { } }, 60000);
+            // تابەکە شاراوەیە → پێویست ناکات داواکاری بنێردرێت. کاتێک
+            // بەکارهێنەر دەگەڕێتەوە، `visibilitychange` یەکسەر دەیپشکنێت.
+            setInterval(() => {
+                if (document.hidden) return;
+                try { ensureAccountActive(); } catch (e) { }
+            }, 60000);
+            document.addEventListener('visibilitychange', () => {
+                if (!document.hidden) { try { ensureAccountActive(); } catch (e) { } }
+            });
         };
 
 
@@ -3568,6 +3576,79 @@
         let selectedTeamMember = null;
         let teamViewMode = "all"; // "all" = هەموو ئۆردەرەکان، "members" = بەپێی ئەندام
 
+        // ============================================================
+        // هێنانەوەی هەموو ڕیزەکان — Supabase بە بنەڕەت لە ١٠٠٠ ڕیز دەوەستێت
+        // ------------------------------------------------------------
+        // ئەم سنوورە **هیچ هەڵەیەک نادات**: تەنها ١٠٠٠ ڕیزی نوێ دەگەڕێنێتەوە
+        // و کۆنەکان بێدەنگ ون دەبن — ئەمە هۆکاری «ئۆردەرە کۆنەکان دەرناکەون»
+        // بوو. بۆیە بە کۆمەڵ (batch) دەهێنرێن تا هەموویان بێن.
+        //
+        // بە `id` دەگەڕێینەوە نەک بە `range`: ئۆردەری نوێ لە کاتی هێنانەوەدا
+        // زیاد دەکرێت، و لەگەڵ `range` ئەوە هەموو ڕیزەکان یەک خانە دەجوڵێنێت
+        // و ڕیزێک لە سنووری پەڕەکاندا دووبارە دەبێتەوە. `id` کلیلی سەرەکییە،
+        // بۆیە خێراترینیشە. (هەمان بیرۆکەی `fetchAllUserTx` لە دێڕی ١١٣٢٢)
+        // ============================================================
+        const PG_PAGE = 1000;
+        async function fetchAllOrders(makeQuery, maxPages = 400) {
+            let all = [], cursor = null;
+            for (let i = 0; i < maxPages; i++) {
+                // `makeQuery` دەبێت فەنکشن بێت نەک کوێرییەکی دروستکراو —
+                // کوێرییەکانی supabase-js تەنها یەک جار بەکاردێن
+                let q = makeQuery().order('id', { ascending: false }).limit(PG_PAGE);
+                if (cursor !== null) q = q.lt('id', cursor);
+                const { data, error } = await q;
+                if (error) throw error;
+                if (!data || !data.length) break;
+                all = all.concat(data);
+                if (data.length < PG_PAGE) break;   // کۆتا پەڕە
+                cursor = data[data.length - 1].id;
+            }
+            return all;
+        }
+
+        // ============================================================
+        // گەڕان: چاوەڕوانی کورت پێش نەخشاندنەوە
+        // ------------------------------------------------------------
+        // پێشتر هەر پیتێک هەموو لیستەکەی لە نوێوە دروست دەکردەوە — واتا
+        // ~٨ نەخشاندنی تەواو لە چرکەیەکدا، هەریەکەیان بە هەزاران توخمی DOM.
+        // بە ٢٢٠ چرکەی خولەکی چاوەڕوانی، تەنها یەک جار دروست دەبێتەوە:
+        // دوای ئەوەی نووسین وەستا.
+        //
+        // تەنها ڕێگای پیتنووسین چاوەڕوانی دەکات. گۆڕینی تاب، فلتەر، و
+        // مۆدی هەڵبژاردن هەر دەستبەجێن — ئەوانە کرداری ڕاستەوخۆی بەکارهێنەرن.
+        // ============================================================
+        let _ordFilterT = null;
+        function debouncedOrderFilters() {
+            clearTimeout(_ordFilterT);
+            _ordFilterT = setTimeout(() => { _ordFilterT = null; applyOrderFilters(); }, 220);
+        }
+        // Enter واتا «ئێستا» — چاوەڕوانییەکە دەبڕدرێت
+        function flushOrderFilters() {
+            if (_ordFilterT === null) return;
+            clearTimeout(_ordFilterT);
+            _ordFilterT = null;
+            applyOrderFilters();
+        }
+
+        // ============================================================
+        // نەخشەی ئەندامان بەپێی کۆد
+        // ------------------------------------------------------------
+        // پێشتر بۆ هەر ئۆردەرێک بە `find()` بەدوای ئەندامەکەیدا دەگەڕا —
+        // واتا (ژمارەی ئۆردەر × ژمارەی ئەندام) بەراوردی سترینگ لە هەر
+        // نەخشاندنێکدا. لەگەڵ ٢٤٣ ئەندام و ١١٠٠ ئۆردەر ئەوە ~٢٦٦ هەزارە،
+        // لە سێ شوێنی جیاوازدا. نەخشەکە یەکجار دروست دەبێت و لێدوانەکە
+        // دەبێتە خێرا.
+        // ============================================================
+        let teamMemberByCode = new Map();
+        function rebuildTeamMemberIndex() {
+            teamMemberByCode = new Map();
+            teamMembersData.forEach(m =>
+                teamMemberByCode.set(String(m.code || "").trim().toLowerCase(), m));
+        }
+        function teamMemberOf(code) {
+            return teamMemberByCode.get(String(code || "").trim().toLowerCase()) || null;
+        }
+
 
         // گۆڕاوەکان بۆ سەیڤکردنی داتا لە مێشکی ئەپەکە
         let isDashboardDataLoaded = false;
@@ -3701,8 +3782,8 @@
             }
 
             try {
-                const { data: orders, error } = await supabase.from('orders').select('*').eq('seller_code', currentUser.code).order('id', { ascending: false });
-                if (error) throw error;
+                const orders = await fetchAllOrders(() =>
+                    supabase.from('orders').select('*').eq('seller_code', currentUser.code));
 
                 let newListHTML = '';
                 let prepCount = 0, onwayCount = 0, delivCount = 0, retCount = 0;
@@ -3999,28 +4080,85 @@
             return String(getRelativeTime(dateString) || "").replace(' پێش ئێستا', '');
         }
 
+        // ============================================================
+        // کاشی ڕووکاری کارت
+        // ------------------------------------------------------------
+        // بۆ هەر کارتێک، لە هەر نەخشاندنێکدا، ئەمانە دەکران: ٤ ڕێجێکس،
+        // ٢ `new Date()`، فۆرماتکردنی `Intl`، و چەند `split()`ـێک. لەگەڵ
+        // ١١٠٠ ئۆردەر ئەوە بە هەزاران کردارە بۆ داتایەک کە هەرگیز ناگۆڕێت.
+        //
+        // کاشەکە بە **خودی ئۆبجێکتی ئۆردەرەکەوە** بەستراوە (WeakMap)، نەک
+        // بە `id`. هەر هێنانەوەیەکی نوێ ئۆبجێکتی نوێ دروست دەکات، بۆیە
+        // کاشەکە خۆکارانە بەتاڵ دەبێت — بێ هیچ کۆدێکی «سڕینەوەی کاش».
+        //
+        // `writePrintFields` ڕیزەکە لە شوێنی خۆیدا دەگۆڕێت، بەڵام تەنها
+        // ستوونەکانی پرێنت — کە لێرەدا کاش ناکرێن.
+        // ============================================================
+        const _cardFmt = new WeakMap();
+        function cardFmt(o) {
+            let f = _cardFmt.get(o);
+            const now = Date.now();
+            if (!f) {
+                const full = o.date ? String(o.date) : "";
+                const p = full.split(' ');
+                const dOnly = p[0] || "نەزانراوە";
+                // بەروار و کاتژمێر پێکەوە لە یەک چیپ، بەبێ چرکە — وەک پەڕەی داشبۆرد
+                const tOnly = stripSeconds(toKurdishMeridiem(
+                    (p[1] && p[2]) ? (p[1] + ' ' + p[2]) : (p[1] || "")));
+                f = {
+                    dOnly: dOnly,
+                    tOnly: tOnly,
+                    dateTime: tOnly ? (dOnly + ' · ' + tOnly) : dOnly,
+                    total: Number(o.grand_total || 0).toLocaleString('en-US'),
+                    city: o.address ? String(o.address).split('-')[0].trim() : "دیاری نەکراوە",
+                    items: shortItemNames(o.item_names),
+                    code: o.order_code || o.id || "00",
+                    name: o.customer_name || "بێ ناو",
+                    // یەک سترینگ بۆ گەڕان لەجیاتی ٤ سترینگی نوێ بۆ هەر پیتێک.
+                    // `` لە کیبۆردەوە نانووسرێت، بۆیە گەڕان هەرگیز
+                    // ناتوانێت بەسەر دوو خانەدا بڕوات — واتا هەمان مانای پێشوو.
+                    blob: (String(o.order_code || o.id || "") + '' +
+                           String(o.phone1 || "") + '' +
+                           String(o.phone2 || "") + '' +
+                           String(o.customer_name || "")).toLowerCase(),
+                    rel: "",
+                    _t: 0
+                };
+                _cardFmt.set(o, f);
+            }
+            // «چەند خولەک پێش ئێستا» بە تێپەڕبوونی کات دەگۆڕێت — هەر خولەکێک جارێک
+            if (now - f._t > 60000) { f.rel = shortRelativeTime(o.date); f._t = now; }
+            return f;
+        }
+
+        // تەنها ٤ حاڵەت هەیە — ڕەنگ و پۆلەکەیان جارێک دەژمێردرێت نەک بۆ هەر کارتێک
+        const _statusStyle = Object.create(null);
+        function statusStyleOf(status) {
+            let s = _statusStyle[status];
+            if (s) return s;
+            s = { bg: "rgba(59, 130, 246, 0.12)", col: "#2563eb", cls: "status-preparing" };
+            if (status.includes("ڕێگا")) s = { bg: "rgba(245, 158, 11, 0.12)", col: "#d97706", cls: "status-onway" };
+            else if (status.includes("گەیشت")) s = { bg: "rgba(16, 185, 129, 0.12)", col: "#059669", cls: "status-delivered" };
+            else if (status.includes("گەڕا") || status.includes("کەنسەڵ")) s = { bg: "rgba(239, 68, 68, 0.12)", col: "#dc2626", cls: "status-returned" };
+            _statusStyle[status] = s;
+            return s;
+        }
+
         // دروستکردنی کارتی ئۆردەری کۆمپاکت بۆ پەڕەی ئۆردەرەکانی تیم/داواکارییەکانم
         // showMember = ئەگەر true بوو، وێنە و ناوی ئەندامەکە پیشان دەدرێت (لە دۆخی «هەموو»)
         function buildMgmtOrderCard(o, showMember) {
             let status = o.status || "ئامادە دەکرێت";
-            let statusBg = "rgba(59, 130, 246, 0.12)"; let statusColor = "#2563eb";
-            let statusClass = "status-preparing";
-            if (status.includes("ڕێگا")) { statusBg = "rgba(245, 158, 11, 0.12)"; statusColor = "#d97706"; statusClass = "status-onway"; }
-            else if (status.includes("گەیشت")) { statusBg = "rgba(16, 185, 129, 0.12)"; statusColor = "#059669"; statusClass = "status-delivered"; }
-            else if (status.includes("گەڕا") || status.includes("کەنسەڵ")) { statusBg = "rgba(239, 68, 68, 0.12)"; statusColor = "#dc2626"; statusClass = "status-returned"; }
+            const _ss = statusStyleOf(status);
+            let statusBg = _ss.bg, statusColor = _ss.col, statusClass = _ss.cls;
 
-            let orderCodeStr = o.order_code || o.id || "00";
-            let custName = o.customer_name || "بێ ناو";
-            let total = Number(o.grand_total || 0).toLocaleString('en-US');
-            let city = o.address ? String(o.address).split('-')[0].trim() : "دیاری نەکراوە";
-            let fullDateStr = o.date ? String(o.date) : "";
-            let dParts = fullDateStr.split(' ');
-            let dOnly = dParts[0] || "نەزانراوە";
-            // بەروار و کاتژمێر پێکەوە لە یەک چیپ، بەبێ چرکە — وەک پەڕەی داشبۆرد
-            let tOnly = stripSeconds(toKurdishMeridiem((dParts[1] && dParts[2]) ? (dParts[1] + ' ' + dParts[2]) : (dParts[1] || "")));
-            let dateTime = tOnly ? (dOnly + ' · ' + tOnly) : dOnly;
-            let relTime = shortRelativeTime(o.date);
-            let items = shortItemNames(o.item_names);
+            const _f = cardFmt(o);
+            let orderCodeStr = _f.code;
+            let custName = _f.name;
+            let total = _f.total;
+            let city = _f.city;
+            let dateTime = _f.dateTime;
+            let relTime = _f.rel;
+            let items = _f.items;
 
             // لە دۆخی «هەموو» ئەندامەکە دەبێتە سەردێڕ (وێنە + ناو)، کڕیارەکە دەچێتە ژێری
             // ناوی ئەندام تەنها دوو وشە: ناوی خۆی و ناوی باوکی (نەک باپیر)
@@ -4028,7 +4166,7 @@
             let custRow = "";
             if (showMember) {
                 let sCode = String(o.seller_code || "").trim().toLowerCase();
-                let mem = teamMembersData.find(m => String(m.code || "").trim().toLowerCase() === sCode);
+                let mem = teamMemberOf(sCode);
                 let mName = mem ? (mem.full_name || "بێ ناو") : (o.seller_name || o.seller_code || "—");
                 let mNameShort = String(mName).trim().split(/\s+/).slice(0, 2).join(' ');
                 let mAvatar = mem ? mem.avatar : "";
@@ -4191,6 +4329,10 @@
             let statusFilter = document.getElementById('filter-status').value;
             let dateFrom = document.getElementById('filter-date-from').value;
             let dateTo = document.getElementById('filter-date-to').value;
+            // جۆری فلتەری بەروار — خوارەوە لە لیستی ئەندامان بەکاردێت. پێشتر
+            // ڕانەگەیەنرابوو، بۆیە `ReferenceError`ـی دەدا و نەخشاندنی لیستەکە
+            // لە ناوەڕاستدا دەوەستا کاتێک ئەندامێک هیچ ئۆردەرێکی نەبوایە.
+            let dateType = document.getElementById('filter-date-type').value || 'all';
             let searchVal = document.getElementById('orders-search-input').value.trim().toLowerCase();
 
             let roleFilterEl = document.querySelector('input[name="orders_role_filter"]:checked');
@@ -4224,7 +4366,7 @@
 
                 // فلتەری پلە بۆ ئۆردەرەکانی تیم (تەنها کاتێک ئەندامێکی دیاریکراو نەکراوەتەوە)
                 if (currentOrdersTab === "team" && !selectedTeamMember && roleFilter !== "all") {
-                    let mem = teamMembersData.find(m => String(m.code || "").trim().toLowerCase() === sellerCode);
+                    let mem = teamMemberOf(sellerCode);
                     if (!mem || normalizeRole(mem.role) !== roleFilter) return false;
                 }
 
@@ -4241,20 +4383,18 @@
                 }
 
                 if (searchVal) {
-                    let cStr = String(o.order_code || o.id || "").toLowerCase();
-                    let p1 = String(o.phone1 || "").toLowerCase();
-                    let p2 = String(o.phone2 || "").toLowerCase();
-                    let nStr = String(o.customer_name || "").toLowerCase();
                     let sCode = sellerCode;
 
                     let sName = "";
                     if (currentOrdersTab === "team") {
-                        let member = teamMembersData.find(m => String(m.code || "").trim().toLowerCase() === sCode);
+                        let member = teamMemberOf(sCode);
                         if (member) sName = String(member.full_name || "").toLowerCase();
                         else sName = String(o.seller_name || "").toLowerCase();
                     }
 
-                    let matchOrder = cStr.includes(searchVal) || p1.includes(searchVal) || p2.includes(searchVal) || nStr.includes(searchVal);
+                    // کۆد + مۆبایل + ناوی کڕیار پێکەوە لە یەک سترینگی کاشکراودان،
+                    // بۆیە یەک `includes` بەسە لەجیاتی چوار سترینگی نوێ بۆ هەر پیتێک
+                    let matchOrder = cardFmt(o).blob.includes(searchVal);
                     let matchMember = sName.includes(searchVal) || sCode.includes(searchVal);
 
                     if (currentOrdersTab === "team") {
@@ -4331,7 +4471,7 @@
 
             if (currentOrdersTab === "team" && selectedTeamMember) {
                 let selCode = String(selectedTeamMember).trim().toLowerCase();
-                let mName = teamMembersData.find(t => String(t.code || "").trim().toLowerCase() === selCode)?.full_name || selectedTeamMember;
+                let mName = (teamMemberOf(selCode) || {}).full_name || selectedTeamMember;
                 newListHTML += `
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; background:rgba(36,129,204,0.08); padding:10px 15px; border-radius:12px; border:1px solid rgba(36,129,204,0.15);">
                     <div style="font-size:13px; font-weight:700; color:var(--primary);">
@@ -4431,7 +4571,14 @@
 
                 if (myScope !== 'none') {
                     // هێنانی هەموو کارمەندان (بۆ ژماردنی سنووری تیم و پیشاندان)
-                    const { data: allEmp } = await supabase.from('employees').select('*');
+                    // ------------------------------------------------------------
+                    // `password` و `permissions` بە ئەنقەست نەهێنراون:
+                    //   • هیچ بەکارهێنەرێکی ئەم داتایە ناخوێنێتەوە — دەسەڵاتەکان
+                    //     لە `currentUser`ـەوە دێن، و بەشی چاکسازی کوێری خۆی هەیە
+                    //   • `permissions` بە تەنها ٨٠٪ی قەبارەکەیە (١٥٢ لە ١٩٠ KB)
+                    // بۆیە ئەم لیستە لە هەر بارکردنێکدا ~٨٠٪ سووکتر بووە.
+                    const { data: allEmp } = await supabase.from('employees')
+                        .select('code, full_name, role, manager, admin, consultant, creator, date, telegram_status, telegram_id, telegram_username, telegram_name, balance, savings, profit_rate, avatar, receipt_name, postal_code');
                     if (allEmp) {
                         // نوێکردنەوەی سنووری تیم لە هەمان داتا
                         allEmployeesLite = allEmp.map(e => ({ code: String(e.code || "").trim(), creator: String(e.creator || "").trim(), role: e.role }));
@@ -4460,14 +4607,16 @@
                     }
                 }
 
-                let queryOrders = supabase.from('orders').select('*').order('id', { ascending: false });
-                // مەودای 'all' → هەموو ئۆردەرەکان؛ نەخێر → تەنها تیم + خۆم
-                if (myScope !== 'all') {
-                    queryOrders = queryOrders.in('seller_code', allowedCodes);
-                }
+                // لێرەدا (نەک لەناو `if`ـەکە) — بۆ ئەوەی لە هەموو ڕێگاکاندا
+                // نەخشەکە لەگەڵ لیستەکە بگونجێت، تەنانەت کاتێک بەتاڵ دەمێنێتەوە
+                rebuildTeamMemberIndex();
 
-                const { data: orders, error } = await queryOrders;
-                if (error) throw error;
+                const orders = await fetchAllOrders(() => {
+                    let q = supabase.from('orders').select('*');
+                    // مەودای 'all' → هەموو ئۆردەرەکان؛ نەخێر → تەنها تیم + خۆم
+                    if (myScope !== 'all') q = q.in('seller_code', allowedCodes);
+                    return q;
+                });
 
                 allManagementOrdersArray = orders;
                 orders.forEach(o => allGlobalOrdersData[o.id] = o);
@@ -7794,6 +7943,17 @@
         }
 
         // ---- تۆمارکردنی هەموو بەشەکان ----
+        // لیستێکی **زیندووی** کارتەکان. `querySelectorAll` لەسەر ١١٠٠ کارت
+        // لە هەر فرەیمێکی سکڕۆڵدا (سێ جار) کاری زۆر بوو.
+        // `getElementsByClassName` زیندووە: یەکجار دەگیرێت و خۆی نوێ دەبێتەوە،
+        // بۆیە هیچ مەترسییەکی «کۆنبوون» نییە.
+        const _cardsLive = new WeakMap();
+        function cardsOf(sc) {
+            let c = _cardsLive.get(sc);
+            if (!c) { c = sc.getElementsByClassName('modern-order-card'); _cardsLive.set(sc, c); }
+            return c;
+        }
+
         function initScrollHide() {
             // داشبۆرد: کارتەکانی ئامار → شریتی چڕ
             // تەنها ئەگەر لە ٣ ئۆردەر زیاتر هەبێت، و کاتێک ئۆردەری سێیەم گەیشتە سەرەوە
@@ -7801,9 +7961,9 @@
                 scroller: 'orders-list',
                 hideEls: ['dash-head'],
                 showEls: ['stats-bar-wrap'],
-                canHide: (sc) => sc.querySelectorAll('.modern-order-card').length > 3,
+                canHide: (sc) => cardsOf(sc).length > 3,
                 minScroll: (sc) => {
-                    const cards = sc.querySelectorAll('.modern-order-card');
+                    const cards = cardsOf(sc);
                     if (cards.length <= 3) return Infinity;
                     // ئەو شوێنەی سکڕۆڵ کە کارتی سێیەم دەگاتە سەرەوەی لیستەکە
                     // (پادینگی سەروو = جێگای پاراستراوی ناوچەی سەرەوە)
@@ -8093,17 +8253,28 @@
             };
 
             input.addEventListener('focus', show);
-            input.addEventListener('input', show);
+            // پانێڵی مێژوو لەگەڵ هەر پیتێک دووبارە دەنەخشێنرا. کردنەوەی بە
+            // فۆکەس هەر دەستبەجێیە؛ تەنها نوێکردنەوەی لەکاتی نووسیندا
+            // چاوەڕوانی دەکات — وەک لیستی ئۆردەرەکان.
+            let _showT = null;
+            input.addEventListener('input', () => {
+                clearTimeout(_showT);
+                _showT = setTimeout(show, 220);
+            });
             input.addEventListener('blur', () => {
                 const v = input.value.trim();
                 if (v.length >= 2) addSearchHistory(cfg.kind, v);
             });
             input.addEventListener('keydown', e => {
                 if (e.key === 'Enter') {
+                    clearTimeout(_showT);
                     addSearchHistory(cfg.kind, input.value.trim());
                     closeAllHistPanels();
                     input.blur();
+                    // چاوەڕوانییەکە دەبڕدرێت — Enter واتا ئێستا
+                    if (cfg.onApply === 'applyOrderFilters') flushOrderFilters();
                 } else if (e.key === 'Escape') {
+                    clearTimeout(_showT);
                     closeAllHistPanels();
                 }
             });
