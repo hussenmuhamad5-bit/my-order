@@ -609,7 +609,7 @@
                                         onchange="filterEditUsers()"><span>ئەندام</span></label>
                             </div>
 
-                            <div class="list-sort-row">
+                            <div class="search-row">
                                 <div class="search-group">
                                     <input class="search-input" type="search" id="edit-list-search"
                                         placeholder="گەڕان بە ناو یان کۆد..." oninput="debouncedEditUsers()"
@@ -623,23 +623,11 @@
                                     </svg>
                                 </div>
                                 <!-- ڕیزبەندی لیستی کلیلەکان (چاکسازی) -->
-                                <div class="list-sort-wrapper" id="sort-edit-select-wrap">
-                                    <i class='bx bx-sort-alt-2 list-sort-prefix-icon'></i>
-                                    <select id="sort-edit-select" class="list-sort-select"
-                                        onchange="onEditSortChange()" aria-label="ڕیزبەندی کلیلەکان">
-                                        <optgroup label="ناو و پلە">
-                                            <option value="alpha_asc">ناو (أ ← ی)</option>
-                                            <option value="alpha_desc">ناو (ی ← أ)</option>
-                                            <option value="role_desc">پلە (بەرز ← نزم)</option>
-                                            <option value="role_asc">پلە (نزم ← بەرز)</option>
-                                        </optgroup>
-                                        <optgroup label="کۆد و بەروار">
-                                            <option value="code_asc">کۆد (أ ← ی)</option>
-                                            <option value="new">نوێترین دروستکراو</option>
-                                            <option value="old">کۆنترین دروستکراو</option>
-                                        </optgroup>
-                                    </select>
-                                    <i class='bx bx-chevron-down list-sort-icon'></i>
+                                <div class="sort-menu" id="sortmenu-edit">
+                                    <button type="button" class="sort-btn" onclick="toggleSortMenu('edit')"
+                                        title="ڕیزبەندی" aria-label="ڕیزبەندی کلیلەکان">
+                                        <i class='bx bx-sort-alt-2'></i>
+                                    </button>
                                 </div>
                             </div>
 
@@ -856,7 +844,7 @@
                                     onchange="filterProfitUsers()"><span>ڕاوێژکار</span></label>
                         </div>
 
-                        <div class="list-sort-row">
+                        <div class="search-row">
                             <div class="search-group" id="profit-search-container">
                                 <input class="search-input" type="search" id="search-profit-input"
                                     placeholder="گەڕان بە ناو یان کۆد..." oninput="debouncedProfitUsers()"
@@ -870,24 +858,11 @@
                                 </svg>
                             </div>
                             <!-- ڕیزبەندی لیستی قازانجەکان -->
-                            <div class="list-sort-wrapper" id="sort-profit-select-wrap">
-                                <i class='bx bx-sort-alt-2 list-sort-prefix-icon'></i>
-                                <select id="sort-profit-select" class="list-sort-select"
-                                    onchange="onProfitSortChange()" aria-label="ڕیزبەندی قازانجەکان">
-                                    <optgroup label="نرخی قازانج">
-                                        <option value="rate_desc">زۆرترین نرخی قازانج</option>
-                                        <option value="rate_asc">کەمترین نرخی قازانج</option>
-                                        <option value="zero_first">ئەوانەی نرخیان دانەنراوە (٠) لە سەرەوە</option>
-                                    </optgroup>
-                                    <optgroup label="ناو و پلە">
-                                        <option value="alpha_asc">ناو (أ ← ی)</option>
-                                        <option value="alpha_desc">ناو (ی ← أ)</option>
-                                        <option value="role_desc">پلە (بەرز ← نزم)</option>
-                                        <option value="role_asc">پلە (نزم ← بەرز)</option>
-                                        <option value="code_asc">کۆد (أ ← ی)</option>
-                                    </optgroup>
-                                </select>
-                                <i class='bx bx-chevron-down list-sort-icon'></i>
+                            <div class="sort-menu" id="sortmenu-profit">
+                                <button type="button" class="sort-btn" onclick="toggleSortMenu('profit')"
+                                    title="ڕیزبەندی" aria-label="ڕیزبەندی قازانجەکان">
+                                    <i class='bx bx-sort-alt-2'></i>
+                                </button>
                             </div>
                         </div>
 
@@ -951,7 +926,7 @@
                                     onchange="filterWalletUsers()"><span>ئەندام</span></label>
                         </div>
 
-                        <div class="list-sort-row" id="wallet-search-sort-row">
+                        <div class="search-row" id="wallet-search-sort-row">
                             <div class="search-group" id="wallet-search-container" style="flex: 1; margin: 0;">
                                 <input class="search-input" type="search" id="search-wallet-input"
                                     placeholder="گەڕان بە ناو یان کۆد..." oninput="debouncedWalletUsers()"
@@ -964,35 +939,14 @@
                                     </g>
                                 </svg>
                             </div>
-                            <!-- ڕیزبەندی جزدانەکان — بژاردەکان بە پۆل دابەشکراون.
-                                 هەڵبژاردنەکە لە `localStorage` دەپارێزرێت. -->
-                            <div class="list-sort-wrapper" id="sort-wallet-select-wrap">
-                                <i class='bx bx-sort-alt-2 list-sort-prefix-icon'></i>
-                                <select id="sort-wallet-select" class="list-sort-select"
-                                    onchange="onWalletSortChange()" aria-label="ڕیزبەندی جزدانەکان">
-                                    <optgroup label="بڕی پارە">
-                                        <option value="balance_desc">زۆرترین باڵانس</option>
-                                        <option value="balance_asc">کەمترین باڵانس</option>
-                                        <option value="total_desc">زۆرترین کۆی گشتی (باڵانس + پاشەکەوت)</option>
-                                        <option value="total_asc">کەمترین کۆی گشتی</option>
-                                    </optgroup>
-                                    <optgroup label="پاشەکەوت">
-                                        <option value="savings_desc">زۆرترین پاشەکەوت</option>
-                                        <option value="savings_asc">کەمترین پاشەکەوت</option>
-                                    </optgroup>
-                                    <optgroup label="جووڵەی دارایی">
-                                        <option value="tx_desc">نوێترین کرداری دارایی</option>
-                                        <option value="tx_asc">کۆنترین کرداری دارایی</option>
-                                    </optgroup>
-                                    <optgroup label="ناو و پلە">
-                                        <option value="alpha_asc">ناو (أ ← ی)</option>
-                                        <option value="alpha_desc">ناو (ی ← أ)</option>
-                                        <option value="role_desc">پلە (بەرز ← نزم)</option>
-                                        <option value="role_asc">پلە (نزم ← بەرز)</option>
-                                        <option value="code_asc">کۆد (أ ← ی)</option>
-                                    </optgroup>
-                                </select>
-                                <i class='bx bx-chevron-down list-sort-icon'></i>
+                            <!-- ڕیزبەندی جزدانەکان — دوگمەیەکی ئایکۆنی کە
+                                 لیستی بژاردەکان دەکاتەوە. بژاردەکان لە
+                                 `SORT_DEFS.wallet` پێناسە کراون. -->
+                            <div class="sort-menu" id="sortmenu-wallet">
+                                <button type="button" class="sort-btn" onclick="toggleSortMenu('wallet')"
+                                    title="ڕیزبەندی" aria-label="ڕیزبەندی جزدانەکان">
+                                    <i class='bx bx-sort-alt-2'></i>
+                                </button>
                             </div>
                         </div>
 
@@ -1392,60 +1346,6 @@
                 </button>
             </div>
 
-            <!-- ============================================================
-                 ڕیزبەندی ئۆردەرەکان — دوو دڕۆپداون، هەریەکە بۆ دۆخێک:
-                   • `sort-orders-select`  → کاتێک کارتی ئۆردەر دەبینرێت
-                   • `sort-members-select` → کاتێک لیستی ئەندامان دەبینرێت
-                 `applyOrderFilters` دیاری دەکات کامیان دەردەکەوێت.
-                 ⚠️ ڕیزبەندی ئۆردەر لە سێرڤەرەوە دەکرێت (چونکە ئۆردەرەکان
-                 پەڕە-بە-پەڕە دێن) — بۆیە پێویستی بە فایلی `db/005` هەیە.
-                 ============================================================ -->
-            <div class="list-sort-row solo" id="orders-sort-row">
-                <div class="list-sort-wrapper" id="sort-orders-select-wrap">
-                    <i class='bx bx-sort-alt-2 list-sort-prefix-icon'></i>
-                    <select id="sort-orders-select" class="list-sort-select" onchange="onOrdersSortChange()"
-                        aria-label="ڕیزبەندی داواکارییەکان">
-                        <optgroup label="بەروار">
-                            <option value="new">نوێترین داواکاری</option>
-                            <option value="old">کۆنترین داواکاری</option>
-                        </optgroup>
-                        <optgroup label="بڕی پارە">
-                            <option value="total_desc">گەورەترین بڕی پارە</option>
-                            <option value="total_asc">بچووکترین بڕی پارە</option>
-                        </optgroup>
-                        <optgroup label="ناو و شوێن">
-                            <option value="name_asc">ناوی کڕیار (أ ← ی)</option>
-                            <option value="name_desc">ناوی کڕیار (ی ← أ)</option>
-                            <option value="city_asc">شار (أ ← ی)</option>
-                            <option value="seller_asc">ناوی فرۆشیار (أ ← ی)</option>
-                        </optgroup>
-                        <optgroup label="حاڵەت">
-                            <option value="status">بەپێی حاڵەتی ئۆردەر</option>
-                        </optgroup>
-                    </select>
-                    <i class='bx bx-chevron-down list-sort-icon'></i>
-                </div>
-                <div class="list-sort-wrapper" id="sort-members-select-wrap" style="display:none;">
-                    <i class='bx bx-sort-alt-2 list-sort-prefix-icon'></i>
-                    <select id="sort-members-select" class="list-sort-select" onchange="onMembersSortChange()"
-                        aria-label="ڕیزبەندی ئەندامان">
-                        <optgroup label="ژمارەی داواکاری">
-                            <option value="count_desc">زۆرترین داواکاری</option>
-                            <option value="count_asc">کەمترین داواکاری</option>
-                            <option value="deliv_desc">زۆرترین گەیشتوو</option>
-                            <option value="ret_desc">زۆرترین گەڕاوە</option>
-                        </optgroup>
-                        <optgroup label="ناو و پلە">
-                            <option value="alpha_asc">ناو (أ ← ی)</option>
-                            <option value="alpha_desc">ناو (ی ← أ)</option>
-                            <option value="role_desc">پلە (بەرز ← نزم)</option>
-                            <option value="role_asc">پلە (نزم ← بەرز)</option>
-                        </optgroup>
-                    </select>
-                    <i class='bx bx-chevron-down list-sort-icon'></i>
-                </div>
-            </div>
-
             <!-- دوگمەی گۆڕینی بینین (هەموو / بەپێی ئەندام) — تەنها لە تابی تیم -->
             <div class="segmented-control" id="team-view-mode" style="display:none; margin-bottom:12px;">
                 <label><input type="radio" name="team_view_mode" value="all" checked
@@ -1508,6 +1408,22 @@
             </div>
 
             <div class="fsheet-body" id="fsheet-body">
+                <!-- ============================================================
+                     ڕیزبەندی — هەمان دیزاینی دڕۆپداونی «گۆڕینی حاڵەتی ئۆردەر».
+                     بژاردەکان دەگۆڕدرێن بەپێی ئەوەی کارتی ئۆردەر دەبینرێت
+                     یان لیستی ئەندامان (`fsSortId()` دیاری دەکات).
+                     ============================================================ -->
+                <div class="fsec" id="fsec-sort">
+                    <div class="fsec-t">ڕیزبەندی</div>
+                    <div class="custom-dropdown-wrapper" id="fs-sort-wrapper">
+                        <div class="custom-dropdown-header" onclick="toggleFilterDropdown('fs-sort-list')">
+                            <span id="fs-sort-text">نوێترین داواکاری</span>
+                            <i class='bx bx-chevron-down'></i>
+                        </div>
+                        <div class="custom-dropdown-list" id="fs-sort-list" style="display:none;"></div>
+                    </div>
+                </div>
+
                 <div class="fsec">
                     <div class="fsec-t">حاڵەتی ئۆردەر</div>
                     <div class="fchips" id="fchips-status"></div>
@@ -3770,68 +3686,224 @@
             return desc ? b.localeCompare(a) : a.localeCompare(b);
         }
 
-        // دروستکردنی ڕووکاری ڕیزبەندی — یەک شوێن بۆ هەموو لیستەکان
-        function sortSelectHtml(id, handler, groups, current, solo) {
-            let opts = groups.map(g => {
-                if (!g.items) return '';
-                let inner = g.items.map(o =>
-                    `<option value="${o.v}"${o.v === current ? ' selected' : ''}>${o.t}</option>`
-                ).join('');
-                return g.label ? `<optgroup label="${g.label}">${inner}</optgroup>` : inner;
-            }).join('');
-            return `
-                <div class="list-sort-wrapper" id="${id}-wrap">
-                    <i class='bx bx-sort-alt-2 list-sort-prefix-icon'></i>
-                    <select id="${id}" class="list-sort-select" onchange="${handler}"
-                        aria-label="ڕیزبەندی لیست">${opts}</select>
-                    <i class='bx bx-chevron-down list-sort-icon'></i>
-                </div>`;
+        // ============================================================
+        // پێناسەی بژاردەکانی ڕیزبەندی بۆ هەر لیستێک
+        // ------------------------------------------------------------
+        // یەک سەرچاوە بۆ هەردوو ڕووکار: دوگمە ئایکۆنییەکەی تەنیشت گەڕان
+        // (جزدان/قازانج/چاکسازی) و دڕۆپداونەکەی ناو شیتی فلتەرکردن
+        // (ئۆردەرەکان). `alias` ناوە کۆنەکان دەگوێزێتەوە.
+        // ============================================================
+        const SORT_DEFS = {
+            wallet: {
+                key: 'wallet', def: 'balance_desc',
+                alias: { profit_desc: 'total_desc', profit_asc: 'total_asc' },
+                groups: [
+                    { label: 'بڕی پارە', items: [
+                        { v: 'balance_desc', t: 'زۆرترین باڵانس' },
+                        { v: 'balance_asc', t: 'کەمترین باڵانس' },
+                        { v: 'total_desc', t: 'زۆرترین کۆی گشتی' },
+                        { v: 'total_asc', t: 'کەمترین کۆی گشتی' }
+                    ] },
+                    { label: 'پاشەکەوت', items: [
+                        { v: 'savings_desc', t: 'زۆرترین پاشەکەوت' },
+                        { v: 'savings_asc', t: 'کەمترین پاشەکەوت' }
+                    ] },
+                    { label: 'جووڵەی دارایی', items: [
+                        { v: 'tx_desc', t: 'نوێترین کرداری دارایی' },
+                        { v: 'tx_asc', t: 'کۆنترین کرداری دارایی' }
+                    ] },
+                    { label: 'ناو و پلە', items: [
+                        { v: 'alpha_asc', t: 'ناو (أ ← ی)' },
+                        { v: 'alpha_desc', t: 'ناو (ی ← أ)' },
+                        { v: 'role_desc', t: 'پلە (بەرز ← نزم)' },
+                        { v: 'role_asc', t: 'پلە (نزم ← بەرز)' },
+                        { v: 'code_asc', t: 'کۆد (أ ← ی)' }
+                    ] }
+                ]
+            },
+            profit: {
+                key: 'profit', def: 'rate_desc',
+                groups: [
+                    { label: 'نرخی قازانج', items: [
+                        { v: 'rate_desc', t: 'زۆرترین نرخ' },
+                        { v: 'rate_asc', t: 'کەمترین نرخ' },
+                        { v: 'zero_first', t: 'بێ نرخ (٠) لە سەرەوە' }
+                    ] },
+                    { label: 'ناو و پلە', items: [
+                        { v: 'alpha_asc', t: 'ناو (أ ← ی)' },
+                        { v: 'alpha_desc', t: 'ناو (ی ← أ)' },
+                        { v: 'role_desc', t: 'پلە (بەرز ← نزم)' },
+                        { v: 'role_asc', t: 'پلە (نزم ← بەرز)' },
+                        { v: 'code_asc', t: 'کۆد (أ ← ی)' }
+                    ] }
+                ]
+            },
+            edit: {
+                key: 'edit', def: 'alpha_asc',
+                groups: [
+                    { label: 'ناو و پلە', items: [
+                        { v: 'alpha_asc', t: 'ناو (أ ← ی)' },
+                        { v: 'alpha_desc', t: 'ناو (ی ← أ)' },
+                        { v: 'role_desc', t: 'پلە (بەرز ← نزم)' },
+                        { v: 'role_asc', t: 'پلە (نزم ← بەرز)' }
+                    ] },
+                    { label: 'کۆد و بەروار', items: [
+                        { v: 'code_asc', t: 'کۆد (أ ← ی)' },
+                        { v: 'new', t: 'نوێترین دروستکراو' },
+                        { v: 'old', t: 'کۆنترین دروستکراو' }
+                    ] }
+                ]
+            },
+            orders: {
+                key: 'orders', def: 'new',
+                groups: [
+                    { label: 'بەروار', items: [
+                        { v: 'new', t: 'نوێترین داواکاری' },
+                        { v: 'old', t: 'کۆنترین داواکاری' }
+                    ] },
+                    { label: 'بڕی پارە', items: [
+                        { v: 'total_desc', t: 'گەورەترین بڕی پارە' },
+                        { v: 'total_asc', t: 'بچووکترین بڕی پارە' }
+                    ] },
+                    { label: 'ناو و شوێن', items: [
+                        { v: 'name_asc', t: 'ناوی کڕیار (أ ← ی)' },
+                        { v: 'name_desc', t: 'ناوی کڕیار (ی ← أ)' },
+                        { v: 'city_asc', t: 'شار (أ ← ی)' },
+                        { v: 'seller_asc', t: 'ناوی فرۆشیار (أ ← ی)' }
+                    ] },
+                    { label: 'حاڵەت', items: [
+                        { v: 'status', t: 'بەپێی حاڵەتی ئۆردەر' }
+                    ] }
+                ]
+            },
+            members: {
+                key: 'members', def: 'count_desc',
+                groups: [
+                    { label: 'ژمارەی داواکاری', items: [
+                        { v: 'count_desc', t: 'زۆرترین داواکاری' },
+                        { v: 'count_asc', t: 'کەمترین داواکاری' },
+                        { v: 'deliv_desc', t: 'زۆرترین گەیشتوو' },
+                        { v: 'ret_desc', t: 'زۆرترین گەڕاوە' }
+                    ] },
+                    { label: 'ناو و پلە', items: [
+                        { v: 'alpha_asc', t: 'ناو (أ ← ی)' },
+                        { v: 'alpha_desc', t: 'ناو (ی ← أ)' },
+                        { v: 'role_desc', t: 'پلە (بەرز ← نزم)' },
+                        { v: 'role_asc', t: 'پلە (نزم ← بەرز)' }
+                    ] }
+                ]
+            }
+        };
+
+        // هەموو بژاردەکانی یەک لیست بە یەک ڕیز
+        function sortItems(id) {
+            let d = SORT_DEFS[id];
+            return d ? d.groups.reduce((a, g) => a.concat(g.items), []) : [];
         }
 
-        // نیشانەکردنی دڕۆپداونەکە کاتێک ڕیزبەندییەکی نا-بنەڕەتی چالاکە
-        function markSortActive(id, val, defVal) {
-            let w = document.getElementById(id + '-wrap');
-            if (w) w.classList.toggle('is-active', val !== defVal);
+        // نرخی ئێستا — لە خەزنەکەوە، بە گوێدانە ناوە کۆنەکان، و ئەگەر
+        // بژاردەکە نەمابێت دەگەڕێتەوە بۆ بنەڕەت
+        function sortValOf(id) {
+            let d = SORT_DEFS[id];
+            if (!d) return '';
+            let v = getListSort(d.key, d.def);
+            if (d.alias && d.alias[v]) v = d.alias[v];
+            return sortItems(id).some(o => o.v === v) ? v : d.def;
         }
 
-        // هێنانەوەی نرخی ئێستای دڕۆپداونێک (لەگەڵ بەردەنگی نەبوونی)
-        function sortValOf(id, key, defVal) {
-            let el = document.getElementById(id);
-            if (el && el.value) return el.value;
-            return getListSort(key, defVal);
+        function sortLabelOf(id) {
+            let v = sortValOf(id);
+            let o = sortItems(id).find(x => x.v === v);
+            return o ? o.t : '';
         }
 
-        // هەموو دڕۆپداونەکانی ڕیزبەندی — ناسنامە ↔ کلیلی خەزن ↔ بنەڕەت
-        const LIST_SORTS = [
-            // `alias` = ناوی کۆنی بژاردەکان، تا هەڵبژاردنی پاشەکەوتکراوی
-            // بەکارهێنەرانی پێشوو بگەڕێتەوە شوێنی ڕاستی خۆی
-            { id: 'sort-wallet-select', key: 'wallet', def: 'balance_desc', alias: { profit_desc: 'total_desc', profit_asc: 'total_asc' } },
-            { id: 'sort-profit-select', key: 'profit', def: 'rate_desc' },
-            { id: 'sort-edit-select', key: 'edit', def: 'alpha_asc' },
-            { id: 'sort-orders-select', key: 'orders', def: 'new' },
-            { id: 'sort-members-select', key: 'members', def: 'count_desc' }
-        ];
-
-        // گەڕاندنەوەی هەڵبژاردنی جاری پێشوو بۆ ناو دڕۆپداونەکان — دەبێت
-        // پێش هەر نەخشاندنێکی لیست بکرێت، ئەگەرنا `sortValOf` بژاردەی
-        // یەکەمی ناو لیستەکە دەخوێنێتەوە نەک ئەوەی بەکارهێنەر هەڵیبژاردبوو
-        function applySavedListSorts() {
-            LIST_SORTS.forEach(s => {
-                let el = document.getElementById(s.id);
-                if (!el) return;
-                let want = getListSort(s.key, s.def);
-                if (s.alias && s.alias[want]) want = s.alias[want];
-                // بژاردەیەکی کۆن کە ئێستا نەماوە → دەگەڕێتەوە بۆ بنەڕەت
-                let ok = Array.prototype.some.call(el.options, o => o.value === want);
-                el.value = ok ? want : s.def;
-                markSortActive(s.id, el.value, s.def);
-            });
+        // نیشانەی «ڕیزبەندییەکی نا-بنەڕەتی چالاکە» لەسەر دوگمەکە
+        function markSortActive(id) {
+            let btn = document.querySelector('#sortmenu-' + id + ' .sort-btn');
+            if (btn) btn.classList.toggle('is-on', sortValOf(id) !== SORT_DEFS[id].def);
         }
 
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', applySavedListSorts);
-        } else {
-            applySavedListSorts();
+        // ============ دوگمەی ڕیزبەندی (تەنیشت بۆکسی گەڕان) ============
+        // لیستەکە بە داواکردن دروست دەبێت (lazy) — نەک لە HTMLـەکەدا
+        // پێشوەخت، تا هەر شوێنێک تەنها یەک دوگمە بێت.
+        function sortMenuItemsHtml(id, onPick) {
+            let cur = sortValOf(id);
+            return SORT_DEFS[id].groups.map(g =>
+                `<div class="sort-menu-grp">${g.label}</div>` +
+                g.items.map(o =>
+                    `<div class="custom-dropdown-item${o.v === cur ? ' active' : ''}"
+                        onclick="${onPick}('${id}','${o.v}')">${o.t}</div>`
+                ).join('')
+            ).join('');
+        }
+
+        function closeSortMenus() {
+            document.querySelectorAll('.sort-menu.open').forEach(m => m.classList.remove('open'));
+            let l = document.getElementById('sort-menu-open');
+            if (l) l.remove();
+            let s = document.getElementById('sort-scrim');
+            if (s) s.remove();
+        }
+
+        function toggleSortMenu(id) {
+            let wrap = document.getElementById('sortmenu-' + id);
+            if (!wrap) return;
+            let wasOpen = wrap.classList.contains('open');
+            closeSortMenus();
+            if (wasOpen) return;
+
+            let scrim = document.createElement('div');
+            scrim.id = 'sort-scrim';
+            scrim.className = 'sort-scrim';
+            scrim.onclick = closeSortMenus;
+            document.body.appendChild(scrim);
+
+            // لیستەکە دەچێتە سەر `body` — نەک ناو کۆنتەینەرەکە، چونکە
+            // ئەوان `overflow:hidden`ـیانە و لیستەکەیان دەبڕی
+            let list = document.createElement('div');
+            list.className = 'sort-menu-list';
+            list.id = 'sort-menu-open';
+            list.innerHTML = sortMenuItemsHtml(id, 'pickSort');
+            document.body.appendChild(list);
+            wrap.classList.add('open');
+            positionSortMenu(wrap.querySelector('.sort-btn'), list);
+
+            // ئەوەی هەڵبژێردراوە دەهێنرێتە ناو دیمەن
+            let act = list.querySelector('.custom-dropdown-item.active');
+            if (act) act.scrollIntoView({ block: 'nearest' });
+        }
+
+        // دانانی لیستەکە لەژێر دوگمەکە — و ئەگەر جێگای خوارەوە نەبوو،
+        // بەرەو سەرەوە دەکرێتەوە. هەروەها لە کەناری شاشە دەرناچێت.
+        function positionSortMenu(btn, list) {
+            if (!btn || !list) return;
+            let r = btn.getBoundingClientRect();
+            let w = list.offsetWidth, h = list.offsetHeight;
+            let left = r.left;
+            if (left + w > window.innerWidth - 8) left = window.innerWidth - w - 8;
+            if (left < 8) left = 8;
+            let top = r.bottom + 6;
+            if (top + h > window.innerHeight - 8) top = Math.max(8, r.top - 6 - h);
+            list.style.left = left + 'px';
+            list.style.top = top + 'px';
+        }
+
+        // هەڵبژاردنی ڕیزبەندییەک لە دوگمەکەوە — دەخەزنرێت و لیستەکە
+        // دەستبەجێ لە نوێوە ڕیز دەکرێت
+        const SORT_APPLIERS = {
+            wallet: () => onWalletSortChange(),
+            profit: () => filterProfitUsers(),
+            edit: () => filterEditUsers(),
+            orders: () => reloadMgmt(),
+            members: () => applyOrderFilters()
+        };
+
+        function pickSort(id, val) {
+            setListSort(SORT_DEFS[id].key, val);
+            closeSortMenus();
+            markSortActive(id);
+            let fn = SORT_APPLIERS[id];
+            if (fn) fn();
         }
 
         // هێنانەوەی ئۆردەرەکان بە دیزاینە ئەسڵییەکەتەوە
@@ -5120,11 +5192,9 @@
                 // فایلی `db/005` جێبەجێ نەکراوە → فەنکشنەکە ئەم پارامەتەرانە
                 // ناناسێت. ڕیزبەندییە نوێیەکان دەکوژێنەوە و لیستەکە بە
                 // شێوەی جاران (نوێترین) دەهێنرێتەوە — نەک بە هەڵەیەک بمێنێتەوە.
-                if (sort !== ORDERS_SORT_DEFAULT && !_ordersSortUnsupported) {
+                if (sort !== SORT_DEFS.orders.def && !_ordersSortUnsupported) {
                     _ordersSortUnsupported = true;
-                    setListSort('orders', ORDERS_SORT_DEFAULT);
-                    let sel = document.getElementById('sort-orders-select');
-                    if (sel) sel.value = ORDERS_SORT_DEFAULT;
+                    setListSort('orders', SORT_DEFS.orders.def);
                     showToast("ڕیزبەندی داواکارییەکان بەردەست نییە — فایلی db/005 لە داتابەیس جێبەجێ نەکراوە.", "error");
                     return reloadMgmt();
                 }
@@ -5135,8 +5205,9 @@
         }
 
         // ============ ڕیزبەندی ئۆردەرەکان و ئەندامانی تیم ============
-        const ORDERS_SORT_DEFAULT = 'new';
-        const MEMBERS_SORT_DEFAULT = 'count_desc';
+        // ڕووکارەکەی لەناو شیتی فلتەرکردنە (`fsec-sort`) — نەک لە
+        // سەرەوەی لیستەکە. ئەمە بۆشایی سەرەوە ئازاد دەکات و هەموو
+        // «دەستکارییەکانی لیست» دەخاتە یەک شوێنەوە.
 
         // ڕیزبەندییە بەروارییەکان تەنها ئەوانەن کە سەردێڕی ڕۆژ لەگەڵیان
         // مانا دەدات — ئەوانی تر بە لیستێکی هاموار (بێ سەردێڕ) دەردەکەون،
@@ -5144,21 +5215,8 @@
         const ORDERS_DATE_SORTS = { 'new': 1, 'old': 1 };
 
         function ordersSortVal() {
-            if (_ordersSortUnsupported) return ORDERS_SORT_DEFAULT;
-            return sortValOf('sort-orders-select', 'orders', ORDERS_SORT_DEFAULT);
-        }
-
-        function onOrdersSortChange() {
-            let v = ordersSortVal();
-            setListSort('orders', v);
-            markSortActive('sort-orders-select', v, ORDERS_SORT_DEFAULT);
-            reloadMgmt();   // ڕیزبەندی لە سێرڤەرەوەیە → پێویستە دووبارە بهێنرێت
-        }
-
-        function onMembersSortChange() {
-            let v = sortValOf('sort-members-select', 'members', MEMBERS_SORT_DEFAULT);
-            setListSort('members', v);
-            applyOrderFilters();   // لیستی ئەندامان لە براوزەردا ڕیز دەکرێت
+            if (_ordersSortUnsupported) return SORT_DEFS.orders.def;
+            return sortValOf('orders');
         }
 
         // پۆلی حاڵەت — دەبێت وردبەورد وەک `order_status_bucket`ی داتابەیس بێت
@@ -5194,21 +5252,6 @@
             }
         }
 
-        // کام دڕۆپداون دەربکەوێت — بەپێی ئەوەی کارتی ئۆردەر دەبینرێت یان
-        // لیستی ئەندامان. لە تابی «داواکارییەکانم» ڕیزبەندی ئەندام مانای نییە.
-        function applyOrdersSortVisibility(membersView) {
-            let row = document.getElementById('orders-sort-row');
-            let oWrap = document.getElementById('sort-orders-select-wrap');
-            let mWrap = document.getElementById('sort-members-select-wrap');
-            if (!row) return;
-            // ئەگەر فایلی `db/005` جێبەجێ نەکرابێت، ڕیزبەندی ئۆردەر
-            // دەشاردرێتەوە — بەڵام ڕیزبەندی ئەندامان (کلاینت) دەمێنێتەوە
-            let showOrders = !membersView && !_ordersSortUnsupported;
-            if (oWrap) oWrap.style.display = showOrders ? '' : 'none';
-            if (mWrap) mWrap.style.display = membersView ? '' : 'none';
-            row.style.display = (showOrders || membersView) ? '' : 'none';
-        }
-
         function applyOrderFilters() {
             let list = document.getElementById('management-orders-list');
             let filterSection = document.getElementById('orders-filter-section');
@@ -5236,12 +5279,10 @@
             let roleFilterBox = document.getElementById('orders-role-filter');
             if (roleFilterBox) roleFilterBox.style.display = (currentOrdersTab === "team" && !selectedTeamMember) ? "flex" : "none";
 
-            // ڕیزبەندی: کام دڕۆپداون بۆ ئەم دۆخە دەگونجێت
-            let inMembersView = (currentOrdersTab === "team" && teamViewMode === "members" && !selectedTeamMember);
-            applyOrdersSortVisibility(inMembersView);
-            markSortActive('sort-orders-select', ordersSortVal(), ORDERS_SORT_DEFAULT);
-            markSortActive('sort-members-select',
-                sortValOf('sort-members-select', 'members', MEMBERS_SORT_DEFAULT), MEMBERS_SORT_DEFAULT);
+            // چیپی «ڕیزبەندی» لە ژێر بۆکسی گەڕان و ژمارەی سەر دوگمەی فلتەر
+            // نوێ دەکرێنەوە — چونکە دۆخی بینین (ئۆردەر/ئەندام) گۆڕاوە و
+            // ڕیزبەندی هەریەکەیان جیاوازە
+            syncFilterUI();
 
             // فلتەری مەودا/حاڵەت/بەروار/گەڕان پێشتر لە سێرڤەرەوە کراوە (لە
             // `reloadMgmt`). ئەم «پێوەرە» تەنها فلتەرە وردەکانی کلاینت (تاب/
@@ -5301,8 +5342,7 @@
                 }
                 // ڕیزبەندی ئەندامەکان — لێرە دەکرێت چونکە ژمارەکانی هەموو
                 // ئەندامان لەبەردەستدان (لە سێرڤەرەوە هاتوون)، نەک پەڕە-بە-پەڕە
-                memberPlan.sort(memberPlanComparator(
-                    sortValOf('sort-members-select', 'members', MEMBERS_SORT_DEFAULT)));
+                memberPlan.sort(memberPlanComparator(sortValOf('members')));
                 _mgmtStart(list, memberPlan, false);
                 return;
             }
@@ -11514,7 +11554,8 @@
                 status: document.getElementById('filter-status').value || 'all',
                 preset: document.getElementById('filter-date-type').value || 'all',
                 from: document.getElementById('filter-date-from').value || null,
-                to: document.getElementById('filter-date-to').value || null
+                to: document.getElementById('filter-date-to').value || null,
+                sort: sortValOf(fsSortId())
             };
             if (fsDraft.preset !== 'all' && fsDraft.preset !== 'custom') {
                 let r = fsPresetRange(fsDraft.preset);
@@ -11530,6 +11571,11 @@
             fcalBackMonths = 12;
 
             fsRenderChips();
+            fsRenderSort();
+            // ڕیزبەندی ئۆردەر بە فایلی `db/005`ـەوە بەندە — ئەگەر نەبوو،
+            // بەشەکە دەشاردرێتەوە (ڕیزبەندی ئەندامان کلاینتە و دەمێنێتەوە)
+            let sortSec = document.getElementById('fsec-sort');
+            if (sortSec) sortSec.style.display = (fsSortId() === 'orders' && _ordersSortUnsupported) ? 'none' : '';
             let calOn = fsSyncCalOpen();
             if (calOn) fcalRender();
             fsSyncInputs();
@@ -11550,9 +11596,44 @@
         }
 
         function resetFilterSheet() {
-            fsDraft = { status: 'all', preset: 'all', from: null, to: null };
+            fsDraft = { status: 'all', preset: 'all', from: null, to: null, sort: SORT_DEFS[fsSortId()].def };
             fcalHover = null; fcalFocus = fdKey(fdToday());
-            fsRenderChips(); fsSyncCalOpen(); fcalPaint(); fsSyncInputs(); fsRenderSummary();
+            fsRenderChips(); fsRenderSort(); fsSyncCalOpen(); fcalPaint(); fsSyncInputs(); fsRenderSummary();
+        }
+
+        // ---------- ڕیزبەندی لەناو شیتەکە ----------
+        // کام کۆمەڵە بژاردە؟ لە دۆخی «بەپێی ئەندام» ڕیزبەندی ئەندامان،
+        // ئەگەرنا ڕیزبەندی خودی ئۆردەرەکان
+        function fsSortId() {
+            return (currentOrdersTab === "team" && teamViewMode === "members" && !selectedTeamMember)
+                ? 'members' : 'orders';
+        }
+
+        function fsRenderSort() {
+            let id = fsSortId();
+            let cur = fsDraft.sort || SORT_DEFS[id].def;
+            let txt = document.getElementById('fs-sort-text');
+            let list = document.getElementById('fs-sort-list');
+            if (!txt || !list) return;
+            let all = sortItems(id);
+            if (!all.some(o => o.v === cur)) { cur = SORT_DEFS[id].def; fsDraft.sort = cur; }
+            let sel = all.find(o => o.v === cur);
+            txt.innerText = sel ? sel.t : '';
+            list.innerHTML = SORT_DEFS[id].groups.map(g =>
+                `<div class="sort-menu-grp">${g.label}</div>` +
+                g.items.map(o =>
+                    `<div class="custom-dropdown-item${o.v === cur ? ' active' : ''}"
+                        onclick="fsPickSort('${o.v}')">${o.t}</div>`
+                ).join('')
+            ).join('');
+        }
+
+        function fsPickSort(v) {
+            fsDraft.sort = v;
+            fsRenderSort();
+            // لیستەکە دادەخرێت — هەمان ڕەفتاری دڕۆپداونی گۆڕینی حاڵەت
+            let l = document.getElementById('fs-sort-list');
+            if (l) { l.style.display = 'none'; l.parentElement.classList.remove('open'); }
         }
 
         // ---------- چیپەکان ----------
@@ -11969,9 +12050,13 @@
             document.getElementById('filter-date-from').value = noRange ? '' : (fsDraft.from || '');
             document.getElementById('filter-date-to').value = noRange ? '' : (fsDraft.to || '');
 
+            // ڕیزبەندییەکەش لێرە جێبەجێ دەبێت — هەمان دوگمەی «پیشاندانی ئەنجامەکان»
+            let sid = fsSortId();
+            if (fsDraft.sort) setListSort(SORT_DEFS[sid].key, fsDraft.sort);
+
             closeFilterSheet();
             syncFilterUI();
-            reloadMgmt();   // فلتەری حاڵەت/بەروار لە سێرڤەرەوە جێبەجێ دەبێت
+            reloadMgmt();   // فلتەری حاڵەت/بەروار/ڕیزبەندی لە سێرڤەرەوە جێبەجێ دەبێت
         }
 
         // ---------- دوگمە و چیپەکانی دەرەوەی شیت ----------
@@ -11984,6 +12069,12 @@
             if (st !== 'all') {
                 let s = FS_STATUSES.find(x => x.v === st);
                 out.push({ kind: 'status', t: s ? s.t : st });
+            }
+            // ڕیزبەندی نا-بنەڕەتیش وەک چیپێکی چالاک دەردەکەوێت — بۆ ئەوەی
+            // دوای داخستنی شیتەکە دیار بێت لیستەکە بەپێی چی ڕیزکراوە
+            let sid = fsSortId();
+            if (sortValOf(sid) !== SORT_DEFS[sid].def) {
+                out.push({ kind: 'sort', t: '⇅ ' + sortLabelOf(sid) });
             }
             if (pr !== 'all') {
                 let p = FS_PRESETS.find(x => x.v === pr);
@@ -12016,7 +12107,12 @@
         }
 
         function clearFilterPart(kind) {
-            if (kind === 'status') document.getElementById('filter-status').value = 'all';
+            if (kind === 'sort') {
+                // گەڕانەوە بۆ ڕیزبەندی بنەڕەتی
+                let sid = fsSortId();
+                setListSort(SORT_DEFS[sid].key, SORT_DEFS[sid].def);
+            }
+            else if (kind === 'status') document.getElementById('filter-status').value = 'all';
             else {
                 document.getElementById('filter-date-type').value = 'all';
                 document.getElementById('filter-date-from').value = '';
@@ -12138,20 +12234,8 @@
             }
         }
 
-        // بژاردە کۆنەکان → ناوە نوێیەکان، تا هەڵبژاردنی پاشەکەوتکراوی
-        // بەکارهێنەرانی پێشوو نەشکێت
-        const WALLET_SORT_ALIAS = { profit_desc: 'total_desc', profit_asc: 'total_asc' };
-        const WALLET_SORT_DEFAULT = 'balance_desc';
-
-        function walletSortVal() {
-            let v = sortValOf('sort-wallet-select', 'wallet', WALLET_SORT_DEFAULT);
-            return WALLET_SORT_ALIAS[v] || v;
-        }
-
         function onWalletSortChange() {
-            let v = walletSortVal();
-            setListSort('wallet', v);
-            markSortActive('sort-wallet-select', v, WALLET_SORT_DEFAULT);
+            let v = sortValOf('wallet');
             // ڕیزبەندی «کرداری دارایی» پێویستی بە مێژووی جووڵەکانە —
             // تەنها کاتێک دەهێنرێت کە بەکارهێنەر داوای بکات
             if ((v === 'tx_desc' || v === 'tx_asc') && !_walletTxMap) {
@@ -12191,7 +12275,7 @@
         function filterWalletUsers() {
             let roleFilter = document.querySelector('input[name="wallet_role_filter"]:checked').value;
             let searchVal = document.getElementById('search-wallet-input').value.trim().toLowerCase();
-            let sortVal = walletSortVal();
+            let sortVal = sortValOf('wallet');
             let listContainer = document.getElementById('wallet-users-list');
             let editSection = document.getElementById('wallet-edit-section');
 
@@ -12213,7 +12297,7 @@
 
             // 💫 ڕیزبەندکردنی جزدانەکان بەپێی هەڵبژاردنی بەکارهێنەر
             filteredUsers.sort(walletComparator(sortVal));
-            markSortActive('sort-wallet-select', sortVal, WALLET_SORT_DEFAULT);
+            markSortActive('wallet');
 
             if (filteredUsers.length === 0) {
                 if (listContainer.__winIO) { listContainer.__winIO.disconnect(); listContainer.__winIO = null; }
@@ -12869,14 +12953,6 @@
         // ----------------------------------------
         // سیستەمی نوێی لیستی قازانجەکان
         // ----------------------------------------
-        const PROFIT_SORT_DEFAULT = 'rate_desc';
-
-        function onProfitSortChange() {
-            let v = sortValOf('sort-profit-select', 'profit', PROFIT_SORT_DEFAULT);
-            setListSort('profit', v);
-            filterProfitUsers();
-        }
-
         // بەراوردکەری لیستی قازانجەکان
         function profitComparator(sortVal) {
             const rate = u => Number(u.data.profit_rate) || 0;
@@ -12898,7 +12974,7 @@
         function filterProfitUsers() {
             let roleFilter = document.querySelector('input[name="profit_role_filter"]:checked').value;
             let searchVal = document.getElementById('search-profit-input').value.trim().toLowerCase();
-            let sortVal = sortValOf('sort-profit-select', 'profit', PROFIT_SORT_DEFAULT);
+            let sortVal = sortValOf('profit');
             let listContainer = document.getElementById('profit-users-list');
             let editSection = document.getElementById('profit-edit-section');
 
@@ -12920,7 +12996,7 @@
 
             // ڕیزبەندی بەپێی هەڵبژاردنی بەکارهێنەر
             filteredUsers.sort(profitComparator(sortVal));
-            markSortActive('sort-profit-select', sortVal, PROFIT_SORT_DEFAULT);
+            markSortActive('profit');
 
             // دروستکردنی دیزاینی لیستەکە
             if (filteredUsers.length === 0) {
@@ -12984,14 +13060,6 @@
         }
 
         // ============ لیستی کلیلەکان لە بەشی چاکسازی (وەک بەشی قازانجەکان) ============
-        const EDIT_SORT_DEFAULT = 'alpha_asc';
-
-        function onEditSortChange() {
-            let v = sortValOf('sort-edit-select', 'edit', EDIT_SORT_DEFAULT);
-            setListSort('edit', v);
-            filterEditUsers();
-        }
-
         // بەراوردکەری لیستی کلیلەکان (چاکسازی)
         function editComparator(sortVal) {
             const byName = (a, b) => cmpName(a.name, b.name);
@@ -13012,7 +13080,7 @@
             let roleFilter = roleEl ? roleEl.value : "";
             let searchEl = document.getElementById('edit-list-search');
             let searchVal = searchEl ? searchEl.value.trim().toLowerCase() : "";
-            let sortVal = sortValOf('sort-edit-select', 'edit', EDIT_SORT_DEFAULT);
+            let sortVal = sortValOf('edit');
             let listContainer = document.getElementById('edit-users-list');
             if (!listContainer) return;
 
@@ -13024,7 +13092,7 @@
             });
 
             filtered.sort(editComparator(sortVal));
-            markSortActive('sort-edit-select', sortVal, EDIT_SORT_DEFAULT);
+            markSortActive('edit');
 
             if (filtered.length === 0) {
                 if (listContainer.__winIO) { listContainer.__winIO.disconnect(); listContainer.__winIO = null; }
