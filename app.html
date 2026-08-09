@@ -3624,6 +3624,94 @@
         }
 
         // ============================================================
+        // ئەنجنی پەڕەبەندی سێرڤەری (server-side pagination) — بۆ داتای زۆر
+        // ------------------------------------------------------------
+        // لەجیاتی هێنانی هەموو ئۆردەرەکان بۆ براوزەر (کە لەگەڵ ١٢٠ هەزار
+        // ئۆردەردا مەحاڵە)، تەنها نوێترین پەڕەیەک دەهێنرێت، و گەڕان/فلتەر/
+        // ژماردن لەناو داتابەیسەکەدا دەکرێن بە فەنکشنەکانی `db/003`.
+        //
+        //   • کاتی کردنەوە جێگیر دەبێت — جا ٥٠٠ ئۆردەر هەبێت یان ٥٠٠ هەزار
+        //   • ئۆردەری کۆن بە سکرۆڵ (پەڕەی داهاتوو) یان گەڕان دەردەکەون
+        //   • ژمارەکان (ئامار/بەیج/ئەندام) لە سێرڤەرەوە ورد دێن، بێ هێنانی
+        //     هەموو ڕیزەکان
+        //
+        // ئەگەر مەپەکانی ژماردن (`ordersDayCounts` هتد) دانەنرابن، کۆدی
+        // ڕەندەری کۆن (ژماردن لە بیرگە) وەک فالباک کاردەکات — بۆیە هیچ
+        // ڕێگایەک ناشکێت.
+        // ============================================================
+        const UI_PAGE = 400;         // ژمارەی ئۆردەر لە هەر پەڕەیەکی ڕووکار
+        // مەپەکانی ژماردن — داشبۆرد و بەڕێوەبردن هەریەکە هی خۆی هەیە تا
+        // تێکەڵ نەبن (کاتێک شاشەکان دەگۆڕدرێن)
+        let dashDayCounts = null;    // داشبۆرد: مەپی ڕۆژ → {prep,onway,deliv,ret}
+        let mgmtDayCounts = null;    // بەڕێوەبردن: مەپی ڕۆژ → {prep,onway,deliv,ret}
+        let mgmtMemberCounts = null; // بەڕێوەبردن: مەپی کۆدی فرۆشیار → {total,prep,onway,deliv,ret}
+
+        // بانگکردنی فەنکشنی داتابەیس — لیستی ڕیز یان [] دەگەڕێنێتەوە
+        async function rpc(fn, params) {
+            const { data, error } = await supabase.rpc(fn, params);
+            if (error) { console.log('rpc ' + fn, error); throw error; }
+            return data || [];
+        }
+
+        // دۆخی ئێستای فلتەرەکان → پارامەتەری فەنکشنەکانی داتابەیس
+        // sellers = null → هەموو فرۆشیارەکان (مەودای «هەموو»)
+        function orderFilterParams(sellers) {
+            let status = document.getElementById('filter-status').value;
+            let dateFrom = document.getElementById('filter-date-from').value;
+            let dateTo = document.getElementById('filter-date-to').value;
+            let search = document.getElementById('orders-search-input').value.trim();
+            return {
+                p_sellers: (sellers && sellers.length) ? sellers : null,
+                p_status: (status && status !== 'all') ? status : null,
+                p_date_from: dateFrom || null,
+                p_date_to: dateTo || null,
+                p_search: search || null
+            };
+        }
+
+        // هێنانی پەڕەیەک لە ئۆردەرەکان (keyset). cursor = idـی دوایین ئۆردەری پەڕەی پێشوو
+        async function fetchOrdersPage(params, cursor, limit) {
+            limit = limit || UI_PAGE;
+            let rows = await rpc('orders_page', Object.assign({}, params, {
+                p_cursor: (cursor === undefined ? null : cursor), p_limit: limit
+            }));
+            return {
+                rows: rows,
+                hasMore: rows.length >= limit,
+                nextCursor: rows.length ? rows[rows.length - 1].id : null
+            };
+        }
+
+        // بەیجی حاڵەت لە ژمارە ئامادەکراوەکانەوە — هەمان ڕووکاری `statusCountBadges`
+        function statusBadgesFromCounts(c) {
+            if (!c) return '';
+            let b = (n, bg, col, icon) => { n = Number(n) || 0; return n > 0 ? `<span style="background:${bg}; color:${col}; font-size:11px; font-weight:700; padding:2px 7px; border-radius:6px; display:inline-flex; align-items:center; gap:3px;"><i class='bx ${icon}'></i>${n}</span>` : ''; };
+            return b(c.deliv, 'rgba(16,185,129,0.15)', '#059669', 'bx-check-circle')
+                + b(c.onway, 'rgba(245,158,11,0.15)', '#d97706', 'bx-car')
+                + b(c.prep, 'rgba(59,130,246,0.15)', '#2563eb', 'bx-package')
+                + b(c.ret, 'rgba(239,68,68,0.15)', '#dc2626', 'bx-undo');
+        }
+
+        // بەیجی ڕۆژ: ئەگەر مەپی سێرڤەر هەبوو ئەوە بەکاردێت (ورد، کۆی تەواوی
+        // ڕۆژ)، ئەگەرنا لەسەر ئۆردەرە بارکراوەکان دەژمێردرێت (فالباکی کۆن)
+        function dayBadges(dayKey, loadedOrders, countsMap) {
+            if (countsMap && countsMap[dayKey]) return statusBadgesFromCounts(countsMap[dayKey]);
+            return statusCountBadges(loadedOrders || []);
+        }
+
+        // بنیاتنانی مەپی ژماردن لە ڕیزەکانی فەنکشنی داتابەیسەوە
+        function buildDayCountsMap(rows) {
+            let m = {};
+            (rows || []).forEach(r => { m[r.day] = { prep: +r.prep || 0, onway: +r.onway || 0, deliv: +r.deliv || 0, ret: +r.ret || 0 }; });
+            return m;
+        }
+        function buildMemberCountsMap(rows) {
+            let m = {};
+            (rows || []).forEach(r => { m[String(r.seller_code || '').trim().toLowerCase()] = { total: +r.total || 0, prep: +r.prep || 0, onway: +r.onway || 0, deliv: +r.deliv || 0, ret: +r.ret || 0 }; });
+            return m;
+        }
+
+        // ============================================================
         // گەڕان: چاوەڕوانی کورت پێش نەخشاندنەوە
         // ------------------------------------------------------------
         // پێشتر هەر پیتێک هەموو لیستەکەی لە نوێوە دروست دەکردەوە — واتا
@@ -3637,14 +3725,16 @@
         let _ordFilterT = null;
         function debouncedOrderFilters() {
             clearTimeout(_ordFilterT);
-            _ordFilterT = setTimeout(() => { _ordFilterT = null; applyOrderFilters(); }, 220);
+            // گەڕان ئێستا لە سێرڤەرەوەیە — چاوەڕوانییەکی کورت زیاتر بۆ ئەوەی
+            // بە هەر پیتێک داواکاریی داتابەیس نەنێردرێت
+            _ordFilterT = setTimeout(() => { _ordFilterT = null; reloadMgmt(); }, 300);
         }
         // Enter واتا «ئێستا» — چاوەڕوانییەکە دەبڕدرێت
         function flushOrderFilters() {
             if (_ordFilterT === null) return;
             clearTimeout(_ordFilterT);
             _ordFilterT = null;
-            applyOrderFilters();
+            reloadMgmt();
         }
 
         // ============================================================
@@ -3705,25 +3795,50 @@
         let _mgmtRendered = 0;       // چەند توکن تا ئێستا نەخشێنراون
         let _mgmtShowMember = false;
         let _mgmtIO = null;
+        // load-more لە سێرڤەرەوە: فەنکشنێکی async کە کاتێک توخمە بارکراوەکان
+        // تەواو دەبن پەڕەی داهاتوو دەهێنێت و توخمی نوێ دەگەڕێنێتەوە (یان null)
+        let _mgmtLoadMore = null;
+        let _mgmtLoadingMore = false;
 
         function _mgmtResetWindow() {
             if (_mgmtIO) { _mgmtIO.disconnect(); _mgmtIO = null; }
             _mgmtPlan = [];
             _mgmtRendered = 0;
+            _mgmtLoadMore = null;
+            _mgmtLoadingMore = false;
         }
 
-        function _mgmtStart(list, plan, showMember) {
+        function _mgmtStart(list, plan, showMember, loadMore) {
             _mgmtPlan = plan;
             _mgmtRendered = 0;
             _mgmtShowMember = showMember;
+            _mgmtLoadMore = loadMore || null;
+            _mgmtLoadingMore = false;
             list.innerHTML = '';
             _mgmtRenderMore(list);       // یەکەم کۆمەڵ
             _mgmtEnsureSentinel(list);   // چاودێری سکرۆڵ بۆ ئەوانی تر
             updatePrintBulkBar();
         }
 
+        async function _mgmtFetchMore(list) {
+            if (_mgmtLoadingMore || !_mgmtLoadMore) return;
+            _mgmtLoadingMore = true;
+            let s = document.getElementById('mgmt-render-sentinel');
+            if (s) s.innerHTML = '<div style="text-align:center; padding:14px; color:#94a3b8; font-size:13px;"><i class="bx bx-loader-alt bx-spin"></i></div>';
+            try {
+                let toks = await _mgmtLoadMore();
+                if (s) s.innerHTML = '';
+                if (toks && toks.length) { _mgmtPlan = _mgmtPlan.concat(toks); _mgmtLoadingMore = false; _mgmtRenderMore(list); }
+                else { _mgmtLoadMore = null; _mgmtLoadingMore = false; _mgmtFinish(); }
+            } catch (e) { console.log(e); if (s) s.innerHTML = ''; _mgmtLoadMore = null; _mgmtLoadingMore = false; _mgmtFinish(); }
+        }
+
         function _mgmtRenderMore(list) {
-            if (_mgmtRendered >= _mgmtPlan.length) { _mgmtFinish(); return; }
+            if (_mgmtRendered >= _mgmtPlan.length) {
+                if (_mgmtLoadMore && !_mgmtLoadingMore) _mgmtFetchMore(list);  // بیرگە تەواو → لە سێرڤەرەوە زیاتر
+                else if (!_mgmtLoadingMore) _mgmtFinish();
+                return;
+            }
             let html = '';
             let cards = 0;
             let i = _mgmtRendered;
@@ -3739,17 +3854,17 @@
             let s = document.getElementById('mgmt-render-sentinel');
             if (s) s.insertAdjacentHTML('beforebegin', html);
             else list.insertAdjacentHTML('beforeend', html);
-            if (_mgmtRendered >= _mgmtPlan.length) _mgmtFinish();
+            if (_mgmtRendered >= _mgmtPlan.length && !_mgmtLoadMore) _mgmtFinish();
         }
 
         function _mgmtEnsureSentinel(list) {
-            if (_mgmtRendered >= _mgmtPlan.length) return;   // هیچی تر نەماوە
+            if (_mgmtRendered >= _mgmtPlan.length && !_mgmtLoadMore) return;   // هیچی تر نەماوە
             let s = document.getElementById('mgmt-render-sentinel');
             if (!s) {
                 s = document.createElement('div');
                 s.id = 'mgmt-render-sentinel';
                 s.setAttribute('aria-hidden', 'true');
-                s.style.cssText = 'height:1px; width:100%; margin:0; padding:0;';
+                s.style.cssText = 'min-height:1px; width:100%; margin:0; padding:0;';
             }
             list.appendChild(s);   // هەمیشە دوایین توخم
             if (!_mgmtIO) {
@@ -3796,13 +3911,18 @@
         //                بەرزاییە کارت دەنەخشێن پێش دانانی scrollTop، ئەگەرنا
         //                لیستی کورت کورت دادەگرێت و شوێنەکە ون دەبێت.
         // ============================================================
-        function winRender(listEl, items, buildItem, chunk, restoreTop) {
+        // onExhausted (ئارەزوومەندانە): فەنکشنێکی async کە کاتێک توخمە
+        // بارکراوەکان تەواو دەبن بانگ دەکرێت — دەبێت پەڕەی داهاتووی سێرڤەر
+        // بهێنێت و لیستێکی نوێ لە توخم بگەڕێنێتەوە (یان [] / null بۆ کۆتایی).
+        // نەدراو → هەمان ڕەفتاری کۆن (تەنها توخمە بارکراوەکان).
+        function winRender(listEl, items, buildItem, chunk, restoreTop, onExhausted) {
             if (!listEl) return;
             chunk = chunk || 30;
             // چاودێری کۆنی ئەم لیستە بوەستێنە (نەخشاندنێکی نوێ دەستی پێکردووە)
             if (listEl.__winIO) { listEl.__winIO.disconnect(); listEl.__winIO = null; }
 
             let rendered = 0;
+            let loadingMore = false, exhaustedDone = false;
             const SENT = 'win-sentinel';
 
             function finish() {
@@ -3810,8 +3930,25 @@
                 let s = listEl.querySelector('.' + SENT);
                 if (s) s.remove();
             }
+            function morePossible() { return onExhausted && !exhaustedDone; }
+            async function loadMore() {
+                if (loadingMore || exhaustedDone) return;
+                loadingMore = true;
+                let s = listEl.querySelector('.' + SENT);
+                if (s) s.innerHTML = '<div style="text-align:center; padding:14px; color:#94a3b8; font-size:12px;"><i class="bx bx-loader-alt bx-spin"></i></div>';
+                try {
+                    let more = await onExhausted();
+                    if (s) s.innerHTML = '';
+                    if (more && more.length) { items = items.concat(more); loadingMore = false; renderMore(); }
+                    else { exhaustedDone = true; loadingMore = false; finish(); }
+                } catch (e) { console.log(e); if (s) s.innerHTML = ''; loadingMore = false; exhaustedDone = true; finish(); }
+            }
             function renderMore() {
-                if (rendered >= items.length) { finish(); return; }
+                if (rendered >= items.length) {
+                    if (morePossible()) loadMore();      // بیرگە تەواو — لە سێرڤەرەوە زیاتر بهێنە
+                    else finish();
+                    return;
+                }
                 let end = Math.min(rendered + chunk, items.length);
                 let html = '';
                 for (let i = rendered; i < end; i++) html += buildItem(items[i], i);
@@ -3819,7 +3956,7 @@
                 let s = listEl.querySelector('.' + SENT);
                 if (s) s.insertAdjacentHTML('beforebegin', html);
                 else listEl.insertAdjacentHTML('beforeend', html);
-                if (rendered >= items.length) finish();
+                if (rendered >= items.length && !morePossible()) finish();
             }
 
             listEl.innerHTML = '';
@@ -3836,12 +3973,15 @@
                 }
             }
 
-            if (rendered < items.length) {      // ئەوانی تر بە سکڕۆڵ دێن
-                let s = document.createElement('div');
-                s.className = SENT;
-                s.setAttribute('aria-hidden', 'true');
-                s.style.cssText = 'height:1px; width:100%; margin:0; padding:0;';
-                listEl.appendChild(s);
+            if (rendered < items.length || morePossible()) {   // ئەوانی تر بە سکڕۆڵ دێن
+                let s = listEl.querySelector('.' + SENT);
+                if (!s) {
+                    s = document.createElement('div');
+                    s.className = SENT;
+                    s.setAttribute('aria-hidden', 'true');
+                    s.style.cssText = 'min-height:1px; width:100%; margin:0; padding:0;';
+                    listEl.appendChild(s);
+                }
                 let io = new IntersectionObserver(es => {
                     if (es.some(e => e.isIntersecting)) renderMore();
                 }, { root: listEl, rootMargin: '800px 0px' });
@@ -3853,10 +3993,13 @@
         }
 
         // کارتی ئەندام — پێشتر لەناو `applyOrderFilters` دروست دەکرا، ئێستا
-        // فەنکشنێکی جیایە تا بتوانرێت بە کۆمەڵ (lazy) دروست بکرێت
-        function buildMemberCard(member, memberOrders) {
-            let count = memberOrders.length;
-            let memberBadges = statusCountBadges(memberOrders);
+        // فەنکشنێکی جیایە تا بتوانرێت بە کۆمەڵ (lazy) دروست بکرێت.
+        // `mo` دەتوانێت ڕیزی ئۆردەر بێت (کۆن) یان ئۆبجێکتی ژماردنی سێرڤەر
+        // {total,prep,onway,deliv,ret} (نوێ — بۆ داتای زۆر، بێ هێنانی ئۆردەرەکان)
+        function buildMemberCard(member, mo) {
+            let count, memberBadges;
+            if (Array.isArray(mo)) { count = mo.length; memberBadges = statusCountBadges(mo); }
+            else { count = Number(mo && mo.total) || 0; memberBadges = statusBadgesFromCounts(mo); }
             return `
                         <div class="team-member-card" style="flex-direction:column; align-items:stretch;" onclick="viewTeamMemberOrders('${member.code}')">
                             <div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
@@ -3974,7 +4117,7 @@
 
             switchScreen('orders-management-screen', document.getElementById('nav-orders-management'));
             if (isManagementDataLoaded) {
-                applyOrderFilters();
+                reloadMgmt();   // فلتەری حاڵەت لە سێرڤەرەوە جێبەجێ دەبێت
             }
         }
 
@@ -3998,7 +4141,7 @@
             // تابی نوێ بە فلتەرە دەرکەوتووەکان دەست پێدەکات
             if (typeof resetAllScrollHide === 'function') resetAllScrollHide();
 
-            applyOrderFilters();
+            reloadMgmt();   // گۆڕینی تاب → مەودای فرۆشیار دەگۆڕێت → لە سێرڤەرەوە بار دەکرێت
         }
 
         // کارتی ئۆردەری پەڕەی سەرەکی (داشبۆرد). پێشتر لەناو `fetchOrders`
@@ -4058,64 +4201,70 @@
             }
 
             try {
-                const orders = await fetchAllOrders(() =>
-                    supabase.from('orders').select('*').eq('seller_code', currentUser.code));
+                // مەودا: تەنها ئۆردەرەکانی خودی بەکارهێنەر
+                const myCode = String(currentUser.code || '').trim();
+                const params = { p_sellers: [myCode], p_status: null, p_date_from: null, p_date_to: null, p_search: null };
 
-                let prepCount = 0, onwayCount = 0, delivCount = 0, retCount = 0;
+                // ئامارەکانی سەرەوە + بەیجی ڕۆژ + یەکەم پەڕەی ئۆردەر — پێکەوە
+                // لە سێرڤەرەوە. ئامار و بەیج بە فەنکشنی ژماردن دێن (ورد، بێ
+                // هێنانی هەموو ئۆردەر)، بۆیە کاتی کردنەوە جێگیرە.
+                let [statRows, dayRows, first] = await Promise.all([
+                    rpc('orders_status_counts', params),
+                    rpc('orders_day_counts', params),
+                    fetchOrdersPage(params, null, UI_PAGE)
+                ]);
 
-                if (!orders || orders.length === 0) {
+                dashDayCounts = buildDayCountsMap(dayRows);
+                let sc = (statRows && statRows[0]) || { prep: 0, onway: 0, deliv: 0, ret: 0 };
+                if (typeof updateStatUI === "function") updateStatUI(+sc.prep || 0, +sc.onway || 0, +sc.deliv || 0, +sc.ret || 0);
+
+                if (!first.rows || first.rows.length === 0) {
                     list.innerHTML = '<p style="text-align:center; color:#888; margin-top:40px;">هێشتا هیچ ئۆردەرێکت نییە.</p>';
-                    if (typeof updateStatUI === "function") updateStatUI(0, 0, 0, 0);
                     isDashboardDataLoaded = true;
                     return;
                 }
 
-                // ژماردنی ئامارەکان + خەزنکردنی داتا
-                orders.forEach(o => {
-                    allGlobalOrdersData[o.id] = o;
-                    let st = o.status || "ئامادە دەکرێت";
-                    if (st.includes("ڕێگا")) onwayCount++;
-                    else if (st.includes("گەیشت")) delivCount++;
-                    else if (st.includes("گەڕا") || st.includes("کەنسەڵ")) retCount++;
-                    else prepCount++;
-                });
+                // دۆخی پەڕەبەندی بۆ «هێنانی زیاتر» (لە سکرۆڵ)
+                let cursor = first.nextCursor;
+                let hasMore = first.hasMore;
+                let lastDay = null;   // بۆ ئەوەی سەردێڕی ڕۆژ تەنها یەکجار بنەخشێت
 
-                // کۆکردنەوەی ئۆردەرەکان بەپێی ڕۆژ (ناوبڕی ڕۆژ لەگەڵ ژمارەی حاڵەتەکان)
-                let ymdStr = (d) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
-                let todayStr = ymdStr(new Date());
-                let ydObj = new Date(); ydObj.setDate(ydObj.getDate() - 1); let yesterdayStr = ymdStr(ydObj);
-                let dayGroups = []; let dayMap = {};
-                orders.forEach(o => {
-                    let day = (o.date ? String(o.date).split(' ')[0].trim() : "نەزانراوە");
-                    if (!dayMap[day]) { dayMap[day] = { day: day, orders: [] }; dayGroups.push(dayMap[day]); }
-                    dayMap[day].orders.push(o);
-                });
-
-                // پلانی نەخشاندن: ناوبڕی ڕۆژ {d} + کارتەکان {c}. بە `winRender`
-                // بە کۆمەڵ (٣٠ لە جارێک) دەنەخشێن — نەک هەموو کارتەکان بەیەکەوە
-                // بە یەک `innerHTML`ـدا (ئەوە پێش ئێستا پەڕەی سەرەکیی فریز دەکرد
-                // کاتێک ئۆردەر زۆر بوو).
-                let plan = [];
-                dayGroups.forEach(group => {
-                    let dl = formatDayLabel(group.day);
-                    plan.push({ d: `
+                // ئۆردەرەکان → توخمی پلان: سەردێڕی ڕۆژ {d} (بەیجەکەی لە مەپی
+                // سێرڤەرەوە، کۆی تەواوی ڕۆژ) + کارتەکان {c}. بە کۆمەڵ نەخشێنراو.
+                function planFor(orders) {
+                    let toks = [];
+                    orders.forEach(o => {
+                        allGlobalOrdersData[o.id] = o;
+                        let day = (o.date ? String(o.date).split(' ')[0].trim() : "نەزانراوە");
+                        if (day !== lastDay) {
+                            lastDay = day;
+                            let dl = formatDayLabel(day);
+                            toks.push({ d: `
                     <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin:12px 0 7px 0; padding-bottom:6px; border-bottom:1px dashed #e2e8f0;">
                         <div style="display:flex; align-items:center; gap:5px; font-size:12px; font-weight:700; color:#334155;">
                             <i class='bx bx-calendar-event' style="color:var(--primary); font-size:15px;"></i>
                             <span dir="auto">${dl.label}</span>
                             ${dl.sub ? `<span dir="ltr" style="font-size:10px; font-weight:600; color:#94a3b8;">${dl.sub}</span>` : ''}
                         </div>
-                        <div style="display:flex; align-items:center; gap:5px; flex-wrap:wrap; justify-content:flex-end;">${statusCountBadges(group.orders)}</div>
+                        <div style="display:flex; align-items:center; gap:5px; flex-wrap:wrap; justify-content:flex-end;">${dayBadges(day, null, dashDayCounts)}</div>
                     </div>` });
-
-                    group.orders.forEach(o => plan.push({ c: o }));
-                });
-
-                winRender(list, plan, tok => tok.d || buildDashOrderCard(tok.c), 30);
-
-                if (typeof updateStatUI === "function") {
-                    updateStatUI(prepCount, onwayCount, delivCount, retCount);
+                        }
+                        toks.push({ c: o });
+                    });
+                    return toks;
                 }
+
+                let plan = planFor(first.rows);
+
+                // کاتێک سکرۆڵ گەیشتە کۆتایی — پەڕەی داهاتوو لە سێرڤەرەوە بهێنە
+                async function loadMoreDash() {
+                    if (!hasMore) return null;
+                    let next = await fetchOrdersPage(params, cursor, UI_PAGE);
+                    cursor = next.nextCursor; hasMore = next.hasMore;
+                    return planFor(next.rows);
+                }
+
+                winRender(list, plan, tok => tok.d || buildDashOrderCard(tok.c), 30, 0, hasMore ? loadMoreDash : null);
 
                 isDashboardDataLoaded = true;
             } catch (err) {
@@ -4539,6 +4688,159 @@
             return html;
         }
 
+        // ============================================================
+        // بەڕێوەبردنی ئۆردەرەکان — پەڕەبەندی سێرڤەری
+        // ------------------------------------------------------------
+        // مەودای بینین (کۆدەکانی فرۆشیار) لە `loadManagementOrders`ـەوە دێت و
+        // لێرە خەزن دەکرێت. هەر گۆڕانێکی تاب/فلتەر/گەڕان `reloadMgmt` بانگ
+        // دەکات کە فلتەرکردنی ئەستوور دەداتە داتابەیسەکە (نەک بیرگەی براوزەر).
+        // `applyOrderFilters` هێشتا ڕەندەرکەرە، بەڵام لەسەر ئەو کارە-سێتەی
+        // سێرڤەر فلتەری کردووە کار دەکات.
+        // ============================================================
+        let mgmtScope = { myScope: 'none', myCode: '', allowedCodes: [] };
+        let mgmtPage = { params: null, cursor: null, hasMore: false, passes: null, showMember: false, lastDay: null };
+        let _mgmtReqId = 0;   // بۆ پشتگوێخستنی وەڵامی درەنگی داواکاریی کۆن (race)
+
+        // کام فرۆشیارەکان بۆ دۆخی بینینی ئێستا؟ (هەمیشە ڕیز — نەک null)
+        function mgmtSellersForView() {
+            let myCode = mgmtScope.myCode;
+            if (currentOrdersTab === "my") return [myCode];
+            if (selectedTeamMember) return [String(selectedTeamMember).trim()];
+            // تابی تیم (هەموو یان بەپێی ئەندام) → ئەندامانی تیم بەبێ خۆم
+            let team = (mgmtScope.allowedCodes || []).filter(c => c && c !== myCode);
+            return team.length ? team : [myCode];
+        }
+
+        // «پێوەری تێپەڕبوون»ی کلاینت (تاب/پلە/دەسەڵات/فلتەر) — هەمان لۆجیکی
+        // کۆنی فلتەری `applyOrderFilters`. سێرڤەر پێشتر بەپێی مەودا+حاڵەت+
+        // بەروار+گەڕان فلتەری کردووە؛ ئەمە تەنها وردەکاری (پلە/دەسەڵات/تاب).
+        function mgmtMakePasses() {
+            let statusFilter = document.getElementById('filter-status').value;
+            let dateFrom = document.getElementById('filter-date-from').value;
+            let dateTo = document.getElementById('filter-date-to').value;
+            let searchVal = document.getElementById('orders-search-input').value.trim().toLowerCase();
+            let roleFilterEl = document.querySelector('input[name="orders_role_filter"]:checked');
+            let roleFilter = roleFilterEl ? roleFilterEl.value : "all";
+            let myCode = String(currentUser ? currentUser.code : "").trim().toLowerCase();
+            let selMemberCode = selectedTeamMember ? String(selectedTeamMember).trim().toLowerCase() : "";
+            let _viewOk = {};
+            return function (o) {
+                let sellerCode = sellerCodeOf(o);
+                let isMyOrder = (sellerCode === myCode);
+                if (!isMyOrder) {
+                    if (!(sellerCode in _viewOk)) _viewOk[sellerCode] = canActOnOrder(o, 'view');
+                    if (!_viewOk[sellerCode]) return false;
+                }
+                if (currentOrdersTab === "my" && !isMyOrder) return false;
+                if (currentOrdersTab === "team" && !selectedTeamMember && isMyOrder) return false;
+                if (currentOrdersTab === "team" && selectedTeamMember && sellerCode !== selMemberCode) return false;
+                if (currentOrdersTab === "team" && !selectedTeamMember && roleFilter !== "all") {
+                    let mem = teamMemberOf(sellerCode);
+                    if (!mem || normalizeRole(mem.role) !== roleFilter) return false;
+                }
+                if (statusFilter !== "all" && !(o.status || "").includes(statusFilter)) return false;
+                if (dateFrom || dateTo) {
+                    let dk = orderDayKey(o);
+                    if (!dk) return false;
+                    if (dateFrom && dk < dateFrom) return false;
+                    if (dateTo && dk > dateTo) return false;
+                }
+                if (searchVal) {
+                    let sName = "";
+                    if (currentOrdersTab === "team") {
+                        let member = teamMemberOf(sellerCode);
+                        if (member) sName = String(member.full_name || "").toLowerCase();
+                        else sName = String(o.seller_name || "").toLowerCase();
+                    }
+                    let matchOrder = cardFmt(o).blob.includes(searchVal);
+                    let matchMember = sName.includes(searchVal) || sellerCode.includes(searchVal);
+                    if (currentOrdersTab === "team") { if (!matchOrder && !matchMember) return false; }
+                    else { if (!matchOrder) return false; }
+                }
+                return true;
+            };
+        }
+
+        // ئۆردەرەکان → توخمی پلان (سەردێڕی ڕۆژ + کارت)، گرووپی ڕۆژ بەردەوام
+        // دەبێت لەگەڵ `mgmtPage.lastDay` (بۆ پەڕەکانی داهاتوو). بەیجی ڕۆژ لە
+        // مەپی سێرڤەرەوە دێت (کۆی تەواوی ڕۆژ). applyFilter=true → `passes`.
+        function mgmtTokensFromOrders(orders, applyFilter) {
+            let toks = [];
+            for (let idx = 0; idx < orders.length; idx++) {
+                let o = orders[idx];
+                if (applyFilter && mgmtPage.passes && !mgmtPage.passes(o)) continue;
+                let day = (o.date ? String(o.date).split(' ')[0].trim() : "نەزانراوە");
+                if (day !== mgmtPage.lastDay) {
+                    mgmtPage.lastDay = day;
+                    let dl = formatDayLabel(day);
+                    toks.push({ d: `
+                    <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin:12px 0 7px 0; padding-bottom:6px; border-bottom:1px dashed #e2e8f0;">
+                        <div style="display:flex; align-items:center; gap:5px; font-size:12px; font-weight:700; color:#334155;">
+                            <i class='bx bx-calendar-event' style="color:var(--primary); font-size:15px;"></i>
+                            <span dir="auto">${dl.label}</span>
+                            ${dl.sub ? `<span dir="ltr" style="font-size:10px; font-weight:600; color:#94a3b8;">${dl.sub}</span>` : ''}
+                        </div>
+                        <div style="display:flex; align-items:center; gap:5px; flex-wrap:wrap; justify-content:flex-end;">${dayBadges(day, null, mgmtDayCounts)}</div>
+                    </div>` });
+                }
+                toks.push({ c: o });
+            }
+            return toks;
+        }
+
+        // load-more بۆ لیستی بەڕێوەبردن: پەڕەی داهاتوو لە سێرڤەرەوە بهێنە.
+        // ئەگەر پەڕەیەک تەواو بە فلتەری کلاینت لابرا (وەک فلتەری پلە)، ئەوا
+        // بەردەوام دەبێت بۆ پەڕەی داهاتوو تا توخمێک بدۆزێتەوە یان کۆتایی بێت.
+        async function mgmtListLoadMore() {
+            let out = [], guard = 0;
+            while (mgmtPage.hasMore && out.length === 0 && guard++ < 20) {
+                let next = await fetchOrdersPage(mgmtPage.params, mgmtPage.cursor, UI_PAGE);
+                mgmtPage.cursor = next.nextCursor;
+                mgmtPage.hasMore = next.hasMore;
+                next.rows.forEach(o => { allGlobalOrdersData[o.id] = o; allManagementOrdersArray.push(o); });
+                out = mgmtTokensFromOrders(next.rows, true);
+            }
+            return out.length ? out : null;
+        }
+
+        // بارکردنەوەی داتای بەڕێوەبردن بەپێی دۆخی ئێستا — فلتەر لە سێرڤەر،
+        // پاشان ڕەندەری کلاینت. هەر تاب/فلتەر/گەڕانێک ئەمە بانگ دەکات.
+        async function reloadMgmt() {
+            if (!isManagementDataLoaded) return;
+            let list = document.getElementById('management-orders-list');
+            let reqId = ++_mgmtReqId;
+            let sellers = mgmtSellersForView();
+            let params = orderFilterParams(sellers);
+            let membersView = (currentOrdersTab === "team" && teamViewMode === "members" && !selectedTeamMember);
+            try {
+                if (membersView) {
+                    let memRows = await rpc('orders_member_counts', params);
+                    if (reqId !== _mgmtReqId) return;   // داواکارییەکی نوێترین هاتووە
+                    mgmtMemberCounts = buildMemberCountsMap(memRows);
+                    mgmtDayCounts = null;
+                    allManagementOrdersArray = [];
+                    mgmtPage.params = params; mgmtPage.cursor = null; mgmtPage.hasMore = false;
+                    applyOrderFilters();
+                } else {
+                    let [dayRows, first] = await Promise.all([
+                        rpc('orders_day_counts', params),
+                        fetchOrdersPage(params, null, UI_PAGE)
+                    ]);
+                    if (reqId !== _mgmtReqId) return;
+                    mgmtDayCounts = buildDayCountsMap(dayRows);
+                    allManagementOrdersArray = first.rows;
+                    first.rows.forEach(o => allGlobalOrdersData[o.id] = o);
+                    mgmtPage.params = params; mgmtPage.cursor = first.nextCursor; mgmtPage.hasMore = first.hasMore;
+                    applyOrderFilters();
+                }
+            } catch (e) {
+                console.log(e);
+                if (reqId === _mgmtReqId && list && !allManagementOrdersArray.length) {
+                    list.innerHTML = '<p style="text-align:center; color:red; margin-top:40px;">❌ هەڵەیەک ڕوویدا لە هێنانەوەی داتاکان.</p>';
+                }
+            }
+        }
+
         function applyOrderFilters() {
             let list = document.getElementById('management-orders-list');
             let filterSection = document.getElementById('orders-filter-section');
@@ -4555,11 +4857,6 @@
             // (لیستی ئەندامان، بێ ئەنجام) و بارەکە دەبێت لە هەموویاندا ڕاست بێت
             updatePrintBulkBar();
 
-            let statusFilter = document.getElementById('filter-status').value;
-            let dateFrom = document.getElementById('filter-date-from').value;
-            let dateTo = document.getElementById('filter-date-to').value;
-            let searchVal = document.getElementById('orders-search-input').value.trim().toLowerCase();
-
             let roleFilterEl = document.querySelector('input[name="orders_role_filter"]:checked');
             let roleFilter = roleFilterEl ? roleFilterEl.value : "all";
 
@@ -4571,68 +4868,11 @@
             let roleFilterBox = document.getElementById('orders-role-filter');
             if (roleFilterBox) roleFilterBox.style.display = (currentOrdersTab === "team" && !selectedTeamMember) ? "flex" : "none";
 
-            // کاشی بینین بەپێی کۆدی فرۆشیار — تا بۆ هەر ئۆردەرێک دووبارە نەژمێردرێت
-            let _viewOk = {};
-            // ئەمانە لە هەموو ئۆردەرەکاندا نەگۆڕن — یەکجار دەژمێردرێن نەک بۆ هەر
-            // ئۆردەرێک (پێشتر ١١٠٠ جار `currentUser.code` نۆرمالایز دەکرا)
-            let myCode = String(currentUser ? currentUser.code : "").trim().toLowerCase();
-            let selMemberCode = selectedTeamMember ? String(selectedTeamMember).trim().toLowerCase() : "";
-
-            let filteredOrders = allManagementOrdersArray.filter(o => {
-                let sellerCode = sellerCodeOf(o);
-                let isMyOrder = (sellerCode === myCode);
-
-                // سنووری پلە + مەودا: ئۆردەری ئەو پلانەی ڕێگەم پێنەدراوە نابینم
-                if (!isMyOrder) {
-                    if (!(sellerCode in _viewOk)) _viewOk[sellerCode] = canActOnOrder(o, 'view');
-                    if (!_viewOk[sellerCode]) return false;
-                }
-
-                if (currentOrdersTab === "my" && !isMyOrder) return false;
-                if (currentOrdersTab === "team" && !selectedTeamMember && isMyOrder) return false;
-                if (currentOrdersTab === "team" && selectedTeamMember && sellerCode !== selMemberCode) return false;
-
-                // فلتەری پلە بۆ ئۆردەرەکانی تیم (تەنها کاتێک ئەندامێکی دیاریکراو نەکراوەتەوە)
-                if (currentOrdersTab === "team" && !selectedTeamMember && roleFilter !== "all") {
-                    let mem = teamMemberOf(sellerCode);
-                    if (!mem || normalizeRole(mem.role) !== roleFilter) return false;
-                }
-
-                if (statusFilter !== "all" && !(o.status || "").includes(statusFilter)) return false;
-
-                // بەروار: هەموو پێشدانراوەکان (ئەمڕۆ، ٧ ڕۆژ، چارەک، دڵخواز…)
-                // دەبنە یەک مەودای [لە، بۆ]. بەراوردی سترینگی 'YYYY-MM-DD'
-                // ڕاستە و کاتی ناوچەیی تێکی نادات.
-                if (dateFrom || dateTo) {
-                    let dk = orderDayKey(o);
-                    if (!dk) return false;
-                    if (dateFrom && dk < dateFrom) return false;
-                    if (dateTo && dk > dateTo) return false;
-                }
-
-                if (searchVal) {
-                    let sCode = sellerCode;
-
-                    let sName = "";
-                    if (currentOrdersTab === "team") {
-                        let member = teamMemberOf(sCode);
-                        if (member) sName = String(member.full_name || "").toLowerCase();
-                        else sName = String(o.seller_name || "").toLowerCase();
-                    }
-
-                    // کۆد + مۆبایل + ناوی کڕیار پێکەوە لە یەک سترینگی کاشکراودان،
-                    // بۆیە یەک `includes` بەسە لەجیاتی چوار سترینگی نوێ بۆ هەر پیتێک
-                    let matchOrder = cardFmt(o).blob.includes(searchVal);
-                    let matchMember = sName.includes(searchVal) || sCode.includes(searchVal);
-
-                    if (currentOrdersTab === "team") {
-                        if (!matchOrder && !matchMember) return false;
-                    } else {
-                        if (!matchOrder) return false;
-                    }
-                }
-                return true;
-            });
+            // فلتەری مەودا/حاڵەت/بەروار/گەڕان پێشتر لە سێرڤەرەوە کراوە (لە
+            // `reloadMgmt`). ئەم «پێوەرە» تەنها فلتەرە وردەکانی کلاینت (تاب/
+            // پلە/دەسەڵات) جێبەجێ دەکات، و بۆ load-moreـیش پاشەکەوت دەکرێت.
+            mgmtPage.passes = mgmtMakePasses();
+            let filteredOrders = allManagementOrdersArray.filter(mgmtPage.passes);
 
             // نەخشاندنی کۆن (هەموو کارتەکان بەیەکەوە) نەماوە — لەجیاتی ئەوە
             // «پلانێک» دروست دەکرێت و بە کۆمەڵی ٤٠ کارتی نەخشێنراو دەردەکەوێت
@@ -4649,12 +4889,19 @@
                 // ١١٠٠) دەگەڕا: ~٢٦٧ هەزار بەراورد + نۆرمالایزکردنی سترینگ لە هەر
                 // گۆڕینێکدا بۆ «بەپێی ئەندام». ئێستا نەخشەیەک یەکجار دروست دەبێت و
                 // هەر ئەندام بە یەک `get` ئۆردەرەکانی دەدۆزێتەوە — O(ئۆردەر+ئەندام).
-                let ordersByCode = new Map();
-                filteredOrders.forEach(o => {
-                    let c = sellerCodeOf(o);
-                    let arr = ordersByCode.get(c);
-                    if (arr) arr.push(o); else ordersByCode.set(c, [o]);
-                });
+                // ژماردنی ئۆردەری هەر ئەندامێک لە سێرڤەرەوە دێت (ورد، بێ
+                // هێنانی ئۆردەرەکان). ئەگەر مەپەکە ئامادە نەبوو (بانگی
+                // ڕاستەوخۆی applyOrderFilters بێ reloadMgmt)، لەسەر ئۆردەرە
+                // بارکراوەکان دەژمێردرێت (فالباکی کۆن).
+                let ordersByCode = null;
+                if (!mgmtMemberCounts) {
+                    ordersByCode = new Map();
+                    filteredOrders.forEach(o => {
+                        let c = sellerCodeOf(o);
+                        let arr = ordersByCode.get(c);
+                        if (arr) arr.push(o); else ordersByCode.set(c, [o]);
+                    });
+                }
 
                 let memberPlan = [];
 
@@ -4663,16 +4910,14 @@
                     // فلتەری پلە: تەنها ئەندامانی ئەو پلەیە پیشان بدە
                     if (roleFilter !== "all" && normalizeRole(member.role) !== roleFilter) return;
 
-                    let memberOrders = ordersByCode.get(mCode) || [];
-                    let count = memberOrders.length;
+                    // mo = ژمارەکانی سێرڤەر {total,...} یان ڕیزی ئۆردەری بارکراو (فالباک)
+                    let mo = mgmtMemberCounts ? (mgmtMemberCounts[mCode] || null) : (ordersByCode.get(mCode) || []);
+                    let count = mgmtMemberCounts ? (mo ? mo.total : 0) : mo.length;
 
                     // تەنها ئەندامانی خاوەن داواکاری پیشان دەدرێن — ئەندامی بێ
-                    // داواکاری (٠) لە لیستی «بەپێی ئەندام» دەرناکەوێت. ئەمە بۆ
-                    // هەموو دۆخەکان کاردەکات (بێ فلتەر، فلتەری حاڵەت/بەروار، گەڕان)
-                    // چونکە `count` لەسەر ئۆردەرە فلتەرکراوەکان دەژمێردرێت — بۆیە
-                    // ئەندامێک کە هیچ ئۆردەرێکی گونجاوی نەبێت، دەرناکەوێت.
+                    // داواکاری (٠) لە لیستی «بەپێی ئەندام» دەرناکەوێت.
                     // کارتەکە بە کۆمەڵ (lazy) لە `buildMemberCard` دروست دەبێت.
-                    if (count > 0) memberPlan.push({ m: member, mo: memberOrders });
+                    if (count > 0) memberPlan.push({ m: member, mo: mo });
                 });
 
                 if (memberPlan.length === 0) {
@@ -4698,7 +4943,10 @@
             ` });
             }
 
-            if (filteredOrders.length === 0) {
+            // «هیچ ئەنجام» تەنها ئەگەر هیچ پەڕەیەکی تریش نەمابێت — ئەگەرنا
+            // (وەک فلتەری پلە کە پەڕەی یەکەمی هەموو لابرد) بە سکرۆڵ/load-more
+            // پەڕەکانی داهاتوو دەگەڕدرێن بۆ دۆزینەوەی ئەنجام
+            if (filteredOrders.length === 0 && !mgmtPage.hasMore) {
                 let head = plan.length ? plan[0].h : '';
                 list.innerHTML = head + '<p style="text-align:center; color:#888; margin-top:40px;">هیچ داواکارییەک نەدۆزرایەوە.</p>';
                 return;
@@ -4708,31 +4956,14 @@
             // لە دۆخی «هەموو»ی تیم (بێ چوونە ناو ئەندامێک) وێنەی ئەندامەکە لەسەر هەر ئۆردەرێک پیشان دەدرێت
             let showMemberCol = (currentOrdersTab === "team" && !selectedTeamMember);
 
-            let dayGroups = []; let dayMap = {};
-            filteredOrders.forEach(o => {
-                let day = (o.date ? String(o.date).split(' ')[0].trim() : "نەزانراوە");
-                if (!dayMap[day]) { dayMap[day] = { day: day, orders: [] }; dayGroups.push(dayMap[day]); }
-                dayMap[day].orders.push(o);
-            });
+            // پلانی نەخشاندن: سەردێڕی ڕۆژ + کارت، بە گرووپی ڕۆژ کە بەیجەکەی
+            // لە مەپی سێرڤەرەوە دێت (کۆی تەواوی ڕۆژ). `lastDay` سفر دەکرێتەوە
+            // تا load-more (پەڕەی داهاتوو) بتوانێت گرووپەکە بەردەوام بکات.
+            mgmtPage.showMember = showMemberCol;
+            mgmtPage.lastDay = null;
+            plan = plan.concat(mgmtTokensFromOrders(filteredOrders, false));
 
-            dayGroups.forEach(group => {
-                // ناوبڕی ڕۆژ + ژمارەکان یەکجار دەژمێردرێن (لە بیرگەوە، هەموو ڕیزەکان)
-                let dl = formatDayLabel(group.day);
-                plan.push({ d: `
-                    <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin:12px 0 7px 0; padding-bottom:6px; border-bottom:1px dashed #e2e8f0;">
-                        <div style="display:flex; align-items:center; gap:5px; font-size:12px; font-weight:700; color:#334155;">
-                            <i class='bx bx-calendar-event' style="color:var(--primary); font-size:15px;"></i>
-                            <span dir="auto">${dl.label}</span>
-                            ${dl.sub ? `<span dir="ltr" style="font-size:10px; font-weight:600; color:#94a3b8;">${dl.sub}</span>` : ''}
-                        </div>
-                        <div style="display:flex; align-items:center; gap:5px; flex-wrap:wrap; justify-content:flex-end;">${statusCountBadges(group.orders)}</div>
-                    </div>` });
-
-                // کارتەکان بە کۆمەڵ (lazy) لە `buildMgmtOrderCard` دروست دەبن
-                group.orders.forEach(o => plan.push({ c: o }));
-            });
-
-            _mgmtStart(list, plan, showMemberCol);
+            _mgmtStart(list, plan, showMemberCol, mgmtPage.hasMore ? mgmtListLoadMore : null);
         }
 
         async function loadManagementOrders() {
@@ -4821,18 +5052,12 @@
                 // نەخشەکە لەگەڵ لیستەکە بگونجێت، تەنانەت کاتێک بەتاڵ دەمێنێتەوە
                 rebuildTeamMemberIndex();
 
-                const orders = await fetchAllOrders(() => {
-                    let q = supabase.from('orders').select('*');
-                    // مەودای 'all' → هەموو ئۆردەرەکان؛ نەخێر → تەنها تیم + خۆم
-                    if (myScope !== 'all') q = q.in('seller_code', allowedCodes);
-                    return q;
-                });
-
-                allManagementOrdersArray = orders;
-                orders.forEach(o => allGlobalOrdersData[o.id] = o);
-
-                isManagementDataLoaded = true;
-                applyOrderFilters();
+                // مەودای بینین خەزن دەکرێت — `reloadMgmt` کۆدەکانی فرۆشیار
+                // بەپێی تابی ئێستا لێی دەردەهێنێت. پێشتر لێرەدا هەموو ئۆردەرەکان
+                // دەهێنران؛ ئێستا تەنها پەڕەیەک بە پێویست (server-side pagination).
+                mgmtScope = { myScope: myScope, myCode: myCode, allowedCodes: allowedCodes };
+                isManagementDataLoaded = true;   // پێش reloadMgmt (ئەگەرنا زوو دەگەڕێتەوە)
+                await reloadMgmt();
             } catch (err) {
                 console.log(err);
                 if (!isManagementDataLoaded) {
@@ -7640,9 +7865,8 @@
             let listEl = document.getElementById('management-orders-list');
             if (listEl) teamMembersScrollTop = listEl.scrollTop;
             selectedTeamMember = code;
-            applyOrderFilters();
-            // ئۆردەرەکانی ئەندام لە سەرەوە دەست پێ بکات
-            if (listEl) listEl.scrollTop = 0;
+            // ئۆردەرەکانی ئەندام لە سێرڤەرەوە بار دەکرێن (لە سەرەوە دەست پێدەکات)
+            reloadMgmt().then(() => { if (listEl) listEl.scrollTop = 0; });
         }
 
 
@@ -7650,17 +7874,16 @@
 
         function backToTeamList() {
             selectedTeamMember = null;
-            applyOrderFilters();
-            // گەڕانەوە بۆ هەمان شوێنی پێشووی لیستی ئەندامان
             let listEl = document.getElementById('management-orders-list');
-            if (listEl) listEl.scrollTop = teamMembersScrollTop;
+            // گەڕانەوە بۆ لیستی ئەندامان و هەمان شوێنی پێشوو
+            reloadMgmt().then(() => { if (listEl) listEl.scrollTop = teamMembersScrollTop; });
         }
 
         // گۆڕینی شێوازی بینینی ئۆردەرەکانی تیم: "all" (هەموو) یان "members" (بەپێی ئەندام)
         function switchTeamView(mode) {
             teamViewMode = mode;
             selectedTeamMember = null;
-            applyOrderFilters();
+            reloadMgmt();
         }
 
 
@@ -11369,7 +11592,7 @@
 
             closeFilterSheet();
             syncFilterUI();
-            applyOrderFilters();
+            reloadMgmt();   // فلتەری حاڵەت/بەروار لە سێرڤەرەوە جێبەجێ دەبێت
         }
 
         // ---------- دوگمە و چیپەکانی دەرەوەی شیت ----------
@@ -11421,7 +11644,7 @@
                 document.getElementById('filter-date-to').value = '';
             }
             syncFilterUI();
-            applyOrderFilters();
+            reloadMgmt();   // لابردنی فلتەر → لە سێرڤەرەوە بار دەکرێتەوە
         }
 
         // بۆکسەکانی نووسین: Enter پشکنین دەکات، دەرچوون هەروەها
@@ -13564,7 +13787,6 @@
                     showToast("دەسەڵاتت نییە بۆ بینینی ئەم ئۆردەرە!", "error");
                     return;
                 }
-                await unlockPrintByScan(found);
                 openOrderDetails(found.id);
                 return;
             }
@@ -13593,7 +13815,6 @@
 
             allGlobalOrdersData[hit.id] = hit;
             hideToast();
-            await unlockPrintByScan(hit);
             openOrderDetails(hit.id);
         }
 
