@@ -9302,3 +9302,215 @@ body.fsheet-open {
   font-weight: 700;
   color: var(--primary);
 }
+
+/* ============================================================
+   بەشی شارەکان — پێشنیارەکانی ناوی شار دەبێت لەسەر هەموو شتێک بن
+   ------------------------------------------------------------
+   «زیادکردنی شار» و سەردێڕی «لیستی شارەکان» هەردووکیان لەلایەن
+   سیستەمی شاردنەوەی سکرۆڵەوە `.sh-over` وەردەگرن (z-index: 20).
+   کاتێک دوو توخم هەمان z-indexیان هەبێت، ئەوەی دواتر لە DOMدا
+   دێت دەچێتە سەرەوە — بۆیە سەردێڕی «لیستی شارەکان» دەکەوتە سەر
+   لیستی پێشنیارەکان. بۆکسی زیادکردن بەرزتر دەکرێتەوە.
+   ============================================================ */
+#cities-add-collapse {
+  z-index: 31;
+}
+
+/* ============================================================
+   فۆرمی ئۆردەری نوێ — بارەکەی پێشکەوتن + هەڵە یارمەتیدەرەکان
+   (ui-ux-pro-max: Progress Indicators + Error Placement +
+    Inline Validation + role="alert")
+   ============================================================ */
+
+/* ---------- ١. بارەکەی پێشکەوتن ---------- */
+.ofp {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  margin: -6px -4px 18px;
+  padding: 12px 14px 13px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, .92);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, .05);
+}
+
+.ofp-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 9px;
+}
+
+.ofp-step {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--primary);
+  flex-shrink: 0;
+}
+
+.ofp-step b {
+  font-variant-numeric: tabular-nums;
+}
+
+/* «ئێستا چی بکەم؟» — ئاڕاستەی هەنگاوی داهاتوو */
+.ofp-label {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #64748b;
+  text-align: left;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ofp-track {
+  position: relative;
+  height: 7px;
+  border-radius: 99px;
+  background: #e9eef5;
+  overflow: hidden;
+}
+
+.ofp-fill {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 0;
+  width: 0;
+  border-radius: 99px;
+  background: linear-gradient(90deg, #2481cc, #4aa3e8);
+  transition: width .32s cubic-bezier(.4, 0, .2, 1), background .32s ease;
+}
+
+/* هەموو هەنگاوەکان تەواو بوون → سەوز */
+.ofp.is-done .ofp-fill {
+  background: linear-gradient(90deg, #059669, #10b981);
+}
+
+.ofp.is-done .ofp-step {
+  color: #059669;
+}
+
+/* ---------- نیشانەی هەر هەنگاوێک ---------- */
+.ofp-dots {
+  display: flex;
+  gap: 6px;
+  margin-top: 9px;
+}
+
+.ofp-dot {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  font-size: 10px;
+  font-weight: 700;
+  color: #94a3b8;
+  transition: color .2s ease;
+}
+
+.ofp-dot i {
+  font-size: 13px;
+  flex-shrink: 0;
+}
+
+.ofp-dot span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ofp-dot.on {
+  color: #059669;
+}
+
+/* هەنگاوی ئێستا — ئەوەی بەکارهێنەر لێیەتی */
+.ofp-dot.cur {
+  color: var(--primary);
+}
+
+@media (max-width: 400px) {
+  .ofp-dot span {
+    display: none;
+  }
+  .ofp-dot {
+    flex: 0 0 auto;
+  }
+  .ofp-dots {
+    gap: 10px;
+  }
+}
+
+/* ---------- ٢. هەڵەی خانەکان ---------- */
+/* پەیام ڕێک لەژێر ئەو خانەیەی کێشەکەی تێدایە — نەک لە سەرەوەی فۆرمەکە */
+.field-err {
+  display: none;
+  align-items: flex-start;
+  gap: 6px;
+  margin: -8px 0 14px;
+  padding: 9px 11px;
+  border-radius: 9px;
+  background: rgba(220, 38, 38, .06);
+  border: 1px solid rgba(220, 38, 38, .22);
+  color: #b91c1c;
+  font-size: 11.5px;
+  font-weight: 600;
+  line-height: 1.65;
+  animation: fieldErrIn .2s ease;
+}
+
+.field-err.on {
+  display: flex;
+}
+
+.field-err > i {
+  font-size: 15px;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+@keyframes fieldErrIn {
+  from { opacity: 0; transform: translateY(-3px); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* خانەکە خۆی — چوارچێوەی سوور + پاشخانێکی زۆر کاڵ */
+.has-err,
+.has-err input,
+.has-err textarea {
+  border-color: #dc2626 !important;
+  background-color: #fef2f2 !important;
+}
+
+.has-err:focus,
+.has-err input:focus {
+  box-shadow: 0 0 0 3.5px rgba(220, 38, 38, .13) !important;
+}
+
+/* ناونیشانی خانەکە — ڕەنگ تاکە نیشانە نییە، ئایکۆنیش زیاد دەکرێت */
+label.lbl-err {
+  color: #b91c1c !important;
+}
+
+/* لەرینەوەیەکی کورت لەکاتی ناردندا، بۆ ئەوەی چاو بیدۆزێتەوە */
+@keyframes errShake {
+  0%, 100% { transform: translateX(0); }
+  25%      { transform: translateX(-4px); }
+  75%      { transform: translateX(4px); }
+}
+
+.err-shake {
+  animation: errShake .28s ease;
+}
+
+/* ڕێزگرتن لە «کەمکردنەوەی جووڵە»ی سیستەم */
+@media (prefers-reduced-motion: reduce) {
+  .ofp-fill { transition: none; }
+  .field-err { animation: none; }
+  .err-shake { animation: none; }
+}

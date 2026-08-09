@@ -87,7 +87,26 @@
 
     <div id="order-screen" class="screen">
 
-        <h2 style="text-align: center; margin-bottom: 25px;"><i class='bx bx-cart-add'></i> ئۆردەری نوێ</h2>
+        <h2 style="text-align: center; margin-bottom: 18px;"><i class='bx bx-cart-add'></i> ئۆردەری نوێ</h2>
+
+        <!-- ============================================================
+             بارەکەی پێشکەوتن — «هەنگاوی ٢ لە ٤»
+             ------------------------------------------------------------
+             فۆرمەکە درێژە، بۆیە بەبێ نیشانەیەک بەکارهێنەر نازانێت چەندی
+             ماوە و چی لەبیر کردووە. ئەم بارە بە `updateOrderProgress()`
+             نوێ دەکرێتەوە و دەڵێت «ئێستا چی بکە».
+             ============================================================ -->
+        <div class="ofp" id="order-progress">
+            <div class="ofp-head">
+                <span class="ofp-step">هەنگاوی <b id="ofp-now">١</b> لە <b>٤</b></span>
+                <span class="ofp-label" id="ofp-label">شار هەڵبژێرە</span>
+            </div>
+            <div class="ofp-track" role="progressbar" aria-valuemin="0" aria-valuemax="4" aria-valuenow="0"
+                aria-label="پێشکەوتنی پڕکردنەوەی ئۆردەر" id="ofp-track">
+                <span class="ofp-fill" id="ofp-fill"></span>
+            </div>
+            <div class="ofp-dots" id="ofp-dots"></div>
+        </div>
 
         <div class="switch-group">
             <label>ناوی کڕیار</label>
@@ -107,7 +126,7 @@
         </div>
         <input type="text" id="customerName" placeholder="ناوی سیانی کڕیار" style="display: none;">
 
-        <label>شار</label>
+        <label id="lbl-city" for="city-input">شار</label>
         <div id="city-input-wrapper" style="position: relative; margin-bottom: 15px;">
             <input type="text" id="city-input" placeholder="شارێک هەڵبژێرە یان بنووسە..." autocomplete="off"
                 oninput="checkCityWarning(); filterCities(); updateCartUI()" onclick="showCityDropdown()"
@@ -122,6 +141,8 @@
             </div>
         </div>
 
+        <div class="field-err" id="err-city" role="alert"><i class='bx bx-error-circle'></i><span></span></div>
+
         <div id="city-warning"
             style="display:none; color:#d9534f; font-size:12px; margin-top:-5px; margin-bottom:15px; background:#fdf2f2; padding:10px; border-radius:8px; border:1px solid #f5c6cb;">
             ⚠️ <b>تێبینی:</b> لەبەر ئەوەی ئەم شارە لە لیستە سەرەکییەکەدا نییە، لەوانەیە گۆڕانکاری بەسەر نرخی گەیاندندا
@@ -131,11 +152,12 @@
         <label>وردەکاری زیاتر بۆ ناونیشان</label>
         <input type="text" id="address-details" placeholder="گەڕەک، کۆڵان، نزیکترین شوێن...">
 
-        <label>ژمارەی مۆبایل</label>
+        <label id="lbl-phone1" for="phone1">ژمارەی مۆبایل</label>
         <div class="phone-field" id="phone1-field">
             <input type="text" inputmode="tel" id="phone1" dir="ltr" placeholder="07..." value="07" oninput="formatPhone(this)" onpaste="handlePhonePaste(event)" style="text-align: left; direction: ltr;">
             <button type="button" class="phone-paste-btn" onclick="pastePhone('phone1')" title="پەیستکردنی ژمارە" aria-label="پەیستکردنی ژمارەی مۆبایل"><i class='bx bx-paste'></i></button>
         </div>
+        <div class="field-err" id="err-phone1" role="alert"><i class='bx bx-error-circle'></i><span></span></div>
 
         <div class="switch-group">
             <label>ژمارەی مۆبایلی تر؟</label>
@@ -175,7 +197,7 @@
         </div>
 
         <div class="cart-wrapper">
-            <label>سەبەتەی کاڵاکان</label>
+            <label id="lbl-cart">سەبەتەی کاڵاکان</label>
             <div class="hist-anchor">
                 <input type="text" id="item-name" placeholder="ناوی کاڵا (نموونە: قەڵەم)" autocomplete="off">
             </div>
@@ -204,6 +226,7 @@
         </div>
 
         <ul id="cart-list" class="cart-list"></ul>
+        <div class="field-err" id="err-cart" role="alert"><i class='bx bx-error-circle'></i><span></span></div>
 
         <!-- کاڵای دیاری — بێ پارە بۆ کڕیار. لە کۆی کاڵاکان و ژمارەی دانەکان
              ناژمێردرێت، بۆیە قازانجی بەڕێوەبەر/سەرپەرشت/ڕاوێژکار ناگۆڕێت.
@@ -327,10 +350,13 @@
                 <span id="sum-total">0 دینار</span>
             </div>
             <div style="margin-top:14px; padding-top:12px; border-top:1px dashed #ccc;">
-                <label style="font-size:13px; color:#475569; font-weight:700; display:block; margin-bottom:6px;"><i
+                <label id="lbl-received" for="amount-received"
+                    style="font-size:13px; color:#475569; font-weight:700; display:block; margin-bottom:6px;"><i
                         class='bx bx-money'></i> پارەی وەرگیراو لە کڕیار</label>
                 <input type="text" inputmode="numeric" id="amount-received" placeholder="بڕی پارەی وەرگیراو بنووسە..." oninput="formatPriceInput(this); updateCartUI();"
                     style="width:100%; height:45px; padding:0 16px; font-family:inherit; font-size:15px; border:1px solid #e2e8f0; border-radius:10px; background:#f8fafc; box-sizing:border-box;">
+                <div class="field-err" id="err-received" role="alert" style="margin:8px 0 0;"><i
+                        class='bx bx-error-circle'></i><span></span></div>
             </div>
 
             <!-- پارەی پێشوەخت — کڕیار بە FastPay/FIB/بانک پارەی داوە، یان
@@ -389,6 +415,8 @@
                     <label><input type="radio" name="prepaid_method" value="other"
                             onchange="updateCartUI()"><span>تر</span></label>
                 </div>
+                <div class="field-err" id="err-paymethod" role="alert" style="margin:-8px 0 12px;"><i
+                        class='bx bx-error-circle'></i><span></span></div>
 
                 <div class="sal-field" id="prepaid-field">
                     <div class="sal-head">
@@ -4434,7 +4462,10 @@
                     isAdminDataLoaded = true;
                     document.getElementById('admin-loading-spinner').style.display = 'none';
                     document.getElementById('admin-screen-content').style.display = 'flex';
-                    if (userRole === "پاشا" && typeof renderAdminCities === "function") renderAdminCities();
+                    // پێشتر ئەمە تەنها بۆ «پاشا» بوو — بۆیە هەرکەسێکی تر
+                    // کە دەسەڵاتی «بەڕێوەبردنی شارەکان»ی پێدرابوو، تابەکەی
+                    // دەبینی بەڵام لیستی شارە تۆمارکراوەکانی بەتاڵ بوو
+                    if (can('manage_cities') && typeof renderAdminCities === "function") renderAdminCities();
 
                     // Reposition admin slider once content is displayed
                     let activeTab = document.querySelector('#admin-screen .magic-tab.active');
@@ -5865,7 +5896,8 @@
             cart = [];
             giftCart = [];
             syncGiftSwitch();
-            updateCartUI();
+            clearOrderErrs();      // فۆرمی نوێ → هیچ هەڵەیەکی کۆن نامێنێتەوە
+            updateCartUI();        // ئەمە `updateOrderProgress`ـیش بانگ دەکات
             uploadedImageUrls = [];
             clearPendingUploads();
             renderImagePreviews();
@@ -8055,10 +8087,31 @@
                 return;
             }
 
-            if (cart.length === 0 || phone1.length < 10 || !city) {
-                showToast("تکایە خانەکان بە دروستی پڕ بکەرەوە.", "error");
+            // ---- پشکنینی خانە پێویستەکان ----
+            // هەموو کێشەکان پێکەوە کۆ دەکرێنەوە و هەریەکەیان لەژێر
+            // خانەکەی خۆیدا دەردەکەوێت — نەک یەک تۆستی گشتی کە نەیدەوت
+            // کام خانە کێشەی هەیە
+            let problems = [];
+            if (!city) {
+                problems.push({ k: 'city', m: 'شار هەڵبژێرە — بەبێ شار نرخی گەیاندن دیاری ناکرێت.' });
+            }
+            if (phone1.length < 10) {
+                problems.push({
+                    k: 'phone1', m: phone1.replace(/\D/g, '').length <= 2
+                        ? 'ژمارەی مۆبایل بەتاڵە — ژمارەی کڕیار بنووسە (نموونە: ٠٧٥٠ ١٢٣ ٤٥٦٧).'
+                        : 'ژمارەی مۆبایل تەواو نییە — پێویستە ١١ ژمارە بێت (نموونە: ٠٧٥٠ ١٢٣ ٤٥٦٧).'
+                });
+            }
+            if (cart.length === 0) {
+                problems.push({ k: 'cart', m: 'هیچ کاڵایەک زیاد نەکراوە — ناو و نرخی کاڵاکە بنووسە، پاشان «زیادکردن بۆ سەبەتە» لێبدە.' });
+            }
+            if (problems.length) {
+                showOrderErrs(problems);
+                showToast(problems.length === 1
+                    ? "یەک خانە پێویستی بە چاککردن هەیە" : `${toArabicDigits(problems.length)} خانە پێویستیان بە چاککردن هەیە`, "error");
                 return;
             }
+            clearOrderErrs();
 
             let address = addressDetails ? city + " - " + addressDetails : city;
 
@@ -8084,7 +8137,8 @@
 
             // پشکنین: پارەی وەرگیراو دەبێت بنووسرێت
             if (amountReceived <= 0) {
-                showToast("تکایە بڕی پارەی وەرگیراو لە کڕیار بنووسە!", "error");
+                showOrderErrs([{ k: 'received', m: 'بڕی پارەی وەرگیراو بنووسە — ئەو بڕەی لە کڕیارەوە وەردەگیرێت.' }]);
+                showToast("بڕی پارەی وەرگیراو بنووسە", "error");
                 return;
             }
             // دیاریەکان: لە کۆی کاڵاکان نین، بەڵام لە قازانج کەم دەکرێنەوە
@@ -8095,9 +8149,17 @@
 
             // پشکنین: کۆی کاڵاکان و گەیاندن و دیاری نابێت زیاتربن لە پارەی وەرگیراو
             if ((itemsTotal + giftTotal + deliveryPrice) > amountReceived) {
-                showToast(giftTotal > 0
-                    ? "⚠️ داواکاری وەرناگیرێت! کۆی کاڵاکان و گەیاندن و دیاری زیاترە لە پارەی وەرگیراو."
-                    : "⚠️ داواکاری وەرناگیرێت! کۆی نرخی کاڵاکان و گەیاندن زیاترە لە پارەی وەرگیراو لە کڕیار.", "error");
+                // پەیامەکە دەڵێت **چەند** کەمە، نەک تەنها «هەڵەیە» —
+                // بۆیە بەکارهێنەر ڕاستەوخۆ دەزانێت چی بنووسێت
+                const need = itemsTotal + giftTotal + deliveryPrice;
+                const gap = need - amountReceived;
+                showOrderErrs([{
+                    k: 'received',
+                    m: `پارەی وەرگیراو کەمە. کۆی ${giftTotal > 0 ? 'کاڵاکان و گەیاندن و دیاری' : 'کاڵاکان و گەیاندن'} `
+                        + `${need.toLocaleString()} دینارە، بەڵام ${amountReceived.toLocaleString()} دینار نووسراوە — `
+                        + `${gap.toLocaleString()} دینار کەمە.`
+                }]);
+                showToast("پارەی وەرگیراو لە کۆی گشتی کەمترە", "error");
                 return;
             }
 
@@ -8127,7 +8189,10 @@
                     return;
                 }
                 if (!paymentMethod) {
-                    showToast("تکایە شێوازی پارەدان هەڵبژێرە! (جزدان / FastPay / FIB / بانک / تر)", "error");
+                    setOrderErr('paymethod', 'شێوازی پارەدان هەڵبژێرە — جزدان، FastPay، FIB، بانک یان تر.');
+                    const pm = document.getElementById('err-paymethod');
+                    if (pm) pm.scrollIntoView({ block: 'center', behavior: 'smooth' });
+                    showToast("شێوازی پارەدان هەڵبژێرە", "error");
                     return;
                 }
                 if (isWalletPay) {
@@ -9777,6 +9842,175 @@
             }
         }
 
+        // ============================================================
+        // ١) بارەکەی پێشکەوتنی فۆرمی ئۆردەر  (Show Progress)
+        // ------------------------------------------------------------
+        // فۆرمەکە درێژە و بەکارهێنەر نازانێت چەندی ماوە. ئەم بارە چوار
+        // هەنگاوە پێویستەکە دەپێوێت و دەڵێت «ئێستا چی بکە».
+        //
+        // ⚠️ پێوەرەکانی `done` دەبێت **وردبەورد** وەک پشکنینەکانی
+        //    `submitOrderImpl` بن — ئەگەرنا بارەکە دەڵێت تەواوە بەڵام
+        //    ناردنەکە ڕەت دەکرێتەوە.
+        // ============================================================
+        const ORDER_STEPS = [
+            {
+                key: 'city', icon: 'bx-map', t: 'شار', hint: 'شارێک هەڵبژێرە',
+                done: () => !!(document.getElementById('city-input') || {}).value.trim()
+            },
+            {
+                key: 'phone1', icon: 'bx-phone', t: 'مۆبایل', hint: 'ژمارەی مۆبایل بنووسە',
+                done: () => (document.getElementById('phone1') || {}).value.trim().length >= 10
+            },
+            {
+                key: 'cart', icon: 'bx-package', t: 'کاڵا', hint: 'کاڵا زیاد بکە بۆ سەبەتە',
+                done: () => cart.length > 0
+            },
+            {
+                key: 'received', icon: 'bx-money', t: 'پارە', hint: 'بڕی پارەی وەرگیراو بنووسە',
+                done: () => readMoneyInput('amount-received') > 0
+            }
+        ];
+
+        function updateOrderProgress() {
+            const wrap = document.getElementById('order-progress');
+            if (!wrap) return;
+
+            const state = ORDER_STEPS.map(s => { try { return !!s.done(); } catch (e) { return false; } });
+            const doneCount = state.filter(Boolean).length;
+            // یەکەم هەنگاوی تەواو-نەکراو = ئەوەی ئێستا پێویستە بکرێت
+            const curIdx = state.indexOf(false);
+            const allDone = curIdx === -1;
+
+            const fill = document.getElementById('ofp-fill');
+            if (fill) fill.style.width = (doneCount / ORDER_STEPS.length * 100) + '%';
+
+            const track = document.getElementById('ofp-track');
+            if (track) track.setAttribute('aria-valuenow', String(doneCount));
+
+            wrap.classList.toggle('is-done', allDone);
+
+            const now = document.getElementById('ofp-now');
+            if (now) now.innerText = toArabicDigits(allDone ? ORDER_STEPS.length : curIdx + 1);
+
+            const lbl = document.getElementById('ofp-label');
+            if (lbl) lbl.innerText = allDone ? '✓ ئامادەیە بۆ ناردن' : ORDER_STEPS[curIdx].hint;
+
+            const dots = document.getElementById('ofp-dots');
+            if (dots) {
+                dots.innerHTML = ORDER_STEPS.map((s, i) => {
+                    const cls = state[i] ? 'on' : (i === curIdx ? 'cur' : '');
+                    const ic = state[i] ? 'bx-check-circle' : s.icon;
+                    return `<span class="ofp-dot ${cls}"><i class='bx ${ic}'></i><span>${s.t}</span></span>`;
+                }).join('');
+            }
+        }
+
+        // ژمارە بە ئەلفوبێی عەرەبی — وەک ڕووکاری ئەپەکە
+        function toArabicDigits(n) {
+            return String(n).replace(/\d/g, d => '٠١٢٣٤٥٦٧٨٩'[+d]);
+        }
+
+        // ============================================================
+        // ٢) هەڵەی یارمەتیدەر  (Helpful Errors)
+        // ------------------------------------------------------------
+        // پێشتر هەموو کێشەکان بە یەک تۆستی گشتی دەردەچوون:
+        // «تکایە خانەکان بە دروستی پڕ بکەرەوە» — کە نەیدەوت **کام** خانە
+        // و **بۆچی**. ئێستا پەیامەکە لەژێر خودی ئەو خانەیەدا دەردەکەوێت،
+        // ڕوون دەکاتەوە چی هەڵەیە و چۆن چاک دەکرێت.
+        // ============================================================
+        const ORDER_ERR_FIELDS = {
+            city: { input: 'city-input', label: 'lbl-city', err: 'err-city' },
+            phone1: { input: 'phone1', label: 'lbl-phone1', err: 'err-phone1' },
+            cart: { input: 'item-name', label: 'lbl-cart', err: 'err-cart' },
+            received: { input: 'amount-received', label: 'lbl-received', err: 'err-received' },
+            paymethod: { input: null, label: null, err: 'err-paymethod' }
+        };
+
+        function setOrderErr(key, msg) {
+            const f = ORDER_ERR_FIELDS[key];
+            if (!f) return;
+            const box = document.getElementById(f.err);
+            if (box) {
+                const sp = box.querySelector('span');
+                if (sp) sp.innerText = msg;
+                box.classList.add('on');
+            }
+            // کارتێکردنی چاوی: چوارچێوەی خانەکە + ناونیشانەکەی
+            if (f.input) {
+                const inp = document.getElementById(f.input);
+                if (inp) { inp.classList.add('has-err'); inp.setAttribute('aria-invalid', 'true'); }
+            }
+            if (f.label) {
+                const l = document.getElementById(f.label);
+                if (l) l.classList.add('lbl-err');
+            }
+        }
+
+        function clearOrderErr(key) {
+            const f = ORDER_ERR_FIELDS[key];
+            if (!f) return;
+            const box = document.getElementById(f.err);
+            if (box) box.classList.remove('on');
+            if (f.input) {
+                const inp = document.getElementById(f.input);
+                if (inp) { inp.classList.remove('has-err'); inp.removeAttribute('aria-invalid'); }
+            }
+            if (f.label) {
+                const l = document.getElementById(f.label);
+                if (l) l.classList.remove('lbl-err');
+            }
+        }
+
+        function clearOrderErrs() {
+            Object.keys(ORDER_ERR_FIELDS).forEach(clearOrderErr);
+        }
+
+        // پیشاندانی هەموو هەڵەکان پێکەوە، پاشان چوون بۆ یەکەمیان.
+        // `[{k, m}]` وەردەگرێت. `true` دەگەڕێنێتەوە ئەگەر هەڵە هەبوو.
+        function showOrderErrs(list) {
+            clearOrderErrs();
+            if (!list || !list.length) return false;
+            list.forEach(e => setOrderErr(e.k, e.m));
+
+            const first = ORDER_ERR_FIELDS[list[0].k];
+            const box = first ? document.getElementById(first.err) : null;
+            if (box) {
+                box.scrollIntoView({ block: 'center', behavior: 'smooth' });
+                box.classList.remove('err-shake');
+                void box.offsetWidth;              // ناچارکردنی دووبارە‌کارکردنی ئەنیمەیشن
+                box.classList.add('err-shake');
+            }
+            // فۆکەس دەخرێتە سەر خانەکە تا کیبۆرد بکرێتەوە و ڕاستەوخۆ چاک بکرێت
+            const inp = first && first.input ? document.getElementById(first.input) : null;
+            if (inp && inp.offsetParent !== null) setTimeout(() => { try { inp.focus({ preventScroll: true }); } catch (e) { } }, 320);
+            return true;
+        }
+
+        // هەڵەکە دەڕوات هەرکە بەکارهێنەر دەستی پێکرد بە چاککردنی —
+        // نەک بمێنێتەوە تا داواکارییەکی نوێی ناردن
+        (function bindOrderErrClearing() {
+            const scr = document.getElementById('order-screen');
+            if (!scr) return;
+            const byInput = {};
+            Object.keys(ORDER_ERR_FIELDS).forEach(k => {
+                const f = ORDER_ERR_FIELDS[k];
+                if (f.input) byInput[f.input] = k;
+            });
+            const onEdit = (ev) => {
+                const t = ev.target;
+                // بارەکەی پێشکەوتن لە هەر گۆڕانکارییەکدا نوێ دەبێتەوە —
+                // ئەمە خانەکانی وەک مۆبایل دەگرێتەوە کە `updateCartUI`
+                // بانگ ناکەن
+                updateOrderProgress();
+                if (!t || !t.id) return;
+                if (byInput[t.id]) clearOrderErr(byInput[t.id]);
+                // هەڵبژاردنی شێوازی پارەدان
+                if (t.name === 'prepaid_method') clearOrderErr('paymethod');
+            };
+            scr.addEventListener('input', onEdit, true);
+            scr.addEventListener('change', onEdit, true);
+        })();
+
         function updateCartUI() {
             let list = document.getElementById('cart-list');
             if (!list) return;
@@ -9886,6 +10120,10 @@
             }
             if (pf) pf.classList.toggle('is-over', !!pmsg);
             if (pe) pe.innerText = pmsg;
+
+            // بارەکەی پێشکەوتن — لێرەدا نوێ دەکرێتەوە چونکە `updateCartUI`
+            // لە هەموو گۆڕانکارییەکی فۆرمەکەدا بانگ دەکرێت
+            updateOrderProgress();
         }
 
 
@@ -10426,6 +10664,10 @@
                 filterWalletUsers();
             } else if (tabName === 'cities') {
                 document.getElementById('section-cities').style.display = 'flex';
+                // وەک تابەکانی تر — لیستەکە لە کاتی کردنەوەی تابەکەدا
+                // دەنەخشێنرێت. پێشتر تەنها لە کاتی بارکردنی یەکەمی
+                // پەڕەی ئەدمین دەنەخشێنرا (تەنها بۆ پاشا)
+                renderAdminCities();
             } else if (tabName === 'trash') {
                 document.getElementById('section-trash').style.display = 'flex';
                 loadTrash();
