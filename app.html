@@ -908,17 +908,31 @@
                                     onchange="filterWalletUsers()"><span>ئەندام</span></label>
                         </div>
 
-                        <div class="search-group" id="wallet-search-container">
-                            <input class="search-input" type="search" id="search-wallet-input"
-                                placeholder="گەڕان بە ناو یان کۆد..." oninput="debouncedWalletUsers()"
-                                autocomplete="off" />
-                            <svg viewBox="0 0 24 24" aria-hidden="true" class="search-icon">
-                                <g>
-                                    <path
-                                        d="M21.53 20.47l-3.66-3.66C19.195 15.24 20 13.214 20 11c0-4.97-4.03-9-9-9s-9 4.03-9 9 4.03 9 9 9c2.215 0 4.24-.804 5.808-2.13l3.66 3.66c.147.146.34.22.53.22s.385-.073.53-.22c.295-.293.295-.767.002-1.06zM3.5 11c0-4.135 3.365-7.5 7.5-7.5s7.5 3.365 7.5 7.5-3.365 7.5-7.5 7.5-7.5-3.365-7.5-7.5z">
-                                    </path>
-                                </g>
-                            </svg>
+                        <div class="wallet-search-sort-row" id="wallet-search-sort-row">
+                            <div class="search-group" id="wallet-search-container" style="flex: 1; margin: 0;">
+                                <input class="search-input" type="search" id="search-wallet-input"
+                                    placeholder="گەڕان بە ناو یان کۆد..." oninput="debouncedWalletUsers()"
+                                    autocomplete="off" />
+                                <svg viewBox="0 0 24 24" aria-hidden="true" class="search-icon">
+                                    <g>
+                                        <path
+                                            d="M21.53 20.47l-3.66-3.66C19.195 15.24 20 13.214 20 11c0-4.97-4.03-9-9-9s-9 4.03-9 9 4.03 9 9 9c2.215 0 4.24-.804 5.808-2.13l3.66 3.66c.147.146.34.22.53.22s.385-.073.53-.22c.295-.293.295-.767.002-1.06zM3.5 11c0-4.135 3.365-7.5 7.5-7.5s7.5 3.365 7.5 7.5-3.365 7.5-7.5 7.5-7.5-3.365-7.5-7.5z">
+                                        </path>
+                                    </g>
+                                </svg>
+                            </div>
+                            <div class="wallet-sort-wrapper">
+                                <i class='bx bx-sort-alt-2 wallet-sort-prefix-icon'></i>
+                                <select id="sort-wallet-select" class="wallet-sort-select" onchange="onWalletSortChange()">
+                                    <option value="profit_desc">زۆرترین قازانج (باڵانس)</option>
+                                    <option value="tx_desc">نوێترین کرداری دارایی</option>
+                                    <option value="alpha_asc">ناو (أ - ی)</option>
+                                    <option value="profit_asc">کەمترین قازانج (باڵانس)</option>
+                                    <option value="savings_desc">زۆرترین پاشەکەوت</option>
+                                    <option value="alpha_desc">ناو (ی - أ)</option>
+                                </select>
+                                <i class='bx bx-chevron-down wallet-sort-icon'></i>
+                            </div>
                         </div>
 
                     </div>
@@ -3635,7 +3649,7 @@
         //   • ژمارەکان (ئامار/بەیج/ئەندام) لە سێرڤەرەوە ورد دێن، بێ هێنانی
         //     هەموو ڕیزەکان
         //
-        // ئەگەر مەپەکانی ژماردن (`ordersDayCounts` هتد) دانەنرابن، کۆدی
+        // ئەگەر مەپەکانی ژماردن (`dashDayCounts`/`mgmtDayCounts` هتد) دانەنرابن، کۆدی
         // ڕەندەری کۆن (ژماردن لە بیرگە) وەک فالباک کاردەکات — بۆیە هیچ
         // ڕێگایەک ناشکێت.
         // ============================================================
@@ -11736,9 +11750,44 @@
             if (verb) verb.innerText = ok ? 'بەڕێوەبردنی' : 'بینینی';
         }
 
+        let _walletTxMap = null;
+        let _walletTxLoading = false;
+
+        async function ensureWalletTxMapLoaded() {
+            if (_walletTxMap || _walletTxLoading) return;
+            _walletTxLoading = true;
+            try {
+                const { data } = await supabase.from('transactions').select('user_code, created_at').order('created_at', { ascending: false });
+                let map = {};
+                if (data) {
+                    data.forEach(t => {
+                        let c = String(t.user_code || "").trim();
+                        if (c && !map[c]) map[c] = t.created_at;
+                    });
+                }
+                _walletTxMap = map;
+            } catch (e) {
+                _walletTxMap = {};
+            } finally {
+                _walletTxLoading = false;
+            }
+        }
+
+        function onWalletSortChange() {
+            let sortEl = document.getElementById('sort-wallet-select');
+            let sortVal = sortEl ? sortEl.value : 'profit_desc';
+            if (sortVal === 'tx_desc' && !_walletTxMap) {
+                ensureWalletTxMapLoaded().then(() => filterWalletUsers());
+            } else {
+                filterWalletUsers();
+            }
+        }
+
         function filterWalletUsers() {
             let roleFilter = document.querySelector('input[name="wallet_role_filter"]:checked').value;
             let searchVal = document.getElementById('search-wallet-input').value.trim().toLowerCase();
+            let sortEl = document.getElementById('sort-wallet-select');
+            let sortVal = sortEl ? sortEl.value : 'profit_desc';
             let listContainer = document.getElementById('wallet-users-list');
             let editSection = document.getElementById('wallet-edit-section');
 
@@ -11757,6 +11806,42 @@
                 }
                 return true;
             });
+
+            // 💫 ڕیزبەندکردنی جزدانەکان بەپێی هەڵبژاردنی بەکارهێنەر
+            if (sortVal === 'profit_desc') {
+                filteredUsers.sort((a, b) => {
+                    let totalA = (Number(a.data.balance) || 0) + (Number(a.data.savings) || 0);
+                    let totalB = (Number(b.data.balance) || 0) + (Number(b.data.savings) || 0);
+                    if (totalB !== totalA) return totalB - totalA;
+                    return a.name.localeCompare(b.name, 'ckb');
+                });
+            } else if (sortVal === 'profit_asc') {
+                filteredUsers.sort((a, b) => {
+                    let totalA = (Number(a.data.balance) || 0) + (Number(a.data.savings) || 0);
+                    let totalB = (Number(b.data.balance) || 0) + (Number(b.data.savings) || 0);
+                    if (totalA !== totalB) return totalA - totalB;
+                    return a.name.localeCompare(b.name, 'ckb');
+                });
+            } else if (sortVal === 'savings_desc') {
+                filteredUsers.sort((a, b) => {
+                    let savA = Number(a.data.savings) || 0;
+                    let savB = Number(b.data.savings) || 0;
+                    if (savB !== savA) return savB - savA;
+                    return a.name.localeCompare(b.name, 'ckb');
+                });
+            } else if (sortVal === 'alpha_asc') {
+                filteredUsers.sort((a, b) => a.name.localeCompare(b.name, 'ckb'));
+            } else if (sortVal === 'alpha_desc') {
+                filteredUsers.sort((a, b) => b.name.localeCompare(a.name, 'ckb'));
+            } else if (sortVal === 'tx_desc') {
+                let map = _walletTxMap || {};
+                filteredUsers.sort((a, b) => {
+                    let timeA = map[a.code] || a.data.updated_at || a.data.created_at || '';
+                    let timeB = map[b.code] || b.data.updated_at || b.data.created_at || '';
+                    if (timeB !== timeA) return timeB.localeCompare(timeA);
+                    return a.name.localeCompare(b.name, 'ckb');
+                });
+            }
 
             if (filteredUsers.length === 0) {
                 if (listContainer.__winIO) { listContainer.__winIO.disconnect(); listContainer.__winIO = null; }
