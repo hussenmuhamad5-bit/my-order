@@ -4482,7 +4482,9 @@
             // تابی نوێ بە فلتەرە دەرکەوتووەکان دەست پێدەکات
             if (typeof resetAllScrollHide === 'function') resetAllScrollHide();
 
-            reloadMgmt();   // گۆڕینی تاب → مەودای فرۆشیار دەگۆڕێت → لە سێرڤەرەوە بار دەکرێت
+            // کاش هەبێت → دەستبەجێیە؛ نەبێت → لە سێرڤەرەوە دێت
+            reloadMgmt();
+            mgmtWarmSiblings();   // تابەکەی تر بۆ گەڕانەوەی داهاتوو ئامادە دەکرێت
         }
 
         // کارتی ئۆردەری پەڕەی سەرەکی (داشبۆرد). پێشتر لەناو `fetchOrders`
@@ -5043,6 +5045,153 @@
         let mgmtPage = { params: null, cursor: null, offset: 0, sort: 'new', flat: false, hasMore: false, passes: null, showMember: false, lastDay: null };
         let _mgmtReqId = 0;   // بۆ پشتگوێخستنی وەڵامی درەنگی داواکاریی کۆن (race)
 
+        // ============================================================
+        // کاشی لیستی بەڕێوەبردن — بۆچی پێویستە؟
+        // ------------------------------------------------------------
+        // پێشتر هەر گۆڕینێکی تاب («داواکارییەکانم» ↔ «ئۆردەری تیم») یان
+        // دۆخی بینین («هەموو» ↔ «بەپێی ئەندام») داواکارییەکی نوێی
+        // سێرڤەری دەنارد — تەنانەت ئەگەر چرکەیەک پێش ئێستا هەمان داتای
+        // هێنابێتەوە. دوو داواکاری بوون (`orders_day_counts` +
+        // `orders_page`)، و ژماردنی ڕۆژەکان بەسەر هەموو خشتەکەدا دەڕوات.
+        // ئەمە هۆکاری ئەو ٢-٣ چرکەیە بوو لە هاتووچۆدا.
+        //
+        // ئێستا ئەنجامی هەر دۆخێک کاش دەکرێت (بە کلیلی تاب + دۆخی بینین
+        // + ئەندامی هەڵبژێردراو + فلتەر + ڕیزبەندی)، بۆیە گەڕانەوە بۆ
+        // دۆخێکی پێشوو **دەستبەجێیە** و هیچ داواکارییەک نانێردرێت.
+        // ============================================================
+        const MGMT_CACHE_TTL = 120000;   // ٢ خولەک متمانە بە کاشەکە
+        const MGMT_CACHE_MAX = 12;       // ژمارەی دۆخی هەڵگیراو
+        let _mgmtCache = new Map();
+        let _mgmtCacheEntry = null;      // ئەو خانەیەی ئێستا پیشان دەدرێت
+
+        function mgmtCacheKey(params, sort, membersView) {
+            return JSON.stringify([
+                currentOrdersTab, teamViewMode, selectedTeamMember || '',
+                sort, membersView ? 'M' : 'L',
+                params.p_sellers ? params.p_sellers.join(',') : '',
+                params.p_status || '', params.p_date_from || '',
+                params.p_date_to || '', params.p_search || ''
+            ]);
+        }
+
+        function mgmtCacheSet(key, entry) {
+            entry.t = Date.now();
+            _mgmtCache.delete(key);          // بۆ ئەوەی بچێتە کۆتاییەوە
+            _mgmtCache.set(key, entry);
+            // کۆنترینەکان لادەبرێن — `Map` ڕیزی زیادکردن دەپارێزێت
+            while (_mgmtCache.size > MGMT_CACHE_MAX) {
+                _mgmtCache.delete(_mgmtCache.keys().next().value);
+            }
+            return entry;
+        }
+
+        // هەر گۆڕانێک لەسەر ئۆردەرەکان (زیادکردن/دەستکاری/سڕینەوە/گۆڕینی
+        // حاڵەت) کاشەکە بێ بەها دەکات — ئەگەرنا داتای کۆن پیشان دەدرێت
+        function invalidateMgmtCache() {
+            _mgmtCache.clear();
+            _mgmtCacheEntry = null;
+        }
+
+        // گەڕاندنەوەی دۆخێکی کاشکراو بۆ ناو گۆڕاوە کارپێکەرەکان
+        function mgmtRestoreCached(e, params, sort, membersView) {
+            _mgmtCacheEntry = e;
+            mgmtMemberCounts = e.memberCounts || null;
+            mgmtDayCounts = e.dayCounts || null;
+            allManagementOrdersArray = e.rows || [];
+            allManagementOrdersArray.forEach(o => allGlobalOrdersData[o.id] = o);
+            mgmtPage.params = params;
+            mgmtPage.cursor = e.cursor;
+            mgmtPage.offset = e.offset;
+            mgmtPage.hasMore = e.hasMore;
+            mgmtPage.sort = sort;
+            mgmtPage.flat = membersView ? false : !ORDERS_DATE_SORTS[sort];
+        }
+
+        // ============================================================
+        // گەرمکردنی پێشوەختەی تابەکانی تر (prefetch)
+        // ------------------------------------------------------------
+        // کاشەکە دووەم جار بەخێرایی دەکات، بەڵام **یەکەم** گۆڕینی تاب
+        // هێشتا چاوەڕوانی سێرڤەری دەکرد. لێرەدا، دوای ئەوەی تابی ئێستا
+        // نیشان درا، تابەکانی تەنیشتی بێدەنگ لە پاشەوە دەهێنرێن — بۆیە
+        // کاتێک بەکارهێنەر پەنجەیان لێدەدات، داتاکە ئامادەیە.
+        //
+        // ⚠️ ئەمە **هیچ** گۆڕاوێکی کارپێکەر دەستکاری ناکات — تەنها
+        //    دەنووسێت بۆ ناو کاشەکە. دۆخی گشتی بۆ ساتێک دەگۆڕدرێت تا
+        //    پارامەتەرەکان دروست بکرێن، بەبێ هیچ `await`ێک لە نێواندا.
+        // ============================================================
+        let _mgmtWarming = {};
+
+        function mgmtWarm(tab, viewMode) {
+            if (!isManagementDataLoaded) return;
+            let sTab = currentOrdersTab, sMode = teamViewMode, sMem = selectedTeamMember;
+            let params, key, membersView, sort;
+            try {
+                currentOrdersTab = tab; teamViewMode = viewMode; selectedTeamMember = null;
+                membersView = (tab === "team" && viewMode === "members");
+                sort = ordersSortVal();
+                params = orderFilterParams(mgmtSellersForView());
+                key = mgmtCacheKey(params, sort, membersView);
+            } finally {
+                // دەبێت هەمیشە بگەڕێتەوە — تەنانەت ئەگەر هەڵەیەکیش ڕوویدا
+                currentOrdersTab = sTab; teamViewMode = sMode; selectedTeamMember = sMem;
+            }
+
+            let old = _mgmtCache.get(key);
+            if (_mgmtWarming[key] || (old && (Date.now() - old.t) < MGMT_CACHE_TTL)) return;
+            _mgmtWarming[key] = 1;
+
+            (async () => {
+                try {
+                    if (membersView) {
+                        let memRows = await rpc('orders_member_counts', params);
+                        mgmtCacheSet(key, {
+                            memberCounts: buildMemberCountsMap(memRows),
+                            dayCounts: null, rows: [], cursor: null, offset: 0, hasMore: false
+                        });
+                    } else {
+                        let [dayRows, first] = await Promise.all([
+                            rpc('orders_day_counts', params),
+                            fetchOrdersPage(params, null, UI_PAGE, 0, sort)
+                        ]);
+                        mgmtCacheSet(key, {
+                            memberCounts: null,
+                            dayCounts: buildDayCountsMap(dayRows),
+                            rows: first.rows,
+                            cursor: first.nextCursor,
+                            offset: first.nextOffset,
+                            hasMore: first.hasMore
+                        });
+                    }
+                } catch (e) {
+                    // بێدەنگ — ئەمە تەنها خێراکردنەوەیە، نەک کارێکی پێویست
+                } finally {
+                    delete _mgmtWarming[key];
+                }
+            })();
+        }
+
+        // تابەکانی تەنیشتی دۆخی ئێستا. لەکاتی گەڕاندا ناکرێت — چونکە
+        // هەر پیتێک کلیلێکی نوێ دروست دەکات و بێ سوود دەبێت
+        function mgmtWarmSiblings() {
+            let searchEl = document.getElementById('orders-search-input');
+            if (searchEl && searchEl.value.trim()) return;
+            let run = () => {
+                if (currentOrdersTab === "my") {
+                    mgmtWarm("team", "all");
+                } else if (selectedTeamMember) {
+                    return;   // لەناو ئەندامێکدایە — تەنیشتی ڕوون نییە
+                } else if (teamViewMode === "members") {
+                    mgmtWarm("team", "all");
+                    mgmtWarm("my", "all");
+                } else {
+                    mgmtWarm("my", "all");
+                    mgmtWarm("team", "members");
+                }
+            };
+            if (typeof requestIdleCallback === 'function') requestIdleCallback(run, { timeout: 1500 });
+            else setTimeout(run, 700);
+        }
+
         // کام فرۆشیارەکان بۆ دۆخی بینینی ئێستا؟ (هەمیشە ڕیز — نەک null)
         function mgmtSellersForView() {
             let myCode = mgmtScope.myCode;
@@ -5145,6 +5294,15 @@
                 mgmtPage.offset = next.nextOffset;
                 mgmtPage.hasMore = next.hasMore;
                 next.rows.forEach(o => { allGlobalOrdersData[o.id] = o; allManagementOrdersArray.push(o); });
+                // پەڕە نوێیەکەش دەچێتە ناو کاشەکەوە — بۆیە ئەگەر بەکارهێنەر
+                // بچێتە تابێکی تر و بگەڕێتەوە، ئەوەی سکرۆڵی کردبوو نامێنێتەوە
+                // بە هێنانەوەی دووبارە
+                if (_mgmtCacheEntry) {
+                    _mgmtCacheEntry.rows = allManagementOrdersArray;
+                    _mgmtCacheEntry.cursor = mgmtPage.cursor;
+                    _mgmtCacheEntry.offset = mgmtPage.offset;
+                    _mgmtCacheEntry.hasMore = mgmtPage.hasMore;
+                }
                 out = mgmtTokensFromOrders(next.rows, true);
             }
             return out.length ? out : null;
@@ -5152,7 +5310,7 @@
 
         // بارکردنەوەی داتای بەڕێوەبردن بەپێی دۆخی ئێستا — فلتەر لە سێرڤەر،
         // پاشان ڕەندەری کلاینت. هەر تاب/فلتەر/گەڕانێک ئەمە بانگ دەکات.
-        async function reloadMgmt() {
+        async function reloadMgmt(force) {
             if (!isManagementDataLoaded) return;
             let list = document.getElementById('management-orders-list');
             let reqId = ++_mgmtReqId;
@@ -5160,33 +5318,55 @@
             let params = orderFilterParams(sellers);
             let membersView = (currentOrdersTab === "team" && teamViewMode === "members" && !selectedTeamMember);
             let sort = ordersSortVal();
+            let key = mgmtCacheKey(params, sort, membersView);
+
+            // ---- کاش: ئەم دۆخە پێشتر هێنراوە؟ دەستبەجێ پیشانی بدە ----
+            // هیچ `await`ێک لێرە نییە، بۆیە گۆڕینی تاب لە هەمان چرکەساتدا
+            // ڕوودەدات — نەک دوای ٢-٣ چرکە
+            let hit = force ? null : _mgmtCache.get(key);
+            if (hit && (Date.now() - hit.t) < MGMT_CACHE_TTL) {
+                mgmtRestoreCached(hit, params, sort, membersView);
+                applyOrderFilters();
+                return;
+            }
+
+            // ---- کاش نەبوو: دەبێت لە سێرڤەرەوە بێت ----
+            // سپینەرەکە تەنها دوای ٢٢٠ملی‌چرکە دەردەکەوێت — ئەگەر وەڵامەکە
+            // خێرا بێت، بەکارهێنەر هیچ لێزمەیەک نابینێت
+            let spinT = setTimeout(() => {
+                if (reqId === _mgmtReqId && list) list.innerHTML = loadingSpinnerHTML;
+            }, 220);
+
             try {
                 if (membersView) {
                     let memRows = await rpc('orders_member_counts', params);
+                    clearTimeout(spinT);
                     if (reqId !== _mgmtReqId) return;   // داواکارییەکی نوێترین هاتووە
-                    mgmtMemberCounts = buildMemberCountsMap(memRows);
-                    mgmtDayCounts = null;
-                    allManagementOrdersArray = [];
-                    mgmtPage.params = params; mgmtPage.cursor = null; mgmtPage.offset = 0;
-                    mgmtPage.sort = sort; mgmtPage.flat = false; mgmtPage.hasMore = false;
+                    mgmtRestoreCached(mgmtCacheSet(key, {
+                        memberCounts: buildMemberCountsMap(memRows),
+                        dayCounts: null, rows: [],
+                        cursor: null, offset: 0, hasMore: false
+                    }), params, sort, membersView);
                     applyOrderFilters();
                 } else {
                     let [dayRows, first] = await Promise.all([
                         rpc('orders_day_counts', params),
                         fetchOrdersPage(params, null, UI_PAGE, 0, sort)
                     ]);
+                    clearTimeout(spinT);
                     if (reqId !== _mgmtReqId) return;
-                    mgmtDayCounts = buildDayCountsMap(dayRows);
-                    allManagementOrdersArray = first.rows;
-                    first.rows.forEach(o => allGlobalOrdersData[o.id] = o);
-                    mgmtPage.params = params; mgmtPage.cursor = first.nextCursor;
-                    mgmtPage.offset = first.nextOffset; mgmtPage.hasMore = first.hasMore;
-                    mgmtPage.sort = sort;
-                    // سەردێڕی ڕۆژ تەنها لەگەڵ ڕیزبەندی بەرواری مانا دەدات
-                    mgmtPage.flat = !ORDERS_DATE_SORTS[sort];
+                    mgmtRestoreCached(mgmtCacheSet(key, {
+                        memberCounts: null,
+                        dayCounts: buildDayCountsMap(dayRows),
+                        rows: first.rows,
+                        cursor: first.nextCursor,
+                        offset: first.nextOffset,
+                        hasMore: first.hasMore
+                    }), params, sort, membersView);
                     applyOrderFilters();
                 }
             } catch (e) {
+                clearTimeout(spinT);
                 console.log(e);
                 if (reqId !== _mgmtReqId) return;
                 // فایلی `db/005` جێبەجێ نەکراوە → فەنکشنەکە ئەم پارامەتەرانە
@@ -5392,6 +5572,10 @@
 
             filterSection.style.display = "block";
 
+            // ئەم فەنکشنە بارکردنێکی «تازە»یە (یەکەم جار، ڕاکێشان بۆ خوارەوە،
+            // گەڕانەوە بۆ شاشەکە) — بۆیە کاشەکە دەسڕدرێتەوە تا داتای نوێ بێت
+            invalidateMgmtCache();
+
             let myRole = String(userRole || "").trim();
             let myCode = String(currentUser.code || "").trim();
             let myName = String(userName || "").trim();
@@ -5477,6 +5661,9 @@
                 mgmtScope = { myScope: myScope, myCode: myCode, allowedCodes: allowedCodes };
                 isManagementDataLoaded = true;   // پێش reloadMgmt (ئەگەرنا زوو دەگەڕێتەوە)
                 await reloadMgmt();
+                // تابەکەی تر لە پاشەوە ئامادە دەکرێت — بۆیە یەکەم
+                // گۆڕینی تابیش خێرایە، نەک تەنها گەڕانەوەکان
+                mgmtWarmSiblings();
             } catch (err) {
                 console.log(err);
                 if (!isManagementDataLoaded) {
@@ -7377,6 +7564,11 @@
                 if (!oid) return;
                 // کاشی مێژوو کۆن بوو — جاری داهاتوو لە نوێوە دەهێنرێت
                 try { delete orderLogsCache[oid]; } catch (e) { }
+                // ئۆردەرێک گۆڕا → کاشی لیستی بەڕێوەبردنیش کۆن بووە.
+                // ئەم فەنکشنە لە هەموو گۆڕانکارییەکدا بانگ دەکرێت
+                // (زیادکردن/دەستکاری/سڕینەوە/حاڵەت/پرێنت)، بۆیە یەک
+                // شوێنی دڵنیایە بۆ بێ‌بەهاکردنی کاشەکە
+                invalidateMgmtCache();
                 await supabase.from('order_logs').insert([{
                     order_id: oid,
                     order_code: (order && order.order_code) ? String(order.order_code) : null,
@@ -7409,6 +7601,7 @@
                 }));
                 if (!rows.length) return;
                 rows.forEach(r => { try { delete orderLogsCache[r.order_id]; } catch (e) { } });
+                invalidateMgmtCache();   // وەک `logOrderAction` — لیستەکە کۆن بووە
                 await supabase.from('order_logs').insert(rows);
             } catch (e) {
                 console.warn('logOrderActionBulk:', e);
@@ -8303,6 +8496,7 @@
             teamViewMode = mode;
             selectedTeamMember = null;
             reloadMgmt();
+            mgmtWarmSiblings();   // دۆخەکەی تر ئامادە دەکرێت بۆ گەڕانەوە
         }
 
 
@@ -13747,6 +13941,8 @@
                 if (data === 'ok') {
                     showToast("بە سەرکەوتوویی گەڕێندرایەوە!", "success");
                     if (fromModal) closeModal(null, 'trash-detail-modal');
+                    // شتێک گەڕایەوە ناو خشتەکان → لیستی بەڕێوەبردن کۆن بووە
+                    invalidateMgmtCache();
 
                     // ئۆردەرێک کە لە جزدانەوە پارەی درابوو: لەکاتی سڕینەوەدا
                     // پارەکەی گەڕێندرایەوە، بۆیە ئێستا کە گەڕاوەتەوە دەبێت
