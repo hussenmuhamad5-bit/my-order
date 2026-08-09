@@ -9514,3 +9514,272 @@ label.lbl-err {
   .field-err { animation: none; }
   .err-shake { animation: none; }
 }
+
+/* ============================================================
+   مۆدی پشکنین — نیشانەی «پشکنراو» / «کێشەی هەیە»
+   ------------------------------------------------------------
+   ⚠️ `opacity` بەکارنەهێنراوە بۆ کاڵکردنەوە — دەقەکە دەخاتە ژێر
+      پێوەری ٤.٥:١ی WCAG. لەبری ئەوە ڕەنگی دیاریکراوی دەق و
+      پاشخان دانراوە. هەروەها ڕەنگ تاکە نیشانە نییە: چیپی ✓/⚑ـیش
+      هەیە، بۆ ئەوانەی جیاکردنەوەی ڕەنگیان قورسە.
+   ============================================================ */
+
+/* ---------- کارتی پشکنراو (کاڵ) ---------- */
+.modern-order-card.rvw-done,
+.team-member-card.rvw-done {
+  background: #f8fafc;
+  border-color: #e8edf3;
+  box-shadow: none;
+}
+
+.rvw-done .mocc-name,
+.rvw-done .mocc-oname,
+.rvw-done .mocc-custrow span,
+.rvw-done .tm-details h4 {
+  color: #5b6a7d;
+}
+
+.rvw-done .mocc-amount,
+.rvw-done .tm-count {
+  color: #64748b;
+}
+
+.rvw-done .mocc-items span {
+  color: #7b8794;
+}
+
+/* وێنە و بەیجەکان کەمێک بێدەنگ دەکرێن — بەڵام نەک دەقەکان */
+.rvw-done .moc-status,
+.rvw-done .tm-info img,
+.rvw-done .avatar-fallback {
+  filter: saturate(.55);
+}
+
+/* ---------- کارتی نیشانەکراو (کێشەی هەیە) ---------- */
+/* ⚠️ پاشخانی کارتەکە **ناگۆڕدرێت** — ڕەنگی پاشخان لەمەوپێش
+   واتای «حاڵەتی ئۆردەر»ی هەیە (ئەمبەری = لە ڕێگایە، سەوز =
+   گەیشتووە…). ئەگەر نیشانەی «کێشەی هەیە»ش ئەمبەری بێت، لەگەڵ
+   «لە ڕێگایە»دا تێکەڵ دەبێت. بۆیە تەنها هێڵێکی قەڵەوی لای
+   دەستپێک + چیپی ⚑ نیشانەکەن. */
+.modern-order-card.rvw-flag {
+  /* `.modern-order-card` بە بنەڕەت `position`ـی نییە */
+  position: relative;
+  border-color: rgba(180, 83, 9, .55);
+  box-shadow: 0 0 0 1px rgba(180, 83, 9, .25);
+}
+
+.modern-order-card.rvw-flag::before {
+  content: '';
+  position: absolute;
+  inset-block: 8px;
+  inset-inline-start: 0;
+  width: 5px;
+  border-radius: 0 4px 4px 0;
+  background: #b45309;
+}
+
+/* ---------- چیپی دۆخ ---------- */
+.rvw-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 7px;
+  border-radius: 6px;
+  font-size: 10px;
+  font-weight: 700;
+  background: rgba(100, 116, 139, .12);
+  color: #475569;
+  white-space: nowrap;
+}
+
+.rvw-chip i { font-size: 12px; }
+
+.rvw-chip.is-flag {
+  background: rgba(217, 119, 6, .14);
+  color: #b45309;
+}
+
+/* ---------- دوگمەی ✓ـی سەر کارتەکە ---------- */
+.card-rvw {
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  color: #94a3b8;
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all .18s ease;
+  /* ناوچەی کرتە ٤٤×٤٤ دەکرێت بەبێ گەورەکردنی خودی دوگمەکە */
+  position: relative;
+}
+
+.card-rvw::after {
+  content: '';
+  position: absolute;
+  inset: -7px;
+}
+
+.card-rvw:active { transform: scale(.9); }
+
+.card-rvw.is-on {
+  border-color: rgba(5, 150, 105, .4);
+  background: rgba(5, 150, 105, .1);
+  color: #059669;
+}
+
+/* ---------- ژمێرەری ناو ڕیزی فلتەرە چالاکەکان ---------- */
+.afchip.rvw-count {
+  background: rgba(36, 129, 204, .08);
+  border-color: rgba(36, 129, 204, .22);
+  color: var(--primary);
+  cursor: default;
+}
+
+/* ---------- پانێڵی پشکنین لەناو پەنجەرەی وردەکاری ---------- */
+.rvw-panel-btns {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.rvw-btn {
+  flex: 1;
+  min-height: 44px;
+  padding: 10px 8px;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  color: #475569;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: all .18s ease;
+}
+
+.rvw-btn i { font-size: 17px; }
+.rvw-btn:active { transform: scale(.97); }
+
+.rvw-btn.ok.is-on {
+  border-color: rgba(5, 150, 105, .45);
+  background: rgba(5, 150, 105, .1);
+  color: #047857;
+}
+
+.rvw-btn.flag.is-on {
+  border-color: rgba(217, 119, 6, .45);
+  background: rgba(217, 119, 6, .12);
+  color: #b45309;
+}
+
+.rvw-panel-note {
+  margin: 8px 0 0;
+  font-size: 11px;
+  line-height: 1.7;
+  color: #64748b;
+}
+
+/* ---------- تۆگڵی مۆدی پشکنین لەناو شیتی فلتەرکردن ---------- */
+.rvw-switch {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  padding: 4px 0 10px;
+}
+
+.rvw-switch input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.rvw-switch-track {
+  position: relative;
+  flex: 0 0 auto;
+  width: 44px;
+  height: 26px;
+  border-radius: 99px;
+  background: #cbd5e1;
+  transition: background .2s ease;
+}
+
+.rvw-switch-track::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  inset-inline-start: 3px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, .2);
+  transition: transform .2s ease;
+}
+
+.rvw-switch input:checked + .rvw-switch-track {
+  background: var(--primary);
+}
+
+/* RTL: پەڕەکە ڕاست-بۆ-چەپە، بۆیە بەرەو چەپ دەجووڵێت */
+.rvw-switch input:checked + .rvw-switch-track::after {
+  transform: translateX(-18px);
+}
+
+.rvw-switch input:focus-visible + .rvw-switch-track {
+  box-shadow: 0 0 0 3.5px rgba(36, 129, 204, .18);
+}
+
+.rvw-switch-txt {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.rvw-switch-txt b {
+  font-size: 13px;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.rvw-switch-txt small {
+  font-size: 10.5px;
+  color: #64748b;
+  line-height: 1.5;
+}
+
+.rvw-clear {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  min-height: 42px;
+  margin-top: 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(220, 38, 38, .25);
+  background: rgba(220, 38, 38, .05);
+  color: #b91c1c;
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.rvw-clear:active { transform: scale(.98); }
+
+@media (prefers-reduced-motion: reduce) {
+  .card-rvw, .rvw-btn, .rvw-switch-track, .rvw-switch-track::after { transition: none; }
+}

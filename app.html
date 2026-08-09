@@ -12,6 +12,46 @@
     <link rel="stylesheet" href="style.css">
     <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
+
+    <!-- ==========================================================
+         گونجاندنی سەرباری تلیگرام (Telegram header) لەگەڵ ئەپەکە.
+         بەبێ ئەمە، تلیگرام ڕەنگی تێمی خۆی بەکاردێنێت (شینی تاریک) و
+         سەربارەکە لە ناوەڕۆکی ڕووناکی ئەپەکە جیا دەبێتەوە.
+         دەبێت پێش ڕێندەری یەکەم جێبەجێ بێت تاکو ڕەنگەکە نەپرشێتەوە.
+         ========================================================== -->
+    <script>
+        (function initTelegramChrome() {
+            var tg = window.Telegram && window.Telegram.WebApp;
+            if (!tg) return;
+
+            var PAGE_BG = '#f4f4f5';   /* --bg لە style.css */
+            var BAR_BG = '#ffffff';   /* .bottom-nav background */
+
+            function atLeast(v) {
+                return typeof tg.isVersionAtLeast === 'function' && tg.isVersionAtLeast(v);
+            }
+
+            try { tg.ready(); } catch (e) { }
+            try { tg.expand(); } catch (e) { }
+
+            /* ڕەنگی هێکس بۆ سەربار لە Bot API 6.9 بەدواوە؛ پێشتر تەنها ناوی تێم */
+            try {
+                tg.setHeaderColor(atLeast('6.9') ? PAGE_BG : 'secondary_bg_color');
+            } catch (e) { }
+
+            try { tg.setBackgroundColor(PAGE_BG); } catch (e) { }
+
+            /* باری خوارەوە — Bot API 7.10 بەدواوە */
+            if (atLeast('7.10')) {
+                try { tg.setBottomBarColor(BAR_BG); } catch (e) { }
+            }
+
+            /* ڕێگری لە داخرانی ڕێکەوتی ئەپ کاتی سکڕۆڵ بۆ خوارەوە — 7.7 بەدواوە */
+            if (atLeast('7.7')) {
+                try { tg.disableVerticalSwipes(); } catch (e) { }
+            }
+        })();
+    </script>
 </head>
 
 <body>
@@ -1450,6 +1490,29 @@
                         </div>
                         <div class="custom-dropdown-list" id="fs-sort-list" style="display:none;"></div>
                     </div>
+                </div>
+
+                <!-- ============================================================
+                     مۆدی پشکنین — «کام ئۆردەرم پشکنیوە؟»
+                     نیشانەکان لەسەر ئەم ئامێرە دەمێننەوە و تایبەتن بە
+                     هەر بەکارهێنەرێک. کاتێک ئۆردەرێک دەگۆڕێت، خۆکارانە
+                     دەگەڕێتەوە بۆ «نەپشکنراو».
+                     ============================================================ -->
+                <div class="fsec" id="fsec-review">
+                    <div class="fsec-t">مۆدی پشکنین</div>
+                    <label class="rvw-switch">
+                        <input type="checkbox" id="fs-review-toggle" onchange="fsToggleReviewMode(this.checked)">
+                        <span class="rvw-switch-track"></span>
+                        <span class="rvw-switch-txt">
+                            <b>نیشانەکردنی ئەوانەی پشکنیومە</b>
+                            <small>ئەوەی دەیکەیتەوە خۆکارانە نیشان دەکرێت و کاڵ دەبێتەوە</small>
+                        </span>
+                    </label>
+                    <div class="fchips" id="fchips-review" style="display:none;"></div>
+                    <button type="button" class="rvw-clear" id="fs-review-clear" style="display:none;"
+                        onclick="fsClearReviews()">
+                        <i class='bx bx-eraser'></i> سڕینەوەی هەموو نیشانەکان
+                    </button>
                 </div>
 
                 <div class="fsec">
@@ -3684,6 +3747,269 @@
             try { localStorage.setItem(LIST_SORT_STORE, JSON.stringify(_listSortPrefs)); } catch (e) { }
         }
 
+        // ============================================================
+        // مۆدی پشکنین — «کام ئۆردەرم پشکنیوە؟»
+        // ------------------------------------------------------------
+        // پشکنینی ڕۆژانەی ئۆردەری تیم لەگەڵ سەدان ئۆردەردا تێکەڵ دەبێت:
+        // هەندێک دووبارە دەپشکنرێن و هەندێک بە تەواوی لەبیر دەکرێن.
+        // بۆیە هەر ئۆردەرێک/ئەندامێک نیشانەی «پشکنراو»ی خۆی هەیە.
+        //
+        // ⚠️ خشتەی `orders` هیچ خانەیەکی `updated_at`ـی نییە — دەستکاری
+        //    هیچ شوێنەوارێک لەسەر ڕیزەکە ناهێڵێت. بۆیە لەبری بەراوردی
+        //    بەروار، **واژوویەکی ناوەڕۆک** لە خانە گرنگەکانەوە دروست
+        //    دەکرێت. ئەگەر واژووەکە گۆڕا ⇒ ئۆردەرەکە گۆڕاوە ⇒ دەبێتەوە
+        //    نەپشکنراو. ئەمە گۆڕانکاری هەر کەسێک لەسەر هەر ئامێرێکیش
+        //    دەگرێتەوە، چونکە ڕیزەکە خۆی لە سێرڤەرەوە تازە دێت.
+        // ============================================================
+        const REVIEW_MAX = 4000;      // زۆرترین تۆماری هەڵگیراو
+        const REVIEW_SAVE_WAIT = 400; // نووسین بۆ localStorage دوا دەخرێت
+
+        // بەپێی نەریتی `histKey` — نیشانەکان تایبەتن بە هەر بەکارهێنەرێک
+        function reviewKey() {
+            const code = (currentUser && currentUser.code) ? currentUser.code : 'guest';
+            return 'mo_review_v1_' + code;
+        }
+
+        let _reviewStore = null;   // { o: {id:{s,t,f}}, m: {code:{s,t}} }
+        let _reviewSaveT = null;
+
+        function reviewStore() {
+            if (_reviewStore) return _reviewStore;
+            try {
+                const raw = JSON.parse(localStorage.getItem(reviewKey()));
+                _reviewStore = (raw && typeof raw === 'object') ? raw : {};
+            } catch (e) { _reviewStore = {}; }
+            if (!_reviewStore.o || typeof _reviewStore.o !== 'object') _reviewStore.o = {};
+            if (!_reviewStore.m || typeof _reviewStore.m !== 'object') _reviewStore.m = {};
+            return _reviewStore;
+        }
+
+        function reviewSave() {
+            clearTimeout(_reviewSaveT);
+            _reviewSaveT = setTimeout(() => {
+                _reviewSaveT = null;
+                try {
+                    pruneReviewStore();
+                    localStorage.setItem(reviewKey(), JSON.stringify(reviewStore()));
+                } catch (e) { }
+            }, REVIEW_SAVE_WAIT);
+        }
+
+        // کۆنترین تۆمارەکان لادەبرێن — ئەگەرنا بیرگەی براوزەر پڕ دەبێت
+        function pruneReviewStore() {
+            const st = reviewStore();
+            const ids = Object.keys(st.o);
+            if (ids.length <= REVIEW_MAX) return;
+            ids.sort((a, b) => (st.o[a].t || 0) - (st.o[b].t || 0));
+            ids.slice(0, ids.length - REVIEW_MAX).forEach(id => { delete st.o[id]; });
+        }
+
+        // واژووی ناوەڕۆک — FNV-1a، ٣٢ بت، بە base36
+        // ⚠️ **کاش ناکرێت لە WeakMapدا**: `writePrintFields` بە
+        //    `Object.assign(o, fields)` ئۆبجێکتەکە لەشوێنی خۆیدا دەگۆڕێت
+        //    (هەمان تەڵەیەی `cardFmt` کە بەرواری تازە ناکاتەوە).
+        function _fnv1a(str) {
+            let h = 0x811c9dc5;
+            for (let i = 0; i < str.length; i++) {
+                h ^= str.charCodeAt(i);
+                h = (h + ((h << 1) + (h << 4) + (h << 7) + (h << 8) + (h << 24))) >>> 0;
+            }
+            return h.toString(36);
+        }
+
+        const REVIEW_SIG_FIELDS = [
+            'status', 'grand_total', 'amount_received', 'prepaid_amount',
+            'payment_method', 'payment_proof_url', 'item_names', 'item_qtys',
+            'item_prices', 'gift_names', 'gift_qtys', 'gift_prices',
+            'customer_name', 'phone1', 'phone2', 'address', 'notes',
+            'printed_at', 'print_scanned_at', 'image_url'
+        ];
+
+        function orderSig(o) {
+            if (!o) return '';
+            let s = '';
+            for (let i = 0; i < REVIEW_SIG_FIELDS.length; i++) {
+                const v = o[REVIEW_SIG_FIELDS[i]];
+                s += (v === null || v === undefined ? '' : v) + '';
+            }
+            return _fnv1a(s);
+        }
+
+        // ئەندام: ژمارەکانی خۆی واژووەکەیە — هەر گۆڕانێکیان واتا شتێک ڕوویداوە
+        function memberSig(mo) {
+            if (!mo) return '0';
+            if (Array.isArray(mo)) return 'n' + mo.length;
+            return [mo.total, mo.prep, mo.onway, mo.deliv, mo.ret]
+                .map(x => Number(x) || 0).join(',');
+        }
+
+        function isReviewed(o) {
+            if (!o) return false;
+            const rec = reviewStore().o[String(o.id)];
+            return !!rec && rec.s === orderSig(o);
+        }
+
+        function isFlagged(o) {
+            if (!o) return false;
+            const rec = reviewStore().o[String(o.id)];
+            return !!rec && rec.f === 1 && rec.s === orderSig(o);
+        }
+
+        function markReviewed(o, flagged) {
+            if (!o) return;
+            reviewStore().o[String(o.id)] = { s: orderSig(o), t: Date.now(), f: flagged ? 1 : 0 };
+            reviewSave();
+        }
+
+        function unmarkReviewed(id) {
+            delete reviewStore().o[String(id)];
+            reviewSave();
+        }
+
+        function isMemberReviewed(code, mo) {
+            const rec = reviewStore().m[String(code)];
+            return !!rec && rec.s === memberSig(mo);
+        }
+
+        function markMemberReviewedSig(code, sig) {
+            reviewStore().m[String(code)] = { s: sig, t: Date.now() };
+            reviewSave();
+        }
+
+        function markMemberReviewed(code, mo) {
+            markMemberReviewedSig(code, memberSig(mo));
+        }
+
+        function clearAllReviews() {
+            _reviewStore = { o: {}, m: {} };
+            try { localStorage.setItem(reviewKey(), JSON.stringify(_reviewStore)); } catch (e) { }
+        }
+
+        // ---------- دۆخی مۆد و فلتەرەکەی ----------
+        // لەگەڵ هەڵبژاردنەکانی ڕیزبەندیدا خەزن دەکرێن (هەمان کلیل)
+        function reviewModeOn() { return getListSort('reviewMode', 'off') === 'on'; }
+        function setReviewMode(on) { setListSort('reviewMode', on ? 'on' : 'off'); }
+        function reviewFilter() { return getListSort('reviewFilter', 'all'); }   // all | todo | flag
+        function setReviewFilter(v) { setListSort('reviewFilter', v); }
+
+        // ---------- نوێکردنەوەی تاکە کارت ----------
+        // تەنها ئەو کارتە دەنەخشێنرێتەوە کە گۆڕا — نەک هەموو لیستەکە.
+        // لە مۆدی «ماوە»دا کارتەکە **لانابرێت**، ئەگەرنا لیستەکە
+        // دەجووڵێت و شوێنی سکرۆڵ ون دەبێت؛ لە بارکردنەوەی دواتردا نامێنێت.
+        function refreshReviewCard(id) {
+            const list = document.getElementById('management-orders-list');
+            if (!list) return;
+            const el = list.querySelector('[data-oid="' + String(id).replace(/["\\]/g, '') + '"]');
+            if (!el) return;
+            const o = allGlobalOrdersData[id];
+            if (!o) return;
+            el.outerHTML = buildMgmtOrderCard(o, _mgmtShowMember);
+        }
+
+        function refreshMemberCard(code) {
+            const list = document.getElementById('management-orders-list');
+            if (!list) return;
+            const el = list.querySelector('[data-mcode="' + String(code).replace(/["\\]/g, '') + '"]');
+            if (!el) return;
+            const mem = teamMemberOf(code);
+            if (!mem) return;
+            const mo = mgmtMemberCounts ? (mgmtMemberCounts[String(code).trim().toLowerCase()] || null) : null;
+            el.outerHTML = buildMemberCard(mem, mo);
+        }
+
+        // دوگمەی ✓ـی سەر کارتەکە
+        function toggleReviewed(id, ev) {
+            if (ev) { ev.stopPropagation(); ev.preventDefault(); }
+            const o = allGlobalOrdersData[id];
+            if (!o) return;
+            if (isReviewed(o)) unmarkReviewed(id); else markReviewed(o, false);
+            refreshReviewCard(id);
+            updateReviewCounter();
+        }
+
+        // ---------- نیشانکردنی خۆکار ----------
+        // `openOrderDetails` ناسنامەکە لێرە دادەنێت، `closeModal` — کە
+        // تاکە ڕێگای داخستنە — نیشانی دەکات.
+        //
+        // دەستکاری/سڕینەوە/گۆڕینی حاڵەتیش `closeModal` بانگ دەکەن، بۆیە
+        // سەرەتا «پشکنراو» دەبن — بەڵام دەستبەجێ دوای گۆڕانکارییەکە
+        // واژووەکە دەگۆڕێت و خۆیان دەگەڕێنەوە بۆ «نەپشکنراو». دروستە.
+        let _reviewOpenId = null;
+        let _reviewOpenMember = null;
+        // ⚠️ واژووی ئەندامەکە **لەکاتی چوونەژوورەوە** هەڵدەگیرێت.
+        //    کاتێک لەناو ئۆردەرەکانی ئەندامێکداین، `mgmtMemberCounts`
+        //    دەبێتە `null` (چونکە `reloadMgmt` ڕێگای لیستی ئۆردەر
+        //    دەگرێتەبەر) — بۆیە لە کاتی دەرچووندا ژمارەکان بەردەست نین.
+        let _reviewOpenMemberSig = null;
+
+        function reviewOnOrderClosed() {
+            const id = _reviewOpenId;
+            _reviewOpenId = null;
+            if (!id || !reviewModeOn()) return;
+            const o = allGlobalOrdersData[id];
+            if (!o) return;
+            // ئەگەر پێشتر بە «کێشەی هەیە» نیشانەکرابێت، لێی نادرێت
+            if (isFlagged(o)) return;
+            markReviewed(o, false);
+            refreshReviewCard(id);
+            updateReviewCounter();
+        }
+
+        function reviewOnMemberClosed() {
+            const code = _reviewOpenMember;
+            const sig = _reviewOpenMemberSig;
+            _reviewOpenMember = null;
+            _reviewOpenMemberSig = null;
+            if (!code || sig === null || !reviewModeOn()) return;
+            markMemberReviewedSig(code, sig);
+        }
+
+        // ---------- پانێڵی پشکنین لەناو پەنجەرەی وردەکاری ----------
+        // مەبەستی پشکنینەکە «ئایا ڕاستە یان غەڵەتی تیایە»یە، بۆیە دوو
+        // دۆخ پێویستە: پشکنراو (کاڵ دەبێتەوە) و کێشەی هەیە (ڕوون
+        // دەمێنێتەوە تا چاک دەکرێتەوە).
+        function reviewPanelHtml(o) {
+            if (!reviewModeOn()) return '';
+            const done = isReviewed(o), flag = isFlagged(o);
+            return `
+            <div class="detail-section rvw-panel" id="rvw-panel" style="margin-top:14px;">
+                <div class="detail-label"><i class='bx bx-list-check'></i> پشکنین</div>
+                <div class="rvw-panel-btns">
+                    <button type="button" class="rvw-btn ok${done && !flag ? ' is-on' : ''}"
+                        aria-pressed="${done && !flag ? 'true' : 'false'}"
+                        onclick="setOrderReview('${o.id}', 'ok')">
+                        <i class='bx bx-check-double'></i> ${done && !flag ? 'پشکنراوە' : 'پشکنیم کرد'}
+                    </button>
+                    <button type="button" class="rvw-btn flag${flag ? ' is-on' : ''}"
+                        aria-pressed="${flag ? 'true' : 'false'}"
+                        onclick="setOrderReview('${o.id}', 'flag')">
+                        <i class='bx bx-flag'></i> کێشەی هەیە
+                    </button>
+                </div>
+                <p class="rvw-panel-note">${flag
+                    ? 'نیشانەکراوە بۆ چاککردنەوە — بە چیپی ⚑ دەیدۆزیتەوە.'
+                    : (done ? 'نیشانەکە خۆکارانە لادەچێت ئەگەر ئەم ئۆردەرە بگۆڕدرێت.'
+                        : 'کاتێک دەرچیت خۆکارانە وەک پشکنراو نیشان دەکرێت.')}</p>
+            </div>`;
+        }
+
+        // 'ok' → پشکنراو (یان لابردنی نیشانەکە) | 'flag' → کێشەی هەیە
+        function setOrderReview(id, mode) {
+            const o = allGlobalOrdersData[id];
+            if (!o) return;
+            if (mode === 'flag') {
+                if (isFlagged(o)) unmarkReviewed(id); else markReviewed(o, true);
+            } else {
+                if (isReviewed(o) && !isFlagged(o)) unmarkReviewed(id); else markReviewed(o, false);
+            }
+            // ئەگەر بە دەست دەستکاری کرا، `closeModal` نابێت بیگۆڕێتەوە
+            _reviewOpenId = null;
+            const panel = document.getElementById('rvw-panel');
+            if (panel) panel.outerHTML = reviewPanelHtml(o);
+            refreshReviewCard(id);
+            updateReviewCounter();
+        }
+
         // ڕێکخەری ناو — «أ تا ی». `Intl.Collator` ڕیزبەندی ڕاستەقینەی
         // کوردی/عەرەبی دەزانێت (ئ، ا، ب…)، نەک ڕیزبەندی کۆدی یونیکۆد کە
         // «ڕ» و «ڵ» و «ۆ» دەخاتە کۆتاییەوە. `numeric` وا دەکات «ئەندام ٢»
@@ -4369,13 +4695,16 @@
             let count, memberBadges;
             if (Array.isArray(mo)) { count = mo.length; memberBadges = statusCountBadges(mo); }
             else { count = Number(mo && mo.total) || 0; memberBadges = statusBadgesFromCounts(mo); }
+            // مۆدی پشکنین — ئەندامێک «پشکنراوە» ئەگەر چوویتە ناو
+            // ئۆردەرەکانی و گەڕایتەوە، بەمەرجێک ژمارەکانی نەگۆڕابن
+            let rvwDone = reviewModeOn() && isMemberReviewed(member.code, mo);
             return `
-                        <div class="team-member-card" style="flex-direction:column; align-items:stretch;" onclick="viewTeamMemberOrders('${member.code}')">
+                        <div class="team-member-card${rvwDone ? ' rvw-done' : ''}" data-mcode="${member.code}" style="flex-direction:column; align-items:stretch;" onclick="viewTeamMemberOrders('${member.code}')">
                             <div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
                                 <div class="tm-info">
                                     ${avatarHtml(member.avatar, member.full_name, 40)}
                                     <div class="tm-details">
-                                        <h4>${member.full_name || "بێ ناو"}</h4>
+                                        <h4>${member.full_name || "بێ ناو"}${rvwDone ? ` <span class="rvw-chip"><i class='bx bx-check-double'></i>پشکنرا</span>` : ''}</h4>
                                         <p>کۆد: <span dir="ltr">${member.code}</span> | پلە: ${normalizeRole(member.role) || "ئەندام"}</p>
                                     </div>
                                 </div>
@@ -4947,9 +5276,19 @@
             // لە مۆدی هەڵبژاردنی پرێنت کارتەکە دەبێتە دوگمەی هەڵبژاردن.
             // ئەوانەی ناتوانرێت هەڵبژێردرێن (پرێنتکراو، گەیشتوو، گەڕاوە،
             // یان دەرەوەی مەودای من) کوێر دەکرێن تا تێکەڵی نەبێت.
+            // مۆدی پشکنین: پشکنراوەکان کاڵ دەبنەوە، نیشانەکراوەکان بە
+            // ئەمبەری ڕوون دەمێننەوە. `data-oid` پێویستە تا دوای
+            // داخستنی پەنجەرەی وردەکاری، تەنها ئەم کارتە نوێ بکرێتەوە
+            // (نەک هەموو لیستەکە لە نوێوە بنەخشێنرێت).
+            let rvwOn = reviewModeOn();
+            let rvwFlag = rvwOn && isFlagged(o);
+            let rvwDone = rvwOn && !rvwFlag && isReviewed(o);
+
             let pickable = printSelectMode && isPrintSelectable(o);
             let cardCls = "modern-order-card moc-compact " + statusClass;
-            let cardAttr = `onclick="openOrderDetails('${o.id}')"`;
+            if (rvwFlag) cardCls += ' rvw-flag';
+            else if (rvwDone) cardCls += ' rvw-done';
+            let cardAttr = `data-oid="${o.id}" onclick="openOrderDetails('${o.id}')"`;
             if (printSelectMode) {
                 if (pickable) {
                     cardCls += ' pbulk-pick' + (printSelected.has(String(o.id)) ? ' is-on' : '');
@@ -4975,6 +5314,8 @@
                     <div class="mocc-meta">
                         ${printStampHtml(o)}
                         ${paidStampHtml(o)}
+                        ${rvwFlag ? `<span class="rvw-chip is-flag"><i class='bx bx-flag'></i>کێشەی هەیە</span>` : ''}
+                        ${rvwDone ? `<span class="rvw-chip"><i class='bx bx-check-double'></i>پشکنرا</span>` : ''}
                         <span class="mocc-chip"><i class='bx bx-calendar'></i><span dir="ltr">${dateTime}</span></span>
                         <span class="mocc-chip mocc-chip-plain"><i class='bx bx-map'></i>${city}</span>
                         <span class="mocc-chip mocc-chip-plain"><i class='bx bx-history'></i>${relTime}</span>
@@ -4983,9 +5324,15 @@
                         <span class="mocc-id"><i class='bx bx-hash'></i>${orderCodeStr}</span>
                         ${printSelectMode
                     ? (pickable ? `<span class="pbulk-tick"><i class='bx bx-check'></i></span>` : '')
-                    : `<button type="button" class="card-copy" title="کۆپیکردنی زانیاری ئۆردەر"
+                    : (rvwOn
+                        ? `<button type="button" class="card-rvw${rvwDone || rvwFlag ? ' is-on' : ''}"
+                            title="${rvwDone || rvwFlag ? 'لابردنی نیشانەی پشکنین' : 'نیشانکردن وەک پشکنراو'}"
+                            aria-label="${rvwDone || rvwFlag ? 'لابردنی نیشانەی پشکنین' : 'نیشانکردن وەک پشکنراو'}"
+                            aria-pressed="${rvwDone || rvwFlag ? 'true' : 'false'}"
+                            onclick="toggleReviewed('${o.id}', event)"><i class='bx bx-check'></i></button>`
+                        : `<button type="button" class="card-copy" title="کۆپیکردنی زانیاری ئۆردەر"
                             aria-label="کۆپیکردنی زانیاری ئۆردەر"
-                            onclick="openCopyMenu('${o.id}', event)"><i class='bx bx-copy'></i></button>`}
+                            onclick="openCopyMenu('${o.id}', event)"><i class='bx bx-copy'></i></button>`)}
                     </div>
                 </div>
             </div>`;
@@ -5245,8 +5592,16 @@
             let roleFilter = roleFilterEl ? roleFilterEl.value : "all";
             let myCode = String(currentUser ? currentUser.code : "").trim().toLowerCase();
             let selMemberCode = selectedTeamMember ? String(selectedTeamMember).trim().toLowerCase() : "";
+            // مۆدی پشکنین — یەکجار دەخوێندرێتەوە، نەک بۆ هەر ئۆردەرێک
+            let rvwOn = reviewModeOn();
+            let rvwF = rvwOn ? reviewFilter() : 'all';
             let _viewOk = {};
             return function (o) {
+                // فلتەری پشکنین لە سەرەوە — هەرزانترینە و زۆرترین لادەبات.
+                // لەگەڵ ماشێنی load-moreـی ئێستادا کاردەکات: ئەگەر پەڕەیەک
+                // بە تەواوی لابرا، خۆی بەردەوام دەبێت بۆ پەڕەی داهاتوو.
+                if (rvwF === 'todo' && isReviewed(o)) return false;
+                if (rvwF === 'flag' && !isFlagged(o)) return false;
                 let sellerCode = sellerCodeOf(o);
                 let isMyOrder = (sellerCode === myCode);
                 if (!isMyOrder) {
@@ -5544,6 +5899,10 @@
                     // تەنها ئەندامانی خاوەن داواکاری پیشان دەدرێن — ئەندامی بێ
                     // داواکاری (٠) لە لیستی «بەپێی ئەندام» دەرناکەوێت.
                     // کارتەکە بە کۆمەڵ (lazy) لە `buildMemberCard` دروست دەبێت.
+                    // فلتەری «ماوە» بۆ لیستی ئەندامانیش کار دەکات
+                    if (reviewModeOn() && reviewFilter() === 'todo'
+                        && isMemberReviewed(member.code, mo)) return;
+
                     if (count > 0) memberPlan.push({ m: member, mo: mo });
                 });
 
@@ -6434,6 +6793,8 @@
         }
 
         async function openOrderDetails(orderId) {
+            // مۆدی پشکنین: دەیپارێزین تا لە `closeModal`دا نیشان بکرێت
+            _reviewOpenId = String(orderId);
             let o = allGlobalOrdersData[orderId];
             let b = document.getElementById('modal-details-body');
 
@@ -6739,6 +7100,7 @@
             ${profitSplitHtml}
             ${changerInfoHtml}
             ${statusChangerHtml}
+            ${reviewPanelHtml(o)}
             <div class="detail-section" style="margin-top:14px;">
                 <div class="detail-label"><i class='bx bx-history'></i> مێژووی کردارەکان</div>
                 <div id="order-log-box" class="order-log-box">${cachedLogs ? orderLogsHtml(cachedLogs) : ORDER_LOG_SKELETON}</div>
@@ -8541,6 +8903,12 @@
             // پاراستنی شوێنی سکرۆڵی لیستی ئەندامان پێش چوونە ناو ئۆردەرەکان
             let listEl = document.getElementById('management-orders-list');
             if (listEl) teamMembersScrollTop = listEl.scrollTop;
+            // بۆ نیشانکردن لە `backToTeamList` — واژووەکە **لێرە**
+            // هەڵدەگیرێت، چونکە دوای چوونەژوورەوە ژمارەکان نامێنن
+            _reviewOpenMember = code;
+            _reviewOpenMemberSig = mgmtMemberCounts
+                ? memberSig(mgmtMemberCounts[String(code).trim().toLowerCase()] || null)
+                : null;
             selectedTeamMember = code;
             // ئۆردەرەکانی ئەندام لە سێرڤەرەوە بار دەکرێن (لە سەرەوە دەست پێدەکات)
             reloadMgmt().then(() => { if (listEl) listEl.scrollTop = 0; });
@@ -8552,6 +8920,9 @@
         function backToTeamList() {
             selectedTeamMember = null;
             let listEl = document.getElementById('management-orders-list');
+            // ئەندامەکە پشکنرا — دەبێت پێش `reloadMgmt` بێت تا کارتەکەی
+            // بە دۆخی نوێوە بنەخشێنرێت
+            reviewOnMemberClosed();
             // گەڕانەوە بۆ لیستی ئەندامان و هەمان شوێنی پێشوو
             reloadMgmt().then(() => { if (listEl) listEl.scrollTop = teamMembersScrollTop; });
         }
@@ -8744,6 +9115,9 @@
         function closeModal(event, modalId) {
             if (event && event.target.id !== modalId) return;
             document.getElementById(modalId).classList.remove('show');
+            // پەنجەرەی وردەکاری ئۆردەر داخرا → وەک «پشکنراو» نیشان دەکرێت.
+            // ئەمە تاکە ڕێگای داخستنە (X، پاشخان، دەستکاری، سڕینەوە…)
+            if (modalId === 'order-details-modal') reviewOnOrderClosed();
         }
 
         // ٢. ناردنی ئۆردەر لەگەڵ دڵنیابوون لە جۆری داتاکان (Numeric & Text)
@@ -11991,7 +12365,9 @@
                 preset: document.getElementById('filter-date-type').value || 'all',
                 from: document.getElementById('filter-date-from').value || null,
                 to: document.getElementById('filter-date-to').value || null,
-                sort: sortValOf(fsSortId())
+                sort: sortValOf(fsSortId()),
+                rvwOn: reviewModeOn(),
+                rvwF: reviewFilter()
             };
             if (fsDraft.preset !== 'all' && fsDraft.preset !== 'custom') {
                 let r = fsPresetRange(fsDraft.preset);
@@ -12008,6 +12384,7 @@
 
             fsRenderChips();
             fsRenderSort();
+            fsRenderReview();
             // ڕیزبەندی ئۆردەر بە فایلی `db/005`ـەوە بەندە — ئەگەر نەبوو،
             // بەشەکە دەشاردرێتەوە (ڕیزبەندی ئەندامان کلاینتە و دەمێنێتەوە)
             let sortSec = document.getElementById('fsec-sort');
@@ -12032,9 +12409,15 @@
         }
 
         function resetFilterSheet() {
-            fsDraft = { status: 'all', preset: 'all', from: null, to: null, sort: SORT_DEFS[fsSortId()].def };
+            // «سڕینەوە» فلتەرەکان دەگەڕێنێتەوە — بەڵام مۆدی پشکنین
+            // ناکوژێنێتەوە (نیشانەکان بە `fsClearReviews` دەسڕدرێنەوە)
+            fsDraft = {
+                status: 'all', preset: 'all', from: null, to: null,
+                sort: SORT_DEFS[fsSortId()].def,
+                rvwOn: !!fsDraft.rvwOn, rvwF: 'all'
+            };
             fcalHover = null; fcalFocus = fdKey(fdToday());
-            fsRenderChips(); fsRenderSort(); fsSyncCalOpen(); fcalPaint(); fsSyncInputs(); fsRenderSummary();
+            fsRenderChips(); fsRenderSort(); fsRenderReview(); fsSyncCalOpen(); fcalPaint(); fsSyncInputs(); fsRenderSummary();
         }
 
         // ---------- ڕیزبەندی لەناو شیتەکە ----------
@@ -12062,6 +12445,47 @@
                         onclick="fsPickSort('${o.v}')">${o.t}</div>`
                 ).join('')
             ).join('');
+        }
+
+        // ---------- مۆدی پشکنین لەناو شیتەکە ----------
+        const FS_REVIEW_CHIPS = [
+            { v: 'all', t: 'هەموو' },
+            { v: 'todo', t: '☑ تەنها ماوەکان' },
+            { v: 'flag', t: '⚑ تەنها نیشانەکراوەکان' }
+        ];
+
+        function fsRenderReview() {
+            const tg = document.getElementById('fs-review-toggle');
+            const chips = document.getElementById('fchips-review');
+            const clr = document.getElementById('fs-review-clear');
+            if (!tg) return;
+            const on = !!fsDraft.rvwOn;
+            tg.checked = on;
+            if (chips) {
+                chips.style.display = on ? 'flex' : 'none';
+                chips.innerHTML = FS_REVIEW_CHIPS.map(c =>
+                    `<button type="button" class="fchip${fsDraft.rvwF === c.v ? ' is-on' : ''}"
+                        onclick="fsPickReview('${c.v}')">${c.t}</button>`).join('');
+            }
+            if (clr) clr.style.display = on ? 'flex' : 'none';
+        }
+
+        function fsToggleReviewMode(on) {
+            fsDraft.rvwOn = !!on;
+            if (!on) fsDraft.rvwF = 'all';
+            fsRenderReview();
+        }
+
+        function fsPickReview(v) {
+            fsDraft.rvwF = v;
+            fsRenderReview();
+        }
+
+        function fsClearReviews() {
+            if (!confirm('⚠️ سڕینەوەی هەموو نیشانەکانی پشکنین\n\nهەموو ئەو ئۆردەر و ئەندامانەی نیشانت کردوون دەگەڕێنەوە بۆ «نەپشکنراو».\n\nدڵنیایت؟')) return;
+            clearAllReviews();
+            showToast('هەموو نیشانەکان سڕانەوە', 'success');
+            fsRenderReview();
         }
 
         function fsPickSort(v) {
@@ -12490,6 +12914,11 @@
             let sid = fsSortId();
             if (fsDraft.sort) setListSort(SORT_DEFS[sid].key, fsDraft.sort);
 
+            // مۆدی پشکنین — لای کلاینتە، بەڵام لێرە جێبەجێ دەبێت تا
+            // هەموو گۆڕانکارییەکانی شیتەکە پێکەوە بێنە دی
+            setReviewMode(!!fsDraft.rvwOn);
+            setReviewFilter(fsDraft.rvwOn ? (fsDraft.rvwF || 'all') : 'all');
+
             closeFilterSheet();
             syncFilterUI();
             reloadMgmt();   // فلتەری حاڵەت/بەروار/ڕیزبەندی لە سێرڤەرەوە جێبەجێ دەبێت
@@ -12519,8 +12948,28 @@
                     : (p ? p.t : pr);
                 out.push({ kind: 'date', t: t });
             }
+            // فلتەری پشکنین — بە کرتەکردنی چیپەکە دەگەڕێتەوە «هەموو»
+            if (reviewModeOn() && reviewFilter() !== 'all') {
+                out.push({
+                    kind: 'review',
+                    t: reviewFilter() === 'todo' ? '☑ تەنها ماوەکان' : '⚑ تەنها نیشانەکراوەکان'
+                });
+            }
             return out;
         }
+
+        // ژماردنی دۆخی پشکنین لەسەر ئۆردەرە **بارکراوەکان**
+        function reviewCounts() {
+            let todo = 0, done = 0, flag = 0;
+            (allManagementOrdersArray || []).forEach(o => {
+                if (isFlagged(o)) flag++;
+                else if (isReviewed(o)) done++;
+                else todo++;
+            });
+            return { todo: todo, done: done, flag: flag };
+        }
+
+        function updateReviewCounter() { syncFilterUI(); }
 
         function syncFilterUI() {
             let list = fsActiveFilters();
@@ -12534,11 +12983,28 @@
 
             let box = document.getElementById('active-filters');
             if (box) {
-                box.innerHTML = list.map(f =>
+                let html = list.map(f =>
                     `<button type="button" class="afchip" onclick="clearFilterPart('${f.kind}')">
                         <span>${f.t}</span><i class='bx bx-x'></i>
                     </button>`).join('');
-                box.style.display = list.length ? 'flex' : 'none';
+
+                // ژمێرەری پشکنین — چیپێکی زانیارییە، لانابرێت.
+                // ⚠️ تەنها ئۆردەرە **بارکراوەکان** دەژمێرێت (٤٠٠ لە
+                //    پەڕەیەکدا)، چونکە دۆخی پشکنین لای ئامێرەکەیە و
+                //    سێرڤەر نایزانێت. بۆیە دەقەکە «لەمانەدا» دەڵێت.
+                // لە دۆخی «بەپێی ئەندام»دا ئۆردەر نەخشێنراو نییە، بۆیە
+                // ژماردنیان مانای نییە
+                let showCounter = reviewModeOn()
+                    && !(currentOrdersTab === 'team' && teamViewMode === 'members' && !selectedTeamMember);
+                if (showCounter) {
+                    let c = reviewCounts();
+                    html += `<span class="afchip rvw-count" title="لە ئۆردەرە بارکراوەکاندا">
+                        <i class='bx bx-list-check'></i>
+                        <span>ماوە ${toArabicDigits(c.todo)} لە ${toArabicDigits(c.todo + c.done + c.flag)}${c.flag ? ' · ⚑ ' + toArabicDigits(c.flag) : ''}</span>
+                    </span>`;
+                }
+                box.innerHTML = html;
+                box.style.display = (list.length || showCounter) ? 'flex' : 'none';
             }
         }
 
@@ -12547,6 +13013,13 @@
                 // گەڕانەوە بۆ ڕیزبەندی بنەڕەتی
                 let sid = fsSortId();
                 setListSort(SORT_DEFS[sid].key, SORT_DEFS[sid].def);
+            }
+            else if (kind === 'review') {
+                // فلتەری پشکنین لای کلاینتە — پێویستی بە سێرڤەر نییە
+                setReviewFilter('all');
+                syncFilterUI();
+                applyOrderFilters();
+                return;
             }
             else if (kind === 'status') document.getElementById('filter-status').value = 'all';
             else {
