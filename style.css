@@ -4528,100 +4528,6 @@ h2 i,
   transform: translateY(-50%);
   background: rgba(36, 129, 204, 0.1);
   border: 1px solid rgba(36, 129, 204, 0.25);
-
-/* ============================================================
-   جێبەجێکردنی دیزاینی تێروتەسەلی ڕیزبەندی جزدانەکان (UI-UX Pro Max)
-   ============================================================ */
-.wallet-search-sort-row {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-  margin-bottom: 12px;
-  width: 100%;
-}
-
-.wallet-search-sort-row .search-group {
-  flex: 1;
-  margin: 0;
-  min-width: 0;
-}
-
-.wallet-sort-wrapper {
-  position: relative;
-  display: flex;
-  align-items: center;
-  flex-shrink: 0;
-}
-
-.wallet-sort-prefix-icon {
-  position: absolute;
-  left: 10px;
-  pointer-events: none;
-  font-size: 17px;
-  color: #64748b;
-  transition: color 0.2s ease;
-}
-
-.wallet-sort-select {
-  height: 45px;
-  padding: 0 28px 0 32px;
-  border-radius: 12px;
-  border: 1px solid #cbd5e1;
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  font-size: 12.5px;
-  font-weight: 600;
-  color: #1e293b;
-  cursor: pointer;
-  outline: none;
-  appearance: none;
-  -webkit-appearance: none;
-  -moz-appearance: none;
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
-  width: 100%;
-}
-
-.wallet-sort-select:hover,
-.wallet-sort-select:focus {
-  border-color: var(--primary);
-  background-color: #ffffff;
-  box-shadow: 0 0 0 3.5px rgba(36, 129, 204, 0.12), 0 4px 12px rgba(0, 0, 0, 0.05);
-}
-
-.wallet-sort-select:focus ~ .wallet-sort-prefix-icon,
-.wallet-sort-select:focus ~ .wallet-sort-icon {
-  color: var(--primary);
-}
-
-.wallet-sort-icon {
-  position: absolute;
-  right: 8px;
-  pointer-events: none;
-  font-size: 18px;
-  color: #64748b;
-  transition: transform 0.2s ease, color 0.2s ease;
-}
-
-.wallet-sort-select:focus ~ .wallet-sort-icon {
-  transform: rotate(180deg);
-}
-
-@media (max-width: 576px) {
-  .wallet-search-sort-row {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 8px;
-  }
-  .wallet-sort-wrapper {
-    width: 100%;
-  }
-  .wallet-sort-select {
-    height: 46px;
-    font-size: 13.5px;
-  }
-}
   color: var(--primary);
   width: 34px;
   height: 34px;
@@ -9251,3 +9157,133 @@ body.fsheet-open {
      ئەگەرنا ڕیزێکی ڕۆژ لە سەروویەوە دەردەکەوێت */
   box-shadow: 0 -16px 0 0 #fff, 0 8px 10px -8px rgba(15, 23, 42, .18);
 }
+
+/* ============================================================
+   کۆمپۆنێنتی ڕیزبەندی لیستەکان (UI/UX Pro Max) — یەک دیزاین بۆ
+   هەموو لیستەکان: جزدان، قازانج، چاکسازی، ئۆردەری تیم…
+   ------------------------------------------------------------
+   RTLـە: بە `inset-inline` نووسراوە، بۆیە ئایکۆنی ڕیزبەندی
+   هەمیشە لای دەستپێک (ڕاست) و تیرەکە لای کۆتایی (چەپ) دەبێت.
+   ============================================================ */
+.list-sort-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 12px;
+  width: 100%;
+}
+
+.list-sort-row .search-group {
+  flex: 1;
+  margin: 0;
+  min-width: 0;
+}
+
+/* ڕیزێکی سەربەخۆ (بێ بۆکسی گەڕان لە تەنیشتی) */
+.list-sort-row.solo {
+  margin-bottom: 15px;
+}
+
+.list-sort-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  min-width: 0;
+}
+
+.list-sort-row.solo .list-sort-wrapper {
+  width: 100%;
+}
+
+.list-sort-prefix-icon {
+  position: absolute;
+  inset-inline-start: 11px;
+  pointer-events: none;
+  font-size: 17px;
+  line-height: 1;
+  color: #64748b;
+  transition: color .2s ease;
+}
+
+.list-sort-select {
+  height: 45px;
+  width: 100%;
+  max-width: 100%;
+  padding-inline: 34px 30px;
+  border-radius: 12px;
+  border: 1px solid #cbd5e1;
+  background: rgba(255, 255, 255, .95);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #1e293b;
+  cursor: pointer;
+  outline: none;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  text-overflow: ellipsis;
+  transition: border-color .25s cubic-bezier(.4, 0, .2, 1),
+              box-shadow .25s cubic-bezier(.4, 0, .2, 1),
+              background-color .25s cubic-bezier(.4, 0, .2, 1);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, .03);
+}
+
+.list-sort-select:hover,
+.list-sort-select:focus-visible {
+  border-color: var(--primary);
+  background-color: #fff;
+  box-shadow: 0 0 0 3.5px rgba(36, 129, 204, .12), 0 4px 12px rgba(0, 0, 0, .05);
+}
+
+/* ڕیزبەندییەکی نا-بنەڕەتی چالاکە → بە ڕەنگی سەرەکی دیار دەکرێت،
+   تا بەکارهێنەر بزانێت لیستەکە بەپێی شتێکی تایبەت ڕیزکراوە */
+.list-sort-wrapper.is-active .list-sort-select {
+  border-color: var(--primary);
+  background-color: rgba(36, 129, 204, .06);
+  color: var(--primary);
+}
+
+.list-sort-wrapper.is-active .list-sort-prefix-icon,
+.list-sort-wrapper.is-active .list-sort-icon,
+.list-sort-select:focus-visible ~ .list-sort-prefix-icon,
+.list-sort-select:focus-visible ~ .list-sort-icon {
+  color: var(--primary);
+}
+
+.list-sort-icon {
+  position: absolute;
+  inset-inline-end: 9px;
+  pointer-events: none;
+  font-size: 18px;
+  line-height: 1;
+  color: #64748b;
+  transition: transform .2s ease, color .2s ease;
+}
+
+.list-sort-select:focus-visible ~ .list-sort-icon {
+  transform: rotate(180deg);
+}
+
+/* لەسەر مۆبایل ژێر یەکەوە دەبن — بۆکسی گەڕان تەسک نابێتەوە */
+@media (max-width: 576px) {
+  .list-sort-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+  .list-sort-wrapper {
+    width: 100%;
+  }
+  .list-sort-select {
+    height: 46px;
+    font-size: 13.5px;
+  }
+}
+
+/* ناوە کۆنەکانی جزدان — تا هیچ شوێنێک نەشکێت ئەگەر مابێتەوە */
+.wallet-search-sort-row { display: flex; gap: 10px; align-items: center; margin-bottom: 12px; width: 100%; }
+.wallet-search-sort-row .search-group { flex: 1; margin: 0; min-width: 0; }
