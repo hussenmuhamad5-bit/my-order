@@ -4087,6 +4087,13 @@
         function reviewOnOrderClosed() {
             const id = _reviewOpenId;
             _reviewOpenId = null;
+
+            // چاتەکە داخرا → کاتژمێرەکە دەوەستێت، و بیرەوەری سکڕۆڵ
+            // پاک دەکرێتەوە: کردنەوەیەکی نوێ دەبێت لە نوێترین
+            // پەیامەوە دەست پێبکات، وەک هەموو چاتێک.
+            ocmtStopTicker();
+            if (id) delete _ocmtScroll[String(id)];
+
             // کۆمێنتێک نووسراوە → واتای «پێویستی بە سەرنجە»، نەک
             // «پشکنرا». بۆیە نیشانکردنی خۆکار تێدەپەڕێنرێت.
             if (_ocmtSkipAutoReview) { _ocmtSkipAutoReview = false; return; }
@@ -7433,6 +7440,13 @@
             switchOrderModalTab('info');
             syncCommentTabBadge();
 
+            // کۆمێنتەکان پێشوەخت دەهێنرێن — کاتێک ئایکۆنی چات دەکرێتەوە
+            // لیستەکە ئامادەیە و هیچ چاوەڕوانییەک نییە.
+            // پەڕەکە شاراوەیە، بۆیە هیچ لەرزینێکی ڕووکار نییە. چاتەکە
+            // بەمە وەک «خوێندراوە» نیشان **ناکرێت** — تەنها کردنەوەی
+            // خودی چاتەکە واتای ئەوە دەگەیەنێت.
+            loadOrderComments(o.id, true);
+
             runOrderSteps();
 
             // تەنها ئەوەی لە بیرگەدا نەبوو بە داواکاری دەهێنرێت
@@ -7822,6 +7836,22 @@
         // بە «پشکنراو» نیشان بکات (بڕوانە reviewOnOrderClosed)
         let _ocmtSkipAutoReview = false;
 
+        // ئەو ئۆردەرەی ئێستا لە لیستی چاتەکەدا نەخشێنراوە.
+        // ⚠️ پێویستە: `ocmtSync` بە جیاوازی کاردەکات، بۆیە ئەگەر
+        //    ئۆردەرێکی تر بێتە ناو هەمان لیستەوە، پەیامەکان تێکەڵ
+        //    دەبن. لێرەوە دەزانرێت کەی لیستەکە بسڕدرێتەوە.
+        let _ocmtListId = null;
+
+        // شوێنی سکڕۆڵ بۆ هەر چاتێک — بۆ ئەوەی گەڕانەوە لە
+        // «زانیاری» بۆ «کۆمێنتەکان» بازنەدات بۆ نوێترین پەیام
+        let _ocmtScroll = {};               // orderId → { top, atEnd }
+
+        // کێ چاتەکەی کردووەتەوە و تا کوا کاتێک خوێندوویەتەوە
+        let commentReadersCache = {};       // orderId → [{ user_code, user_name, last_read_at }]
+        let _ocmtReaders = [];              // خوێنەرەکانی ئەو ئۆردەرەی ئێستا دەنەخشێنرێت
+        let _ocmtReadersSig = '';           // واژووی خوێنەرەکان — بۆ زانینی گۆڕان
+        let _ocmtTick = null;               // کاتژمێری نوێکردنەوەی «چەند خولەک لەمەوپێش»
+
         const ORDER_COMMENTS_SKELETON = `
             <div class="ocmt-row"><div class="olog-skel olog-dot"></div>
                 <div class="ocmt-bubble" style="width:60%"><div class="olog-skel olog-bar w40"></div>
@@ -7835,10 +7865,100 @@
             el.style.height = Math.min(el.scrollHeight, 120) + 'px';
         }
 
+        // نووسینی لیستەکە + دۆخی «بەتاڵ» (بۆ ناوەڕاستکردنی پەیامەکە)
+        function ocmtSetList(html, empty) {
+            const list = document.getElementById('order-comments-list');
+            if (!list) return;
+            list.innerHTML = html;
+            list.classList.toggle('is-empty', !!empty);
+        }
+
+        // کاتی پەیام بە زمانی مرۆڤ: «٥ خولەک لەمەوپێش»
+        // ------------------------------------------------------------
+        // جیاوازە لە `shortRelativeTime` (کە «پێش ئێستا» لادەبات و بۆ
+        // چیپی کارتەکانە) — لێرەدا ڕستەیەکی تەواو دەخوێندرێتەوە، و
+        // بەرواری تەواویش لە `title`دا دەمێنێتەوە.
+        function ocmtTimeText(iso) {
+            const t = new Date(iso).getTime();
+            if (!t || isNaN(t)) return '';
+            let s = Math.floor((Date.now() - t) / 1000);
+            if (s < 0) s = 0;
+            if (s < 60) return 'ئێستا';
+            const m = Math.floor(s / 60);
+            if (m < 60) return m + ' خولەک لەمەوپێش';
+            const h = Math.floor(m / 60);
+            if (h < 24) return h + ' کاتژمێر لەمەوپێش';
+            const d = Math.floor(h / 24);
+            if (d < 7) return d + ' ڕۆژ لەمەوپێش';
+            if (d < 30) return Math.floor(d / 7) + ' هەفتە لەمەوپێش';
+            const mo = Math.floor(d / 30);
+            if (mo < 12) return mo + ' مانگ لەمەوپێش';
+            return Math.floor(mo / 12) + ' ساڵ لەمەوپێش';
+        }
+
+        // کێ ئەم پەیامەی بینیوە؟
+        // ------------------------------------------------------------
+        // خوێنەرێک پەیامێکی بینیوە ئەگەر دوایین کاتی خوێندنەوەی
+        // چاتەکەی دوای نووسینی ئەو پەیامە بێت.
+        //
+        // نووسەرەکە خۆی و خودی من لە لیستەکە دەردەچین — «خۆم بینیومە»
+        // هیچ زانیارییەکی نوێ نییە.
+        function ocmtSeenOf(c) {
+            if (!_ocmtReaders.length || !c || c.deleted_at) return [];
+            const t = new Date(c.created_at).getTime();
+            if (!t || isNaN(t)) return [];
+            const me = String(currentUser && currentUser.code);
+            const author = String(c.user_code);
+            return _ocmtReaders.filter(r => {
+                const rc = String(r.user_code);
+                if (rc === author || rc === me) return false;
+                const rt = new Date(r.last_read_at).getTime();
+                return !!rt && rt >= t;
+            });
+        }
+
+        function ocmtSeenHtml(c) {
+            if (c.deleted_at) return '';
+            const mine = String(c.user_code) === String(currentUser.code);
+            const seen = ocmtSeenOf(c);
+
+            // پەیامی خۆم و هێشتا کەس نەیبینیوە → یەک ڕەگەز
+            if (!seen.length) {
+                return mine
+                    ? `<span class="ocmt-seen" title="هێشتا کەس نەیبینیوە"><i class='bx bx-check'></i></span>`
+                    : '';
+            }
+
+            const names = seen.map(r => String(r.user_name || r.user_code));
+            const short = names.length <= 2
+                ? names.join('، ')
+                : (names.slice(0, 2).join('، ') + ' +' + (names.length - 2));
+
+            return `<span class="ocmt-seen is-on" title="بینراوە لەلایەن ${histEsc(names.join('، '))}"
+                    onclick="showCommentSeen('${c.id}')"><i class='bx bx-check-double'></i><b>${histEsc(short)}</b></span>`;
+        }
+
+        // پەنجەدانان لەسەر نیشانەی «بینراوە» → ناوەکان لەگەڵ کاتەکانیان
+        function showCommentSeen(cid) {
+            const rows = orderCommentsCache[String(_reviewOpenId)] || [];
+            const c = rows.find(x => String(x.id) === String(cid));
+            if (!c) return;
+            const seen = ocmtSeenOf(c);
+            if (!seen.length) { showToast("هێشتا کەس ئەم پەیامەی نەبینیوە", "info"); return; }
+            const txt = seen.slice(0, 5)
+                .map(r => (r.user_name || r.user_code) + ' (' + ocmtTimeText(r.last_read_at) + ')')
+                .join(' · ');
+            showToast("بینراوە لەلایەن " + txt + (seen.length > 5 ? ' …' : ''), "info");
+        }
+
         // واژووی ناوەڕۆک — بۆ زانینی ئەوەی ڕیزەیەک گۆڕاوە یان نا،
-        // بەبێ بەراوردکردنی HTMLـەکە
+        // بەبێ بەراوردکردنی HTMLـەکە. دۆخی «بینراوە»ش تێیدایە، چونکە
+        // ئەویش لەناو ڕیزەکەدا دەردەکەوێت.
         function ocmtSig(c) {
-            return [c.body || '', c.edited_at || '', c.deleted_at || ''].join('|');
+            return [
+                c.body || '', c.edited_at || '', c.deleted_at || '',
+                ocmtSeenOf(c).map(r => r.user_code).join(',')
+            ].join('|');
         }
 
         function ocmtRowHtml(c) {
@@ -7866,8 +7986,10 @@
                     ${mine ? '' : `<div class="ocmt-name">${histEsc(name)}${c.role ? `<span class="ocmt-role">${histEsc(String(c.role))}</span>` : ''}</div>`}
                     ${body}
                     <div class="ocmt-foot">
-                        <span>${histEsc(shortRelativeTime(c.created_at))}</span>
+                        <span class="ocmt-time" data-ts="${histEsc(String(c.created_at || ''))}"
+                            title="${histEsc(formatLogTime(c.created_at))}">${histEsc(ocmtTimeText(c.created_at))}</span>
                         ${c.edited_at && !del ? `<span class="ocmt-edited">دەستکاری کراوە</span>` : ''}
+                        ${ocmtSeenHtml(c)}
                         ${acts}
                     </div>
                 </div>
@@ -7903,6 +8025,36 @@
         }
 
         // ============================================================
+        // بیرەوەری سکڕۆڵی چات
+        // ------------------------------------------------------------
+        // گەڕانەوە بۆ «زانیاری» و هاتنەوە بۆ «کۆمێنتەکان» نابێت
+        // بازبدات بۆ نوێترین پەیام — هەر لەو شوێنە دەستپێدەکاتەوە کە
+        // لێی ڕۆیشتووی.
+        //
+        // ⚠️ پێش شاردنەوەی پەڕەکە هەڵدەگیرێت: دوای `display:none`
+        //    هەموو پێوانەکان سفر دەبن.
+        //
+        // ئەگەر لە کۆتاییدا بووی (وەک چات)، دۆخەکە «کۆتایی» تۆمار
+        // دەکرێت نەک ژمارەیەک — تاکو پەیامە نوێکان بەردەوام دیار بن.
+        // ============================================================
+        function ocmtRememberScroll() {
+            const list = document.getElementById('order-comments-list');
+            if (!list || !_ocmtListId || !list.clientHeight) return;
+            _ocmtScroll[String(_ocmtListId)] = {
+                top: list.scrollTop,
+                atEnd: (list.scrollHeight - list.scrollTop - list.clientHeight) < 40
+            };
+        }
+
+        function ocmtRestoreScroll() {
+            const list = document.getElementById('order-comments-list');
+            if (!list) return;
+            const m = _ocmtScroll[String(_reviewOpenId)];
+            if (!m || m.atEnd) { ocmtScrollToEnd(); return; }
+            list.scrollTop = m.top;
+        }
+
+        // ============================================================
         // نوێکردنەوەی چڕ — وەک چاتی ڕاستەقینە
         // ------------------------------------------------------------
         // پێشتر هەر جارێک `list.innerHTML` بە تەواوی دەنووسرایەوە،
@@ -7920,13 +8072,13 @@
 
             rows = rows || [];
             if (!rows.length) {
-                list.innerHTML = orderCommentsHtml(rows);
+                ocmtSetList(orderCommentsHtml(rows), true);
                 return;
             }
 
             // یەکەم نەخشاندن (یان دوای دۆخی بەتاڵ/سکێلێتۆن) → تەواو
             if (!list.querySelector('.ocmt-row')) {
-                list.innerHTML = orderCommentsHtml(rows);
+                ocmtSetList(orderCommentsHtml(rows), false);
                 return;
             }
 
@@ -7961,6 +8113,9 @@
                 const cid = el.getAttribute('data-cid');
                 if (cid !== 'pending' && !seen.has(cid)) el.remove();
             });
+
+            // هەموویان لابران → دۆخی بەتاڵ (جیاکەرەوەی ڕۆژەکانیش لادەچن)
+            if (!list.querySelector('.ocmt-row')) ocmtSetList(orderCommentsHtml([]), true);
         }
 
         // پەیامێکی کاتی — یەکسەر دەردەکەوێت پێش وەڵامی سێرڤەر،
@@ -7970,7 +8125,7 @@
             if (!list) return;
             // ئەگەر لیستەکە بەتاڵ بێت، دۆخی «هیچ کۆمێنتێک نییە» لادەبرێت
             const empty = list.querySelector('.ocmt-empty');
-            if (empty) list.innerHTML = '';
+            if (empty) ocmtSetList('', false);
             list.insertAdjacentHTML('beforeend',
                 `<div class="ocmt-row is-mine is-pending" data-cid="pending">
                     <div class="ocmt-avatar">${avatarHtml(currentUser.avatar, userName, 28)}</div>
@@ -7987,20 +8142,50 @@
             if (p) p.remove();
         }
 
+        // خوێنەرەکانی چاتێک — «کێ بینیویەتی». کۆمەڵێکی بچووکە (چەند
+        // کارمەندێک)، بۆیە یەک بانگ بەسە بۆ هەموو پەیامەکان.
+        async function loadCommentReaders(orderId) {
+            const oid = String(orderId);
+            try {
+                const { data, error } = await supabase.rpc('order_comment_readers', { p_order_id: oid });
+                if (error) throw error;
+                commentReadersCache[oid] = data || [];
+            } catch (e) {
+                console.warn('commentReaders:', e);
+                commentReadersCache[oid] = commentReadersCache[oid] || [];
+            }
+            if (String(_reviewOpenId) === oid) {
+                _ocmtReaders = commentReadersCache[oid];
+                _ocmtReadersSig = _ocmtReaders.map(r => r.user_code + '@' + r.last_read_at).join('|');
+            }
+        }
+
         async function loadOrderComments(orderId, keepScroll) {
             const list = document.getElementById('order-comments-list');
             if (!list || !orderId) return;
 
             const oid = String(orderId);
+
+            // ئۆردەرێکی تر لە لیستەکەدایە → دەسڕدرێتەوە. ئەگەرنا
+            // `ocmtSync` بە جیاوازی کاردەکات و پەیامەکان تێکەڵ دەبن.
+            if (_ocmtListId !== oid) { ocmtSetList('', false); _ocmtListId = oid; }
+
+            _ocmtReaders = commentReadersCache[oid] || [];
+
             const cached = orderCommentsCache[oid];
             if (cached) ocmtSync(cached);
-            else if (!list.querySelector('.ocmt-row')) list.innerHTML = ORDER_COMMENTS_SKELETON;
+            else if (!list.querySelector('.ocmt-row')) ocmtSetList(ORDER_COMMENTS_SKELETON, false);
 
             try {
-                const { data, error } = await supabase.rpc('order_comments_page', {
-                    p_order_id: oid, p_limit: 100, p_before_id: null
-                });
-                if (error) throw error;
+                // پەیامەکان و خوێنەرەکان پێکەوە دەهێنرێن — یەک چاوەڕوانی
+                const [res] = await Promise.all([
+                    supabase.rpc('order_comments_page', {
+                        p_order_id: oid, p_limit: 100, p_before_id: null
+                    }),
+                    loadCommentReaders(oid)
+                ]);
+                if (res.error) throw res.error;
+                const data = res.data;
 
                 orderCommentsCache[oid] = data || [];
                 // مۆداڵەکە لەوانەیە داخرابێت لەم ماوەیەدا
@@ -8017,9 +8202,48 @@
             } catch (e) {
                 console.warn('loadOrderComments:', e);
                 if (!cached) {
-                    list.innerHTML = `<div class="ocmt-empty"><i class='bx bx-error-circle'></i>
-                        <p>نەتوانرا کۆمێنتەکان باربکرێن</p></div>`;
+                    ocmtSetList(`<div class="ocmt-empty"><i class='bx bx-error-circle'></i>
+                        <p>نەتوانرا کۆمێنتەکان باربکرێن</p></div>`, true);
                 }
+            }
+        }
+
+        // ============================================================
+        // کاتژمێری چات — تەنها کاتێک پەڕەی کۆمێنت کراوەیە
+        // ------------------------------------------------------------
+        //   • «٥ خولەک لەمەوپێش» نوێ دەکاتەوە (دەقەکە بە تەنها
+        //     دەگۆڕدرێت، ڕیزەکە دووبارە نانەخشێنرێت)
+        //   • دەپرسێت کێ چاتەکەی کردووەتەوە → نیشانەی «بینراوە»
+        //
+        // خۆی خۆی دەوەستێت کاتێک مۆداڵەکە دادەخرێت یان دەگەڕێتەوە
+        // بۆ پەڕەی زانیاری — پێویست بە هەڵگرتنی هیچ ڕووداوێک ناکات.
+        // ============================================================
+        function ocmtStartTicker() {
+            if (_ocmtTick) return;
+            _ocmtTick = setInterval(ocmtTickOnce, 20000);
+        }
+
+        function ocmtStopTicker() {
+            if (_ocmtTick) { clearInterval(_ocmtTick); _ocmtTick = null; }
+        }
+
+        async function ocmtTickOnce() {
+            const m = document.getElementById('order-details-modal');
+            const on = m && m.classList.contains('show') && _ocmtTab === 'comments' && _reviewOpenId;
+            if (!on) { ocmtStopTicker(); return; }
+
+            document.querySelectorAll('#order-comments-list .ocmt-time').forEach(el => {
+                const ts = el.getAttribute('data-ts');
+                if (ts) el.textContent = ocmtTimeText(ts);
+            });
+
+            const oid = String(_reviewOpenId);
+            const before = _ocmtReadersSig;
+            await loadCommentReaders(oid);
+            // تەنها ئەگەر کەسێکی نوێ بینیبێتی — ئەوسا ڕیزە
+            // پەیوەندیدارەکان بە تەنها نوێ دەکرێنەوە
+            if (String(_reviewOpenId) === oid && _ocmtReadersSig !== before) {
+                ocmtSync(orderCommentsCache[oid] || []);
             }
         }
 
@@ -8124,6 +8348,9 @@
         // بەمە شوێنی سەرەوە بەفیڕۆ ناچێت و هەردوو پەڕەکە هەمان
         // قەبارەیان دەبێت.
         function switchOrderModalTab(tab) {
+            // ⚠️ پێش شاردنەوەی پەڕەکە — دوای ئەوە پێوانەکان سفرن
+            if (_ocmtTab === 'comments' && tab !== 'comments') ocmtRememberScroll();
+
             _ocmtTab = tab;
             const body = document.getElementById('modal-details-body');
             const pane = document.getElementById('order-comments-pane');
@@ -8145,8 +8372,15 @@
             }
 
             if (tab === 'comments' && _reviewOpenId) {
-                loadOrderComments(_reviewOpenId);
+                // کاشەکە لە `openOrderDetails`ەوە پڕکراوە، بۆیە ئەم
+                // بانگە دەستبەجێ لە بیرگەوە دەینەخشێنێت — چاوەڕوانی نییە
+                loadOrderComments(_reviewOpenId, true);
+                // ...و پاشان دەگەڕێینەوە بۆ ئەو شوێنەی لێی ڕۆیشتبووین
+                ocmtRestoreScroll();
                 markCommentsRead(_reviewOpenId);
+                ocmtStartTicker();
+            } else {
+                ocmtStopTicker();
             }
         }
 
@@ -8179,15 +8413,21 @@
 
         async function markCommentsRead(orderId) {
             const oid = String(orderId);
-            if (!unreadCommentMap.get(oid)) return;   // پێشتر خوێندراوەتەوە
-            unreadCommentMap.delete(oid);
-            syncCommentTabBadge();
+            const had = !!unreadCommentMap.get(oid);
+            if (had) {
+                unreadCommentMap.delete(oid);
+                syncCommentTabBadge();
+            }
             try {
+                // ⚠️ هەمیشە دەنێردرێت، تەنانەت ئەگەر هیچ نەخوێندراوێک
+                //    نەبێت: ئەم کاتە هەر ئەوەیە کە خەڵکی تر پێی
+                //    دەزانن پەیامەکانیان بینراون. ئەگەر لێرەدا
+                //    بوەستینایە، نیشانەی «بینراوە» هەرگیز نەدەگۆڕا.
                 await supabase.rpc('mark_order_comments_read', {
                     p_user_code: String(currentUser.code), p_order_id: oid
                 });
                 // کارتەکە بە تەنها نوێ دەکرێتەوە، بەبێ نەخشاندنەوەی لیستەکە
-                if (typeof refreshReviewCard === 'function') refreshReviewCard(oid);
+                if (had && typeof refreshReviewCard === 'function') refreshReviewCard(oid);
             } catch (e) { console.warn('markCommentsRead:', e); }
         }
 

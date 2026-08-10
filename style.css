@@ -10208,9 +10208,11 @@ body {
   margin-bottom: 12px;
 }
 
-/* پەیامی خۆم دەچێتە لای چەپ — لە RTLـدا `row-reverse` ئەوە دەکات،
-   وەک تلیگرام و واتساپی عەرەبی/کوردی */
-.ocmt-row.is-mine {
+/* پەیامی خۆم لای ڕاست، هی ئەوانی تر لای چەپ.
+   لە RTLـدا `row` لە ڕاستەوە دەست پێدەکات (ئەڤاتار لای ڕاست) و
+   `row-reverse` لە چەپەوە — بۆیە تەنها پەیامی ئەوانی تر
+   هەڵدەگەڕێتەوە. */
+.ocmt-row:not(.is-mine) {
   flex-direction: row-reverse;
 }
 
@@ -10228,13 +10230,14 @@ body {
   box-shadow: 0 1px 2px rgba(15, 23, 42, .04);
 }
 
-/* گۆشەیەکی تیژ لەو لایەی نووسەرەکەی لێیەوەیە — نیشانەی «دەم» */
+/* گۆشەیەکی تیژ لەو لایەی نووسەرەکەی لێیەوەیە — نیشانەی «دەم».
+   ئەڤاتاری ئەوانی تر لای چەپە، هی من لای ڕاست. */
 .ocmt-row:not(.is-mine) .ocmt-bubble {
-  border-top-right-radius: 5px;
+  border-top-left-radius: 5px;
 }
 
 .ocmt-row.is-mine .ocmt-bubble {
-  border-top-left-radius: 5px;
+  border-top-right-radius: 5px;
   background: rgba(36, 129, 204, .08);
   border-color: rgba(36, 129, 204, .22);
 }
@@ -10274,6 +10277,9 @@ body {
 .ocmt-foot {
   display: flex;
   align-items: center;
+  /* ناوی خوێنەرەکان دەکرێت درێژ بێت — دەبێت بشکێت، نەک بۆکسەکە
+     فراوان بکات یان بەسەر دوگمەکاندا بڕوات */
+  flex-wrap: wrap;
   gap: 6px;
   margin-top: 3px;
   font-size: 9.5px;
@@ -10282,6 +10288,34 @@ body {
 
 .ocmt-edited {
   font-style: italic;
+}
+
+/* ---- «بینراوە لەلایەن…» ----
+   ✓ = هێشتا کەس نەیبینیوە | ✓✓ + ناوەکان = بینراوە
+   پەنجەدانان لەسەری هەموو ناوەکان لەگەڵ کاتەکانیان پیشان دەدات */
+.ocmt-seen {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  min-width: 0;
+}
+
+.ocmt-seen.is-on {
+  color: var(--primary);
+  cursor: pointer;
+}
+
+.ocmt-seen i {
+  font-size: 12px;
+}
+
+.ocmt-seen b {
+  font-weight: 700;
+  min-width: 0;
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* دەستکاری و سڕینەوە — تەنها لەسەر پەیامی خۆت */
@@ -10322,6 +10356,17 @@ body {
 }
 
 /* ---- دۆخی بەتاڵ و بارکردن ---- */
+
+/* «هێشتا هیچ کۆمێنتێک نییە» دەبێت لە ناوەڕاستی پەڕەکەدا بێت، نەک
+   لە سەرەوە. لیستەکە `flex:1`ـە بەناو پەڕەیەکی ستوونیدا، بۆیە
+   بەرزییەکەی دیاریکراوە و ناوەڕاستکردنەکە دروست دەبێت.
+   کلاسەکە لە `ocmtSetList()`ەوە دادەنرێت. */
+#order-comments-list.is-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .ocmt-empty {
   text-align: center;
   padding: 40px 20px;
@@ -10343,6 +10388,9 @@ body {
   flex-shrink: 0;
   display: flex;
   align-items: flex-end;
+  /* دوگمەی ناردن لای ڕاست — لە RTLـدا `row-reverse` بۆکسی
+     نووسین دەخاتە چەپ و دوگمەکە دەباتە ڕاست */
+  flex-direction: row-reverse;
   gap: 8px;
   padding-top: 10px;
   border-top: 1px solid #eef2f7;
