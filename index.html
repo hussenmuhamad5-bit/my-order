@@ -29,6 +29,24 @@
             if (atLeast('7.7')) {
                 try { tg.disableVerticalSwipes(); } catch (e) { }
             }
+
+            /* ناوچەی سەلامەت — هەمان لۆجیکی app.html، بۆ ئەوەی پەڕەی
+               چوونەژوورەوەش لە دۆخی fullscreen نەچێتە ژێر ستاتەس بار */
+            function applySafeArea() {
+                var root = document.documentElement;
+                var s = tg.safeAreaInset || {};
+                var c = tg.contentSafeAreaInset || {};
+                root.style.setProperty('--tg-js-safe-top', (s.top || 0) + 'px');
+                root.style.setProperty('--tg-js-content-top', (c.top || 0) + 'px');
+                root.style.setProperty('--tg-js-safe-bottom', (s.bottom || 0) + 'px');
+                root.classList.toggle('tg-fullscreen', !!tg.isFullscreen);
+            }
+
+            applySafeArea();
+            ['safeAreaChanged', 'contentSafeAreaChanged', 'fullscreenChanged', 'viewportChanged']
+                .forEach(function (ev) {
+                    try { tg.onEvent(ev, applySafeArea); } catch (e) { }
+                });
         })();
     </script>
 </head>

@@ -14,6 +14,29 @@
   --text-secondary: #64748b;
 
   /* ==========================================================
+     ناوچەی سەلامەت — دۆخی fullscreen ی Mini App
+     ------------------------------------------------------------
+     دوای ئەوەی ئەپەکە کرا بە fullscreen، ناوەڕۆک دەچێتە ژێر
+     ستاتەس باری مۆبایل (کات، شەحن، ئاگادارییەکان) و ژێر دوو
+     دوگمەی مەلەوەری تلیگرام: «✕ Close» لە چەپ و «⌄ ⋮» لە ڕاست.
+     شاشە لە 360×692 بۆ 360×804 گۆڕا، بەڵام ئەو ١١٢px زیادەیە
+     سەربەست نییە — ژێری ئەو ڕووکارانەیە.
+
+     تلیگرام دوو کۆمەڵە ڕێبەری CSS دادەنێت (Bot API 8.0+):
+       --tg-viewport-safe-area-inset-*          ستاتەس بار / نۆچ
+       --tg-viewport-content-safe-area-inset-*  دوگمەکانی تلیگرام
+     ئەم دووانە کۆدەکرێنەوە، چونکە دووەمیان بەپێی یەکەمیان
+     پێودەکرێت نەک بەپێی سەری شاشە.
+
+     --tg-js-* لە app.html دادەنرێن وەک پاڵپشت بۆ کلاینتێک کە
+     ڕێبەرە CSSـەکان دانانێت. ئەگەر هیچیان نەبوون → 0px، واتە
+     لە دۆخی ئاسایی (نەک fullscreen) ڕووکارەکە هەروەک خۆی
+     دەمێنێتەوە و هیچ بۆشاییەکی زیادە دروست نابێت.
+     ========================================================== */
+  --safe-top: calc(max(var(--tg-viewport-safe-area-inset-top, 0px), var(--tg-js-safe-top, 0px)) + max(var(--tg-viewport-content-safe-area-inset-top, 0px), var(--tg-js-content-top, 0px)));
+  --safe-bottom: max(var(--tg-viewport-safe-area-inset-bottom, 0px), var(--tg-js-safe-bottom, 0px), env(safe-area-inset-bottom, 0px));
+
+  /* ==========================================================
      سیستەمی قەبارە — بەپێی ستانداردی Telegram Mini Apps (Wallet / TON Space)
      پێشتر ٢٤ قەبارەی جیاوازی فۆنت هەبوو؛ ئێستا تەنها ٧ پلە.
      ========================================================== */
@@ -9782,4 +9805,94 @@ label.lbl-err {
 
 @media (prefers-reduced-motion: reduce) {
   .card-rvw, .rvw-btn, .rvw-switch-track, .rvw-switch-track::after { transition: none; }
+}
+
+
+/* ============================================================
+   بەکارهێنانی ناوچەی سەلامەت — دۆخی fullscreen
+   ------------------------------------------------------------
+   لە کۆتایی فایلەکە دانراوە بەئەنقەست: هەمان تایبەتمەندی
+   (specificity) ی ڕێسا بنەڕەتییەکانی هەیە، بۆیە بەهۆی ڕیزبەندی
+   بەسەریاندا زاڵ دەبێت — بەبێ !important و بەبێ دەستکاریکردنی
+   ئەو ڕێسایانە لە شوێنی خۆیان.
+
+   لە دۆخی ئاسایی --safe-top و --safe-bottom = 0px، بۆیە ئەم
+   بەشە هیچ گۆڕانێک ناکات و ڕووکاری پێشوو دەپارێزێت.
+   ============================================================ */
+
+/* --- سەرەوە: ژێر ستاتەس بار و دوگمەکانی تلیگرام --- */
+body {
+  padding-top: calc(14px + var(--safe-top));
+}
+
+#dashboard-screen.active,
+#wallet-screen.active,
+#orders-management-screen.active,
+#admin-screen.active {
+  padding-top: calc(20px + var(--safe-top));
+}
+
+#order-screen.active,
+#settings-screen.active {
+  top: calc(20px + var(--safe-top));
+}
+
+/* --- توخمە مەلەوەرەکانی سەرەوە --- */
+
+/* ئاگادارییەکان — ئەگەرنا لە ژێر دوگمەکانی تلیگرام دەردەکەون */
+.custom-toast-wrapper.show {
+  top: calc(20px + var(--safe-top));
+}
+
+/* دوگمەی داخستنی گەلەری لە سەرەوەی ڕاستە — هەمان شوێنی «⌄ ⋮»ی
+   تلیگرام. بەبێ ئەم بۆشاییە دوگمەکە دەست ناکەوێت. */
+.gallery-close {
+  top: calc(16px + var(--safe-top));
+}
+
+.gallery-counter {
+  top: calc(22px + var(--safe-top));
+}
+
+/* شیتی خوارەوە لە خوارەوە لکێنراوە، بەڵام بە 92vh دەتوانێت
+   سەرەکەی بگاتە ناو ناوچەی تلیگرام — بۆیە سنووردار دەکرێت */
+.fsheet-panel {
+  max-height: min(92vh, calc(100vh - var(--safe-top) - 12px));
+}
+
+/* --- خوارەوە: ژێر هێڵی جەستی ماڵەوە --- */
+#bottom-nav {
+  bottom: calc(50px + var(--safe-bottom));
+}
+
+.bottom-nav {
+  padding-bottom: calc(12px + var(--safe-bottom));
+}
+
+.fab {
+  bottom: calc(6rem + var(--safe-bottom));
+}
+
+.fab-wrapper {
+  bottom: calc(150px + var(--safe-bottom));
+}
+
+/* --- شاشە تەسکەکان: بۆشایی سەرەوە کەم دەکرێتەوە تاکو
+       ناوەڕۆک زۆر بەرەو خوارەوە پاڵ نەدرێت --- */
+@media screen and (max-width: 389px) {
+  body {
+    padding-top: calc(10px + var(--safe-top));
+  }
+
+  #dashboard-screen.active,
+  #wallet-screen.active,
+  #orders-management-screen.active,
+  #admin-screen.active {
+    padding-top: calc(14px + var(--safe-top));
+  }
+
+  #order-screen.active,
+  #settings-screen.active {
+    top: calc(14px + var(--safe-top));
+  }
 }

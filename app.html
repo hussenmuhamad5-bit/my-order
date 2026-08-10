@@ -50,6 +50,37 @@
             if (atLeast('7.7')) {
                 try { tg.disableVerticalSwipes(); } catch (e) { }
             }
+
+            /* ==========================================================
+               ناوچەی سەلامەت — پاڵپشتی JS بۆ دۆخی fullscreen
+               ----------------------------------------------------------
+               لە دۆخی fullscreen ناوەڕۆکی ئەپەکە دەچێتە ژێر ستاتەس
+               باری مۆبایل و ژێر دوگمەکانی «✕ Close» و «⌄ ⋮»ی تلیگرام.
+               بۆشاییەکە لە style.css بە --safe-top / --safe-bottom
+               جێبەجێ دەکرێت.
+
+               تلیگرام لە Bot API 8.0 بەدواوە ڕێبەرە CSSـەکان خۆی
+               دادەنێت. ئەمە دوو شت دەکات: (١) پاڵپشتی JS بۆ کلاینتێک
+               کە APIـەکەی هەیە بەڵام ڕێبەرەکان دانانێت، (٢) نوێکردنەوە
+               کاتێک دۆخەکە دەگۆڕێت — سووڕانەوەی شاشە، یان چوونە
+               دەرەوەی fullscreen.
+               ========================================================== */
+            function applySafeArea() {
+                var root = document.documentElement;
+                var s = tg.safeAreaInset || {};
+                var c = tg.contentSafeAreaInset || {};
+                root.style.setProperty('--tg-js-safe-top', (s.top || 0) + 'px');
+                root.style.setProperty('--tg-js-content-top', (c.top || 0) + 'px');
+                root.style.setProperty('--tg-js-safe-bottom', (s.bottom || 0) + 'px');
+                /* چەقێک بۆ ستایلی مەرجدار، ئەگەر داهاتوو پێویست بوو */
+                root.classList.toggle('tg-fullscreen', !!tg.isFullscreen);
+            }
+
+            applySafeArea();
+            ['safeAreaChanged', 'contentSafeAreaChanged', 'fullscreenChanged', 'viewportChanged']
+                .forEach(function (ev) {
+                    try { tg.onEvent(ev, applySafeArea); } catch (e) { }
+                });
         })();
     </script>
 </head>
@@ -6416,6 +6447,10 @@
         const WALLET_REFUND_TYPE = 'گەڕانەوەی پارەی جزدان';
         const isWalletPayTx = (t) => !!t && (t.type === WALLET_PAY_TYPE || t.type === WALLET_REFUND_TYPE);
 
+        // ڕاستکردنەوەی مێژوو — جووڵەیەکی دەفتەری، نەک پارەی ڕاستەقینەی
+        // زیادکراو/بڕدراو. ڕیزەیەکی دووبارە یان ونبوو پووچ دەکاتەوە.
+        const HISTORY_FIX_TYPE = 'ڕاستکردنەوەی مێژوو';
+
         // ئایا ئەم ئۆردەرە لە جزدانەوە پارەی دراوە؟
         function orderWalletPaid(o) {
             return (o && String(o.payment_method || '').toLowerCase() === 'wallet') ? orderPrepaid(o) : 0;
@@ -6449,37 +6484,25 @@
             const delta = want - paid;                 // + = بڕینی زیاتر، − = گەڕاندنەوە
             if (Math.abs(delta) < 0.5) return paid;
 
-            const { data: u, error: uErr } = await supabase.from('employees')
-                .select('balance').eq('code', memberCode).single();
-            if (uErr) throw uErr;
-            if (!u) throw new Error('کارمەند نەدۆزرایەوە: ' + memberCode);
-
-            const oldBal = parseFloat(u.balance || 0);
-            const newBal = oldBal - delta;
-
-            const { error: upErr } = await supabase.from('employees')
-                .update({ balance: newBal }).eq('code', memberCode);
-            if (upErr) throw upErr;
-
-            const { error: txErr } = await supabase.from('transactions').insert({
-                user_code: memberCode,
-                order_id: String(orderId),
-                amount: -delta,
-                type: delta > 0 ? WALLET_PAY_TYPE : WALLET_REFUND_TYPE,
-                description: delta > 0
-                    ? `پارەدان لە جزدان بۆ ئۆردەری ${orderCode || orderId}`
-                    : `گەڕانەوەی پارەی جزدان لە ئۆردەری ${orderCode || orderId}`,
-                created_by: userName,
-                wallet_type: 'balance',
-                old_balance: oldBal,
-                new_balance: newBal
+            // نوێکردنەوەی باڵانس و تۆمارکردنی جووڵەکە لە ناو یەک ترانزاکشن.
+            // پێشتر سێ هەنگاوی جیاواز بوون (خوێندنەوە ← نووسینەوە ← تۆمار)
+            // و ئەگەر هەنگاوی کۆتایی شکستی دەهێنا، باڵانسەکە بە دەستی
+            // دەگەڕێندرایەوە. ئێستا داتابەیس خۆی هەمووی پێکەوە دەگەڕێنێتەوە.
+            const { error: waErr } = await supabase.rpc('wallet_apply', {
+                p_rows: [{
+                    user_code: memberCode,
+                    order_id: String(orderId),
+                    amount: -delta,
+                    wallet_type: 'balance',
+                    type: delta > 0 ? WALLET_PAY_TYPE : WALLET_REFUND_TYPE,
+                    description: delta > 0
+                        ? `پارەدان لە جزدان بۆ ئۆردەری ${orderCode || orderId}`
+                        : `گەڕانەوەی پارەی جزدان لە ئۆردەری ${orderCode || orderId}`
+                }],
+                p_created_by: userName,
+                p_lock_key: 'order_profit:' + String(orderId)
             });
-            // ئەگەر جووڵەکە نەنووسرا، باڵانسەکە دەگەڕێتەوە دۆخی پێشوو —
-            // ئەگەرنا پارەیەک دەبڕدرێت کە هیچ تۆمارێکی نییە
-            if (txErr) {
-                await supabase.from('employees').update({ balance: oldBal }).eq('code', memberCode);
-                throw txErr;
-            }
+            if (waErr) throw waErr;
 
             invalidateWalletCaches(memberCode);
             return want;
@@ -8112,53 +8135,24 @@
                         walletBack = await walletPaidOnOrder(o.id, o.seller_code);
                         await syncOrderWalletPayment(o.id, o.order_code, o.seller_code, 0);
                     }
-                    // === لۆجیکی نوێ: گەڕاندنەوە بەپێی «کۆی پوخت» (net) بۆ هەر بەکارهێنەر و هەر جزدان ===
-                    // بۆ هەر (بەکارهێنەر + جزدان)، کۆی هەموو جووڵەکانی ئەم ئۆردەرە کۆدەکەینەوە، پاشان ئەو کۆیە دەبڕینەوە
-                    // تا دەگاتە 0. ئەمە idempotent ـە: دوای گەڕاندنەوە کۆی پوخت = 0، بۆیە دووبارە کلیک هیچ زیانێک ناگەیەنێت،
-                    // هەروەها ئەگەر ئۆردەرێک بە هەڵە چەند جار گەیشتوو کرابێت، تەنها جارێک بۆ 0 دەگەڕێتەوە (خۆچاککردن).
-                    const { data: txsAll } = await supabase.from('transactions').select('*').eq('order_id', String(o.id));
-                    // جووڵەکانی پارەدانی جزدان لێرەدا نایەنە ژماردن — پێشتر
-                    // بە تەواوی گەڕێندرانەوە، و ئەگەر دووبارە بژمێردرێن
-                    // پارەکە دووجار دەگەڕێتەوە
-                    const txs = (txsAll || []).filter(t => !isWalletPayTx(t));
-                    if (txs && txs.length > 0) {
-                        let netMap = {}; // key: `${user_code}|${wallet}` -> کۆی پوخت
-                        for (let tx of txs) {
-                            let wallet = (tx.wallet_type === 'savings' || tx.type === 'پاشەکەوتی ئۆردەر') ? 'savings' : 'balance';
-                            let key = tx.user_code + '|' + wallet;
-                            netMap[key] = (netMap[key] || 0) + parseFloat(tx.amount || 0);
-                        }
-
-                        let revertTxs = [];
-                        for (let key in netMap) {
-                            let net = netMap[key];
-                            if (Math.abs(net) < 0.01) continue; // هیچ شتێک نەماوە بۆ گەڕاندنەوە
-
-                            let sepIdx = key.lastIndexOf('|');
-                            let uCode = key.substring(0, sepIdx);
-                            let isSavings = (key.substring(sepIdx + 1) === 'savings');
-
-                            const { data: u } = await supabase.from('employees').select('balance, savings').eq('code', uCode).single();
-                            if (u) {
-                                let oldBal = parseFloat(u.balance || 0); let oldSav = parseFloat(u.savings || 0);
-                                let newBal = oldBal; let newSav = oldSav;
-                                if (isSavings) newSav -= net; else newBal -= net;
-                                await supabase.from('employees').update({ balance: newBal, savings: newSav }).eq('code', uCode);
-                                revertTxs.push({
-                                    user_code: uCode,
-                                    order_id: String(o.id),
-                                    amount: -net,
-                                    type: "گەڕانەوەی ئۆردەر",
-                                    description: `بڕین بەهۆی گەڕانەوەی ئۆردەری ${o.order_code}. هۆکار: ${reason}`,
-                                    created_by: userName,
-                                    wallet_type: isSavings ? "savings" : "balance",
-                                    old_balance: isSavings ? oldSav : oldBal,
-                                    new_balance: isSavings ? newSav : newBal
-                                });
-                            }
-                        }
-                        if (revertTxs.length > 0) await supabase.from('transactions').insert(revertTxs);
-                    }
+                    // ==========================================================
+                    // گەڕاندنەوەی قازانج بە یەک بانگی ئەتۆمی
+                    // ----------------------------------------------------------
+                    // کۆی پوختی هەر (بەکارهێنەر + جزدان) لە داتابەیس دەژمێردرێت
+                    // و باڵانسەکان لە هەمان ترانزاکشندا دەگۆڕدرێن، ژێر قوفڵێک
+                    // لەسەر ئەم ئۆردەرە. idempotent ـە: دوای گەڕاندنەوە کۆی
+                    // پوخت = 0، بۆیە دووبارە کلیک هیچ زیانێک ناگەیەنێت.
+                    //
+                    // پێشتر لە کڵاینت بوو: باڵانس دەخوێندرایەوە، لە JS
+                    // دەژمێردرا، پاشان دەنووسرایەوە — بۆیە دوو کلیکی خێرا
+                    // باڵانسیان یەک جار دەگۆڕی بەڵام دوو ڕیزەیان تۆمار دەکرد.
+                    // ==========================================================
+                    const { error: retErr } = await supabase.rpc('return_order_profit', {
+                        p_order_id: String(o.id),
+                        p_created_by: userName,
+                        p_description: `بڕین بەهۆی گەڕانەوەی ئۆردەری ${o.order_code}. هۆکار: ${reason}`
+                    });
+                    if (retErr) throw retErr;
                     await supabase.from('orders').update({ status: newStatus, return_reason: reason, status_changed_by: userName }).eq('id', orderId);
                     const backNote = walletBack > 0
                         ? ` ${Math.round(walletBack).toLocaleString()} د.ع گەڕایەوە جزدانی خاوەنەکەی.`
@@ -13301,7 +13295,7 @@
             const cutoff = Date.now() - PAYOUT_HOLD_DAYS * DAY_MS;
             const groups = {};              // کلیل: جزدان|ئۆردەر
             // fromOrders + bonus + cut == ready (هەمیشە)
-            const mk = () => ({ ready: 0, pending: 0, pendingN: 0, due: null, fromOrders: 0, bonus: 0, cut: 0 });
+            const mk = () => ({ ready: 0, pending: 0, pendingN: 0, due: null, fromOrders: 0, bonus: 0, cut: 0, fix: 0 });
             const out = { bal: mk(), sav: mk() };
 
             (txs || []).forEach(t => {
@@ -13317,6 +13311,12 @@
                 // جزدانەکە دەرچووە، بۆیە نابێت وەک پارەی «لە چاوەڕوانیدا»
                 // بژمێردرێت — ئەگەرنا «ئامادە» بەردەوام دەبێت لە پیشاندانی
                 // پارەیەک کە پێشتر خەرجکراوە و دەکرێت دووجار خەرج بکرێت
+                // ڕاستکردنەوەی مێژوو جیا کۆدەکرێتەوە. ئەم ڕیزەیە ڕیزەیەکی
+                // دووبارە/ونبوو پووچ دەکاتەوە کە زۆرجار خۆی لە «چاوەڕوانی»دایە،
+                // بۆیە نابێت یەکسەر بکەوێتە سەر «ئامادە» — ئەگەرنا ئامادە
+                // ساڵب دەبێت و بە هەڵە وەک «قەرز» دەردەکەوێت.
+                if (t.type === HISTORY_FIX_TYPE) { b.fix += amt; return; }
+
                 if (!t.order_id || isWalletPayTx(t)) {
                     if (amt >= 0) b.bonus += amt; else b.cut += amt;
                     return;
@@ -13342,6 +13342,19 @@
             // ئامادە دەکرێت ساڵب بێت و ئەمە بەئەنقەستە: ئەگەر سزا لە پارەی
             // ئامادە زیاتر بێت، قەرزەکە دەمێنێتەوە و خۆکارانە لە یەکەم
             // ئۆردەرەوە دەبڕدرێت کە خولی ١٠ ڕۆژەکەی تەواو دەبێت
+            // ڕاستکردنەوەکان سەرەتا لە «چاوەڕوانی» دەبڕدرێن — ئەو ڕیزە
+            // دووبارانە لەوێن کە پووچیان دەکەنەوە. تەنها ئەوەی چاوەڕوانی
+            // هەڵینەگرێت دەکەوێتە سەر «ئامادە» و دەبێتە قەرزی ڕاستەقینە.
+            [out.bal, out.sav].forEach(b => {
+                if (!b.fix) return;
+                const absorb = b.fix < 0
+                    ? -Math.min(-b.fix, Math.max(0, b.pending))
+                    : Math.min(b.fix, Math.max(0, -b.pending));
+                b.pending += absorb;
+                const rest = b.fix - absorb;
+                if (rest >= 0) b.bonus += rest; else b.cut += rest;
+            });
+
             out.bal.ready = (parseFloat(balance) || 0) - out.bal.pending;
             out.sav.ready = (parseFloat(savings) || 0) - out.sav.pending;
 
@@ -13567,7 +13580,7 @@
                 const d = Math.round(s[k].diff);
                 if (Math.abs(d) < 1) return;
                 rows.push({
-                    user_code: code, amount: d, type: "ڕاستکردنەوەی مێژوو",
+                    user_code: code, amount: d, type: HISTORY_FIX_TYPE,
                     description: `جیاوازی نێوان باڵانسی تۆمارکراو (${Math.round(s[k].actual).toLocaleString()}) و کۆی جووڵەکان (${Math.round(s[k].expected).toLocaleString()})`,
                     created_by: userName, wallet_type: wt,
                     old_balance: Math.round(s[k].expected), new_balance: Math.round(s[k].actual)
@@ -13673,9 +13686,17 @@
             const salBtn = document.getElementById('w-salary-btn');
             if (salBtn) { salBtn.disabled = true; salBtn.style.opacity = '0.5'; }
             try {
-                const u = allEditableUsers.find(x => x.code === code);
-                const txs = await fetchAllUserTx(code);
-                walletHoldCache[code] = splitWalletByHold(txs, u ? u.data.balance : 0, u ? u.data.savings : 0);
+                // باڵانس ڕاستەوخۆ لە داتابەیسەوە دەهێنرێت — نەک لە لیستی
+                // ناوەوەی allEditableUsers. ئەو لیستە لەوانەیە کۆن بێت (بۆ
+                // نموونە یەکسەر دوای زیادکردنی پارە)، و ئەوسا باڵانسی کۆن
+                // بەرامبەر جووڵەی نوێ بەراورد دەکرێت و «جیاوازی»یەکی درۆیین
+                // دەردەکەوێت کە بەڕێوەبەر بە هەڵە ڕاستی دەکاتەوە.
+                const [uRes, txs] = await Promise.all([
+                    supabase.from('employees').select('balance, savings').eq('code', code).single(),
+                    fetchAllUserTx(code)
+                ]);
+                const u = uRes && uRes.data;
+                walletHoldCache[code] = splitWalletByHold(txs, u ? u.balance : 0, u ? u.savings : 0);
                 // لەوانەیە بەکارهێنەر جزدانەکەی داخستبێت پێش گەڕانەوەی داتاکە
                 if (window.currentWalletCode === code) renderWalletHoldSplit(walletHoldCache[code]);
             } catch (e) {
@@ -14159,22 +14180,28 @@
 
             showToast("جێبەجێکردن...", "loading");
             try {
-                const { data: u } = await supabase.from('employees').select('balance').eq('code', userCode).single();
-                let currentBal = parseFloat(u.balance || 0); let finalAmount = amount; let newBal = currentBal; let typeText = "";
-                if (action === 'add') { newBal += finalAmount; typeText = "زیادکردنی دەستی"; }
-                if (action === 'deduct') { finalAmount = -finalAmount; newBal += finalAmount; typeText = "کەمکردنەوەی دەستی"; }
+                let finalAmount = amount; let typeText = "";
+                if (action === 'add') { typeText = "زیادکردنی دەستی"; }
+                if (action === 'deduct') { finalAmount = -finalAmount; typeText = "کەمکردنەوەی دەستی"; }
 
-                await supabase.from('employees').update({ balance: newBal }).eq('code', userCode);
-                await supabase.from('transactions').insert({
-                    user_code: userCode,
-                    amount: finalAmount,
-                    type: typeText,
-                    description: reason,
-                    created_by: userName,
-                    wallet_type: 'balance',
-                    old_balance: currentBal,
-                    new_balance: newBal
+                // باڵانس لە داتابەیسدا ژماردن دەکرێت (balance = balance + amount)
+                // نەک لە کڵاینت، بۆیە دوو داواکاری هاوکات یەکتری ون ناکەن.
+                const { error: waErr } = await supabase.rpc('wallet_apply', {
+                    p_rows: [{
+                        user_code: userCode,
+                        amount: finalAmount,
+                        wallet_type: 'balance',
+                        type: typeText,
+                        description: reason
+                    }],
+                    p_created_by: userName,
+                    p_lock_key: 'wallet:' + userCode
                 });
+                if (waErr) {
+                    console.error(waErr);
+                    showToast("کێشە لە داتابەیس هەیە!", "error");
+                    return;
+                }
 
                 showToast("جێبەجێ کرا!", "success");
                 delete walletTxCache[userCode]; // کاش پووچ بکەرەوە تا جاری داهاتوو داتای نوێ بهێنێت
@@ -15147,18 +15174,11 @@
             try {
                 // پاراستن: ئەگەر ئەم ئۆردەرە پێشتر پارەی بۆ دابەشکرابێت و نەگەڕابێتەوە (کۆی پوخت > 0)،
                 // ڕێگری لە دووبارە دابەشکردن دەکات تا پارە چەند جار زیاد نەکرێت.
-                const { data: existingTxsAll } = await supabase.from('transactions').select('amount, type').eq('order_id', String(o.id));
-                // پارەدانی جزدان لەم پشکنینەدا نایەتە ژماردن — ژمارەیەکی
-                // نێگەتیڤە و دەیشارێتەوە کە قازانجەکان پێشتر دابەشکراون
-                const existingTxs = (existingTxsAll || []).filter(t => !isWalletPayTx(t));
-                if (existingTxs && existingTxs.length > 0) {
-                    let existingNet = existingTxs.reduce((s, t) => s + parseFloat(t.amount || 0), 0);
-                    if (existingNet > 0.01) {
-                        showToast("ئەم ئۆردەرە پێشتر پارەی بۆ دابەشکراوە! بۆ دابەشکردنەوە، سەرەتا بیکە بە گەڕاوە.", "error");
-                        if (confirmBtn) { confirmBtn.disabled = false; confirmBtn.innerHTML = "<i class='bx bx-check-circle'></i> تەسدیقکردن و تۆمارکردن"; }
-                        return;
-                    }
-                }
+                // پشکنینی «پێشتر دابەشکراوە» ئیتر لێرە نییە — چووەتە ناو
+                // distribute_order_profit و ژێر قوفڵی ئۆردەرەکە ڕوودەدات.
+                // پێشتر لێرە بوو، بەڵام پێش ئەوەی یەکەم ڕیزە بنووسرێت
+                // دەیخوێندەوە، بۆیە دوو کلیکی خێرا هەردووکیان تێدەپەڕین
+                // و پارەکە دووجار تۆمار دەکرا.
 
                 // دووپاتکردنەوەی پارەی جزدان: ئۆردەرێکی گەڕاوە کە دووبارە
                 // دەکرێتە گەیشتوو، پارەی جزدانەکەی پێشتر گەڕێندراوەتەوە —
@@ -15176,13 +15196,17 @@
                 }
 
                 let txList = [];
-                let updateBalances = {};
 
+                // old_balance / new_balance لێرە دانانرێن — داتابەیس خۆی
+                // دایاندەنێت لە کاتی نوێکردنەوەی باڵانس، بۆیە هەمیشە
+                // ڕاستن تەنانەت لە کاتی داواکاری هاوکاتیشدا.
                 const addTx = (uCode, amount, type, desc, isSavings = false) => {
                     if (amount !== 0 && uCode) {
-                        txList.push({ user_code: uCode, order_id: String(o.id), amount: amount, type: type, description: desc });
-                        if (!updateBalances[uCode]) updateBalances[uCode] = { bal: 0, sav: 0 };
-                        if (isSavings) updateBalances[uCode].sav += amount; else updateBalances[uCode].bal += amount;
+                        txList.push({
+                            user_code: uCode, order_id: String(o.id), amount: amount,
+                            type: type, description: desc,
+                            wallet_type: isSavings ? 'savings' : 'balance'
+                        });
                     }
                 };
 
@@ -15206,39 +15230,31 @@
                     addTx(globalKingCode, kingP, "قازانجی ئۆردەر", `قازانجی پاشا لە ئۆردەری ${oCode}`);
                 }
 
-                // زیادکردنی پارەکان بۆ جزدانەکان لە Supabase
-                for (let code in updateBalances) {
-                    const { data: uData } = await supabase.from('employees').select('balance, savings').eq('code', code).single();
-                    if (uData) {
-                        let oldB = parseFloat(uData.balance || 0);
-                        let oldS = parseFloat(uData.savings || 0);
-                        let newB = oldB + updateBalances[code].bal;
-                        let newS = oldS + updateBalances[code].sav;
-                        await supabase.from('employees').update({ balance: newB, savings: newS }).eq('code', code);
-
-                        txList.forEach(tx => {
-                            if (tx.user_code === code) {
-                                tx.created_by = userName;
-                                if (tx.type === "پاشەکەوتی ئۆردەر") {
-                                    tx.wallet_type = 'savings';
-                                    tx.old_balance = oldS;
-                                    tx.new_balance = newS;
-                                } else {
-                                    tx.wallet_type = 'balance';
-                                    tx.old_balance = oldB;
-                                    tx.new_balance = newB;
-                                }
-                            }
-                        });
-                    }
-                }
-
-                // ناردنی جووڵە داراییەکان (Transactions)
+                // ==========================================================
+                // دابەشکردن بە یەک بانگی ئەتۆمی
+                // ----------------------------------------------------------
+                // پشکنینی «پێشتر دابەشکراوە»، نوێکردنەوەی باڵانسەکان و
+                // تۆمارکردنی جووڵەکان هەموویان لە ناو یەک ترانزاکشنی
+                // داتابەیس ڕوودەدەن، ژێر قوفڵێک لەسەر ئەم ئۆردەرە.
+                //
+                // پێشتر ئەمە سێ هەنگاوی جیاواز بوو لە کڵاینتەوە:
+                // خوێندنەوەی باڵانس ← ژماردن لە JS ← نووسینەوە. دوو
+                // داواکاری هاوکات هەمان باڵانسیان دەخوێندەوە و هەمان
+                // ئەنجامیان دەنووسی، بۆیە باڵانس یەک جار دەگۆڕا بەڵام
+                // دوو ڕیزە تۆمار دەکران — سەرچاوەی قەرزە درۆیینەکان.
+                // ==========================================================
                 if (txList.length > 0) {
-                    const { error: txErr } = await supabase.from('transactions').insert(txList);
-                    if (txErr) {
-                        console.error(txErr);
-                        showToast("کێشە لە داتابەیس هەیە!", "error");
+                    const { error: distErr } = await supabase.rpc('distribute_order_profit', {
+                        p_order_id: String(o.id),
+                        p_rows: txList,
+                        p_created_by: userName
+                    });
+                    if (distErr) {
+                        console.error(distErr);
+                        const already = String(distErr.message || '').includes('ALREADY_DISTRIBUTED');
+                        showToast(already
+                            ? "ئەم ئۆردەرە پێشتر پارەی بۆ دابەشکراوە! بۆ دابەشکردنەوە، سەرەتا بیکە بە گەڕاوە."
+                            : "کێشە لە داتابەیس هەیە!", "error");
                         if (confirmBtn) { confirmBtn.disabled = false; confirmBtn.innerHTML = "<i class='bx bx-check-circle'></i> تەسدیقکردن و تۆمارکردن"; }
                         return;
                     }
