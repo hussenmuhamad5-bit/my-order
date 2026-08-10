@@ -39,8 +39,18 @@
        tgbar  = بەرزی ڕیزی «✕ Close» و «⌄ ⋮» */
   --safe-top-status: max(var(--tg-viewport-safe-area-inset-top, 0px), var(--tg-js-safe-top, 0px));
   --safe-top-tgbar: max(var(--tg-viewport-content-safe-area-inset-top, 0px), var(--tg-js-content-top, 0px));
-  --safe-top: calc(var(--safe-top-status) + var(--safe-top-tgbar));
-  --safe-bottom: max(var(--tg-viewport-safe-area-inset-bottom, 0px), var(--tg-js-safe-bottom, 0px), env(safe-area-inset-bottom, 0px));
+
+  /* ⚠️ بنەڕەت سفرە — بۆتەکە بە دوو دۆخی جیاواز دەکرێتەوە:
+       • fullscreen  → ناوەڕۆک دەچێتە ژێر ڕووکاری تلیگرام، بۆشایی
+                       پێویستە. پۆلی `tg-fullscreen` دادەنرێت.
+       • دۆخی ئاسایی → تلیگرام سەربارێکی ڕەقی خۆی هەیە و ناوچەی
+                       وێبڤیو پێشتر لە ژێریەوە دەست پێدەکات، بۆیە
+                       هەر بۆشاییەکی زیادە باندێکی بەتاڵ دروست
+                       دەکات.
+     لە دۆخی ئاساییدا هێشتا Telegram ڕێبەرەکان بە نرخی ناسفر
+     دادەنێت، بۆیە ناکرێت پشت بەوان ببەسترێت — پۆلەکە بڕیاردەرە. */
+  --safe-top: 0px;
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
 
   /* ==========================================================
      سیستەمی قەبارە — بەپێی ستانداردی Telegram Mini Apps (Wallet / TON Space)
@@ -9845,6 +9855,15 @@ label.lbl-err {
    لە دۆخی ئاسایی --safe-top و --safe-bottom = 0px، بۆیە ئەم
    بەشە هیچ گۆڕانێک ناکات و ڕووکاری پێشوو دەپارێزێت.
    ============================================================ */
+
+/* --- بەهای ڕاستەقینەی ناوچەی سەلامەت — تەنها لە fullscreen ---
+   لە دۆخی ئاسایی ئەمانە سفر دەمێننەوە (بنەڕەتەکەیان لە :root)،
+   بۆیە هەموو ئەو ڕێسایانەی خوارەوە هیچ کاریگەرییەکیان نییە و
+   ڕووکارەکە دەقاودەق وەک پێش ئەم گۆڕانکارییانە دەبێت. */
+:root.tg-fullscreen {
+  --safe-top: calc(var(--safe-top-status) + var(--safe-top-tgbar));
+  --safe-bottom: max(var(--tg-viewport-safe-area-inset-bottom, 0px), var(--tg-js-safe-bottom, 0px), env(safe-area-inset-bottom, 0px));
+}
 
 /* --- سەرەوە: ژێر ستاتەس بار و دوگمەکانی تلیگرام ---
    بۆشاییەکە کەم ڕاگیراوە (2px) — دوگمەکانی تلیگرام پێشتر بە

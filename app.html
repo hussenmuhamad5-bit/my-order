@@ -65,15 +65,39 @@
                کاتێک دۆخەکە دەگۆڕێت — سووڕانەوەی شاشە، یان چوونە
                دەرەوەی fullscreen.
                ========================================================== */
+            /* ناونیشانی جزدان دوو شوێنی هەیە:
+                 fullscreen  → لە دەرەوەی `sh-collapse`، تاکو بچێتە
+                               ڕیزی دوگمەکانی تلیگرام و لەگەڵ سکڕۆڵدا
+                               بە `tg-title-off` بشاردرێتەوە.
+                 دۆخی ئاسایی → لە ناو `sh-collapse`، تاکو دەقاودەق
+                               لەگەڵ کارتەکاندا بچەمێتەوە — وەک
+                               پێش زیادکردنی دۆخی fullscreen. */
+            function placeWalletTitle(full) {
+                var t = document.querySelector('#wallet-screen .tg-title');
+                var col = document.getElementById('wallet-head-collapse');
+                var scr = document.getElementById('wallet-screen');
+                if (!t || !col || !scr) return;
+                if (full) {
+                    if (t.parentNode !== scr) scr.insertBefore(t, scr.firstChild);
+                } else {
+                    if (t.parentNode !== col) col.insertBefore(t, col.firstChild);
+                }
+            }
+
             function applySafeArea() {
                 var root = document.documentElement;
                 var s = tg.safeAreaInset || {};
                 var c = tg.contentSafeAreaInset || {};
+                var full = !!tg.isFullscreen;
                 root.style.setProperty('--tg-js-safe-top', (s.top || 0) + 'px');
                 root.style.setProperty('--tg-js-content-top', (c.top || 0) + 'px');
                 root.style.setProperty('--tg-js-safe-bottom', (s.bottom || 0) + 'px');
-                /* چەقێک بۆ ستایلی مەرجدار، ئەگەر داهاتوو پێویست بوو */
-                root.classList.toggle('tg-fullscreen', !!tg.isFullscreen);
+                /* ئەم پۆلە بڕیاردەرە: بەبێی هەموو بۆشاییەکانی ناوچەی
+                   سەلامەت سفر دەبن و ڕووکارەکە وەک دۆخی ئاسایی
+                   دەمێنێتەوە. لە دۆخی ئاساییدا تلیگرام هێشتا ڕێبەری
+                   ناسفر دادەنێت، بۆیە ناکرێت پشت بەوان ببەسترێت. */
+                root.classList.toggle('tg-fullscreen', full);
+                placeWalletTitle(full);
             }
 
             applySafeArea();
@@ -81,6 +105,11 @@
                 .forEach(function (ev) {
                     try { tg.onEvent(ev, applySafeArea); } catch (e) { }
                 });
+
+            /* ئەم سکریپتە لە <head>دایە — لەو ساتەدا هێشتا `body`
+               دروست نەبووە، بۆیە `placeWalletTitle` هیچ ناکات.
+               دووبارە بانگ دەکرێت کاتێک ماڵپەرەکە ئامادە دەبێت. */
+            document.addEventListener('DOMContentLoaded', applySafeArea);
         })();
     </script>
 </head>
@@ -15434,13 +15463,13 @@
                 <div class="dist-input-row">
                     <label><i class='bx bx-car'></i> نرخی گەیاندن (شۆفێر)</label>
                     <div class="dist-input-group">
-                        <button type="button" class="qty-btn plus-btn" onclick="adjustDistValue('dist-delivery', 1000)">
+                        <button type="button" class="qty-btn plus-btn" onclick="adjustDistValue('dist-delivery', 500)">
                             <svg class="qty-icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 18 18">
                                 <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 1v16M1 9h16"></path>
                             </svg>
                         </button>
-                        <input type="number" id="dist-delivery" value="${distData.deliveryCost}" oninput="calcKingProfit()" class="qty-input">
-                        <button type="button" class="qty-btn minus-btn" onclick="adjustDistValue('dist-delivery', -1000)">
+                        <input type="text" inputmode="numeric" id="dist-delivery" value="${distData.deliveryCost}" oninput="onDistInput('dist-delivery')" class="qty-input">
+                        <button type="button" class="qty-btn minus-btn" onclick="adjustDistValue('dist-delivery', -500)">
                             <svg class="qty-icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 18 18">
                                 <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M1 9h16"></path>
                             </svg>
@@ -15455,13 +15484,13 @@
                     ${distData.manager.bonus > 0
                         ? `<div class="dist-bonus-note">قازانجی دیاریکراو ${distData.manager.base.toLocaleString()} + پاداشتی بەڕێوەبەری تاک ${distData.manager.bonus.toLocaleString()} (${MANAGER_SOLO_BONUS.toLocaleString()} × ${distData.manager.itemsCount} دانە)</div>` : ''}
                     <div class="dist-input-group">
-                        <button type="button" class="qty-btn plus-btn" onclick="adjustDistValue('dist-manager', 1000)" ${!distData.manager.code ? 'disabled' : ''}>
+                        <button type="button" class="qty-btn plus-btn" onclick="adjustDistValue('dist-manager', 500)" ${!distData.manager.code ? 'disabled' : ''}>
                             <svg class="qty-icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 18 18">
                                 <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 1v16M1 9h16"></path>
                             </svg>
                         </button>
-                        <input type="number" id="dist-manager" value="${distData.manager.code ? distData.manager.profit : 0}" ${!distData.manager.code ? 'disabled' : ''} oninput="calcKingProfit()" class="qty-input">
-                        <button type="button" class="qty-btn minus-btn" onclick="adjustDistValue('dist-manager', -1000)" ${!distData.manager.code ? 'disabled' : ''}>
+                        <input type="text" inputmode="numeric" id="dist-manager" value="${distData.manager.code ? distData.manager.profit : 0}" ${!distData.manager.code ? 'disabled' : ''} oninput="onDistInput('dist-manager')" class="qty-input">
+                        <button type="button" class="qty-btn minus-btn" onclick="adjustDistValue('dist-manager', -500)" ${!distData.manager.code ? 'disabled' : ''}>
                             <svg class="qty-icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 18 18">
                                 <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M1 9h16"></path>
                             </svg>
@@ -15471,13 +15500,13 @@
                 <div class="dist-input-row" style="${showAdminStyle}">
                     <label><i class='bx bx-shield'></i> سەرپەرشت (${distData.admin.name})</label>
                     <div class="dist-input-group">
-                        <button type="button" class="qty-btn plus-btn" onclick="adjustDistValue('dist-admin', 1000)" ${!distData.admin.code ? 'disabled' : ''}>
+                        <button type="button" class="qty-btn plus-btn" onclick="adjustDistValue('dist-admin', 500)" ${!distData.admin.code ? 'disabled' : ''}>
                             <svg class="qty-icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 18 18">
                                 <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 1v16M1 9h16"></path>
                             </svg>
                         </button>
-                        <input type="number" id="dist-admin" value="${distData.admin.code ? distData.admin.profit : 0}" ${!distData.admin.code ? 'disabled' : ''} oninput="calcKingProfit()" class="qty-input">
-                        <button type="button" class="qty-btn minus-btn" onclick="adjustDistValue('dist-admin', -1000)" ${!distData.admin.code ? 'disabled' : ''}>
+                        <input type="text" inputmode="numeric" id="dist-admin" value="${distData.admin.code ? distData.admin.profit : 0}" ${!distData.admin.code ? 'disabled' : ''} oninput="onDistInput('dist-admin')" class="qty-input">
+                        <button type="button" class="qty-btn minus-btn" onclick="adjustDistValue('dist-admin', -500)" ${!distData.admin.code ? 'disabled' : ''}>
                             <svg class="qty-icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 18 18">
                                 <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M1 9h16"></path>
                             </svg>
@@ -15487,13 +15516,13 @@
                 <div class="dist-input-row" style="${showConsultantStyle}">
                     <label><i class='bx bx-glasses'></i> ڕاوێژکار (${distData.consultant.name})</label>
                     <div class="dist-input-group">
-                        <button type="button" class="qty-btn plus-btn" onclick="adjustDistValue('dist-consultant', 1000)" ${!distData.consultant.code ? 'disabled' : ''}>
+                        <button type="button" class="qty-btn plus-btn" onclick="adjustDistValue('dist-consultant', 500)" ${!distData.consultant.code ? 'disabled' : ''}>
                             <svg class="qty-icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 18 18">
                                 <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 1v16M1 9h16"></path>
                             </svg>
                         </button>
-                        <input type="number" id="dist-consultant" value="${distData.consultant.code ? distData.consultant.profit : 0}" ${!distData.consultant.code ? 'disabled' : ''} oninput="calcKingProfit()" class="qty-input">
-                        <button type="button" class="qty-btn minus-btn" onclick="adjustDistValue('dist-consultant', -1000)" ${!distData.consultant.code ? 'disabled' : ''}>
+                        <input type="text" inputmode="numeric" id="dist-consultant" value="${distData.consultant.code ? distData.consultant.profit : 0}" ${!distData.consultant.code ? 'disabled' : ''} oninput="onDistInput('dist-consultant')" class="qty-input">
+                        <button type="button" class="qty-btn minus-btn" onclick="adjustDistValue('dist-consultant', -500)" ${!distData.consultant.code ? 'disabled' : ''}>
                             <svg class="qty-icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 18 18">
                                 <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M1 9h16"></path>
                             </svg>
@@ -15503,13 +15532,13 @@
                 <div class="dist-input-row" style="background:#eff6ff; border-color:#bfdbfe; ${displayStyle}">
                     <label style="color:#1d4ed8; font-weight:bold;"><i class='bx bx-wallet'></i> قازانجی ${distData.member.role}</label>
                     <div class="dist-input-group" style="border-color: #93c5fd;">
-                        <button type="button" class="qty-btn plus-btn" onclick="adjustDistValue('dist-member', 1000)" style="border-left-color: #93c5fd;">
+                        <button type="button" class="qty-btn plus-btn" onclick="adjustDistValue('dist-member', 500)" style="border-left-color: #93c5fd;">
                             <svg class="qty-icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 18 18">
                                 <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 1v16M1 9h16"></path>
                             </svg>
                         </button>
-                        <input type="number" id="dist-member" value="${distData.memberProfit}" oninput="calcKingProfit()" class="qty-input">
-                        <button type="button" class="qty-btn minus-btn" onclick="adjustDistValue('dist-member', -1000)" style="border-right-color: #93c5fd;">
+                        <input type="text" inputmode="numeric" id="dist-member" value="${distData.memberProfit}" oninput="onDistInput('dist-member')" class="qty-input">
+                        <button type="button" class="qty-btn minus-btn" onclick="adjustDistValue('dist-member', -500)" style="border-right-color: #93c5fd;">
                             <svg class="qty-icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 18 18">
                                 <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M1 9h16"></path>
                             </svg>
@@ -15524,7 +15553,7 @@
                                 <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 1v16M1 9h16"></path>
                             </svg>
                         </button>
-                        <input type="number" id="dist-savings" value="${distData.savingsDefault}" oninput="calcKingProfit()" class="qty-input">
+                        <input type="text" inputmode="numeric" id="dist-savings" value="${distData.savingsDefault}" oninput="onDistInput('dist-savings')" class="qty-input">
                         <button type="button" class="qty-btn minus-btn" onclick="adjustDistValue('dist-savings', -500)" style="border-right-color: #6ee7b7;">
                             <svg class="qty-icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 18 18">
                                 <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M1 9h16"></path>
@@ -15539,15 +15568,73 @@
             } catch (e) { showToast("هەڵەیەک ڕوویدا لە هێنانی داتا", "error"); }
         }
 
+        // ============================================================
+        // خانەکانی دابەشکردنی قازانج — سنوور و ژمارەی چەند زمانی
+        // ------------------------------------------------------------
+        // سێ یاسا:
+        //   ١. کۆی دابەشکراو هەرگیز لە کۆی گشتی زیاتر نابێت — واتە
+        //      «ئەوەی دەمێنێتەوە (پاشا)» هەرگیز ساڵب نابێت.
+        //   ٢. هیچ خانەیەک ساڵب نابێت. دەکرێت ببێتە سفر، بەڵام کەمتر نا.
+        //   ٣. ژمارەی عەرەبی (٠-٩)، فارسی (۰-۹) و هیندی وەردەگیرێت،
+        //      وەک فۆرمی پڕکردنەوەی ئۆردەر. بۆیە خانەکان `type="text"`ـن
+        //      نەک `number` — خانەی `number` ئەو ژمارانە ڕەت دەکاتەوە.
+        // ============================================================
+        const DIST_IDS = ['dist-delivery', 'dist-manager', 'dist-admin',
+            'dist-consultant', 'dist-member', 'dist-savings'];
+
+        // خوێندنەوە لەگەڵ ڕێکخستنی ژمارەکان — هەمان لۆجیکی readMoneyInput
+        function distRead(id) {
+            const el = document.getElementById(id);
+            if (!el) return 0;
+            const raw = toEnglishDigits(el.value).replace(/,/g, '').replace(/\D/g, '');
+            return parseFloat(raw) || 0;
+        }
+
+        // زۆرترین بڕ کە دەکرێت بخرێتە ئەم خانەیەوە بەبێ ئەوەی
+        // «پاشا» ساڵب بێتەوە
+        function distMaxFor(id) {
+            let others = 0;
+            DIST_IDS.forEach(k => { if (k !== id) others += distRead(k); });
+            return Math.max(0, Math.round(distData.grandTotal || 0) - others);
+        }
+
+        let _distWarnT = 0;
+        function distWarnCap() {
+            if (Date.now() - _distWarnT < 2500) return;   // زۆر دووبارە نەبێتەوە
+            _distWarnT = Date.now();
+            showToast("ناتوانیت لە کۆی گشتی زیاتر دابەش بکەیت", "error");
+        }
+
+        // دوای هەر نووسینێک: ژمارەکە ڕێک دەخرێت و بۆ سنوور دەبڕدرێتەوە
+        function onDistInput(id) {
+            const el = document.getElementById(id);
+            if (!el) return;
+            let v = distRead(id);
+            const max = distMaxFor(id);
+            let capped = false;
+            if (v > max) { v = max; capped = true; }
+
+            // خانەی بەتاڵ وەک خۆی دەمێنێتەوە، تاکو بەکارهێنەر بتوانێت
+            // بیسڕێتەوە و لە نوێوە بنووسێت
+            const norm = (el.value === '' && v === 0) ? '' : String(v);
+            if (el.value !== norm) el.value = norm;
+
+            if (capped) distWarnCap();
+            calcKingProfit();
+        }
+
         function calcKingProfit() {
             let isAuthorized = can('distribute_profit');
-            let delivery = parseFloat(document.getElementById('dist-delivery').value || 0);
-            let manager = (isDistKingOrder || !isAuthorized || !distData.manager.code) ? 0 : parseFloat(document.getElementById('dist-manager').value || 0);
-            let admin = (isDistKingOrder || !isAuthorized || !distData.admin.code) ? 0 : parseFloat(document.getElementById('dist-admin').value || 0);
-            let consultant = (isDistKingOrder || !isAuthorized || !distData.consultant.code) ? 0 : parseFloat(document.getElementById('dist-consultant').value || 0);
-            let member = (isDistKingOrder || !isAuthorized) ? 0 : parseFloat(document.getElementById('dist-member').value || 0);
-            let savings = (isDistKingOrder || !isAuthorized) ? 0 : parseFloat(document.getElementById('dist-savings').value || 0);
-            let king = distData.grandTotal - (delivery + manager + admin + consultant + member + savings);
+            let delivery = distRead('dist-delivery');
+            let manager = (isDistKingOrder || !isAuthorized || !distData.manager.code) ? 0 : distRead('dist-manager');
+            let admin = (isDistKingOrder || !isAuthorized || !distData.admin.code) ? 0 : distRead('dist-admin');
+            let consultant = (isDistKingOrder || !isAuthorized || !distData.consultant.code) ? 0 : distRead('dist-consultant');
+            let member = (isDistKingOrder || !isAuthorized) ? 0 : distRead('dist-member');
+            let savings = (isDistKingOrder || !isAuthorized) ? 0 : distRead('dist-savings');
+            let king = Math.round((distData.grandTotal || 0) - (delivery + manager + admin + consultant + member + savings));
+            // بڕینەکە پێشتر لە `onDistInput` ڕوویداوە، بۆیە ئەمە
+            // تەنها پارێزەرێکی دواییە
+            if (king < 0) king = 0;
             document.getElementById('dist-king').innerText = king.toLocaleString() + " د.ع";
         }
 
@@ -15562,10 +15649,11 @@
                 if (mode === 'inc' && delta < 0) return;
                 if (mode === 'dec' && delta > 0) return;
             }
-            let val = parseFloat(input.value) || 0;
-            val += delta;
+            let val = distRead(inputId) + delta;
             if (val < 0) val = 0;
-            input.value = val;
+            const max = distMaxFor(inputId);
+            if (val > max) { val = max; distWarnCap(); }
+            input.value = String(val);
             calcKingProfit();
         }
 
@@ -15597,12 +15685,24 @@
             }
 
             let isAuthorized = canActOnOrder(distributingOrder, 'distribute');
-            let delivery = parseFloat(document.getElementById('dist-delivery').value || 0);
-            let managerP = (isDistKingOrder || !isAuthorized || !distData.manager.code) ? 0 : parseFloat(document.getElementById('dist-manager').value || 0);
-            let adminP = (isDistKingOrder || !isAuthorized || !distData.admin.code) ? 0 : parseFloat(document.getElementById('dist-admin').value || 0);
-            let consultantP = (isDistKingOrder || !isAuthorized || !distData.consultant.code) ? 0 : parseFloat(document.getElementById('dist-consultant').value || 0);
-            let memberP = (isDistKingOrder || !isAuthorized) ? 0 : parseFloat(document.getElementById('dist-member').value || 0);
-            let savingsP = (isDistKingOrder || !isAuthorized) ? 0 : parseFloat(document.getElementById('dist-savings').value || 0);
+            // `distRead` ژمارەی عەرەبی/فارسی ڕێک دەخات — خانەکان
+            // `type="text"`ـن، بۆیە `parseFloat`ی ڕووت پێویست نییە
+            let delivery = distRead('dist-delivery');
+            let managerP = (isDistKingOrder || !isAuthorized || !distData.manager.code) ? 0 : distRead('dist-manager');
+            let adminP = (isDistKingOrder || !isAuthorized || !distData.admin.code) ? 0 : distRead('dist-admin');
+            let consultantP = (isDistKingOrder || !isAuthorized || !distData.consultant.code) ? 0 : distRead('dist-consultant');
+            let memberP = (isDistKingOrder || !isAuthorized) ? 0 : distRead('dist-member');
+            let savingsP = (isDistKingOrder || !isAuthorized) ? 0 : distRead('dist-savings');
+
+            // پارێزەری کۆتایی — `onDistInput` پێشتر ڕێگری دەکات، بەڵام
+            // ئەگەر بە هەر ڕێگایەک کۆکە تێپەڕی، نابێت قازانجی پاشا
+            // ساڵب بێت و لە جزدانەکەی ببڕدرێت
+            const _distSum = delivery + managerP + adminP + consultantP + memberP + savingsP;
+            if (_distSum > Math.round(distData.grandTotal || 0) + 0.01) {
+                showToast("کۆی دابەشکراو لە کۆی گشتی زیاترە — بڕەکان ڕاست بکەرەوە", "error");
+                if (confirmBtn) { confirmBtn.disabled = false; confirmBtn.innerHTML = "<i class='bx bx-check-circle'></i> تەسدیقکردن و تۆمارکردن"; }
+                return;
+            }
 
             let o = distributingOrder;
             let oCode = o.order_code;
