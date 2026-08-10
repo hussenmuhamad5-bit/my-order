@@ -10112,3 +10112,308 @@ body {
     font-size: var(--fs-base);
   }
 }
+
+
+/* ============================================================
+   کۆمێنتەکانی ئۆردەر — چات لە ناو مۆداڵی وردەکاری
+   ------------------------------------------------------------
+   `.modal-content` پێشتر `display:flex; flex-direction:column;
+   overflow:hidden`ـە و `#modal-details-body` سکڕۆڵەرەکەیە، بۆیە
+   قاڵبەکە ئامادەیە: تابەکان و بۆکسی نووسین `flex-shrink:0`،
+   لیستی چاتەکە `flex:1` و خۆی سکڕۆڵ دەکات.
+   ============================================================ */
+
+/* ---- ناونیشانی مۆداڵ ---- */
+/* بچووکتر کرا تاکو شوێن بۆ ئایکۆنی چات بکرێتەوە */
+#order-details-modal .modal-title {
+  font-size: var(--fs-base);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ---- دوگمەی چات لە سەربارەکە ---- */
+.ocmt-toggle {
+  position: relative;
+}
+
+.ocmt-toggle.is-on {
+  background: rgba(36, 129, 204, .14);
+  color: var(--primary);
+}
+
+/* خاڵی سوور = کۆمێنتی نەخوێندراو */
+.ocmt-dot {
+  display: none;
+  position: absolute;
+  top: -2px;
+  inset-inline-end: -2px;
+  min-width: 15px;
+  height: 15px;
+  padding: 0 3px;
+  border-radius: 8px;
+  background: #ef4444;
+  border: 2px solid #fff;
+  color: #fff;
+  font-size: 9px;
+  font-weight: 800;
+  line-height: 11px;
+  text-align: center;
+  box-sizing: content-box;
+}
+
+.ocmt-dot.is-on {
+  display: block;
+}
+
+/* ---- قەبارەی یەکسان بۆ هەردوو پەڕەکە ----
+   بەبێ ئەمە مۆداڵەکە بەپێی ناوەڕۆک قەبارەی دەگۆڕی: زانیاری
+   قەبارەیەک، چات قەبارەیەکی تر. ئێستا هەردووکیان یەکسانن. */
+#order-details-modal .modal-content {
+  height: 85vh;
+}
+
+/* ---- پەڕەی چات ---- */
+#order-comments-pane {
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+}
+
+#order-comments-pane.is-on {
+  display: flex !important;
+}
+
+#order-comments-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  /* سکڕۆڵ ناچێتە سەر مۆداڵەکە — هەمان ئەوەی .order-log-box */
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  padding: 2px 2px 8px;
+}
+
+#order-comments-list::-webkit-scrollbar {
+  display: none;
+}
+
+/* ---- ڕیزی پەیام ---- */
+.ocmt-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+/* پەیامی خۆم دەچێتە لای چەپ — لە RTLـدا `row-reverse` ئەوە دەکات،
+   وەک تلیگرام و واتساپی عەرەبی/کوردی */
+.ocmt-row.is-mine {
+  flex-direction: row-reverse;
+}
+
+.ocmt-avatar {
+  flex-shrink: 0;
+}
+
+.ocmt-bubble {
+  max-width: 78%;
+  min-width: 0;
+  padding: 8px 11px 6px;
+  border-radius: 14px;
+  background: #fff;
+  border: 1px solid #e8edf3;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, .04);
+}
+
+/* گۆشەیەکی تیژ لەو لایەی نووسەرەکەی لێیەوەیە — نیشانەی «دەم» */
+.ocmt-row:not(.is-mine) .ocmt-bubble {
+  border-top-right-radius: 5px;
+}
+
+.ocmt-row.is-mine .ocmt-bubble {
+  border-top-left-radius: 5px;
+  background: rgba(36, 129, 204, .08);
+  border-color: rgba(36, 129, 204, .22);
+}
+
+/* پەیامی کاتی — هێشتا نەگەیشتووەتە سێرڤەر */
+.ocmt-row.is-pending .ocmt-bubble {
+  opacity: .6;
+}
+
+.ocmt-name {
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--primary);
+  margin-bottom: 2px;
+}
+
+.ocmt-role {
+  font-size: 9.5px;
+  font-weight: 700;
+  color: #94a3b8;
+  margin-inline-start: 5px;
+}
+
+.ocmt-body {
+  font-size: 13px;
+  line-height: 1.75;
+  color: var(--text-main);
+  word-break: break-word;
+  white-space: pre-line;
+}
+
+.ocmt-body.is-deleted {
+  color: #94a3b8;
+  font-style: italic;
+}
+
+.ocmt-foot {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 3px;
+  font-size: 9.5px;
+  color: #94a3b8;
+}
+
+.ocmt-edited {
+  font-style: italic;
+}
+
+/* دەستکاری و سڕینەوە — تەنها لەسەر پەیامی خۆت */
+.ocmt-act {
+  background: none;
+  border: none;
+  padding: 2px 3px;
+  font-size: 13px;
+  line-height: 1;
+  color: #94a3b8;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.ocmt-act:active {
+  color: var(--primary);
+}
+
+.ocmt-act.is-del:active {
+  color: #dc2626;
+}
+
+/* ---- جیاکەرەوەی ڕۆژ ---- */
+.ocmt-day {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 4px 0 12px;
+}
+
+.ocmt-day span {
+  background: #eef2f7;
+  color: #64748b;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 3px 12px;
+  border-radius: 20px;
+}
+
+/* ---- دۆخی بەتاڵ و بارکردن ---- */
+.ocmt-empty {
+  text-align: center;
+  padding: 40px 20px;
+  color: #94a3b8;
+}
+
+.ocmt-empty i {
+  font-size: 40px;
+  opacity: .45;
+}
+
+.ocmt-empty p {
+  margin: 8px 0 0;
+  font-size: var(--fs-md);
+}
+
+/* ---- بۆکسی نووسین ---- */
+.ocmt-composer {
+  flex-shrink: 0;
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  padding-top: 10px;
+  border-top: 1px solid #eef2f7;
+  /* لە fullscreenـدا هێڵی جەستی ماڵەوە لە خوارەوەیە */
+  padding-bottom: var(--safe-bottom);
+}
+
+.ocmt-composer textarea {
+  flex: 1;
+  min-width: 0;
+  min-height: 42px;
+  max-height: 120px;
+  padding: 11px 14px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #f8fafc;
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-main);
+  resize: none;
+  overflow-y: auto;
+  box-sizing: border-box;
+}
+
+.ocmt-composer textarea:focus {
+  outline: none;
+  border-color: rgba(36, 129, 204, .45);
+  background: #fff;
+}
+
+.ocmt-send {
+  flex-shrink: 0;
+  width: 42px;
+  height: 42px;
+  border: none;
+  border-radius: 12px;
+  background: var(--primary);
+  color: #fff;
+  font-size: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform .15s ease, opacity .15s ease;
+}
+
+.ocmt-send:active {
+  transform: scale(.92);
+}
+
+.ocmt-send:disabled {
+  opacity: .45;
+  cursor: default;
+}
+
+/* ---- نیشانەی کۆمێنت لەسەر کارتی ئۆردەر ---- */
+/* هەمان قاڵبی .print-stamp / .paid-stamp */
+.cmt-stamp {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 6px;
+  background: rgba(100, 116, 139, .12);
+  color: #64748b;
+}
+
+.cmt-stamp.has-unread {
+  background: rgba(239, 68, 68, .14);
+  color: #dc2626;
+}

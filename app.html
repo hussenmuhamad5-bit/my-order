@@ -1673,8 +1673,15 @@
         onclick="closeModal(event, 'order-details-modal')">
         <div class="modal-content" onclick="event.stopPropagation()">
             <div class="modal-header">
-                <h3 class="modal-title"><i class='bx bx-receipt'></i> زانیاری داواکاری</h3>
+                <h3 class="modal-title is-sm"><i class='bx bx-receipt'></i> زانیاری داواکاری</h3>
                 <div class="modal-head-actions">
+                    <!-- دەروازەی چات — پەنجەدانان لەنێوان «زانیاری» و
+                         «کۆمێنتەکان» دەگۆڕێت. خاڵی سوور = کۆمێنتی نەخوێندراو. -->
+                    <button class="modal-copy ocmt-toggle" id="ocmt-toggle" title="کۆمێنتەکان"
+                        onclick="switchOrderModalTab(_ocmtTab === 'comments' ? 'info' : 'comments')">
+                        <i class='bx bx-message-rounded-dots'></i>
+                        <span class="ocmt-dot" id="ocmt-tab-badge"></span>
+                    </button>
                     <button class="modal-copy" id="order-copy-btn" title="کۆپیکردنی زانیاری ئۆردەر"><i
                             class='bx bx-copy'></i></button>
                     <button class="modal-close" onclick="closeModal(null, 'order-details-modal')"><i
@@ -1682,6 +1689,17 @@
                 </div>
             </div>
             <div id="modal-details-body"></div>
+
+            <!-- پەڕەی چات — لیستێکی سکڕۆڵکەر + بۆکسی نووسینی چەسپاو لە خوارەوە -->
+            <div id="order-comments-pane" style="display:none;">
+                <div id="order-comments-list"></div>
+                <div class="ocmt-composer">
+                    <textarea id="ocmt-input" rows="1" placeholder="پەیامێک بنووسە..."
+                        oninput="ocmtGrow(this)" autocomplete="off"></textarea>
+                    <button type="button" class="ocmt-send" id="ocmt-send" title="ناردن"
+                        onclick="postOrderComment(this)"><i class='bx bx-send'></i></button>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -3067,6 +3085,10 @@
             // شەیپی تابەکان دوای هاتنی فۆنتەکان دووبارە دەپێورێت
             watchMagicSliders();
 
+            // ژمارەی کۆمێنتە نەخوێندراوەکان — پێش نەخشاندنی کارتەکان
+            // پێویستە، بۆیە چاوەڕێی دەکرێت
+            try { await refreshUnreadComments(); } catch (e) { }
+
             // پشکنینی دوورەپەڕ: هەموو ٦٠ چرکە دڵنیابوونەوە کە کلیلەکە هێشتا هەیە
             // (ئەگەر سڕایەوە → دەرچوونی خۆکار، تەنانەت ئەگەر بەکارهێنەر هیچ نەکات)
             // تابەکە شاراوەیە → پێویست ناکات داواکاری بنێردرێت. کاتێک
@@ -4065,6 +4087,9 @@
         function reviewOnOrderClosed() {
             const id = _reviewOpenId;
             _reviewOpenId = null;
+            // کۆمێنتێک نووسراوە → واتای «پێویستی بە سەرنجە»، نەک
+            // «پشکنرا». بۆیە نیشانکردنی خۆکار تێدەپەڕێنرێت.
+            if (_ocmtSkipAutoReview) { _ocmtSkipAutoReview = false; return; }
             if (!id || !reviewModeOn()) return;
             const o = allGlobalOrdersData[id];
             if (!o) return;
@@ -5187,6 +5212,7 @@
                         <div class="moc-meta">
                             ${printStampHtml(o)}
                             ${paidStampHtml(o)}
+                            ${commentStampHtml(o)}
                             <span class="moc-chip"><i class='bx bx-calendar'></i><span dir="ltr">${explicitDateOnly} · ${explicitTimeOnly}</span></span>
                             <span class="moc-chip"><i class='bx bx-map'></i>${city}</span>
                             <span class="moc-chip"><i class='bx bx-history'></i>${relativeTime}</span>
@@ -5619,6 +5645,7 @@
                     <div class="mocc-meta">
                         ${printStampHtml(o)}
                         ${paidStampHtml(o)}
+                        ${commentStampHtml(o)}
                         ${rvwFlag ? `<span class="rvw-chip is-flag"><i class='bx bx-flag'></i>کێشەی هەیە</span>` : ''}
                         ${rvwDone ? `<span class="rvw-chip"><i class='bx bx-check-double'></i>پشکنرا</span>` : ''}
                         <span class="mocc-chip"><i class='bx bx-calendar'></i><span dir="ltr">${dateTime}</span></span>
@@ -7401,6 +7428,11 @@
             if (copyBtn) copyBtn.onclick = (ev) => openCopyMenu(o.id, ev);
 
             document.getElementById('order-details-modal').classList.add('show');
+
+            // هەمیشە لەسەر «زانیاری» دەکرێتەوە
+            switchOrderModalTab('info');
+            syncCommentTabBadge();
+
             runOrderSteps();
 
             // تەنها ئەوەی لە بیرگەدا نەبوو بە داواکاری دەهێنرێت
@@ -7773,6 +7805,410 @@
             }
         }
 
+        // ============================================================
+        // کۆمێنتەکانی ئۆردەر — چات
+        // ------------------------------------------------------------
+        // هەمان قاڵبی `order_logs`ی سەرەوە: کاش لە بیرگە، سکێلێتۆن،
+        // ڕێندەرەر، بارکەری ئەسینک. جیاوازییەکە: لێرەدا دەنووسرێتەوە.
+        //
+        // مەودای دەسەڵات: هیچ دەسەڵاتێکی نوێ نییە — هەرکەسێک
+        // `canActOnOrder(o,'view')`ی بۆ ڕەوا بێت، دەیبینێت و دەنووسێت.
+        // ============================================================
+        let orderCommentsCache = {};        // orderId → ڕیزەکان
+        let unreadCommentMap = new Map();   // orderId → ژمارەی نەخوێندراو
+        let _ocmtTab = 'info';              // تابی چالاکی مۆداڵەکە
+        let _ocmtEditId = null;             // ئەو کۆمێنتەی دەستکاری دەکرێت
+        // ئەگەر کۆمێنتێک نووسرابێت، داخستنی مۆداڵەکە نابێت ئۆردەرەکە
+        // بە «پشکنراو» نیشان بکات (بڕوانە reviewOnOrderClosed)
+        let _ocmtSkipAutoReview = false;
+
+        const ORDER_COMMENTS_SKELETON = `
+            <div class="ocmt-row"><div class="olog-skel olog-dot"></div>
+                <div class="ocmt-bubble" style="width:60%"><div class="olog-skel olog-bar w40"></div>
+                <div class="olog-skel olog-bar w70" style="margin-top:6px"></div></div></div>
+            <div class="ocmt-row is-mine"><div class="olog-skel olog-dot"></div>
+                <div class="ocmt-bubble" style="width:45%"><div class="olog-skel olog-bar w30"></div>
+                <div class="olog-skel olog-bar w40" style="margin-top:6px"></div></div></div>`;
+
+        function ocmtGrow(el) {
+            el.style.height = '';
+            el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+        }
+
+        // واژووی ناوەڕۆک — بۆ زانینی ئەوەی ڕیزەیەک گۆڕاوە یان نا،
+        // بەبێ بەراوردکردنی HTMLـەکە
+        function ocmtSig(c) {
+            return [c.body || '', c.edited_at || '', c.deleted_at || ''].join('|');
+        }
+
+        function ocmtRowHtml(c) {
+            const mine = String(c.user_code) === String(currentUser.code);
+            const name = String(c.user_name || c.user_code || 'بێ ناو');
+            const del = !!c.deleted_at;
+
+            const body = del
+                ? `<div class="ocmt-body is-deleted"><i class='bx bx-block'></i> ئەم پەیامە سڕایەوە</div>`
+                : `<div class="ocmt-body">${histEsc(String(c.body || ''))}</div>`;
+
+            // دەستکاری و سڕینەوە تەنها بۆ پەیامی خۆت (یان پاشا)
+            const canEdit = !del && (mine || userRole === 'پاشا');
+            const acts = canEdit
+                ? `<button type="button" class="ocmt-act" title="دەستکاری"
+                       onclick="startEditComment(${c.id})"><i class='bx bx-pencil'></i></button>
+                   <button type="button" class="ocmt-act is-del" title="سڕینەوە"
+                       onclick="removeOrderComment(${c.id})"><i class='bx bx-trash'></i></button>`
+                : '';
+
+            return `<div class="ocmt-row ${mine ? 'is-mine' : ''}" data-cid="${c.id}"
+                    data-sig="${histEsc(ocmtSig(c))}" data-day="${histEsc(dayKeyOf(c.created_at))}">
+                <div class="ocmt-avatar">${avatarHtml(c.avatar, name, 28)}</div>
+                <div class="ocmt-bubble">
+                    ${mine ? '' : `<div class="ocmt-name">${histEsc(name)}${c.role ? `<span class="ocmt-role">${histEsc(String(c.role))}</span>` : ''}</div>`}
+                    ${body}
+                    <div class="ocmt-foot">
+                        <span>${histEsc(shortRelativeTime(c.created_at))}</span>
+                        ${c.edited_at && !del ? `<span class="ocmt-edited">دەستکاری کراوە</span>` : ''}
+                        ${acts}
+                    </div>
+                </div>
+            </div>`;
+        }
+
+        function orderCommentsHtml(rows) {
+            if (!rows || !rows.length) {
+                return `<div class="ocmt-empty"><i class='bx bx-message-rounded-dots'></i>
+                        <p>هێشتا هیچ کۆمێنتێک نییە</p></div>`;
+            }
+            // جیاکەرەوەی ڕۆژ — `dayKeyOf` + `formatDayLabel`ی هەبوو
+            // بەکاردێن (ئەمڕۆ / دوێنێ / بەروار). سەردێڕی
+            // `txDayDividerHtml` بەکارنایەت چونکە بۆ پارەیە.
+            let html = '', lastDay = null;
+            rows.forEach(c => {
+                const day = dayKeyOf(c.created_at);
+                if (day !== lastDay) {
+                    lastDay = day;
+                    const dl = formatDayLabel(day);
+                    // `data-day` بۆ ئەوەیە کە `ocmtSync` بزانێت ئایا
+                    // جیاکەرەوەی ئەم ڕۆژە پێشتر هەیە یان نا
+                    html += `<div class="ocmt-day" data-day="${histEsc(day)}"><span>${histEsc(dl.label)}</span></div>`;
+                }
+                html += ocmtRowHtml(c);
+            });
+            return html;
+        }
+
+        function ocmtScrollToEnd() {
+            const list = document.getElementById('order-comments-list');
+            if (list) list.scrollTop = list.scrollHeight;
+        }
+
+        // ============================================================
+        // نوێکردنەوەی چڕ — وەک چاتی ڕاستەقینە
+        // ------------------------------------------------------------
+        // پێشتر هەر جارێک `list.innerHTML` بە تەواوی دەنووسرایەوە،
+        // بۆیە هەموو پەیامەکان دەلەرزین و شوێنی سکڕۆڵ لەدەست دەچوو.
+        //
+        // ئێستا تەنها جیاوازییەکان دەست لێدەدرێن:
+        //   • پەیامی نوێ  → لە کۆتاییدا زیاد دەکرێت
+        //   • دەستکاری/سڕینەوە → تەنها ئەو یەک ڕیزەیە دەگۆڕدرێت
+        //   • سڕاو لە سێرڤەر  → ئەو ڕیزەیە لادەبرێت
+        // ئەوانەی نەگۆڕاون هەرگیز دەست لێ نادرێن.
+        // ============================================================
+        function ocmtSync(rows) {
+            const list = document.getElementById('order-comments-list');
+            if (!list) return;
+
+            rows = rows || [];
+            if (!rows.length) {
+                list.innerHTML = orderCommentsHtml(rows);
+                return;
+            }
+
+            // یەکەم نەخشاندن (یان دوای دۆخی بەتاڵ/سکێلێتۆن) → تەواو
+            if (!list.querySelector('.ocmt-row')) {
+                list.innerHTML = orderCommentsHtml(rows);
+                return;
+            }
+
+            const seen = new Set();
+            let lastDay = null;
+
+            rows.forEach(c => {
+                const cid = String(c.id);
+                const day = dayKeyOf(c.created_at);
+                seen.add(cid);
+
+                const el = list.querySelector('.ocmt-row[data-cid="' + cid + '"]');
+                if (el) {
+                    // هەیە → تەنها ئەگەر ناوەڕۆکەکەی گۆڕابێت
+                    if (el.getAttribute('data-sig') !== ocmtSig(c)) {
+                        el.outerHTML = ocmtRowHtml(c);
+                    }
+                } else {
+                    // نوێیە → لە کۆتاییدا زیاد دەکرێت
+                    if (day !== lastDay && !list.querySelector('.ocmt-day[data-day="' + day + '"]')) {
+                        const dl = formatDayLabel(day);
+                        list.insertAdjacentHTML('beforeend',
+                            `<div class="ocmt-day" data-day="${histEsc(day)}"><span>${histEsc(dl.label)}</span></div>`);
+                    }
+                    list.insertAdjacentHTML('beforeend', ocmtRowHtml(c));
+                }
+                lastDay = day;
+            });
+
+            // ئەوانەی لە سێرڤەر نەماون (بە تەواوی سڕاون)
+            list.querySelectorAll('.ocmt-row').forEach(el => {
+                const cid = el.getAttribute('data-cid');
+                if (cid !== 'pending' && !seen.has(cid)) el.remove();
+            });
+        }
+
+        // پەیامێکی کاتی — یەکسەر دەردەکەوێت پێش وەڵامی سێرڤەر،
+        // وەک مەسینجەر و تلیگرام
+        function ocmtAddPending(body) {
+            const list = document.getElementById('order-comments-list');
+            if (!list) return;
+            // ئەگەر لیستەکە بەتاڵ بێت، دۆخی «هیچ کۆمێنتێک نییە» لادەبرێت
+            const empty = list.querySelector('.ocmt-empty');
+            if (empty) list.innerHTML = '';
+            list.insertAdjacentHTML('beforeend',
+                `<div class="ocmt-row is-mine is-pending" data-cid="pending">
+                    <div class="ocmt-avatar">${avatarHtml(currentUser.avatar, userName, 28)}</div>
+                    <div class="ocmt-bubble">
+                        <div class="ocmt-body">${histEsc(body)}</div>
+                        <div class="ocmt-foot"><span><i class='bx bx-time-five'></i> دەنێردرێت…</span></div>
+                    </div>
+                </div>`);
+            ocmtScrollToEnd();
+        }
+
+        function ocmtRemovePending() {
+            const p = document.querySelector('#order-comments-list .ocmt-row.is-pending');
+            if (p) p.remove();
+        }
+
+        async function loadOrderComments(orderId, keepScroll) {
+            const list = document.getElementById('order-comments-list');
+            if (!list || !orderId) return;
+
+            const oid = String(orderId);
+            const cached = orderCommentsCache[oid];
+            if (cached) ocmtSync(cached);
+            else if (!list.querySelector('.ocmt-row')) list.innerHTML = ORDER_COMMENTS_SKELETON;
+
+            try {
+                const { data, error } = await supabase.rpc('order_comments_page', {
+                    p_order_id: oid, p_limit: 100, p_before_id: null
+                });
+                if (error) throw error;
+
+                orderCommentsCache[oid] = data || [];
+                // مۆداڵەکە لەوانەیە داخرابێت لەم ماوەیەدا
+                if (String(_reviewOpenId) !== oid) return;
+
+                // ئایا لە کۆتاییەوەین؟ ئەگەر بەڵێ، دوای زیادکردنی
+                // پەیامی نوێ خۆکارانە دەڕۆین بۆ خوارەوە — وەک چات.
+                // ئەگەر بەکارهێنەر سەرەوە دەخوێنێتەوە، دەست لێی نادرێت.
+                const atEnd = list.scrollHeight - list.scrollTop - list.clientHeight < 80;
+
+                ocmtSync(data);
+
+                if (!keepScroll || atEnd) ocmtScrollToEnd();
+            } catch (e) {
+                console.warn('loadOrderComments:', e);
+                if (!cached) {
+                    list.innerHTML = `<div class="ocmt-empty"><i class='bx bx-error-circle'></i>
+                        <p>نەتوانرا کۆمێنتەکان باربکرێن</p></div>`;
+                }
+            }
+        }
+
+        // ---- ناردن / دەستکاری / سڕینەوە ----
+        async function postOrderComment(btn) {
+            return guardSubmit('order-comment', btn, () => postOrderCommentImpl(btn));
+        }
+
+        async function postOrderCommentImpl() {
+            if (!await ensureAccountActive()) return;
+            const input = document.getElementById('ocmt-input');
+            const oid = _reviewOpenId;
+            const body = (input ? input.value : '').trim();
+            if (!oid || !body) return;
+
+            const o = allGlobalOrdersData[oid];
+            const editing = _ocmtEditId;
+
+            // ---- ڕووکار یەکسەر وەڵام دەداتەوە ----
+            // بۆکسەکە بەتاڵ دەکرێت و پەیامەکە دەردەکەوێت پێش ئەوەی
+            // سێرڤەر وەڵام بداتەوە — وەک مەسینجەر و تلیگرام.
+            input.value = '';
+            ocmtGrow(input);
+            if (!editing) ocmtAddPending(body);
+
+            try {
+                if (editing) {
+                    const { error } = await supabase.rpc('edit_order_comment', {
+                        p_id: editing, p_body: body, p_user_code: String(currentUser.code)
+                    });
+                    if (error) throw error;
+                    _ocmtEditId = null;
+                } else {
+                    const { error } = await supabase.rpc('post_order_comment', {
+                        p_order_id: String(oid),
+                        p_body: body,
+                        p_user_code: String(currentUser.code),
+                        p_user_name: userName || null,
+                        p_order_code: o ? (o.order_code || null) : null
+                    });
+                    if (error) throw error;
+                }
+
+                delete orderCommentsCache[String(oid)];
+                await loadOrderComments(oid);
+                // پەیامی کاتی دوای هاتنی ئەسڵییەکە لادەبرێت
+                ocmtRemovePending();
+                ocmtScrollToEnd();
+
+                // کۆمێنت واتای «پێویستی بە سەرنجە»، نەک «پشکنرا» — بۆیە
+                // داخستنی مۆداڵەکە دوای ئەمە خۆکارانە بە پشکنراو نیشانی
+                // ناکات. `_reviewOpenId` وەک خۆی دەمێنێتەوە، چونکە
+                // نوێکردنەوەی realtime پێویستی پێیەتی.
+                _ocmtSkipAutoReview = true;
+            } catch (e) {
+                console.error('postOrderComment:', e);
+                // نەنێردرا → پەیامە کاتییەکە لادەبرێت و دەقەکە
+                // دەگەڕێتەوە ناو بۆکسەکە، تاکو نەفەوتێت
+                ocmtRemovePending();
+                if (input && !input.value.trim()) {
+                    input.value = body;
+                    ocmtGrow(input);
+                }
+                if (editing) _ocmtEditId = editing;
+                showToast(String(e.message || '').includes('NOT_ALLOWED')
+                    ? "دەسەڵاتت نییە بۆ ئەم پەیامە" : "نەتوانرا پەیامەکە بنێردرێت", "error");
+            }
+        }
+
+        function startEditComment(cid) {
+            const oid = String(_reviewOpenId);
+            const row = (orderCommentsCache[oid] || []).find(c => String(c.id) === String(cid));
+            if (!row) return;
+            const input = document.getElementById('ocmt-input');
+            if (!input) return;
+            _ocmtEditId = cid;
+            input.value = String(row.body || '');
+            ocmtGrow(input);
+            input.focus();
+            showToast("دەستکاری — پاشان بینێرە", "info");
+        }
+
+        async function removeOrderComment(cid) {
+            if (!confirm('ئەم پەیامە بسڕدرێتەوە؟')) return;
+            const oid = String(_reviewOpenId);
+            try {
+                const { error } = await supabase.rpc('delete_order_comment', {
+                    p_id: cid, p_user_code: String(currentUser.code)
+                });
+                if (error) throw error;
+                delete orderCommentsCache[oid];
+                await loadOrderComments(oid, true);
+            } catch (e) {
+                console.error('removeOrderComment:', e);
+                showToast(String(e.message || '').includes('NOT_ALLOWED')
+                    ? "دەسەڵاتت نییە" : "نەتوانرا بسڕدرێتەوە", "error");
+            }
+        }
+
+        // ---- گۆڕین لەنێوان زانیاری و چات ----
+        // دەروازەکە ئایکۆنێکە لە سەربارەکە (#ocmt-toggle)، نەک تاب —
+        // بەمە شوێنی سەرەوە بەفیڕۆ ناچێت و هەردوو پەڕەکە هەمان
+        // قەبارەیان دەبێت.
+        function switchOrderModalTab(tab) {
+            _ocmtTab = tab;
+            const body = document.getElementById('modal-details-body');
+            const pane = document.getElementById('order-comments-pane');
+            const btn = document.getElementById('ocmt-toggle');
+            const title = document.querySelector('#order-details-modal .modal-title');
+
+            if (body) body.style.display = (tab === 'info') ? '' : 'none';
+            if (pane) pane.classList.toggle('is-on', tab === 'comments');
+            if (btn) {
+                btn.classList.toggle('is-on', tab === 'comments');
+                btn.title = (tab === 'comments') ? 'زانیاری ئۆردەر' : 'کۆمێنتەکان';
+                btn.querySelector('i').className = (tab === 'comments')
+                    ? 'bx bx-receipt' : 'bx bx-message-rounded-dots';
+            }
+            if (title) {
+                title.innerHTML = (tab === 'comments')
+                    ? `<i class='bx bx-message-rounded-dots'></i> کۆمێنتەکان`
+                    : `<i class='bx bx-receipt'></i> زانیاری داواکاری`;
+            }
+
+            if (tab === 'comments' && _reviewOpenId) {
+                loadOrderComments(_reviewOpenId);
+                markCommentsRead(_reviewOpenId);
+            }
+        }
+
+        // ---- نیشانەی نەخوێندراو ----
+        function unreadCommentsOf(orderId) {
+            return unreadCommentMap.get(String(orderId)) || 0;
+        }
+
+        // نیشانەیەکی بچووک لەسەر کارتی ئۆردەر — هەمان قاڵبی
+        // `printStampHtml` و `paidStampHtml`
+        function commentStampHtml(o) {
+            const n = Number(o && o.comment_count || 0);
+            if (!n) return '';
+            const un = unreadCommentsOf(o.id);
+            // ژمارەکە بە ئینگلیزی — وەک ژمارەکانی تری سەر کارتەکە
+            return `<span class="cmt-stamp ${un ? 'has-unread' : ''}" dir="ltr">
+                <i class='bx bx-message-rounded-dots'></i>${un || n}</span>`;
+        }
+
+        async function refreshUnreadComments() {
+            if (!currentUser || !currentUser.code) return;
+            try {
+                const { data, error } = await supabase.rpc('my_unread_comment_counts', {
+                    p_user_code: String(currentUser.code)
+                });
+                if (error) throw error;
+                unreadCommentMap = new Map((data || []).map(r => [String(r.order_id), Number(r.n) || 0]));
+            } catch (e) { console.warn('unreadComments:', e); }
+        }
+
+        async function markCommentsRead(orderId) {
+            const oid = String(orderId);
+            if (!unreadCommentMap.get(oid)) return;   // پێشتر خوێندراوەتەوە
+            unreadCommentMap.delete(oid);
+            syncCommentTabBadge();
+            try {
+                await supabase.rpc('mark_order_comments_read', {
+                    p_user_code: String(currentUser.code), p_order_id: oid
+                });
+                // کارتەکە بە تەنها نوێ دەکرێتەوە، بەبێ نەخشاندنەوەی لیستەکە
+                if (typeof refreshReviewCard === 'function') refreshReviewCard(oid);
+            } catch (e) { console.warn('markCommentsRead:', e); }
+        }
+
+        // خاڵێکی سوور لەسەر ئایکۆنی چات کاتێک کۆمێنتی نەخوێندراو هەیە
+        function syncCommentTabBadge() {
+            const b = document.getElementById('ocmt-tab-badge');
+            if (!b) return;
+            const n = unreadCommentsOf(_reviewOpenId);
+            b.textContent = n > 9 ? '9+' : (n ? String(n) : '');
+            b.classList.toggle('is-on', n > 0);
+        }
+
+        // ئایا مۆداڵەکە نابێت دووبارە بنەخشێنرێت؟
+        // چات کراوەیە یان دەقێکی نووسراو هەیە → `openOrderDetails`
+        // هەموو `innerHTML`ەکە دەسڕێتەوە و ئەو دەقە لەدەست دەچێت.
+        function ocmtBusy() {
+            if (_ocmtTab === 'comments') return true;
+            const ta = document.getElementById('ocmt-input');
+            return !!(ta && ta.value.trim());
+        }
+
         // کاشی زانیاری فرۆشیار — تەنها یەکجار بار دەکرێت بۆ هەر فرۆشیارێک
         let sellerInfoCache = {};
 
@@ -8030,6 +8466,10 @@
                         const m = document.getElementById('order-details-modal');
                         if (!m || !m.classList.contains('show')) return;
                         if (!_reviewOpenId || !ids.has(String(_reviewOpenId))) return;
+                        // چات کراوەیە یان دەقێک نووسراوە → دەست لێ نادرێت،
+                        // ئەگەرنا `openOrderDetails` هەموو مۆداڵەکە
+                        // دەسڕێتەوە و ئەو دەقە لەدەست دەچێت
+                        if (ocmtBusy()) return;
                         if (allGlobalOrdersData[_reviewOpenId]) openOrderDetails(_reviewOpenId);
                     }).catch(() => { });
                 }
@@ -8040,6 +8480,37 @@
                 walletTxCache = {};
                 walletHoldCache = {};
                 if (screen === 'wallet-screen') loadMyWalletData();
+            }
+
+            if (ents.has('order_comments')) {
+                ids.forEach(id => { delete orderCommentsCache[String(id)]; });
+
+                // ⚠️ بە هیچ شێوەیەک `openOrderDetails()` بانگ ناکرێت
+                //    (وەک لقی `orders`ی سەرەوە) — ئەوە `innerHTML`ی
+                //    هەموو مۆداڵەکە دەسڕێتەوە و ئەو دەقەی بەکارهێنەر
+                //    نووسیویەتی لەدەست دەچێت. تەنها لیستی چاتەکە.
+                //
+                // هەروەها بە شاشە سنووردار نەکراوە — مۆداڵەکە لەسەر
+                // هەر شاشەیەک دەکرێتەوە.
+                const m = document.getElementById('order-details-modal');
+                const open = m && m.classList.contains('show') && _reviewOpenId;
+
+                if (open && ids.has(String(_reviewOpenId))) {
+                    if (_ocmtTab === 'comments') {
+                        loadOrderComments(_reviewOpenId, true);
+                        markCommentsRead(_reviewOpenId);
+                    } else {
+                        // تابی زانیارییە → تەنها نیشانەکە نوێ دەکرێتەوە
+                        refreshUnreadComments().then(syncCommentTabBadge);
+                    }
+                } else {
+                    // مۆداڵەکە داخراوە → نیشانەکانی سەر کارتەکان
+                    refreshUnreadComments().then(() => {
+                        ids.forEach(id => {
+                            if (typeof refreshReviewCard === 'function') refreshReviewCard(String(id));
+                        });
+                    });
+                }
             }
         }
 
@@ -8055,7 +8526,10 @@
                         function (payload) {
                             const e = payload && payload.new;
                             if (!e || !e.entity) return;
-                            scheduleRealtimeRefresh(e.entity, e.entity === 'orders' ? e.entity_id : null);
+                            // کۆمێنتەکانیش ناسنامەی ئۆردەر دەنێرن —
+                            // تریگەرەکە لە db/012 وای لێکراوە
+                            const withId = (e.entity === 'orders' || e.entity === 'order_comments');
+                            scheduleRealtimeRefresh(e.entity, withId ? e.entity_id : null);
                         })
                     .subscribe(function (status) {
                         if (status !== 'SUBSCRIBED') return;
@@ -8066,6 +8540,7 @@
                         if (_rtSubscribedOnce) {
                             scheduleRealtimeRefresh('orders');
                             scheduleRealtimeRefresh('transactions');
+                            scheduleRealtimeRefresh('order_comments');
                         }
                         _rtSubscribedOnce = true;
                     });
@@ -8080,6 +8555,7 @@
             if (document.visibilityState !== 'visible' || !_rtChannel) return;
             scheduleRealtimeRefresh('orders');
             scheduleRealtimeRefresh('transactions');
+            scheduleRealtimeRefresh('order_comments');
         });
 
         // ============================================================
