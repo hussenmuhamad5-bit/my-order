@@ -9542,6 +9542,18 @@
                 state.zone.forEach(e => e.classList.toggle('sh-off', off));
                 if (state.bd) state.bd.classList.toggle('sh-off', off);
                 alts().forEach(e => e.classList.toggle('sh-on', off));
+
+                // ناونیشانی پەڕە (جزدانەکەم / ڕێکخستنەکان) لە دۆخی
+                // fullscreen بە `position: fixed` لە ڕیزی دوگمەکانی
+                // تلیگرامدایە، بۆیە ناکەوێتە ناو `state.zone` — ئەوە
+                // تەنها توخمە ڕەوتییەکان دەگرێتەوە.
+                //
+                // بەبێ ئەمە کاتی سکڕۆڵ کارتەکان دەڕۆن بەڵام
+                // نووسینەکە دەمێنێتەوە و تێکەڵی ئەو ناوەڕۆکە دەبێت
+                // کە بە ژێریدا تێدەپەڕێت.
+                const shScreen = scroller.closest('.screen');
+                const shTitle = shScreen && shScreen.querySelector('.tg-title');
+                if (shTitle) shTitle.classList.toggle('tg-title-off', off);
             }
 
             state.reset = function () {
