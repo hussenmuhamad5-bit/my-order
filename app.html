@@ -3064,6 +3064,9 @@
             // دوگمەی گەڕانەوەی تلیگرام + گەڕانەوەی مۆبایل
             navInit();
 
+            // شەیپی تابەکان دوای هاتنی فۆنتەکان دووبارە دەپێورێت
+            watchMagicSliders();
+
             // پشکنینی دوورەپەڕ: هەموو ٦٠ چرکە دڵنیابوونەوە کە کلیلەکە هێشتا هەیە
             // (ئەگەر سڕایەوە → دەرچوونی خۆکار، تەنانەت ئەگەر بەکارهێنەر هیچ نەکات)
             // تابەکە شاراوەیە → پێویست ناکات داواکاری بنێردرێت. کاتێک
@@ -4705,6 +4708,117 @@
         }
 
         // ============================================================
+        // بیرگەی سکڕۆڵ بۆ لیستی بەڕێوەبردن
+        // ------------------------------------------------------------
+        // هەموو دۆخەکان یەک توخمی سکڕۆڵ بەکاردێنن (#management-orders-list)،
+        // بۆیە گۆڕینی تاب شوێنی سکڕۆڵەکەی لەگەڵ خۆیدا دەبرد: لە
+        // «داواکارییەکانم» ٥٠٠px دەچوویتە خوارەوە، پاشان «ئۆردەری تیم»ـیش
+        // لە ٥٠٠px دەست پێدەکرد. هەروەها گەڕانەوە بۆ تابی پێشوو
+        // لە سەرەوە دەستی پێدەکردەوە.
+        //
+        // ئێستا هەر دۆخێک بیرگەی جیای خۆی هەیە. کلیلەکە هەموو ئەو
+        // شتانە لەخۆدەگرێت کە ناوەڕۆکی لیستەکە دەگۆڕن — تاب، بینینی
+        // ئەندامان، ئەندامی هەڵبژێردراو، فلتەری پلە، حاڵەت، بەروار و
+        // گەڕان. بۆیە گەڕانێکی نوێ لە سەرەوە دەست پێدەکات، بەڵام
+        // گەڕانەوە بۆ دۆخێکی پێشوو شوێنەکەی خۆی دەدۆزێتەوە.
+        // ============================================================
+        // ---- بیرگەی سکڕۆڵ بۆ شاشەکانی تر (داشبۆرد، جزدان، ئەدمین) ----
+        // لیستی بەڕێوەبردن لێرەدا نییە — بیرگەیەکی وردتری خۆی هەیە
+        // بەپێی تاب و فلتەر (بڕوانە `mgmtScrollKey`).
+        const _screenScrollMem = {};
+
+        function screenScrollerEl(screenId) {
+            if (!screenId || screenId === 'orders-management-screen') return null;
+            const id = (typeof scrollerForScreen === 'function') ? scrollerForScreen(screenId) : null;
+            return id ? document.getElementById(id) : null;
+        }
+
+        function screenScrollSave(screenId) {
+            const el = screenScrollerEl(screenId);
+            if (el) _screenScrollMem[screenId] = el.scrollTop;
+        }
+
+        function screenScrollRestore(screenId) {
+            const top = _screenScrollMem[screenId] || 0;
+            if (!top) return;
+            const put = () => {
+                const el = screenScrollerEl(screenId);
+                // تەنها ئەگەر لیستەکە هێشتا لە سەرەوەیە — ئەگەر
+                // بەکارهێنەر خۆی جوڵاندبێتی، دەستی لێ نادرێت
+                if (el && el.scrollTop === 0) el.scrollTop = top;
+            };
+            requestAnimationFrame(put);          // داتا لە کاشەوە
+            setTimeout(put, 300);                // داتا لە سێرڤەرەوە
+        }
+
+        const _mgmtScrollMem = new Map();
+        let _mgmtScrollBound = false;
+        // ⚠️ پێنجەرەیەکی کاتی بەکاردێت نەک ئاڵایەکی سادە کە بە
+        //    `requestAnimationFrame` پاک بکرێتەوە: کاتێک ئەپەکە
+        //    دەچێتە پشتەوە، وێبگەڕ فرەیم ناخوڵقێنێت و rAF هەرگیز
+        //    ناجووڵێت — ئەوسا پاراستنەکە هەمیشەیی دەبێت و بیرگەکە
+        //    بە تەواوی کار ناکات.
+        let _mgmtScrollRestoreAt = 0;
+        const MGMT_SCROLL_QUIET_MS = 150;
+
+        function mgmtScrollKey() {
+            const roleEl = document.querySelector('input[name="orders_role_filter"]:checked');
+            const p = (typeof mgmtPage !== 'undefined' && mgmtPage.params) ? mgmtPage.params : {};
+            return [
+                currentOrdersTab, teamViewMode, selectedTeamMember || '',
+                roleEl ? roleEl.value : '',
+                p.p_status || '', p.p_date_from || '', p.p_date_to || '', p.p_search || ''
+            ].join('|');
+        }
+
+        // تۆمارکردنی شوێنی ئێستا بۆ دۆخی ئێستا
+        function mgmtRememberScroll() {
+            const list = document.getElementById('management-orders-list');
+            if (!list) return;
+            // ئەو ڕووداوە سکڕۆڵەی خۆمان دروستی دەکەین تۆمار ناکرێت
+            if (Date.now() - _mgmtScrollRestoreAt < MGMT_SCROLL_QUIET_MS) return;
+            _mgmtScrollMem.set(mgmtScrollKey(), list.scrollTop);
+        }
+
+        function bindMgmtScrollMem() {
+            if (_mgmtScrollBound) return;
+            const list = document.getElementById('management-orders-list');
+            if (!list) return;
+            _mgmtScrollBound = true;
+            // بەردەوام تۆمار دەکرێت، بۆیە پێویست ناکات هەموو ئەو
+            // شوێنانە دەستکاری بکرێن کە فلتەر دەگۆڕن
+            list.addEventListener('scroll', mgmtRememberScroll, { passive: true });
+        }
+
+        function mgmtRestoreScroll() {
+            bindMgmtScrollMem();
+            const list = document.getElementById('management-orders-list');
+            if (!list) return;
+            const top = _mgmtScrollMem.get(mgmtScrollKey()) || 0;
+
+            // لیستەکە پەنجەرەییە (windowed) — پێویستە بەقەد ئەو شوێنە
+            // کارت بنەخشێنرێن پێش ئەوەی سکڕۆڵەکە دابنرێت
+            // تۆمارکردن بۆ ماوەیەکی کورت ڕادەگیرێت، ئەگەرنا ئەو
+            // ڕووداوە سکڕۆڵەی خۆمان دروستی دەکەین سفر لەسەر کلیلە
+            // نوێیەکە دەنووسێت پێش ئەوەی بگەڕێندرێتەوە
+            _mgmtScrollRestoreAt = Date.now();
+            if (top > 0) _mgmtRenderUntilScroll(list, top);
+            list.scrollTop = top;
+        }
+
+        // تاکە قولاپ: هەموو ڕێڕەوەکانی نەخشاندن بە `applyOrderFilters`
+        // کۆتاییان دێت — تاب، فلتەری پلە، گەڕان، ڕیزبەندی، هەمووی.
+        // بە پێچانەوەی، پێویست ناکات دەیان شوێن دەستکاری بکرێن.
+        {
+            const _applyOrderFiltersRaw = applyOrderFilters;
+            applyOrderFilters = function () {
+                const r = _applyOrderFiltersRaw.apply(this, arguments);
+                try { mgmtRestoreScroll(); } catch (e) { }
+                return r;
+            };
+        }
+
+        // ============================================================
         // نەخشێنەری پەنجەرەیی گشتی (windowed) — هەمان بیرۆکەی `_mgmt*`ـەکەی
         // لیستی ئۆردەری تیم، بەڵام گشتییە و بۆ هەر لیستێک بەکاردێت (پەڕەی
         // سەرەکی، لیستەکانی ئەدمین...). پێشتر ئەو لیستانە هەموو ~٢٤٣ کارتەکەیان
@@ -4852,6 +4966,11 @@
             // try/catch: `navStack` بە `const` پێناسەکراوە لە خوارەوەی
             // ئەم فەنکشنە، بۆیە ئەگەر ڕۆژێک پێش ئەو دێڕە بانگ بکرێت
             // ڕێزمانەکە هەڵ نەدات.
+            // شوێنی سکڕۆڵی شاشەی پێشوو تۆمار دەکرێت. شاشەی ناچالاک
+            // `display:none` دەبێت، و ئەوە `scrollTop` سفر دەکاتەوە —
+            // بۆیە دەبێت بە دەست بپارێزرێت.
+            try { screenScrollSave(activeScreenId()); } catch (e) { }
+
             try {
                 const _navPrev = activeScreenId();
                 if (screenId === 'dashboard-screen') {
@@ -4904,16 +5023,13 @@
             }
 
             if (screenId === 'admin-screen') {
-                let activeTab = document.querySelector('#admin-screen .magic-tab.active');
-                let slider = document.getElementById('admin-tab-slider');
-                if (activeTab && slider) {
-                    slider.style.transition = 'none';
-                    slider.style.width = activeTab.offsetWidth + 'px';
-                    slider.style.left = activeTab.offsetLeft + 'px';
-                    void slider.offsetWidth;
-                    slider.style.transition = '';
-                }
+                syncMagicSlider(document.getElementById('admin-magic-tabs'), false);
             }
+
+            // گەڕاندنەوەی شوێنی سکڕۆڵی ئەم شاشەیە. دوو هەوڵ دەدرێت:
+            // یەکێک دەستبەجێ (ئەگەر داتاکە لە کاشەوە هاتبێت) و یەکێکی
+            // تر دوای ٣٠٠ملی‌چرکە (ئەگەر لە سێرڤەرەوە هاتبێت).
+            try { screenScrollRestore(screenId); } catch (e) { }
 
             if (screenId === 'dashboard-screen' && !isDashboardDataLoaded) fetchOrders();
             if (screenId === 'orders-management-screen' && !isManagementDataLoaded) loadManagementOrders();
@@ -4938,16 +5054,8 @@
                     // دەبینی بەڵام لیستی شارە تۆمارکراوەکانی بەتاڵ بوو
                     if (can('manage_cities') && typeof renderAdminCities === "function") renderAdminCities();
 
-                    // Reposition admin slider once content is displayed
-                    let activeTab = document.querySelector('#admin-screen .magic-tab.active');
-                    let slider = document.getElementById('admin-tab-slider');
-                    if (activeTab && slider) {
-                        slider.style.transition = 'none';
-                        slider.style.width = activeTab.offsetWidth + 'px';
-                        slider.style.left = activeTab.offsetLeft + 'px';
-                        void slider.offsetWidth; // force reflow
-                        slider.style.transition = '';
-                    }
+                    // ئێستا کە ناوەڕۆکەکە دەرکەوت، شەیپەکە دەپێورێتەوە
+                    syncMagicSlider(document.getElementById('admin-magic-tabs'), false);
                 });
             }
         }
@@ -4964,6 +5072,63 @@
             }
         }
 
+        // ============================================================
+        // شەیپی پاشبنەمای تابەکان (.magic-slider)
+        // ------------------------------------------------------------
+        // کێشەی پێشوو: پانی تابە چالاکەکە بە `offsetWidth` دەپێورا،
+        // بەڵام لە یەکەم کردنەوەدا فۆنتی کوردی (Noto Kufi Arabic)
+        // هێشتا نەگەیشتبوو. بۆیە پانییەکە بە فۆنتی جێگرەوە دەپێورا،
+        // پاشان کاتێک فۆنتەکە دەهات تابەکە پان دەبووەوە — بەڵام
+        // شەیپەکە لە پانی کۆنی خۆی دەمایەوە و گلیچ دەردەکەوت.
+        // دوای گۆڕینی تاب ڕاست دەبووەوە، چونکە ئەوکات فۆنتەکە هاتبوو.
+        //
+        // ئێستا دوای هاتنی فۆنتەکان دووبارە دەپێورێت، و
+        // `ResizeObserver` هەر گۆڕانێکی قەبارە دەگرێت.
+        // ============================================================
+        function syncMagicSlider(wrap, animate) {
+            if (!wrap) return;
+            const active = wrap.querySelector('.magic-tab.active');
+            const slider = wrap.querySelector('.magic-slider');
+            if (!active || !slider) return;
+            // شاراوەیە → پێوانەکان هەموویان سفرن، دەست لێ نادرێت
+            if (!wrap.offsetParent && wrap.offsetWidth === 0) return;
+
+            if (!animate) slider.style.transition = 'none';
+            slider.style.width = active.offsetWidth + 'px';
+            slider.style.left = active.offsetLeft + 'px';
+            if (!animate) {
+                void slider.offsetWidth;      // ناچارکردنی وێبگەڕ بۆ جێبەجێکردنی یەکسەر
+                slider.style.transition = '';
+            }
+        }
+
+        function syncAllMagicSliders() {
+            document.querySelectorAll('.magic-tabs-wrapper')
+                .forEach(w => syncMagicSlider(w, false));
+        }
+
+        let _magicWatched = false;
+        function watchMagicSliders() {
+            if (_magicWatched) return;
+            _magicWatched = true;
+
+            // ١) دوای هاتنی فۆنتەکان — چارەسەری سەرەکی
+            try {
+                if (document.fonts && document.fonts.ready) {
+                    document.fonts.ready.then(syncAllMagicSliders);
+                }
+            } catch (e) { }
+
+            // ٢) هەر گۆڕانێکی قەبارە (دەرکەوتنی تاب، سووڕانەوەی شاشە)
+            if (typeof ResizeObserver === 'function') {
+                const ro = new ResizeObserver(syncAllMagicSliders);
+                document.querySelectorAll('.magic-tabs-wrapper .magic-tabs')
+                    .forEach(el => ro.observe(el));
+            }
+
+            window.addEventListener('resize', syncAllMagicSliders, { passive: true });
+        }
+
         // ١. چاککردنی تابی ئۆردەرەکان بۆ ئەوەی لەخۆیەوە ڕیفرێش نەبێت
         function switchOrdersTab(tabKey, clickedElement) {
             // ئەگەر پەنجە لە هەمان ئەو تابە بدرێت کە تیایدایە، هیچ ناکات و ڕیفرێش نابێت
@@ -4974,12 +5139,10 @@
             // تێبینی: کۆدی سڕینەوەی (selectedTeamMember = null) مان لابرد بۆ ئەوەی شوێنەکەت ون نەبێت
 
             let parent = clickedElement.parentElement;
-            let tabs = parent.querySelectorAll('.magic-tab');
-            let slider = parent.querySelector('.magic-slider');
-            tabs.forEach(tab => tab.classList.remove('active'));
+            parent.querySelectorAll('.magic-tab').forEach(tab => tab.classList.remove('active'));
             clickedElement.classList.add('active');
-            slider.style.width = clickedElement.offsetWidth + 'px';
-            slider.style.left = clickedElement.offsetLeft + 'px';
+            // بە ئەنیمەیشن — کلیکی بەکارهێنەرە
+            syncMagicSlider(parent.closest('.magic-tabs-wrapper') || parent, true);
 
             // تابی نوێ بە فلتەرە دەرکەوتووەکان دەست پێدەکات
             if (typeof resetAllScrollHide === 'function') resetAllScrollHide();
@@ -6118,20 +6281,11 @@
             if (myScope !== 'none') {
                 tabsWrap.style.display = 'flex';
 
-                // جێگیرکردنی شەیپەکە ڕاستەوخۆ پێش هێنانی داتاکان، وە بێ ئەنیمەیشن
-                setTimeout(() => {
-                    let activeTab = tabsWrap.querySelector('.magic-tab.active');
-                    let slider = tabsWrap.querySelector('.magic-slider');
-                    if (activeTab && slider) {
-                        slider.style.transition = 'none'; // ڕاگرتنی ئەنیمەیشن بۆ ئەوەی خلیسکێنە نەکات
-                        slider.style.width = activeTab.offsetWidth + 'px';
-                        slider.style.left = activeTab.offsetLeft + 'px';
-
-                        void slider.offsetWidth; // ناچارکردنی وێبگەڕەکە بۆ جێبەجێکردن یەکسەر
-
-                        slider.style.transition = ''; // گەڕاندنەوەی ئەنیمەیشن بۆ کاتی کلیککردنی دواتر
-                    }
-                }, 10);
+                // جێگیرکردنی شەیپەکە بێ ئەنیمەیشن. `syncMagicSlider`
+                // دوای هاتنی فۆنتەکانیش دووبارە دەپێوێت — بەبێ ئەوە،
+                // یەکەم کردنەوە بە فۆنتی جێگرەوە دەپێورا و شەیپەکە
+                // لە شوێنی هەڵەدا دەوەستا.
+                syncMagicSlider(tabsWrap, false);
             } else {
                 tabsWrap.style.display = 'none';
             }
@@ -11372,14 +11526,10 @@
 
         function switchAdminTab(tabName, clickedElement) {
             let parent = clickedElement.parentElement;
-            let tabs = parent.querySelectorAll('.magic-tab');
-            let slider = parent.querySelector('.magic-slider');
-
-            tabs.forEach(tab => tab.classList.remove('active'));
+            parent.querySelectorAll('.magic-tab').forEach(tab => tab.classList.remove('active'));
             clickedElement.classList.add('active');
-
-            slider.style.width = clickedElement.offsetWidth + 'px';
-            slider.style.left = clickedElement.offsetLeft + 'px';
+            // بە ئەنیمەیشن — کلیکی بەکارهێنەرە
+            syncMagicSlider(parent.closest('.magic-tabs-wrapper') || parent, true);
 
             document.getElementById('section-create-code').style.display = 'none';
             document.getElementById('section-edit-code').style.display = 'none';
@@ -11421,13 +11571,10 @@
         const adminTabObserver = new IntersectionObserver((entries) => {
             entries.forEach(entry => {
                 if (entry.isIntersecting) {
-                    let parent = entry.target;
-                    let activeTab = parent.querySelector('.magic-tab.active');
-                    let slider = parent.querySelector('.magic-slider');
-                    if (activeTab && slider) {
-                        slider.style.width = activeTab.offsetWidth + 'px';
-                        slider.style.left = activeTab.offsetLeft + 'px';
-                    }
+                    // هەمان فەنکشنی هاوبەش — تاکو ئەم ڕێڕەوەش
+                    // سوود لە پێوانەی دوای فۆنت وەربگرێت
+                    syncMagicSlider(entry.target.querySelector('.magic-tabs-wrapper')
+                        || entry.target, false);
                 }
             });
         });
