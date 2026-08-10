@@ -33,7 +33,13 @@
      لە دۆخی ئاسایی (نەک fullscreen) ڕووکارەکە هەروەک خۆی
      دەمێنێتەوە و هیچ بۆشاییەکی زیادە دروست نابێت.
      ========================================================== */
-  --safe-top: calc(max(var(--tg-viewport-safe-area-inset-top, 0px), var(--tg-js-safe-top, 0px)) + max(var(--tg-viewport-content-safe-area-inset-top, 0px), var(--tg-js-content-top, 0px)));
+  /* دوو بەشەکە جیا دەکرێنەوە — بۆ دانانی ناونیشانی پەڕە دەقاودەق
+     لە ڕیزی دوگمەکانی تلیگرام، پێویستمان بە هەریەکەیان بەتەنها هەیە:
+       status = بەرزی ستاتەس بار
+       tgbar  = بەرزی ڕیزی «✕ Close» و «⌄ ⋮» */
+  --safe-top-status: max(var(--tg-viewport-safe-area-inset-top, 0px), var(--tg-js-safe-top, 0px));
+  --safe-top-tgbar: max(var(--tg-viewport-content-safe-area-inset-top, 0px), var(--tg-js-content-top, 0px));
+  --safe-top: calc(var(--safe-top-status) + var(--safe-top-tgbar));
   --safe-bottom: max(var(--tg-viewport-safe-area-inset-bottom, 0px), var(--tg-js-safe-bottom, 0px), env(safe-area-inset-bottom, 0px));
 
   /* ==========================================================
@@ -9820,21 +9826,69 @@ label.lbl-err {
    بەشە هیچ گۆڕانێک ناکات و ڕووکاری پێشوو دەپارێزێت.
    ============================================================ */
 
-/* --- سەرەوە: ژێر ستاتەس بار و دوگمەکانی تلیگرام --- */
+/* --- سەرەوە: ژێر ستاتەس بار و دوگمەکانی تلیگرام ---
+   بۆشاییەکە کەم ڕاگیراوە (2px) — دوگمەکانی تلیگرام پێشتر بە
+   --safe-top خۆیان لێدەکرێتەوە، بۆیە پێویست ناکات بۆشاییەکی
+   زیادە هەبێت لە ژێریان. */
 body {
-  padding-top: calc(14px + var(--safe-top));
+  padding-top: calc(2px + var(--safe-top));
 }
 
 #dashboard-screen.active,
 #wallet-screen.active,
 #orders-management-screen.active,
 #admin-screen.active {
-  padding-top: calc(20px + var(--safe-top));
+  padding-top: calc(2px + var(--safe-top));
 }
 
 #order-screen.active,
 #settings-screen.active {
-  top: calc(20px + var(--safe-top));
+  top: calc(2px + var(--safe-top));
+}
+
+/* --- ناونیشانی پەڕە لە ناو ڕیزی دوگمەکانی تلیگرام ---
+   لە دۆخی fullscreen ئەو بۆشاییە بەتاڵەی نێوان «✕ Close» و
+   «⌄ ⋮» بەفیڕۆ دەچێت. ناونیشانی پەڕە دەخرێتە ناوی، و ناوەڕۆکی
+   پەڕەکە بەرەو سەرەوە دێت.
+
+   تەنها کاتێک کاردەکات کە `tg-fullscreen` لەسەر <html> دانرابێت
+   (لە app.html دادەنرێت). لە دۆخی ئاسایی وەک h2ـێکی ئاسایی
+   دەمێنێتەوە و هیچ ناگۆڕێت. */
+/* ڕووکاری ئاسایی (نەک fullscreen) — وەک پێشوو دەمێنێتەوە.
+   ئەم ستایلانە پێشتر inline بوون لەسەر h2ـەکە، بەڵام inline
+   بەسەر پۆلەکەدا زاڵ دەبوو، بۆیە هێنرانە ئێرە. */
+.wallet-title {
+  text-align: center;
+  margin-bottom: 12px;
+  font-size: 20px;
+}
+
+:root.tg-fullscreen .tg-title {
+  position: fixed;
+  top: var(--safe-top-status);
+  height: var(--safe-top-tgbar);
+  /* 96px لای هەردوولا — پانی دوگمەکانی تلیگرام */
+  left: 96px;
+  right: 96px;
+  margin: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: var(--fs-lg);
+  line-height: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  /* دوگمەکانی تلیگرام لەسەرەوەن — کلیک لێرە نەگیرێت */
+  pointer-events: none;
+}
+
+/* ناونیشانەکە لە ڕەوتی پەڕەکە دەرچووە، بۆیە ئەو بۆشاییەی
+   ژێری پێویست نییە */
+:root.tg-fullscreen .tg-title + * {
+  margin-top: 0;
 }
 
 /* --- توخمە مەلەوەرەکانی سەرەوە --- */
@@ -9860,9 +9914,12 @@ body {
   max-height: min(92vh, calc(100vh - var(--safe-top) - 12px));
 }
 
-/* --- خوارەوە: ژێر هێڵی جەستی ماڵەوە --- */
+/* --- خوارەوە: ژێر هێڵی جەستی ماڵەوە ---
+   پێشتر ناڤەکە 50px لەسەر هێڵی جەست بوو، واتە ٧٤px بۆشایی لە
+   خوارەوە. ئێستا 8px ـە — تەنها ئەوەندەی پێویستە. FAB بە هەمان
+   ڕێژە هێنراوەتە خوارەوە تاکو بۆشایی نێوانیان (40px) نەگۆڕێت. */
 #bottom-nav {
-  bottom: calc(50px + var(--safe-bottom));
+  bottom: calc(8px + var(--safe-bottom));
 }
 
 .bottom-nav {
@@ -9870,11 +9927,11 @@ body {
 }
 
 .fab {
-  bottom: calc(6rem + var(--safe-bottom));
+  bottom: calc(54px + var(--safe-bottom));
 }
 
 .fab-wrapper {
-  bottom: calc(150px + var(--safe-bottom));
+  bottom: calc(108px + var(--safe-bottom));
 }
 
 /* --- شاشە تەسکەکان: بۆشایی سەرەوە کەم دەکرێتەوە تاکو
@@ -9888,11 +9945,19 @@ body {
   #wallet-screen.active,
   #orders-management-screen.active,
   #admin-screen.active {
-    padding-top: calc(14px + var(--safe-top));
+    padding-top: calc(2px + var(--safe-top));
   }
 
   #order-screen.active,
   #settings-screen.active {
-    top: calc(14px + var(--safe-top));
+    top: calc(2px + var(--safe-top));
+  }
+
+  /* شاشەی تەسک — دوگمەکانی تلیگرام ڕێژەیی گەورەتر دەردەکەون،
+     بۆیە بۆشایی لای ناونیشانەکە کەمتر دەکرێتەوە */
+  :root.tg-fullscreen .tg-title {
+    left: 88px;
+    right: 88px;
+    font-size: var(--fs-base);
   }
 }

@@ -1191,9 +1191,9 @@
     </div>
 
     <div id="settings-screen" class="screen">
-        <h2><i class='bx bx-cog'></i> ڕێکخستنەکان</h2>
+        <h2 class="tg-title"><i class='bx bx-cog'></i> ڕێکخستنەکان</h2>
         <div
-            style="background:#fff; padding:20px; border-radius:12px; text-align:center; margin-top:20px; box-shadow: 0 2px 10px rgba(0,0,0,0.05);">
+            style="background:#fff; padding:20px; border-radius:12px; text-align:center; box-shadow: 0 2px 10px rgba(0,0,0,0.05);">
             <div style="position:relative; width:82px; height:82px; margin:0 auto 10px auto; cursor:pointer;"
                 onclick="openAvatarEditor()" title="گۆڕینی وێنەی پرۆفایل">
                 <div id="settings-avatar"></div>
@@ -1835,9 +1835,11 @@
     </div>
 
     <div id="wallet-screen" class="screen">
+        <!-- ناونیشانەکە لە دەرەوەی sh-collapse دانراوە: لە دۆخی
+             fullscreen دەچێتە ناو ڕیزی دوگمەکانی تلیگرام و نابێت
+             لەگەڵ کارتەکاندا بچەمێتەوە کاتی سکڕۆڵ -->
+        <h2 class="tg-title wallet-title"><i class='bx bx-wallet'></i> جزدانەکەم</h2>
         <div id="wallet-head-collapse" class="sh-collapse">
-            <h2 style="text-align: center; margin-bottom: 12px; font-size: 20px;"><i class='bx bx-wallet'></i> جزدانەکەم
-            </h2>
             <div class="wallet-card">
                 <h3>کۆی باڵانس</h3>
                 <h1 id="my-wallet-balance">0 د.ع</h1>
@@ -2982,6 +2984,10 @@
             try { if (typeof setupSmartSearch === 'function') setupSmartSearch(); } catch (e) { }
 
             switchScreen('dashboard-screen');
+
+            // نوێبوونەوەی ڕاستەوخۆ — دوای بارکردنی داشبۆرد بانگ دەکرێت،
+            // تاکو یەکەم پەیوەستبوون نەبێتە هۆی بارکردنێکی دووبارە
+            subscribeRealtime();
 
             // پشکنینی دوورەپەڕ: هەموو ٦٠ چرکە دڵنیابوونەوە کە کلیلەکە هێشتا هەیە
             // (ئەگەر سڕایەوە → دەرچوونی خۆکار، تەنانەت ئەگەر بەکارهێنەر هیچ نەکات)
@@ -7696,7 +7702,125 @@
                 if (mgmtActive && saved > 0) _mgmtRenderUntilScroll(el2, saved);
                 el2.scrollTop = saved;
             });
+            return Promise.resolve(p);
         }
+
+        // ============================================================
+        // نوێبوونەوەی ڕاستەوخۆ (Realtime)
+        // ------------------------------------------------------------
+        // گوێ لە خشتەی `realtime_events` دەگرین — خشتەیەکی سووک کە
+        // تریگەرەکانی داتابەیس پڕی دەکەنەوە کاتێک `orders` یان
+        // `transactions` دەگۆڕێن.
+        //
+        // ئاگادارکردنەوەکە هیچ داتایەکی ئۆردەری تێدا نییە، تەنها
+        // دەڵێت «شتێک گۆڕا». پاشان ئەم کڵاینتە بە داواکاری
+        // سنوورداری خۆی داتاکە دەهێنێتەوە — بۆیە هیچ ئەندامێک
+        // داتایەک وەرناگرێت کە دەسەڵاتی بینینی نییە. ئەگەر
+        // `orders` ڕاستەوخۆ لە Realtimeدا بووایە، ڕیزەی تەواو
+        // (ناو، تەلەفۆن، ناونیشانی کڕیار) بۆ هەموو کڵاینتێک
+        // دەنێردرا، چونکە RLS کوژاوەتەوە.
+        //
+        // ئەگەر db/008 جێبەجێ نەکرابێت، ئەم بەشە بێدەنگ هیچ ناکات
+        // و ئەپەکە وەک پێشوو کاردەکات.
+        // ============================================================
+        let _rtChannel = null;
+        let _rtTimer = null;
+        let _rtPending = new Set();
+        let _rtChangedOrders = new Set();
+        let _rtSubscribedOnce = false;
+
+        // دابەشکردنی قازانج بە تەنها ٥-٦ جووڵە دروست دەکات، و
+        // گۆڕینی حاڵەت چەندین ئاگادارکردنەوە. کۆیان دەکەینەوە و
+        // یەک جار نوێ دەکەینەوە، نەک شەش جار.
+        const RT_DEBOUNCE_MS = 400;
+
+        function scheduleRealtimeRefresh(entity, orderId) {
+            if (entity) _rtPending.add(entity);
+            if (orderId) _rtChangedOrders.add(String(orderId));
+            clearTimeout(_rtTimer);
+            _rtTimer = setTimeout(applyRealtimeRefresh, RT_DEBOUNCE_MS);
+        }
+
+        function applyRealtimeRefresh() {
+            const ents = _rtPending;
+            const ids = _rtChangedOrders;
+            _rtPending = new Set();
+            _rtChangedOrders = new Set();
+            if (!ents.size) return;
+
+            const screen = activeScreenId();
+
+            if (ents.has('orders')) {
+                invalidateMgmtCache();
+                // هەردوو لیستەکە بە کۆن دادەنرێن — ئەوەی چالاکە
+                // یەکسەر نوێ دەبێتەوە، ئەوی تر لە سەردانی داهاتوودا
+                isDashboardDataLoaded = false;
+                isManagementDataLoaded = false;
+
+                // تەنها ئەگەر لیستێک بەردەست بێت. لەسەر شاشەی فۆرمی
+                // ئۆردەر هیچ ناکەین — نابێت ئەوەی بەکارهێنەر
+                // نووسیویەتی بشێوێنین.
+                if (screen === 'orders-management-screen' || screen === 'dashboard-screen') {
+                    const done = refreshOrdersKeepScroll();
+
+                    // ئەگەر وردەکاری ئۆردەرێک کراوەیە و هەر ئەو
+                    // ئۆردەرە گۆڕاوە، مۆدالەکەش نوێ دەکەینەوە —
+                    // ئەگەرنا بەڕێوەبەر داتای کۆن دەبینێت
+                    Promise.resolve(done).then(() => {
+                        const m = document.getElementById('order-details-modal');
+                        if (!m || !m.classList.contains('show')) return;
+                        if (!_reviewOpenId || !ids.has(String(_reviewOpenId))) return;
+                        if (allGlobalOrdersData[_reviewOpenId]) openOrderDetails(_reviewOpenId);
+                    }).catch(() => { });
+                }
+            }
+
+            if (ents.has('transactions')) {
+                isWalletDataLoaded = false;
+                walletTxCache = {};
+                walletHoldCache = {};
+                if (screen === 'wallet-screen') loadMyWalletData();
+            }
+        }
+
+        function subscribeRealtime() {
+            if (_rtChannel) return;                        // یەک جار بەسە
+            if (!supabase || typeof supabase.channel !== 'function') return;
+
+            try {
+                _rtChannel = supabase
+                    .channel('app-changes')
+                    .on('postgres_changes',
+                        { event: 'INSERT', schema: 'public', table: 'realtime_events' },
+                        function (payload) {
+                            const e = payload && payload.new;
+                            if (!e || !e.entity) return;
+                            scheduleRealtimeRefresh(e.entity, e.entity === 'orders' ? e.entity_id : null);
+                        })
+                    .subscribe(function (status) {
+                        if (status !== 'SUBSCRIBED') return;
+                        // یەکەم پەیوەستبوون: داتاکە تازە بارکراوە،
+                        // پێویست ناکات دووبارە بهێنرێت. بەڵام دوای
+                        // پچڕان و پەیوەستبوونەوە لەوانەیە
+                        // ئاگادارکردنەوەکان لەدەست چووبن.
+                        if (_rtSubscribedOnce) {
+                            scheduleRealtimeRefresh('orders');
+                            scheduleRealtimeRefresh('transactions');
+                        }
+                        _rtSubscribedOnce = true;
+                    });
+            } catch (e) {
+                console.error('realtime:', e);
+            }
+        }
+
+        // گەڕانەوە بۆ ئەپەکە دوای ئەوەی لە پشتەوە بووە — لەو ماوەیەدا
+        // لەوانەیە پەیوەندییەکە پچڕابێت و ئاگادارکردنەوە لەدەست چووبێت
+        document.addEventListener('visibilitychange', function () {
+            if (document.visibilityState !== 'visible' || !_rtChannel) return;
+            scheduleRealtimeRefresh('orders');
+            scheduleRealtimeRefresh('transactions');
+        });
 
         // ============================================================
         // کردارەکانی قوفڵی پرێنت — نیشانەکردن، سکان، شکاندنی قوفڵ
