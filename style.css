@@ -9905,6 +9905,79 @@ body {
   top: calc(2px + var(--safe-top));
 }
 
+/* ============================================================
+   وێنەی پرۆفایل لەسەر پەڕەی سەرەکی — دەروازەی ڕێکخستنەکان
+   ------------------------------------------------------------
+   «ڕێکخستنەکان» لە ناڤی خوارەوە لابرا و کرایە وێنەیەکی بازنەیی
+   لە سەرەوە، وەک ئەپە بانکی و کڕینەکان.
+
+   دوو شوێنی هەیە:
+     دۆخی ئاسایی → لە ڕیزی سەری داشبۆرد، تەنیشت «ئامارەکانی من»
+     fullscreen  → دەچێتە ناو ئەو بۆشاییە بەتاڵەی نێوان
+                   «✕ Close» و «⌄ ⋮» — ئەو ناوچەیە بەفیڕۆ دەچوو
+   ============================================================ */
+.dash-head-start {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.dash-avatar {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  border-radius: 50%;
+  flex-shrink: 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* حەلقەیەکی دوو چینی نەرم: سپی لە ناوەوە، شینی کاڵ لە دەرەوە */
+  box-shadow:
+    0 0 0 2px #fff,
+    0 0 0 3.5px rgba(36, 129, 204, .32),
+    0 2px 8px rgba(15, 23, 42, .12);
+  transition: transform .18s ease, box-shadow .18s ease;
+}
+
+.dash-avatar:active {
+  transform: scale(.92);
+  box-shadow:
+    0 0 0 2px #fff,
+    0 0 0 3.5px rgba(36, 129, 204, .55),
+    0 1px 4px rgba(15, 23, 42, .16);
+}
+
+/* fullscreen: دەچێتە ناوەڕاستی ڕیزی دوگمەکانی تلیگرام */
+:root.tg-fullscreen .dash-avatar {
+  position: fixed;
+  top: var(--safe-top-status);
+  height: var(--safe-top-tgbar);
+  left: 50%;
+  transform: translateX(-50%);
+  width: 36px;
+  /* بەرزی ڕیزەکە زیاترە لە وێنەکە، بۆیە بە فلێکس ناوەڕاست دەکرێت
+     و پاشخانەکە دەسڕدرێتەوە تاکو تەنها بازنەکە دەربکەوێت */
+  background: none;
+  box-shadow: none;
+  z-index: 60;
+}
+
+/* حەلقەکە دەچێتە سەر خودی بازنەکە، نەک دوگمە درێژەکە */
+:root.tg-fullscreen .dash-avatar>div {
+  box-shadow:
+    0 0 0 2px rgba(255, 255, 255, .9),
+    0 0 0 3.5px rgba(36, 129, 204, .32),
+    0 2px 8px rgba(15, 23, 42, .18);
+}
+
+:root.tg-fullscreen .dash-avatar:active {
+  transform: translateX(-50%) scale(.92);
+}
+
 /* --- ناونیشانی پەڕە لە ناو ڕیزی دوگمەکانی تلیگرام ---
    لە دۆخی fullscreen ئەو بۆشاییە بەتاڵەی نێوان «✕ Close» و
    «⌄ ⋮» بەفیڕۆ دەچێت. ناونیشانی پەڕە دەخرێتە ناوی، و ناوەڕۆکی

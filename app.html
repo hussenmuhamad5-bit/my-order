@@ -120,7 +120,16 @@
 
         <div class="dashboard-header" id="dash-head"
             style="display: flex; justify-content: space-between; align-items: center;">
-            <span>ئامارەکانی من</span>
+            <div class="dash-head-start">
+                <!-- وێنەی پرۆفایل = دەروازەی ڕێکخستنەکان.
+                     لە دۆخی ئاسایی لێرە دەمێنێتەوە؛ لە fullscreenدا
+                     دەچێتە ناو ئەو بۆشاییە بەتاڵەی نێوان دوگمەکانی
+                     تلیگرام (بڕوانە .dash-avatar لە style.css). -->
+                <button type="button" id="dash-avatar" class="dash-avatar"
+                    onclick="switchScreen('settings-screen')" title="پرۆفایل و ڕێکخستنەکان"
+                    aria-label="پرۆفایل و ڕێکخستنەکان"></button>
+                <span>ئامارەکانی من</span>
+            </div>
             <button type="button" onclick="triggerOrderScan()" class="dash-scan-btn" title="سکانی بارکۆد / QR">
                 <i class='bx bx-qr-scan' style="font-size: 18px;"></i>
                 <span>سکانی ئۆردەر</span>
@@ -1442,10 +1451,8 @@
             <button class="nav-item" id="nav-admin" style="display:none;" onclick="switchScreen('admin-screen', this)">
                 <i class='bx bx-shield-quarter'></i>
             </button>
-
-            <button class="nav-item" id="nav-settings" onclick="switchScreen('settings-screen', this)">
-                <i class='bx bx-user'></i>
-            </button>
+            <!-- «ڕێکخستنەکان» لێرە لابرا — ئێستا بە وێنەی پرۆفایل لە
+                 سەری پەڕەی سەرەکییەوە دەکرێتەوە (#dash-avatar) -->
         </div>
     </div>
 
@@ -3394,10 +3401,15 @@
             }
         }
 
-        // نوێکردنەوەی وێنەی پرۆفایلی خۆم لە ڕێکخستنەکان
+        // نوێکردنەوەی وێنەی پرۆفایلی خۆم — لە ڕێکخستنەکان و لەسەر
+        // پەڕەی سەرەکی (دوگمەکەی سەرەوە کە ڕێکخستنەکان دەکاتەوە)
         function applyOwnAvatar() {
+            if (!currentUser) return;
             let el = document.getElementById('settings-avatar');
-            if (el && currentUser) el.innerHTML = avatarHtml(currentUser.avatar, userName, 82);
+            if (el) el.innerHTML = avatarHtml(currentUser.avatar, userName, 82);
+
+            let dash = document.getElementById('dash-avatar');
+            if (dash) dash.innerHTML = avatarHtml(currentUser.avatar, userName, 36);
         }
 
         // ============================================================
@@ -6185,8 +6197,9 @@
             'dashboard-screen': 'nav-dashboard',
             'orders-management-screen': 'nav-orders-management',
             'wallet-screen': 'nav-wallet',
-            'admin-screen': 'nav-admin',
-            'settings-screen': 'nav-settings'
+            'admin-screen': 'nav-admin'
+            // ڕێکخستنەکان ئیتر لە ناڤی خوارەوەدا نییە — بە وێنەی
+            // پرۆفایلەوە دەکرێتەوە، بۆیە هیچ دوگمەیەکی ناڤی نییە
         };
 
         const SCREEN_SCROLLER = {
