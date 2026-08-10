@@ -1182,6 +1182,20 @@
                         <button type="button" class="trash-chip refresh" onclick="loadTrash(true)" title="نوێکردنەوە"><i
                                 class='bx bx-refresh'></i></button>
                     </div>
+                    <div class="search-row" style="margin-top: 10px;">
+                        <div class="search-group" style="flex: 1; margin: 0;">
+                            <input class="search-input" type="search" id="search-trash-input"
+                                placeholder="گەڕان بە کۆدی ئۆردەر، ناو، مۆبایل یان کۆدی کلیل..."
+                                oninput="debouncedTrashSearch()" autocomplete="off" />
+                            <svg viewBox="0 0 24 24" aria-hidden="true" class="search-icon">
+                                <g>
+                                    <path
+                                        d="M21.53 20.47l-3.66-3.66C19.195 15.24 20 13.214 20 11c0-4.97-4.03-9-9-9s-9 4.03-9 9 4.03 9 9 9c2.215 0 4.24-.804 5.808-2.13l3.66 3.66c.147.146.34.22.53.22s.385-.073.53-.22c.295-.293.295-.767.002-1.06zM3.5 11c0-4.135 3.365-7.5 7.5-7.5s7.5 3.365 7.5 7.5-3.365 7.5-7.5 7.5-7.5-3.365-7.5-7.5z">
+                                    </path>
+                                </g>
+                            </svg>
+                        </div>
+                    </div>
                 </div>
                 <div class="container" id="trash-container">
                     <div id="trash-list"></div>
@@ -14551,10 +14565,26 @@
         }
 
         function setTrashFilter(kind, el) {
+            if (trashFilter === kind) return;
             trashFilter = kind;
             document.querySelectorAll('#trash-filters .trash-chip').forEach(c => c.classList.remove('active'));
             if (el) el.classList.add('active');
-            renderTrash();
+            // فلتەرکردن لە سێرڤەرەوەیە — بۆیە دەبێت پەڕەکە لە سەرەوە
+            // دەست پێبکاتەوە، نەک تەنها ئەوەی بارکراوە فلتەر بکرێت
+            loadTrash(true);
+        }
+
+        // گەڕان بە دواخستن — نەک لەسەر هەر پیتێک داواکارییەک بنێردرێت
+        let _trashSearchT = 0;
+        function debouncedTrashSearch() {
+            clearTimeout(_trashSearchT);
+            _trashSearchT = setTimeout(() => {
+                const el = document.getElementById('search-trash-input');
+                const v = ((el && el.value) || '').trim();
+                if (v === trashSearch) return;
+                trashSearch = v;
+                loadTrash(true);
+            }, 320);
         }
 
         // ئەنیمەیشنی لۆدینگ — هەمان ئەوەی بەشی جزدان/بەڕێوەبردن
@@ -14568,9 +14598,30 @@
                 </svg>
             </div>`;
 
-        // یەکجار بار دەکرێت — دوای ئەوە لە کاشەوە دەردەکەوێت.
-        // تەنها دوای گەڕاندنەوە/سڕینەوە یان بە داواکاری ڕوون نوێ دەکرێتەوە.
+        // ============================================================
+        // تەنەکەی خۆڵ — بارکردنی پەڕە-بە-پەڕە لە سێرڤەرەوە
+        // ------------------------------------------------------------
+        // پێشتر هەموو ڕیزەکان بە یەک داواکاری دەهێنران بە `limit(300)`
+        // لەگەڵ `payload`ـی تەواو. دوو کێشەی هەبوو:
+        //
+        //   ١. داتا لەدەست دەچوو — تەنها ٣٠٠ی یەکەم. بە ١٢,٠٠٠
+        //      ڕیزەوە، زۆربەی شتەکان هەرگیز نەدەبینران.
+        //   ٢. قورس بوو — `payload` بۆ هەر ڕیزێک دەهێنرا (jsonbـی
+        //      تەواوی ئۆردەرەکە)، بەڵام تەنها لە مۆدالی وردەکاریدا
+        //      بەکاردەهات.
+        //
+        // ئێستا `trash_page` تەنها دەقی سووک دەگەڕێنێتەوە (ناونیشان،
+        // کۆد، بڕ) و پەڕە-بە-پەڕە دێت بە سکڕۆڵ. گەڕان و فلتەریش
+        // لە سێرڤەرەوەن، بۆیە هەموو ١٢,٠٠٠ەکە دەگەڕێن نەک تەنها
+        // ئەوەی بارکراوە.
+        // ============================================================
+        const TRASH_PAGE = 60;
         let trashLoaded = false;
+        let trashSearch = '';
+        let trashOffset = 0;
+        let trashHasMore = true;
+        let trashLoading = false;
+        let _trashPurged = false;      // purge تەنها یەک جار لە هەر دانیشتنێک
 
         async function loadTrash(force) {
             const box = document.getElementById('trash-list');
@@ -14580,92 +14631,157 @@
                 return;
             }
 
-            // پێشتر بارکراوە → دەستبەجێ پیشان بدە بەبێ لۆدینگ
-            if (trashLoaded && !force) {
-                renderTrash();
-                return;
-            }
+            // پێشتر بارکراوە و داواکاری نوێکردنەوە نەکراوە → وەک خۆی
+            if (trashLoaded && !force) return;
 
+            trashLoading = true;
+            trashOffset = 0;
+            trashHasMore = true;
+            trashCache = [];
             box.innerHTML = TRASH_SPINNER;
-            try {
-                // پاککردنەوەی ئەوانەی ٣٠ ڕۆژیان بەسەرچووە — هەر جارێک دەکرێتەوە
-                try { await supabase.rpc('purge_expired_trash'); } catch (e) { console.warn('purge:', e); }
 
-                // payload ـیش دەهێنرێت تا زانیاری تەواو پیشان بدرێت بەبێ داواکارییەکی تر
-                const { data, error } = await supabase.from('trash')
-                    .select('id, source_table, record_id, label, payload, deleted_by, deleted_by_name, deleted_at, expires_at')
-                    .order('deleted_at', { ascending: false })
-                    .limit(300);
-                if (error) throw error;
-                trashCache = data || [];
+            try {
+                // پاککردنەوەی بەسەرچووەکان — تەنها یەک جار، نەک لە هەر گەڕانێکدا
+                if (!_trashPurged) {
+                    _trashPurged = true;
+                    try { await supabase.rpc('purge_expired_trash'); } catch (e) { console.warn('purge:', e); }
+                }
+
+                const rows = await trashFetchPage(0);
+                trashCache = rows;
+                trashOffset = rows.length;
+                trashHasMore = rows.length >= TRASH_PAGE;
                 trashLoaded = true;
+
                 renderTrash();
+                refreshTrashCounts();
+                bindTrashScroll();
             } catch (e) {
                 console.error('loadTrash:', e);
                 box.innerHTML = `<div class="trash-empty"><i class='bx bx-error-circle'></i>
                     <p>نەتوانرا تەنەکەی خۆڵ باربکرێت</p>
                     <button type="button" class="trash-retry" onclick="loadTrash(true)"><i class='bx bx-refresh'></i> هەوڵدانەوە</button>
                 </div>`;
+            } finally {
+                trashLoading = false;
             }
+        }
+
+        async function trashFetchPage(offset) {
+            const { data, error } = await supabase.rpc('trash_page', {
+                p_kind: trashFilter === 'all' ? null : trashFilter,
+                p_search: trashSearch || null,
+                p_limit: TRASH_PAGE,
+                p_offset: offset
+            });
+            if (error) throw error;
+            return data || [];
+        }
+
+        // پەڕەی داهاتوو — کاتێک بەکارهێنەر نزیک کۆتایی لیستەکە دەبێتەوە
+        async function loadMoreTrash() {
+            if (trashLoading || !trashHasMore) return;
+            trashLoading = true;
+
+            const box = document.getElementById('trash-list');
+            const more = document.createElement('div');
+            more.className = 'trash-more';
+            more.innerHTML = `<i class='bx bx-loader-alt bx-spin'></i>`;
+            if (box) box.appendChild(more);
+
+            try {
+                const rows = await trashFetchPage(trashOffset);
+                trashOffset += rows.length;
+                trashHasMore = rows.length >= TRASH_PAGE;
+                trashCache = trashCache.concat(rows);
+                more.remove();
+                if (box && rows.length) box.insertAdjacentHTML('beforeend', rows.map(trashCardHtml).join(''));
+            } catch (e) {
+                console.error('loadMoreTrash:', e);
+                more.innerHTML = `<button type="button" class="trash-retry" onclick="loadMoreTrash()"><i class='bx bx-refresh'></i> هەوڵدانەوە</button>`;
+            } finally {
+                trashLoading = false;
+            }
+        }
+
+        let _trashScrollBound = false;
+        function bindTrashScroll() {
+            if (_trashScrollBound) return;
+            const sc = document.getElementById('trash-container');
+            if (!sc) return;
+            _trashScrollBound = true;
+            sc.addEventListener('scroll', () => {
+                if (sc.scrollTop + sc.clientHeight >= sc.scrollHeight - 400) loadMoreTrash();
+            }, { passive: true });
+        }
+
+        // ژمارەی هەر جۆرێک لەسەر چیپەکان — بەپێی گەڕانی ئێستا
+        async function refreshTrashCounts() {
+            try {
+                const { data, error } = await supabase.rpc('trash_counts', { p_search: trashSearch || null });
+                if (error) throw error;
+                const map = {};
+                (data || []).forEach(r => { map[r.kind] = r.n; });
+                document.querySelectorAll('#trash-filters .trash-chip[data-trash-filter]').forEach(c => {
+                    const k = c.getAttribute('data-trash-filter');
+                    const n = map[k] || 0;
+                    let base = c.getAttribute('data-label');
+                    if (!base) { base = c.textContent.trim(); c.setAttribute('data-label', base); }
+                    c.textContent = n ? `${base} ${toArabicDigits(n)}` : base;
+                });
+            } catch (e) { console.warn('trashCounts:', e); }
+        }
+
+        // ناونیشان و کۆد لە سێرڤەرەوە دێن (trash_page)، بۆیە لێرەدا
+        // payload پێویست نییە — تەنها لە مۆدالی وردەکاریدا دەهێنرێت
+        function trashCardHtml(r) {
+            const meta = TRASH_META[r.source_table] || { icon: 'bx-file', color: '#64748b', label: r.source_table };
+            const days = trashDaysLeft(r.expires_at);
+            const urgent = days <= 5;
+
+            const title = String(r.title || r.label || r.record_id || '—').trim();
+            const bits = [];
+            if (r.code) bits.push(`<span class="tb-code">${histEsc(r.code)}</span>`);
+            if (r.total != null && r.total !== '') bits.push(`<span class="tb-total">${money(r.total)} د.ع</span>`);
+            if (r.extra) bits.push(`<span class="tb-cust">${histEsc(r.extra)}</span>`);
+
+            const sub = bits.length
+                ? `<div class="trash-sub">${bits.join('<span class="trash-meta-dot"></span>')}</div>`
+                : '';
+
+            return `<div class="trash-card" onclick="openTrashDetail(${r.id})">
+                <span class="trash-ico" style="--tc:${meta.color};" title="${histEsc(meta.label)}"><i class='bx ${meta.icon}'></i></span>
+                <div class="trash-body">
+                    <div class="trash-title">${histEsc(title)}</div>
+                    ${sub}
+                    <div class="trash-foot">
+                        <span class="trash-time">${histEsc(formatLogTime(r.deleted_at))}</span>
+                        <span class="trash-left ${urgent ? 'urgent' : ''}">${days > 0 ? `${days} ڕۆژ` : 'ئەمڕۆ'}</span>
+                    </div>
+                </div>
+                <div class="trash-actions">
+                    <button type="button" class="ticon restore" title="گەڕاندنەوە"
+                        onclick="event.stopPropagation(); restoreTrashItem(${r.id}, this)"><i class='bx bx-undo'></i></button>
+                    <button type="button" class="ticon purge" title="سڕینەوەی هەمیشەیی"
+                        onclick="event.stopPropagation(); purgeTrashItem(${r.id}, this)"><i class='bx bx-trash'></i></button>
+                </div>
+            </div>`;
         }
 
         function renderTrash() {
             const box = document.getElementById('trash-list');
             if (!box) return;
 
-            const rows = trashCache.filter(r => trashFilter === 'all' || r.source_table === trashFilter);
-            if (rows.length === 0) {
-                box.innerHTML = `<div class="trash-empty"><i class='bx bx-trash'></i><p>${trashFilter === 'all' ? 'تەنەکەی خۆڵ بەتاڵە' : 'هیچ شتێک لەم جۆرە نییە'}</p></div>`;
+            // فلتەر و گەڕان لە سێرڤەرەوە کراون — لێرەدا هیچ فلتەرێک نییە
+            if (trashCache.length === 0) {
+                const msg = trashSearch
+                    ? 'هیچ شتێک نەدۆزرایەوە'
+                    : (trashFilter === 'all' ? 'تەنەکەی خۆڵ بەتاڵە' : 'هیچ شتێک لەم جۆرە نییە');
+                box.innerHTML = `<div class="trash-empty"><i class='bx bx-trash'></i><p>${msg}</p></div>`;
                 return;
             }
 
-            box.innerHTML = rows.map(r => {
-                const meta = TRASH_META[r.source_table] || { icon: 'bx-file', color: '#64748b', label: r.source_table };
-                const days = trashDaysLeft(r.expires_at);
-                const urgent = days <= 5;
-                const p = r.payload || {};
-
-                // ناونیشان = ناوی خاوەنەکەی؛ دێڕی دووەم = زانیاری تایبەتی هەر جۆرێک
-                let title = '';
-                let bits = [];
-                if (r.source_table === 'orders') {
-                    title = String(p.seller_name || '').trim() || String(p.seller_code || '').trim() || 'بێ خاوەن';
-                    if (p.order_code) bits.push(`<span class="tb-code">${histEsc(p.order_code)}</span>`);
-                    if (p.grand_total != null && p.grand_total !== '') bits.push(`<span class="tb-total">${money(p.grand_total)} د.ع</span>`);
-                    if (p.customer_name) bits.push(`<span class="tb-cust">${histEsc(p.customer_name)}</span>`);
-                } else if (r.source_table === 'employees') {
-                    title = String(p.full_name || '').trim() || String(p.code || '').trim() || 'بێ ناو';
-                    if (p.code) bits.push(`<span class="tb-code">${histEsc(p.code)}</span>`);
-                    if (p.role) bits.push(`<span class="tb-cust">${histEsc(p.role)}</span>`);
-                } else if (r.source_table === 'cities') {
-                    title = String(p.name || '').trim() || String(r.label || '').trim() || 'شار';
-                    if (p.real_price != null) bits.push(`<span class="tb-total">${money(p.real_price)} د.ع</span>`);
-                } else {
-                    title = r.label || r.record_id;
-                }
-
-                const sub = bits.length
-                    ? `<div class="trash-sub">${bits.join('<span class="trash-meta-dot"></span>')}</div>`
-                    : '';
-
-                return `<div class="trash-card" onclick="openTrashDetail(${r.id})">
-                    <span class="trash-ico" style="--tc:${meta.color};" title="${histEsc(meta.label)}"><i class='bx ${meta.icon}'></i></span>
-                    <div class="trash-body">
-                        <div class="trash-title">${histEsc(title)}</div>
-                        ${sub}
-                        <div class="trash-foot">
-                            <span class="trash-time">${histEsc(formatLogTime(r.deleted_at))}</span>
-                            <span class="trash-left ${urgent ? 'urgent' : ''}">${days > 0 ? `${days} ڕۆژ` : 'ئەمڕۆ'}</span>
-                        </div>
-                    </div>
-                    <div class="trash-actions">
-                        <button type="button" class="ticon restore" title="گەڕاندنەوە"
-                            onclick="event.stopPropagation(); restoreTrashItem(${r.id}, this)"><i class='bx bx-undo'></i></button>
-                        <button type="button" class="ticon purge" title="سڕینەوەی هەمیشەیی"
-                            onclick="event.stopPropagation(); purgeTrashItem(${r.id}, this)"><i class='bx bx-trash'></i></button>
-                    </div>
-                </div>`;
-            }).join('');
+            box.innerHTML = trashCache.map(trashCardHtml).join('');
         }
 
         // ---------- زانیاری تەواوی شتی سڕاو ----------
@@ -14768,20 +14884,41 @@
             return html;
         }
 
-        function openTrashDetail(trashId) {
+        // payload ی یەک ڕیزە — لە لیستەکەدا نایەت (قورسە)، بۆیە
+        // لێرەدا بە داواکاری دەهێنرێت و لە کاش دەمێنێتەوە
+        async function ensureTrashPayload(r) {
+            if (r.payload) return r.payload;
+            const { data, error } = await supabase.rpc('trash_payload', { p_id: r.id });
+            if (error) throw error;
+            r.payload = data || {};
+            return r.payload;
+        }
+
+        async function openTrashDetail(trashId) {
             const r = trashCache.find(x => x.id === trashId);
             if (!r) return;
             const meta = TRASH_META[r.source_table] || { icon: 'bx-file', color: '#64748b', label: r.source_table };
 
             document.getElementById('trash-detail-title').innerHTML =
                 `<i class='bx ${meta.icon}' style="color:${meta.color};"></i> ${histEsc(r.label || r.record_id)}`;
-            document.getElementById('trash-detail-body').innerHTML = trashDetailBody(r);
             document.getElementById('trash-detail-actions').innerHTML = `
                 <button type="button" class="ticon-lg restore" title="گەڕاندنەوە"
                     onclick="restoreTrashItem(${r.id}, this, true)"><i class='bx bx-undo'></i></button>
                 <button type="button" class="ticon-lg purge" title="سڕینەوەی هەمیشەیی"
                     onclick="purgeTrashItem(${r.id}, this, true)"><i class='bx bx-trash'></i></button>`;
+
+            const body = document.getElementById('trash-detail-body');
+            body.innerHTML = TRASH_SPINNER;
             document.getElementById('trash-detail-modal').classList.add('show');
+
+            try {
+                await ensureTrashPayload(r);
+                body.innerHTML = trashDetailBody(r);
+            } catch (e) {
+                console.error('openTrashDetail:', e);
+                body.innerHTML = `<div class="trash-empty"><i class='bx bx-error-circle'></i>
+                    <p>نەتوانرا زانیارییەکان باربکرێن</p></div>`;
+            }
         }
 
         // سڕینەوەی هەمیشەیی — ڕاستەوخۆ لە تەیبڵی trash، بێ گەڕانەوە
@@ -14813,6 +14950,13 @@
 
             if (btn) { btn.disabled = true; btn.innerHTML = "<i class='bx bx-loader-alt bx-spin'></i>"; }
             try {
+                // payload **پێش** گەڕاندنەوە دەهێنرێت — دوای ئەوە ڕیزەکەی
+                // تەنەکە سڕاوەتەوە و `trash_payload` هیچ ناگەڕێنێتەوە.
+                // بۆ ئۆردەر پێویستە، بۆ ڕێکخستنەوەی پارەی جزدان.
+                if (item && item.source_table === 'orders') {
+                    try { await ensureTrashPayload(item); } catch (e) { console.warn('payload:', e); }
+                }
+
                 const { data, error } = await supabase.rpc('restore_from_trash', { p_trash_id: trashId });
                 if (error) throw error;
 
