@@ -84,6 +84,27 @@
                 }
             }
 
+            /* وێنەی پرۆفایل — هەمان کێشە.
+               ⚠️ `#dash-head` پۆلی `.sh-over` وەردەگرێت لەکاتی سکڕۆڵدا،
+                  کە `will-change: transform`ـی هەیە. ئەوە توخمەکە
+                  دەکاتە **چوارچێوەی پێوانە** بۆ منداڵە `fixed`ـەکانی،
+                  بۆیە `position: fixed` ئیتر بەپێی شاشە ناپێورێت و
+                  ئەڤاتاڕەکە لە ناو سەرەکەدا دەمێنێتەوە.
+
+                  چارەسەر: لە fullscreenدا دەردەهێنرێت و دەبێتە
+                  منداڵی ڕاستەوخۆی شاشەکە، کە هیچ transformێکی نییە. */
+            function placeDashAvatar(full) {
+                var a = document.getElementById('dash-avatar');
+                var head = document.querySelector('#dashboard-screen .dash-head-start');
+                var scr = document.getElementById('dashboard-screen');
+                if (!a || !head || !scr) return;
+                if (full) {
+                    if (a.parentNode !== scr) scr.insertBefore(a, scr.firstChild);
+                } else {
+                    if (a.parentNode !== head) head.insertBefore(a, head.firstChild);
+                }
+            }
+
             function applySafeArea() {
                 var root = document.documentElement;
                 var s = tg.safeAreaInset || {};
@@ -98,6 +119,7 @@
                    ناسفر دادەنێت، بۆیە ناکرێت پشت بەوان ببەسترێت. */
                 root.classList.toggle('tg-fullscreen', full);
                 placeWalletTitle(full);
+                placeDashAvatar(full);
             }
 
             applySafeArea();
