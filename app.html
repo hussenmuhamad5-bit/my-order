@@ -3003,6 +3003,9 @@
             // تاکو یەکەم پەیوەستبوون نەبێتە هۆی بارکردنێکی دووبارە
             subscribeRealtime();
 
+            // دوگمەی گەڕانەوەی تلیگرام + گەڕانەوەی مۆبایل
+            navInit();
+
             // پشکنینی دوورەپەڕ: هەموو ٦٠ چرکە دڵنیابوونەوە کە کلیلەکە هێشتا هەیە
             // (ئەگەر سڕایەوە → دەرچوونی خۆکار، تەنانەت ئەگەر بەکارهێنەر هیچ نەکات)
             // تابەکە شاراوەیە → پێویست ناکات داواکاری بنێردرێت. کاتێک
@@ -4777,6 +4780,31 @@
         let isWalletDataLoaded = false;
 
         function switchScreen(screenId, navElement = null) {
+            // ---- ستاکی گەڕانەوە ----
+            // داشبۆرد ڕەگەکەیە: کاتێک دەگەڕێینەوە بۆی، ستاکەکە پاک
+            // دەکرێتەوە و دوگمەی گەڕانەوە دەشاردرێتەوە (دیسان دەبێتە
+            // «✕ Close»). ئەگەرنا خانەیەک زیاد دەکرێت کە دەگەڕێتەوە
+            // شاشەی پێشوو.
+            //
+            // try/catch: `navStack` بە `const` پێناسەکراوە لە خوارەوەی
+            // ئەم فەنکشنە، بۆیە ئەگەر ڕۆژێک پێش ئەو دێڕە بانگ بکرێت
+            // ڕێزمانەکە هەڵ نەدات.
+            try {
+                const _navPrev = activeScreenId();
+                if (screenId === 'dashboard-screen') {
+                    navReset();
+                } else if (_navPrev && _navPrev !== screenId) {
+                    // فۆرمی ئۆردەر ڕێگای گەڕانەوەی تایبەتی خۆی هەیە:
+                    // `returnFromEdit` شاشەی سەرچاوە، شوێنی سکڕۆڵ و
+                    // مۆدالی جووڵەکان دەگەڕێنێتەوە. بە `switchScreen`ی
+                    // ساکار ئەوانە لەدەست دەچن.
+                    const _undo = (screenId === 'order-screen')
+                        ? () => returnFromEdit(false)
+                        : () => switchScreen(_navPrev);
+                    navPush('s:' + screenId, _undo);
+                }
+            } catch (e) { }
+
             document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
             document.getElementById(screenId).classList.add('active');
 
@@ -9250,6 +9278,136 @@
             // پەنجەرەی وردەکاری ئۆردەر داخرا → وەک «پشکنراو» نیشان دەکرێت.
             // ئەمە تاکە ڕێگای داخستنە (X، پاشخان، دەستکاری، سڕینەوە…)
             if (modalId === 'order-details-modal') reviewOnOrderClosed();
+        }
+
+        // ============================================================
+        // گەڕانەوە — دوگمەی «‹ Back»ی تلیگرام و گەڕانەوەی مۆبایل
+        // ------------------------------------------------------------
+        // پێشتر سەربارەکە هەمیشە «✕ Close» بوو، و گەڕانەوەی مۆبایل
+        // ئەپەکەی بە تەواوی دادەخست — تەنانەت لە ناوەڕاستی پڕکردنەوەی
+        // ئۆردەریشدا.
+        //
+        // ئێستا ستاکێکی گەڕانەوە هەیە. هەر کردارێک کە شتێک دەکاتەوە
+        // (گۆڕینی شاشە، مۆدال، شیتی فلتەر) خانەیەک زیاد دەکات. دوگمەی
+        // گەڕانەوەی تلیگرام و گەڕانەوەی مۆبایل هەردووکیان یەک ڕێگا
+        // بەکاردێنن، بۆیە هەمان هەڵسوکەوتیان هەیە.
+        //
+        // ڕێبازی مێژوو: تەنها **یەک** خانەی مێژوو دەپارێزرێت کاتێک
+        // شتێک بۆ گەڕانەوە هەیە — نەک یەک خانە بۆ هەر ئاستێک. بەمە
+        // ئەگەر مۆدالێک بە ڕێگایەکی تر دابخرێت (دوگمەی ✕، پاشخان)،
+        // مێژوو و ستاکەکە لێک جیا نابنەوە.
+        // ============================================================
+        const navStack = [];            // [{ key, undo }]
+        let _navSentinel = false;       // ئایا خانەی مێژوومان هەیە؟
+        let _navSuppress = false;       // گەڕانەوەیەکی ناوخۆیی — پشتگوێ بخرێت
+        let _navRunning = false;        // ڕێگری لە دووبارە زیادکردن لەکاتی گەڕانەوە
+
+        function navTg() {
+            const tg = window.Telegram && window.Telegram.WebApp;
+            return (tg && tg.BackButton) ? tg : null;
+        }
+
+        function navSyncButton() {
+            const tg = navTg();
+            if (!tg) return;
+            try {
+                if (navStack.length) tg.BackButton.show(); else tg.BackButton.hide();
+            } catch (e) { }
+        }
+
+        function navSyncHistory() {
+            try {
+                if (navStack.length && !_navSentinel) {
+                    history.pushState({ tgnav: 1 }, '');
+                    _navSentinel = true;
+                } else if (!navStack.length && _navSentinel) {
+                    // ستاکەکە بەتاڵ بووەتەوە بەبێ گەڕانەوە (بۆ نموونە
+                    // مۆدالەکە بە ✕ داخرا) — خانەی مێژووەکەش لادەبرێت،
+                    // ئەگەرنا یەک پەنجەی زیادە پێویست دەبێت
+                    _navSuppress = true;
+                    _navSentinel = false;
+                    history.back();
+                }
+            } catch (e) { }
+        }
+
+        function navSync() { navSyncButton(); navSyncHistory(); }
+
+        function navPush(key, undo) {
+            if (_navRunning) return;
+            if (key && navStack.some(e => e.key === key)) return;   // دووبارە نەبێتەوە
+            navStack.push({ key: key, undo: undo });
+            navSync();
+        }
+
+        // خانەیەک لادەبرێت چونکە بە ڕێگایەکی تر داخرا (نەک بە گەڕانەوە)
+        function navDrop(key) {
+            const i = navStack.findIndex(e => e.key === key);
+            if (i < 0) return;
+            navStack.splice(i, 1);
+            navSync();
+        }
+
+        function navReset() {
+            navStack.length = 0;
+            navSync();
+        }
+
+        // گەڕانەوەیەک — لە دوگمەی تلیگرام یان گەڕانەوەی مۆبایلەوە
+        function navBack() {
+            const e = navStack.pop();
+            navSyncButton();
+            if (e && typeof e.undo === 'function') {
+                _navRunning = true;
+                try { e.undo(); } catch (err) { console.error('navBack:', err); }
+                finally { _navRunning = false; }
+            }
+            navSyncHistory();
+        }
+
+        window.addEventListener('popstate', function () {
+            if (_navSuppress) { _navSuppress = false; return; }
+            _navSentinel = false;
+            if (navStack.length) navBack();
+            // ستاک بەتاڵە → ڕێگە دەدرێت تلیگرام ئەپەکە دابخات
+        });
+
+        // ---- چاودێری مۆدالەکان ----
+        // بەبێ دەستکاریکردنی دەیان شوێنی بانگکردن: گوێ لە زیادبوون و
+        // لابردنی پۆلی `show` دەگیرێت لەسەر هەموو مۆدال و شیتەکان.
+        function navWatchOverlays() {
+            const obs = new MutationObserver(muts => {
+                muts.forEach(m => {
+                    const el = m.target;
+                    if (!el.classList) return;
+                    const isSheet = el.classList.contains('fsheet');
+                    if (!el.classList.contains('modal-overlay') && !isSheet) return;
+                    if (!el.id) return;
+
+                    const shown = el.classList.contains('show');
+                    if (shown && !el.__navOn) {
+                        el.__navOn = true;
+                        navPush('m:' + el.id, isSheet
+                            ? () => { try { closeFilterSheet(); } catch (e) { el.classList.remove('show'); } }
+                            : () => closeModal(null, el.id));
+                    } else if (!shown && el.__navOn) {
+                        el.__navOn = false;
+                        navDrop('m:' + el.id);
+                    }
+                });
+            });
+            obs.observe(document.body, {
+                subtree: true, attributes: true, attributeFilter: ['class']
+            });
+        }
+
+        function navInit() {
+            const tg = navTg();
+            if (tg) {
+                try { tg.BackButton.onClick(() => history.back()); } catch (e) { }
+            }
+            navWatchOverlays();
+            navSync();
         }
 
         // ٢. ناردنی ئۆردەر لەگەڵ دڵنیابوون لە جۆری داتاکان (Numeric & Text)
