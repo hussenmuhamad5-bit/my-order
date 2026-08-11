@@ -9122,8 +9122,8 @@
         //   tg  کوژاوە → پەیام بۆ تلیگرام ناچێت
         // ============================================================
         const NOTIF_CHANNELS = [
-            { c: 'app', t: 'سایت' },
-            { c: 'tg', t: 'تلیگرام' }
+            { c: 'app', t: 'سایت', icon: 'bx-window-alt' },
+            { c: 'tg', t: 'تلیگرام', icon: 'bx-paper-plane' }
         ];
         const NOTIF_PREF_KINDS = [
             { k: 'create', t: 'ئۆردەری نوێ' },
@@ -9143,6 +9143,19 @@
             const s = (notifPrefs()[channel] || {})[scope];
             if (!s || s[kind] === undefined || s[kind] === null) return true;
             return s[kind] !== false;
+        }
+
+        // دوگمەکە یەکسەر دۆخەکەی دەگۆڕێت (بەبێ چاوەڕوانی سێرڤەر)،
+        // پاشان `setNotifPref` پاشەکەوتی دەکات و لە کاتی شکستدا
+        // دەیگەڕێنێتەوە
+        function toggleNotifPref(channel, scope, kind, btn) {
+            const on = !(btn && btn.classList.contains('is-on'));
+            if (btn) {
+                btn.classList.toggle('is-on', on);
+                btn.classList.toggle('is-off', !on);
+                btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+            }
+            setNotifPref(channel, scope, kind, on);
         }
 
         async function setNotifPref(channel, scope, kind, on) {
@@ -9174,15 +9187,25 @@
                 + NOTIF_CHANNELS.map(ch => `<span>${ch.t}</span>`).join('')
                 + `</div>`;
 
+            // دوو دوگمەی ئایکۆنی لە جیاتی دوو سویچ.
+            //
+            // بنەڕەت «هەمووی کراوەیە»، بۆیە بە سویچ ٢٠ پیلی سەوزی
+            // وەکیەک دەردەکەوتن — دیوارێکی ڕەنگ کە هیچ زانیارییەک
+            // نادات. ئێستا کراوە = هێمن، کوژاوە = دەردەکەوێت.
+            //
+            // دۆخی «کوژاوە» بە هێڵێکی لار نیشان دەدرێت نەک تەنها بە
+            // ڕەنگ — بۆ ئەوانەی ڕەنگ جیا ناکەنەوە.
             return head + NOTIF_PREF_KINDS.map(function (x) {
                 const meta = NOTIF_KIND_META[x.k] || { icon: 'bx-bell', color: '#64748b' };
                 const sw = NOTIF_CHANNELS.map(function (ch) {
                     const on = notifPrefOn(ch.c, scope, x.k);
-                    return `<label class="glass-toggle is-sm" title="${x.t} — ${ch.t}">
-                            <input type="checkbox" ${on ? 'checked' : ''}
-                                onchange="setNotifPref('${ch.c}','${scope}','${x.k}', this.checked)">
-                            <span class="slider-track"></span>
-                        </label>`;
+                    return `<button type="button" class="npc-ch ${on ? 'is-on' : 'is-off'}"
+                            aria-pressed="${on ? 'true' : 'false'}"
+                            aria-label="${x.t} — ${ch.t}${on ? '' : ' (کوژاوە)'}"
+                            title="${x.t} — ${ch.t}"
+                            onclick="toggleNotifPref('${ch.c}','${scope}','${x.k}', this)">
+                            <i class='bx ${ch.icon}'></i>
+                        </button>`;
                 }).join('');
                 return `<div class="npc-row">
                         <span class="npc-row-ico" style="background:${meta.color}1f; color:${meta.color};"><i class='bx ${meta.icon}'></i></span>
