@@ -4604,6 +4604,30 @@
             return statusCountBadges(loadedOrders || []);
         }
 
+        // سەردێڕی ڕۆژ — یەک شوێن بۆ هەردوو لیستەکە (داشبۆرد و بەڕێوەبردن).
+        //
+        // data-day و data-daybadges پێویستن بۆ نوێبوونەوەی وردی
+        // ڕاستەوخۆ: پێیان دەزانرێت کارتێکی نوێ لە کوێ دابنرێت و
+        // ژمارەکانی ڕۆژ چۆن نوێ بکرێنەوە، بەبێ نەخشاندنەوەی لیستەکە.
+        function dayHeadHtml(day, countsMap) {
+            let dl = formatDayLabel(day);
+            let dayAttr = String(day).replace(/["\\]/g, '');
+            return `
+                    <div data-day="${dayAttr}" style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin:12px 0 7px 0; padding-bottom:6px; border-bottom:1px dashed #e2e8f0;">
+                        <div style="display:flex; align-items:center; gap:5px; font-size:12px; font-weight:700; color:#334155;">
+                            <i class='bx bx-calendar-event' style="color:var(--primary); font-size:15px;"></i>
+                            <span dir="auto">${dl.label}</span>
+                            ${dl.sub ? `<span dir="ltr" style="font-size:10px; font-weight:600; color:#94a3b8;">${dl.sub}</span>` : ''}
+                        </div>
+                        <div data-daybadges style="display:flex; align-items:center; gap:5px; flex-wrap:wrap; justify-content:flex-end;">${dayBadges(day, null, countsMap)}</div>
+                    </div>`;
+        }
+
+        // ڕۆژی ئۆردەرێک — «YYYY-MM-DD» لە خانەی بەرواری دەقی
+        function orderDayOf(o) {
+            return (o && o.date) ? String(o.date).split(' ')[0].trim() : "نەزانراوە";
+        }
+
         // بنیاتنانی مەپی ژماردن لە ڕیزەکانی فەنکشنی داتابەیسەوە
         function buildDayCountsMap(rows) {
             let m = {};
@@ -5262,7 +5286,7 @@
             let relativeTime = shortRelativeTime(o.date);
 
             return `
-                    <div class="modern-order-card ${statusClass}" onclick="openOrderDetails('${o.id}')">
+                    <div class="modern-order-card ${statusClass}" data-oid="${o.id}" onclick="openOrderDetails('${o.id}')">
                         <div class="moc-header">
                             <h3 class="moc-title">
                                 <i class='bx bx-user moc-avatar'></i>
@@ -5337,16 +5361,7 @@
                         let day = (o.date ? String(o.date).split(' ')[0].trim() : "نەزانراوە");
                         if (day !== lastDay) {
                             lastDay = day;
-                            let dl = formatDayLabel(day);
-                            toks.push({ d: `
-                    <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin:12px 0 7px 0; padding-bottom:6px; border-bottom:1px dashed #e2e8f0;">
-                        <div style="display:flex; align-items:center; gap:5px; font-size:12px; font-weight:700; color:#334155;">
-                            <i class='bx bx-calendar-event' style="color:var(--primary); font-size:15px;"></i>
-                            <span dir="auto">${dl.label}</span>
-                            ${dl.sub ? `<span dir="ltr" style="font-size:10px; font-weight:600; color:#94a3b8;">${dl.sub}</span>` : ''}
-                        </div>
-                        <div style="display:flex; align-items:center; gap:5px; flex-wrap:wrap; justify-content:flex-end;">${dayBadges(day, null, dashDayCounts)}</div>
-                    </div>` });
+                            toks.push({ d: dayHeadHtml(day, dashDayCounts) });
                         }
                         toks.push({ c: o });
                     });
@@ -6047,19 +6062,10 @@
                 // تێکەڵ دەکات — ئەوسا سەردێڕی ڕۆژ دووبارە و دووبارە
                 // دەردەکەوێت و مانای نامێنێت، بۆیە لادەبرێت
                 if (mgmtPage.flat) { toks.push({ c: o }); continue; }
-                let day = (o.date ? String(o.date).split(' ')[0].trim() : "نەزانراوە");
+                let day = orderDayOf(o);
                 if (day !== mgmtPage.lastDay) {
                     mgmtPage.lastDay = day;
-                    let dl = formatDayLabel(day);
-                    toks.push({ d: `
-                    <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin:12px 0 7px 0; padding-bottom:6px; border-bottom:1px dashed #e2e8f0;">
-                        <div style="display:flex; align-items:center; gap:5px; font-size:12px; font-weight:700; color:#334155;">
-                            <i class='bx bx-calendar-event' style="color:var(--primary); font-size:15px;"></i>
-                            <span dir="auto">${dl.label}</span>
-                            ${dl.sub ? `<span dir="ltr" style="font-size:10px; font-weight:600; color:#94a3b8;">${dl.sub}</span>` : ''}
-                        </div>
-                        <div style="display:flex; align-items:center; gap:5px; flex-wrap:wrap; justify-content:flex-end;">${dayBadges(day, null, mgmtDayCounts)}</div>
-                    </div>` });
+                    toks.push({ d: dayHeadHtml(day, mgmtDayCounts) });
                 }
                 toks.push({ c: o });
             }
@@ -8540,9 +8546,29 @@
                 </div>
             </div>`).join('') + `</div>`;
 
+        // دۆخی بەتاڵ و هەڵە — لە ناوەڕاستی ناوچەکەدا، بە ئایکۆن و
+        // ڕوونکردنەوە. دەقێکی وشکی تاک لە سەرەوەی بۆشاییەکەدا
+        // بەکارهێنەر لێڵ دەکات: نازانێت ئایا شتێک شکاوە یان
+        // بەڕاستی هیچ نییە، و نازانێت چی بکات.
+        //
+        // role=alert تەنها لەگەڵ دوگمەیەکدا دادەنرێت — واتا دۆخی
+        // هەڵەیە و پێویستە خوێنەری شاشە ڕایبگەیەنێت.
+        function notifStateHtml(icon, title, hint, action) {
+            return `<div class="notif-state"${action ? ' role="alert"' : ''}>
+                    <span class="notif-state-ico"><i class='bx ${icon}'></i></span>
+                    <p class="notif-state-title">${title}</p>
+                    ${hint ? `<p class="notif-state-hint">${hint}</p>` : ''}
+                    ${action || ''}
+                </div>`;
+        }
+
         function notifRowsHtml(list) {
             if (!list || !list.length) {
-                return `<div class="order-log-empty"><i class='bx bx-bell-off'></i> هیچ ئاگادارکردنەوەیەک نییە</div>`;
+                return _notifTab === 'team'
+                    ? notifStateHtml('bx-group', 'هیچ شتێک لە تیمەکەتدا ڕووی نەداوە',
+                        'کاتێک ئەندامێک ئۆردەرێک تۆمار بکات یان حاڵەتێک بگۆڕێت، لێرە دەردەکەوێت')
+                    : notifStateHtml('bx-bell', 'هیچ ئاگادارکردنەوەیەکت نییە',
+                        'گۆڕانی حاڵەتی ئۆردەر، پارەی جزدان و کۆمێنتەکان لێرە کۆدەبنەوە');
             }
             return list.map(n => {
                 const meta = NOTIF_KIND_META[n.kind] || { icon: 'bx-bell', color: '#64748b' };
@@ -8550,12 +8576,22 @@
                 const oid = String(n.order_id || '').replace(/[^0-9A-Za-z_-]/g, '');
                 const who = n.actor_name ? histEsc(n.actor_name) : '';
                 const body = n.body ? histEsc(n.body) : '';
+
+                // کۆدی ئۆردەر ناوێکە نەک ڕستە — نابێت بەناوەڕاستدا
+                // ببڕدرێت. CSS هەمیشە ڕێگە بە بڕین دوای «-» دەدات،
+                // بۆیە overflow-wrap بەس نییە و پێویستی بە nowrap ـە.
+                const code = String(n.order_code || '');
+                let title = histEsc(n.title || '');
+                if (code) {
+                    title = title.split(histEsc(code)).join(
+                        '<span class="notif-code" dir="ltr">' + histEsc(code) + '</span>');
+                }
                 const cls = 'notif-row' + (n.read_at ? '' : ' is-unread') + (oid ? ' is-clickable' : '');
                 const click = oid ? ` onclick="openNotifOrder('${oid}')"` : '';
                 return `<div class="${cls}"${click}>
                         <span class="notif-dot" style="background:${meta.color}1f; color:${meta.color};"><i class='bx ${meta.icon}'></i></span>
                         <div class="notif-body">
-                            <div class="notif-top"><b>${histEsc(n.title || '')}</b></div>
+                            <div class="notif-top"><b>${title}</b></div>
                             ${body ? `<div class="notif-detail">${body}</div>` : ''}
                             <div class="notif-time">
                                 <i class='bx bx-time-five'></i> ${histEsc(getRelativeTime(n.created_at))}
@@ -8592,7 +8628,13 @@
             } catch (e) {
                 console.warn('loadNotifications:', e);
                 if (_notifTab === scope) {
-                    box.innerHTML = `<div class="order-log-empty"><i class='bx bx-error-circle'></i> نەتوانرا ئاگادارکردنەوەکان باربکرێن</div>`;
+                    // ڕێگای دەرچوون پێویستە — نەک تەنها پەیامی هەڵە
+                    box.innerHTML = notifStateHtml('bx-wifi-off',
+                        'نەتوانرا ئاگادارکردنەوەکان باربکرێن',
+                        'پەیوەندی ئینتەرنێتەکەت بپشکنە و دووبارە هەوڵبدەرەوە',
+                        `<button type="button" class="notif-state-btn" onclick="loadNotifications(_notifTab, true)">
+                            <i class='bx bx-refresh'></i> دووبارە هەوڵبدەرەوە
+                        </button>`);
                 }
             }
         }
@@ -8907,6 +8949,202 @@
         }
 
         // ============================================================
+        // نوێبوونەوەی وردی ڕاستەوخۆ
+        // ------------------------------------------------------------
+        // پێشتر هەر گۆڕانکارییەک — لەلایەن هەر کەسێکەوە لە هەموو
+        // تیمەکە — تەواوی لیستەکەی لە سێرڤەرەوە دەهێنایەوە
+        // (`refreshOrdersKeepScroll`). لە کاتی کاری چالاکدا ئەمە
+        // دەیان جار لە خولەکێکدا ڕوودەدا: لیستەکە دەتروسکایەوە،
+        // شوێنی سکڕۆڵ دەجوڵا و کارتە کراوەکان دەسڕانەوە.
+        //
+        // ئێستا تەنها ئەو ئۆردەرانە دەهێنرێن کە گۆڕاون (بە id)، و
+        // DOM بە وردی چاک دەکرێت:
+        //   • کارتێکی هەبوو  → تەنها ئەو کارتە دەگۆڕدرێت
+        //   • ئۆردەرێکی نوێ  → بێدەنگ دەخرێتە سەرەوەی لیستەکە
+        //   • نەماوە/دەرچووە → کارتەکەی لادەبرێت
+        //
+        // ⚠️ هیچ کاتێک `innerHTML`ی لیستەکە بە تەواوی نانووسرێتەوە.
+        // ============================================================
+        function rtCardOf(list, id) {
+            if (!list) return null;
+            return list.querySelector('[data-oid="' + String(id).replace(/["\\]/g, '') + '"]');
+        }
+
+        // تەنها ئەو ئۆردەرانەی گۆڕاون — نەک پەڕەیەکی تەواو.
+        // مەودای دەسەڵات بە `mgmtPage.passes` / `canActOnOrder` لە
+        // خوارەوە پارێزراوە، وەک هەموو ڕێڕەوەکانی تری کڵاینت.
+        async function rtFetchOrders(ids) {
+            if (!ids.length) return [];
+            const { data, error } = await supabase.from('orders').select('*').in('id', ids);
+            if (error) throw error;
+            return data || [];
+        }
+
+        // کارتێکی نوێ دەخاتە سەرەوەی لیستەکە، لەگەڵ سەردێڕی ڕۆژ
+        // ئەگەر ڕۆژەکەی نوێ بێت. false = لیستەکە بەتاڵە و
+        // بانگکەرەکە خۆی بڕیار دەدات.
+        function rtInsertTop(list, cardHtml, day, countsMap, flat) {
+            const anchor = list.querySelector('[data-day],[data-oid]');
+            if (!anchor) return false;
+            if (flat) {
+                anchor.insertAdjacentHTML('beforebegin', cardHtml);
+            } else if (anchor.matches('[data-day]') && anchor.getAttribute('data-day') === day) {
+                anchor.insertAdjacentHTML('afterend', cardHtml);
+            } else {
+                anchor.insertAdjacentHTML('beforebegin', dayHeadHtml(day, countsMap) + cardHtml);
+            }
+            return true;
+        }
+
+        function rtPatchMgmt(rows, gone) {
+            const list = document.getElementById('management-orders-list');
+            if (!list || !isManagementDataLoaded) return;
+            if (activeScreenId() !== 'orders-management-screen') return;
+
+            // لیستی ئەندامان کارتی ئۆردەری تێدا نییە — ژمارەکانی
+            // ئەندامان لە سەردانی داهاتوودا نوێ دەبنەوە
+            const membersView = (currentOrdersTab === 'team' && teamViewMode === 'members' && !selectedTeamMember);
+            const passes = mgmtPage.passes || function () { return false; };
+            const newestFirst = (ordersSortVal() === 'new');
+            let touched = false;
+
+            gone.forEach(function (id) {
+                const c = rtCardOf(list, id);
+                if (c) { c.remove(); touched = true; }
+                const i = allManagementOrdersArray.findIndex(x => String(x.id) === id);
+                if (i >= 0) allManagementOrdersArray.splice(i, 1);
+            });
+
+            rows.forEach(function (o) {
+                const id = String(o.id);
+                const i = allManagementOrdersArray.findIndex(x => String(x.id) === id);
+                const card = rtCardOf(list, id);
+                const ok = passes(o);
+
+                if (i >= 0) allManagementOrdersArray[i] = o;
+
+                if (!ok) {                    // لە فلتەری ئێستادا دەرچووە
+                    if (card) { card.remove(); touched = true; }
+                    if (i >= 0) allManagementOrdersArray.splice(i, 1);
+                    return;
+                }
+                if (card) {                   // هەیە → لە شوێنی خۆیدا
+                    card.outerHTML = buildMgmtOrderCard(o, _mgmtShowMember);
+                    touched = true;
+                    return;
+                }
+                if (membersView) return;
+                if (i < 0) allManagementOrdersArray.unshift(o);
+
+                // تەنها لە ڕیزبەندیی «نوێترین» دڵنیاین شوێنەکەی
+                // سەرەوەیە. لە ڕیزبەندییەکانی تر داتاکە زیاد دەکرێت
+                // بەڵام DOM دەست لێ نادرێت — لە نەخشاندنی سروشتیی
+                // داهاتوودا شوێنی ڕاستی خۆی دەگرێت، بەبێ لێزمە.
+                if (!newestFirst) return;
+                if (rtInsertTop(list, buildMgmtOrderCard(o, _mgmtShowMember),
+                    orderDayOf(o), mgmtDayCounts, mgmtPage.flat)) {
+                    touched = true;
+                } else {
+                    applyOrderFilters();      // لیستەکە بەتاڵ بوو — لێزمە نییە
+                }
+            });
+
+            if (!touched) return;
+            try { if (typeof updateReviewCounter === 'function') updateReviewCounter(); } catch (e) { }
+            try { updatePrintBulkBar(); } catch (e) { }
+        }
+
+        function rtPatchDash(rows, gone) {
+            const list = document.getElementById('orders-list');
+            if (!list || !isDashboardDataLoaded) return;
+            if (activeScreenId() !== 'dashboard-screen') return;
+
+            // داشبۆرد تەنها ئۆردەرەکانی خودی بەکارهێنەر پیشان دەدات،
+            // هەمیشە بە نوێترین
+            const myCode = String((currentUser && currentUser.code) || '').trim().toLowerCase();
+
+            gone.forEach(function (id) {
+                const c = rtCardOf(list, id);
+                if (c) c.remove();
+            });
+
+            rows.forEach(function (o) {
+                const card = rtCardOf(list, o.id);
+                if (sellerCodeOf(o) !== myCode) { if (card) card.remove(); return; }
+                if (card) { card.outerHTML = buildDashOrderCard(o); return; }
+                rtInsertTop(list, buildDashOrderCard(o), orderDayOf(o), dashDayCounts, false);
+            });
+        }
+
+        // بەیجەکانی سەردێڕی ڕۆژ — لە شوێنی خۆیاندا
+        function rtSyncDayBadges(list, map) {
+            if (!list || !map) return;
+            list.querySelectorAll('[data-day]').forEach(function (h) {
+                const box = h.querySelector('[data-daybadges]');
+                if (!box) return;
+                const html = dayBadges(h.getAttribute('data-day'), null, map);
+                if (box.innerHTML !== html) box.innerHTML = html;
+            });
+        }
+
+        // ئامار و ژمارەکان بە ژماردنی سێرڤەر — بەبێ هێنانی ئۆردەرەکان
+        // و بەبێ دەستلێدانی لیستەکە
+        async function rtRefreshCounts() {
+            const screen = activeScreenId();
+            try {
+                if (screen === 'dashboard-screen' && isDashboardDataLoaded) {
+                    const p = {
+                        p_sellers: [String(currentUser.code || '').trim()],
+                        p_status: null, p_date_from: null, p_date_to: null, p_search: null
+                    };
+                    const [statRows, dayRows] = await Promise.all([
+                        rpc('orders_status_counts', p),
+                        rpc('orders_day_counts', p)
+                    ]);
+                    const sc = (statRows && statRows[0]) || { prep: 0, onway: 0, deliv: 0, ret: 0 };
+                    if (typeof updateStatUI === 'function') {
+                        updateStatUI(+sc.prep || 0, +sc.onway || 0, +sc.deliv || 0, +sc.ret || 0);
+                    }
+                    dashDayCounts = buildDayCountsMap(dayRows);
+                    rtSyncDayBadges(document.getElementById('orders-list'), dashDayCounts);
+                } else if (screen === 'orders-management-screen' && isManagementDataLoaded) {
+                    const dayRows = await rpc('orders_day_counts', orderFilterParams(mgmtSellersForView()));
+                    mgmtDayCounts = buildDayCountsMap(dayRows);
+                    rtSyncDayBadges(document.getElementById('management-orders-list'), mgmtDayCounts);
+                }
+            } catch (e) { console.warn('rtRefreshCounts:', e); }
+        }
+
+        async function rtPatchOrders(ids) {
+            const idList = Array.from(ids || []).map(String).filter(Boolean);
+            if (!idList.length) return;
+
+            // داتاکە گۆڕاوە → کاشی تابەکانی بەڕێوەبردن کۆن بووە، و
+            // ئەو لیستەی چالاک نییە دەبێت لە سەردانی داهاتوودا لە
+            // نوێوە بێت. ئەوەی چالاکە لە خوارەوە بە وردی چاک دەکرێت.
+            invalidateMgmtCache();
+            const _screen = activeScreenId();
+            if (_screen !== 'dashboard-screen') isDashboardDataLoaded = false;
+            if (_screen !== 'orders-management-screen') isManagementDataLoaded = false;
+
+            let rows = [];
+            try {
+                rows = await rtFetchOrders(idList);
+            } catch (e) {
+                console.warn('rtPatchOrders:', e);
+                return;                     // بێدەنگ — لیستەکە وەک خۆی دەمێنێتەوە
+            }
+
+            const found = new Set(rows.map(r => String(r.id)));
+            rows.forEach(function (o) { allGlobalOrdersData[o.id] = o; });
+            const gone = idList.filter(id => !found.has(id));
+
+            rtPatchMgmt(rows, gone);
+            rtPatchDash(rows, gone);
+            await rtRefreshCounts();
+        }
+
+        // ============================================================
         // نوێبوونەوەی ڕاستەوخۆ (Realtime)
         // ------------------------------------------------------------
         // گوێ لە خشتەی `realtime_events` دەگرین — خشتەیەکی سووک کە
@@ -8938,8 +9176,64 @@
         function scheduleRealtimeRefresh(entity, orderId) {
             if (entity) _rtPending.add(entity);
             if (orderId) _rtChangedOrders.add(String(orderId));
+            _rtLastSyncAt = Date.now();
             clearTimeout(_rtTimer);
             _rtTimer = setTimeout(applyRealtimeRefresh, RT_DEBOUNCE_MS);
+        }
+
+        // ------------------------------------------------------------
+        // گەڕانەوە بۆ ئەپەکە / پەیوەندی‌گرتنەوە
+        //
+        // پێشتر لێرەدا هەموو لیستەکان لە نوێوە دەهێنران، چونکە
+        // نەدەزانرا چی لەو ماوەیەدا گۆڕاوە. بەڵام `realtime_events`
+        // ڕیزەکانی ١٠ خولەک ڕادەگرێت — بۆیە دەتوانین لێی بپرسین.
+        //
+        // ئەگەر ماوەکە لە تەمەنی خشتەکە درێژتر بێت، ئەوکات بەڕاستی
+        // نازانین چی گۆڕاوە و نوێکردنەوەی تەواو پێویستە.
+        // ------------------------------------------------------------
+        const RT_EVENT_TTL_MS = 10 * 60000;   // db/008: ڕیزەکان دوای ١٠ خولەک دەسڕدرێنەوە
+        let _rtLastSyncAt = Date.now();
+
+        function rtFullRefresh() {
+            invalidateMgmtCache();
+            isDashboardDataLoaded = false;
+            isManagementDataLoaded = false;
+            isWalletDataLoaded = false;
+            scheduleRealtimeRefresh('orders');
+            scheduleRealtimeRefresh('transactions');
+            scheduleRealtimeRefresh('order_comments');
+            scheduleRealtimeRefresh('notifications');
+        }
+
+        async function rtCatchUp() {
+            const gap = Date.now() - _rtLastSyncAt;
+            _rtLastSyncAt = Date.now();
+
+            // درێژتر لە تەمەنی ڕووداوەکان دوورکەوتووینەتەوە
+            if (gap > RT_EVENT_TTL_MS - 60000) { rtFullRefresh(); return; }
+
+            try {
+                const since = new Date(Date.now() - RT_EVENT_TTL_MS).toISOString();
+                const { data, error } = await supabase.from('realtime_events')
+                    .select('entity, entity_id')
+                    .gte('created_at', since)
+                    .limit(500);
+                if (error) throw error;
+                (data || []).forEach(function (e) {
+                    if (!e || !e.entity) return;
+                    if (e.entity === 'notifications') {
+                        if (currentUser && String(e.entity_id || '') === String(currentUser.code)) {
+                            scheduleRealtimeRefresh('notifications');
+                        }
+                        return;
+                    }
+                    const withId = (e.entity === 'orders' || e.entity === 'order_comments');
+                    scheduleRealtimeRefresh(e.entity, withId ? e.entity_id : null);
+                });
+            } catch (err) {
+                console.warn('rtCatchUp:', err);
+                rtFullRefresh();
+            }
         }
 
         function applyRealtimeRefresh() {
@@ -8952,39 +9246,57 @@
             const screen = activeScreenId();
 
             if (ents.has('orders')) {
-                invalidateMgmtCache();
-                // هەردوو لیستەکە بە کۆن دادەنرێن — ئەوەی چالاکە
-                // یەکسەر نوێ دەبێتەوە، ئەوی تر لە سەردانی داهاتوودا
-                isDashboardDataLoaded = false;
-                isManagementDataLoaded = false;
+                const dashOn = (screen === 'dashboard-screen');
+                const mgmtOn = (screen === 'orders-management-screen');
 
-                // تەنها ئەگەر لیستێک بەردەست بێت. لەسەر شاشەی فۆرمی
-                // ئۆردەر هیچ ناکەین — نابێت ئەوەی بەکارهێنەر
-                // نووسیویەتی بشێوێنین.
-                if (screen === 'orders-management-screen' || screen === 'dashboard-screen') {
-                    const done = refreshOrdersKeepScroll();
-
-                    // ئەگەر وردەکاری ئۆردەرێک کراوەیە و هەر ئەو
-                    // ئۆردەرە گۆڕاوە، مۆدالەکەش نوێ دەکەینەوە —
-                    // ئەگەرنا بەڕێوەبەر داتای کۆن دەبینێت
-                    Promise.resolve(done).then(() => {
-                        const m = document.getElementById('order-details-modal');
-                        if (!m || !m.classList.contains('show')) return;
-                        if (!_reviewOpenId || !ids.has(String(_reviewOpenId))) return;
-                        // چات کراوەیە یان دەقێک نووسراوە → دەست لێ نادرێت،
-                        // ئەگەرنا `openOrderDetails` هەموو مۆداڵەکە
-                        // دەسڕێتەوە و ئەو دەقە لەدەست دەچێت
-                        if (ocmtBusy()) return;
-                        if (allGlobalOrdersData[_reviewOpenId]) openOrderDetails(_reviewOpenId);
-                    }).catch(() => { });
+                let done;
+                if (ids.size) {
+                    // ڕێڕەوی ئاسایی: دەزانین کام ئۆردەر گۆڕاوە →
+                    // تەنها ئەوان دەهێنرێن و تەنها کارتەکانیان
+                    // دەگۆڕدرێن. سکڕۆڵ و کارتی کراوە دەمێننەوە.
+                    done = rtPatchOrders(ids);
+                } else {
+                    // نازانین کام ئۆردەر گۆڕاوە — تەنها لەو دۆخەدا
+                    // ڕوودەدات کە زیاتر لە ١٠ خولەک دوورکەوتووینەتەوە
+                    // (بڕوانە rtCatchUp)، کە بەهەرحاڵ کاتی نوێبوونەوەیە
+                    invalidateMgmtCache();
+                    isDashboardDataLoaded = false;
+                    isManagementDataLoaded = false;
+                    if (dashOn || mgmtOn) done = refreshOrdersKeepScroll();
                 }
+
+                // ئەگەر وردەکاری ئۆردەرێک کراوەیە و هەر ئەو
+                // ئۆردەرە گۆڕاوە، مۆدالەکەش نوێ دەکەینەوە —
+                // ئەگەرنا بەڕێوەبەر داتای کۆن دەبینێت
+                Promise.resolve(done).then(() => {
+                    const m = document.getElementById('order-details-modal');
+                    if (!m || !m.classList.contains('show')) return;
+                    if (!_reviewOpenId || !ids.has(String(_reviewOpenId))) return;
+                    // چات کراوەیە یان دەقێک نووسراوە → دەست لێ نادرێت،
+                    // ئەگەرنا `openOrderDetails` هەموو مۆداڵەکە
+                    // دەسڕێتەوە و ئەو دەقە لەدەست دەچێت
+                    if (ocmtBusy()) return;
+                    if (allGlobalOrdersData[_reviewOpenId]) openOrderDetails(_reviewOpenId);
+                }).catch(() => { });
             }
 
             if (ents.has('transactions')) {
-                isWalletDataLoaded = false;
                 walletTxCache = {};
                 walletHoldCache = {};
-                if (screen === 'wallet-screen') loadMyWalletData();
+                if (screen === 'wallet-screen') {
+                    // ⚠️ `isWalletDataLoaded` بە ئەنقەست **نەکراوەتەوە**
+                    //    false: ئەگەر بکرێتەوە، `loadMyWalletData` سپینەر
+                    //    دادەنێت و لیستەکە دەتروسکێتەوە. بە پاراستنی
+                    //    بارەکە، ناوەڕۆکەکە بێدەنگ دەگۆڕدرێت.
+                    const wl = document.getElementById('my-transactions-list');
+                    const wtop = wl ? wl.scrollTop : 0;
+                    Promise.resolve(loadMyWalletData()).then(() => {
+                        const wl2 = document.getElementById('my-transactions-list');
+                        if (wl2) wl2.scrollTop = wtop;
+                    }).catch(() => { });
+                } else {
+                    isWalletDataLoaded = false;   // سەردانی داهاتوو نوێی دەکاتەوە
+                }
             }
 
             if (ents.has('order_comments')) {
@@ -9025,7 +9337,15 @@
                     if (!nm || !nm.classList.contains('show')) return;
                     _notifLoaded.own = false;
                     _notifLoaded.team = false;
-                    loadNotifications(_notifTab, true).then(() => markNotifRead(_notifTab, true));
+                    // شوێنی سکڕۆڵ دەپارێزرێت — ڕیزە نوێیەکان لە
+                    // سەرەوە زیاد دەبن و نابێت بەکارهێنەر بجوڵێت
+                    const nl = document.getElementById('notif-list');
+                    const ntop = nl ? nl.scrollTop : 0;
+                    loadNotifications(_notifTab, true).then(() => {
+                        const nl2 = document.getElementById('notif-list');
+                        if (nl2 && ntop > 0) nl2.scrollTop = ntop;
+                        markNotifRead(_notifTab, true);
+                    });
                 });
             }
         }
@@ -9062,12 +9382,7 @@
                         // پێویست ناکات دووبارە بهێنرێت. بەڵام دوای
                         // پچڕان و پەیوەستبوونەوە لەوانەیە
                         // ئاگادارکردنەوەکان لەدەست چووبن.
-                        if (_rtSubscribedOnce) {
-                            scheduleRealtimeRefresh('orders');
-                            scheduleRealtimeRefresh('transactions');
-                            scheduleRealtimeRefresh('order_comments');
-                            scheduleRealtimeRefresh('notifications');
-                        }
+                        if (_rtSubscribedOnce) rtCatchUp();
                         _rtSubscribedOnce = true;
                     });
             } catch (e) {
@@ -9079,10 +9394,7 @@
         // لەوانەیە پەیوەندییەکە پچڕابێت و ئاگادارکردنەوە لەدەست چووبێت
         document.addEventListener('visibilitychange', function () {
             if (document.visibilityState !== 'visible' || !_rtChannel) return;
-            scheduleRealtimeRefresh('orders');
-            scheduleRealtimeRefresh('transactions');
-            scheduleRealtimeRefresh('order_comments');
-            scheduleRealtimeRefresh('notifications');
+            rtCatchUp();
         });
 
         // ============================================================
@@ -9155,7 +9467,7 @@
                 });
                 showToast("🔒 پرێنت کرا — ئۆردەرەکە قوفڵە تا سکانی دەکەیت", "success");
                 openOrderDetails(orderId);
-                refreshOrdersKeepScroll();
+                rtPatchOrders([orderId]);
             } catch (e) {
                 showPrintError(e, "کێشەیەک ڕوویدا لە نیشانەکردنی پرێنت");
             }
@@ -9177,7 +9489,7 @@
                     detail: 'بە سکانی بارکۆد قوفڵی پرێنتی لابرد'
                 });
                 showToast("🔓 قوفڵ لابرا — ئێستا دەتوانیت بیکەیت بە «لە ڕێگایە»", "success");
-                refreshOrdersKeepScroll();
+                rtPatchOrders([o.id]);
                 return true;
             } catch (e) {
                 showPrintError(e, "کێشەیەک ڕوویدا لە لابردنی قوفڵ");
@@ -9205,7 +9517,7 @@
                 });
                 showToast("🔓 قوفڵی پرێنت لابرا", "success");
                 openOrderDetails(orderId);
-                refreshOrdersKeepScroll();
+                rtPatchOrders([orderId]);
             } catch (e) {
                 showPrintError(e, "کێشەیەک ڕوویدا لە لابردنی قوفڵ");
             }
@@ -9320,7 +9632,7 @@
                     'وەسڵەکەی پرێنت کرا بە کۆمەڵ — ئۆردەرەکە قوفڵ کرا تا سکان دەکرێت');
                 showToast(`🔒 ${orders.length} ئۆردەر پرێنتکراو و قوفڵ کران`, "success");
                 exitPrintSelectMode();
-                refreshOrdersKeepScroll();
+                rtPatchOrders(orders.map(x => x.id));
             } catch (e) {
                 showPrintError(e, "کێشەیەک ڕوویدا لە نیشانەکردنی پرێنت");
             }
@@ -9551,7 +9863,7 @@
                     showToast(walletBack > 0
                         ? `حاڵەت گۆڕدرا — ${Math.round(walletBack).toLocaleString()} د.ع گەڕایەوە جزدان!`
                         : "حاڵەت گۆڕدرا و پارەکان بڕدران!", "success");
-                    refreshOrdersKeepScroll();
+                    rtPatchOrders([o.id]);
                 } catch (e) {
                     console.error('return order:', e);
                     showToast("هەڵە لە گەڕانەوەدا ڕوویدا", "error");
@@ -9570,7 +9882,7 @@
                 });
                 showToast("حاڵەت گۆڕدرا!", "success");
                 closeModal(null, 'order-details-modal');
-                refreshOrdersKeepScroll();
+                rtPatchOrders([orderId]);
             } catch (e) { showToast("هەڵەیەک ڕوویدا", "error"); }
         }
 
@@ -9618,7 +9930,9 @@
                     ? `🗑️ سڕایەوە — ${Math.round(delWalletBack).toLocaleString()} د.ع گەڕایەوە جزدانەکەت`
                     : "🗑️ سڕایەوە — بۆ ٣٠ ڕۆژ لە تەنەکەی خۆڵدایە", "success");
 
-                refreshOrdersKeepScroll();
+                // ئۆردەرەکە چووەتە تەنەکەی خۆڵ → سێرڤەر هیچی
+                // ناگەڕێنێتەوە → کارتەکەی بێدەنگ لادەبرێت
+                rtPatchOrders([orderId]);
             } catch (err) {
                 console.log(err);
                 showToast("❌ هەڵەیەک ڕوویدا لە سڕینەوەدا", "error");
@@ -16992,8 +17306,8 @@
                 showToast("بە سەرکەوتوویی دابەشکرا!", "success");
                 closeModal(null, 'profit-distribution-modal');
 
-                // ڕیفرێشکردنی شاشەکان بەبێ لادانی شوێنی سکرۆڵ
-                refreshOrdersKeepScroll();
+                // تەنها ئەم ئۆردەرە — نەک نەخشاندنەوەی لیستەکە
+                rtPatchOrders([o.id]);
 
             } catch (e) {
                 console.error(e);

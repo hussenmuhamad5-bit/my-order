@@ -10532,9 +10532,19 @@ body {
   flex-shrink: 0;
 }
 
+/* تابەکان لە ناوەڕاست. بنەڕەتی .magic-tabs-wrapper ڕاستەڕێزە
+   (flex-start)؛ #orders-magic-tabs هەمان هەڵگەڕانەوەی هەیە. */
 #notif-magic-tabs {
   flex-shrink: 0;
+  justify-content: center;
   margin-bottom: 8px;
+}
+
+/* شریتی تابەکان بنەڕەتی rgba(255,255,255,.05)ـە — بۆ پاشبنەمای
+   خۆڵەمێشیی پەڕەکان. لەسەر سپیی مۆداڵ هیچ نەدەبینرا، بۆیە
+   تابی ناچالاک وەک دەقێکی سەرگەردان دەردەکەوت. */
+#notif-modal .magic-tabs {
+  background-color: rgba(15, 23, 42, .05);
 }
 
 .notif-list {
@@ -10543,6 +10553,10 @@ body {
   overflow-y: auto;
   scrollbar-width: none;
   -ms-overflow-style: none;
+  /* ستوونی فلێکس تاکو .notif-state بتوانێت بۆشاییەکە پڕ بکاتەوە
+     و لە ناوەڕاستدا بێت، نەک لە سەرەوە بچەسپێت */
+  display: flex;
+  flex-direction: column;
 }
 
 .notif-list::-webkit-scrollbar {
@@ -10576,6 +10590,9 @@ body {
   padding: 12px 10px;
   border-radius: 12px;
   position: relative;
+  /* ناوەوەی ستوونی فلێکس — بەبێ ئەمە ڕیزەکان دەپەستێنرێن
+     کاتێک ژمارەیان زیاتر دەبێت لە بەرزی لیستەکە */
+  flex-shrink: 0;
 }
 
 .notif-row+.notif-row {
@@ -10615,18 +10632,27 @@ body {
   min-width: 0;
 }
 
+/* overflow-wrap نەک word-break: ئەمە تەنها کاتێک وشەیەک دەبڕێت
+   کە بە تەنها لە دێڕێکدا نەگونجێت. بە word-break کۆدی ئۆردەر
+   («1000-hUwk5») بەناوەڕاستدا دەبڕدرا و دەبووە دوو پارچە. */
 .notif-top {
   font-size: var(--fs-md);
   color: var(--text-main);
   margin-bottom: 3px;
-  word-break: break-word;
+  overflow-wrap: break-word;
+}
+
+/* کۆدی ئۆردەر — یەک پارچە دەمێنێتەوە */
+.notif-code {
+  white-space: nowrap;
+  unicode-bidi: isolate;
 }
 
 .notif-detail {
   font-size: var(--fs-sm);
   color: #475569;
   line-height: 1.65;
-  word-break: break-word;
+  overflow-wrap: break-word;
   white-space: pre-line;
 }
 
@@ -10637,12 +10663,105 @@ body {
   flex-wrap: wrap;
   margin-top: 6px;
   font-size: var(--fs-2xs);
-  color: #94a3b8;
+  /* #94a3b8 تەنها ٢.٨:١ ـە لەسەر سپی — کەمتر لە پێوەری ٣:١ی
+     دەقی لاوەکی. #64748b ٤.٨:١ ـە. */
+  color: #64748b;
   direction: rtl;
 }
 
 .notif-time i {
   font-size: 13px;
+}
+
+/* ---- دۆخی بەتاڵ و هەڵە ----
+   لە ناوەڕاستی ئەو بۆشاییەی ماوەتەوە، بە ئایکۆن و ڕوونکردنەوە
+   و — بۆ هەڵە — ڕێگایەکی دەرچوون. */
+.notif-state {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 4px;
+  padding: 24px 28px;
+}
+
+.notif-state-ico {
+  width: 56px;
+  height: 56px;
+  margin-bottom: 10px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(36, 129, 204, .08);
+  color: var(--primary);
+  font-size: 26px;
+}
+
+.notif-state-title {
+  margin: 0;
+  font-size: var(--fs-md);
+  font-weight: var(--font-bold);
+  color: #334155;
+}
+
+.notif-state-hint {
+  margin: 0;
+  max-width: 32ch;
+  font-size: var(--fs-sm);
+  line-height: 1.7;
+  color: #64748b;
+}
+
+/* بەرزی ٤٤px = کەمترین ئامانجی پەنجە */
+.notif-state-btn {
+  margin-top: 14px;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 18px;
+  border-radius: var(--r-full);
+  border: 1px solid rgba(36, 129, 204, .28);
+  background: rgba(36, 129, 204, .08);
+  color: var(--primary);
+  font-family: inherit;
+  font-size: var(--fs-md);
+  font-weight: var(--font-bold);
+  cursor: pointer;
+  transition: background .2s ease, transform .2s ease;
+}
+
+.notif-state-btn:active {
+  background: rgba(36, 129, 204, .2);
+  transform: scale(.96);
+}
+
+/* جووڵەیەکی هێمن — تەنها بۆ دۆخەکان، نەک بۆ ڕیزەکان: ڕیزەکان
+   لەگەڵ هەر نوێبوونەوەیەکی ڕاستەوخۆدا دووبارە دەنەخشێنرێن و
+   ئەنیمەیشنی دووبارە دەبووە تروسکایی. */
+@keyframes notif-state-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.notif-state {
+  animation: notif-state-in .35s cubic-bezier(.25, .8, .3, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .notif-state {
+    animation: none;
+  }
 }
 
 /* لە fullscreenـدا مۆداڵێکی ناوەڕاست‌کراو سەرەکەی دەکەوێتە ژێر
