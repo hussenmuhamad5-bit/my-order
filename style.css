@@ -10547,6 +10547,47 @@ body {
   background-color: rgba(15, 23, 42, .05);
 }
 
+/* ---- پۆلەکان: هەمووی / ئۆردەری نوێ / حاڵەت / پارە / ... ----
+   بە پانی زیاتر لە پانی پانێڵەکە دەبن، بۆیە بە ئاسۆیی دەخزێن. */
+.notif-chips {
+  flex-shrink: 0;
+  display: flex;
+  gap: 6px;
+  padding-bottom: 10px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.notif-chips::-webkit-scrollbar {
+  display: none;
+}
+
+.notif-chip {
+  flex-shrink: 0;
+  padding: 6px 13px;
+  border-radius: var(--r-full);
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  color: #64748b;
+  font-family: inherit;
+  font-size: var(--fs-sm);
+  font-weight: var(--font-bold);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background .2s ease, color .2s ease, border-color .2s ease;
+}
+
+.notif-chip.is-on {
+  background: rgba(36, 129, 204, .1);
+  border-color: rgba(36, 129, 204, .3);
+  color: var(--primary);
+}
+
+.notif-chip:active {
+  transform: scale(.96);
+}
+
 .notif-list {
   flex: 1;
   min-height: 0;
@@ -10605,6 +10646,30 @@ body {
 
 .notif-row.is-clickable:active {
   background: rgba(36, 129, 204, .1);
+}
+
+/* ئۆردەرەکە لە سێرڤەرەوە دەهێنرێت پێش کردنەوەی مۆداڵەکە —
+   نیشانەکە لێرەیە، نەک بە بۆکسێکی سپیی بەتاڵ لەسەر شاشەکە */
+.notif-row.is-busy {
+  opacity: .55;
+  pointer-events: none;
+}
+
+.notif-row.is-busy .notif-dot i {
+  animation: notif-spin .7s linear infinite;
+}
+
+@keyframes notif-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+  .notif-row.is-busy .notif-dot i {
+    animation: none;
+  }
 }
 
 /* نەخوێندراو — پاشبنەمایەکی شین و هێمن */

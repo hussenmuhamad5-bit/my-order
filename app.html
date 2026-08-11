@@ -1719,6 +1719,10 @@
                 </div>
             </div>
 
+            <!-- پۆلەکان — بە JS نەخشێنراون لە NOTIF_FILTERSـەوە،
+                 تاکو لیستەکە یەک شوێنی هەبێت -->
+            <div class="notif-chips" id="notif-chips"></div>
+
             <div class="notif-list" id="notif-list"></div>
         </div>
     </div>
@@ -5153,7 +5157,18 @@
 
             // فۆرمی ئۆردەر: پارەی ئامادەی جزدان لەوانەیە لەم ماوەیەدا
             // گۆڕابێت (ئۆردەرێکی تر، مووچە...) — بۆیە دووبارە دەهێنرێت
-            if (screenId === 'order-screen') walletReadyState.loaded = false;
+            if (screenId === 'order-screen') {
+                walletReadyState.loaded = false;
+                // ⚠️ ڕیزی هەنگاوەکان (#ofp-dots) بەتاڵ دەست پێدەکات و
+                //    تەنها بە JS پڕ دەکرێتەوە. پێشتر تەنها لە
+                //    `resetOrderForm`ـەوە بانگ دەکرا، ئەویش تەنها
+                //    کاتێک `editingOrderId !== null` — واتا لە یەکەم
+                //    کردنەوەی فۆرمەکەدا هەنگاوەکان دەرنەدەکەوتن تا
+                //    بەکارهێنەر یەکەم پیتی دەنووسی.
+                //    لێرەدا هەموو ڕێگاکانی کردنەوە دەگرێتەوە — نوێ،
+                //    دەستکاری (کە فۆرمەکەی پێشتر پڕکردووە)، و کۆپی.
+                try { updateOrderProgress(); } catch (e) { }
+            }
 
             if (screenId === 'admin-screen' && !isAdminDataLoaded) {
                 document.getElementById('admin-screen-content').style.display = 'none';
@@ -8516,9 +8531,51 @@
         // دەسەڵات ناکات، تەنها ئەوە پیشان دەدات کە بۆی هاتووە.
         // ============================================================
         let _notifTab = 'own';
+        let _notifKind = 'all';
         let _notifCache = { own: [], team: [] };
         let _notifUnread = { own: 0, team: 0 };
         let _notifLoaded = { own: false, team: false };
+
+        // پۆلەکانی پەڕەکە. «گۆڕانی حاڵەت» هەردوو `status` و
+        // `distribute` دەگرێتەوە — دابەشکردنی قازانج خۆی گۆڕانێکی
+        // حاڵەتە (ئۆردەرەکە دەبێتە «گەیشتووە»).
+        const NOTIF_FILTERS = [
+            { k: 'all', t: 'هەمووی', kinds: null },
+            { k: 'create', t: 'ئۆردەری نوێ', kinds: ['create'] },
+            { k: 'status', t: 'گۆڕانی حاڵەت', kinds: ['status', 'distribute'] },
+            { k: 'wallet', t: 'پارە', kinds: ['wallet'] },
+            { k: 'edit', t: 'دەستکاری', kinds: ['edit'] },
+            { k: 'comment', t: 'کۆمێنت', kinds: ['comment'] }
+        ];
+
+        function notifFilterOf(k) {
+            for (let i = 0; i < NOTIF_FILTERS.length; i++) {
+                if (NOTIF_FILTERS[i].k === k) return NOTIF_FILTERS[i];
+            }
+            return NOTIF_FILTERS[0];
+        }
+
+        // ڕیزەکان پێشتر بە نوێترین‌بۆ‌کۆنترین لە سێرڤەرەوە دێن
+        // (`order by id desc`)، بۆیە لێرەدا تەنها پاڵاوتن دەکرێت
+        function notifApplyKind(list) {
+            const f = notifFilterOf(_notifKind);
+            if (!f.kinds) return list || [];
+            return (list || []).filter(n => f.kinds.indexOf(n.kind) !== -1);
+        }
+
+        // ڕیزە کۆنەکان ئیمۆجییان لە سەرەتای ناونیشاندا هەیە (پێش
+        // ئەوەی لە db/015 لابردرێن). لە هەندێک ئامێردا وەک چوارگۆشەی
+        // بەتاڵ دەردەکەون، و ئایکۆنی ڕاستەقینەی ڕیزەکە شوێنیان
+        // دەگرێتەوە — بۆیە لێرەدا لادەبرێن.
+        let _notifEmojiRe;
+        try {
+            _notifEmojiRe = new RegExp('^[\\p{Extended_Pictographic}\\uFE0F\\u200D\\s]+', 'u');
+        } catch (e) { _notifEmojiRe = null; }
+
+        function notifCleanTitle(t) {
+            const s = String(t || '');
+            return _notifEmojiRe ? s.replace(_notifEmojiRe, '') : s;
+        }
 
         const NOTIF_KIND_META = {
             create: { icon: 'bx-plus-circle', color: '#2481cc' },
@@ -8563,14 +8620,20 @@
         }
 
         function notifRowsHtml(list) {
-            if (!list || !list.length) {
+            const rows = notifApplyKind(list);
+            if (!rows.length) {
+                if (_notifKind !== 'all') {
+                    return notifStateHtml('bx-filter-alt',
+                        'هیچ شتێک لەم بەشەدا نییە',
+                        'بەشی «هەمووی» هەموو ئاگادارکردنەوەکان پیشان دەدات');
+                }
                 return _notifTab === 'team'
                     ? notifStateHtml('bx-group', 'هیچ شتێک لە تیمەکەتدا ڕووی نەداوە',
                         'کاتێک ئەندامێک ئۆردەرێک تۆمار بکات یان حاڵەتێک بگۆڕێت، لێرە دەردەکەوێت')
                     : notifStateHtml('bx-bell', 'هیچ ئاگادارکردنەوەیەکت نییە',
                         'گۆڕانی حاڵەتی ئۆردەر، پارەی جزدان و کۆمێنتەکان لێرە کۆدەبنەوە');
             }
-            return list.map(n => {
+            return rows.map(n => {
                 const meta = NOTIF_KIND_META[n.kind] || { icon: 'bx-bell', color: '#64748b' };
                 // ناسنامەی ئۆردەر دەچێتە ناو onclickـەوە → تەنها پیت و ژمارە
                 const oid = String(n.order_id || '').replace(/[^0-9A-Za-z_-]/g, '');
@@ -8581,13 +8644,13 @@
                 // ببڕدرێت. CSS هەمیشە ڕێگە بە بڕین دوای «-» دەدات،
                 // بۆیە overflow-wrap بەس نییە و پێویستی بە nowrap ـە.
                 const code = String(n.order_code || '');
-                let title = histEsc(n.title || '');
+                let title = histEsc(notifCleanTitle(n.title));
                 if (code) {
                     title = title.split(histEsc(code)).join(
                         '<span class="notif-code" dir="ltr">' + histEsc(code) + '</span>');
                 }
                 const cls = 'notif-row' + (n.read_at ? '' : ' is-unread') + (oid ? ' is-clickable' : '');
-                const click = oid ? ` onclick="openNotifOrder('${oid}')"` : '';
+                const click = oid ? ` onclick="openNotifOrder('${oid}', this)"` : '';
                 return `<div class="${cls}"${click}>
                         <span class="notif-dot" style="background:${meta.color}1f; color:${meta.color};"><i class='bx ${meta.icon}'></i></span>
                         <div class="notif-body">
@@ -8729,6 +8792,7 @@
             if (ownBtn) ownBtn.classList.toggle('active', _notifTab === 'own');
             if (teamBtn) teamBtn.classList.toggle('active', _notifTab === 'team');
 
+            renderNotifChips();
             m.classList.add('show');
 
             // ⚠️ syncMagicSlider زوو دەگەڕێتەوە کاتێک پانێڵەکە هێشتا
@@ -8738,13 +8802,60 @@
             loadNotifications(_notifTab).then(() => markNotifRead(_notifTab, true));
         }
 
-        function openNotifOrder(orderId) {
-            // سەرەتا داخستن پاشان کردنەوە — تاکو navDrop پێش navPush بێت
-            // و ستاکی دوگمەی گەڕانەوە هاوسەنگ بمێنێتەوە
-            closeModal(null, 'notif-modal');
-            if (orderId && typeof openOrderDetails === 'function') {
-                openOrderDetails(String(orderId));
+        function renderNotifications() {
+            const box = document.getElementById('notif-list');
+            if (box) box.innerHTML = notifRowsHtml(_notifCache[_notifTab]);
+        }
+
+        function renderNotifChips() {
+            const box = document.getElementById('notif-chips');
+            if (!box) return;
+            box.innerHTML = NOTIF_FILTERS.map(f =>
+                `<button type="button" class="notif-chip${f.k === _notifKind ? ' is-on' : ''}"
+                    onclick="setNotifKind('${f.k}')">${f.t}</button>`
+            ).join('');
+        }
+
+        function setNotifKind(k) {
+            if (_notifKind === k) return;
+            _notifKind = k;
+            renderNotifChips();
+            renderNotifications();
+            const box = document.getElementById('notif-list');
+            if (box) box.scrollTop = 0;   // پۆلی نوێ لە سەرەوە دەست پێدەکات
+        }
+
+        async function openNotifOrder(orderId, el) {
+            const id = String(orderId || '');
+            if (!id) return;
+
+            // ⚠️ مۆداڵی ئۆردەر **پێش** ئامادەبوونی داتاکە ناکرێتەوە.
+            //    `openOrderDetails` ئەگەر ئۆردەرەکەی لە کاشدا نەبوو،
+            //    یەکسەر بۆکسێکی سپیی بەتاڵ بە سپینەرەوە دەکاتەوە و
+            //    دواتر پڕی دەکات — ئەوە ئەو پرتە سپییە بوو.
+            //    لێرەدا سەرەتا داتاکە دەهێنرێت و نیشانەی چاوەڕوانی
+            //    لەسەر هەمان ڕیز دەردەکەوێت، پاشان مۆداڵەکە پڕ
+            //    دەکرێتەوە پێش دەرکەوتنی.
+            if (!allGlobalOrdersData[id]) {
+                if (el) el.classList.add('is-busy');
+                try {
+                    const { data, error } = await supabase.from('orders')
+                        .select('*').eq('id', id).single();
+                    if (error || !data) throw (error || new Error('not found'));
+                    allGlobalOrdersData[id] = data;
+                } catch (e) {
+                    console.warn('openNotifOrder:', e);
+                    if (el) el.classList.remove('is-busy');
+                    showToast('ئۆردەرەکە نەدۆزرایەوە', 'error');
+                    return;
+                }
+                if (el) el.classList.remove('is-busy');
             }
+
+            // داخستن پێش کردنەوە — تاکو navDrop پێش navPush بێت و
+            // ستاکی دوگمەی گەڕانەوە هاوسەنگ بمێنێتەوە
+            closeModal(null, 'notif-modal');
+            openOrderDetails(id);
         }
 
         // ئایا مۆداڵەکە نابێت دووبارە بنەخشێنرێت؟
