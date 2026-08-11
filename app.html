@@ -5351,6 +5351,13 @@
             // === ئەم دێڕە کێشەی جزدان چارەسەر دەکات ===
             if (screenId === 'wallet-screen') loadMyWalletData();
 
+            // تەنەکەی خۆڵ لە پشتەوە پێش‌دەهێنرێت — بۆیە کاتێک
+            // بەکارهێنەر کارتەکە دەکاتەوە، داتاکە ئامادەیە و
+            // چاوەڕوانی ڕێڕەوی تۆڕ ناکات
+            if (screenId === 'settings-screen' && !_myTrashLoaded) {
+                setTimeout(() => { try { loadMyTrash(true); } catch (e) { } }, 250);
+            }
+
             // فۆرمی ئۆردەر: پارەی ئامادەی جزدان لەوانەیە لەم ماوەیەدا
             // گۆڕابێت (ئۆردەرێکی تر، مووچە...) — بۆیە دووبارە دەهێنرێت
             if (screenId === 'order-screen') {
@@ -9262,47 +9269,107 @@
         //    دەپشکنێت، بۆیە ناکرێت تێپەڕێنرێت.
         // ============================================================
         let _myTrash = [];
+        let _myTrashLoaded = false;
 
         function myTrashRowHtml(t) {
             const days = trashDaysLeft(t.expires_at);
             const total = Number(t.total || 0).toLocaleString('en-US');
             const code = String(t.order_code || t.record_id || '').replace(/["\\<>]/g, '');
-            return `<div class="mtr-row">
+            const name = histEsc(t.customer_name || 'بێ ناو');
+            // ڕیزەکە خۆی دەکرێتەوە بۆ وردەکاری؛ دوگمەکە تەنها
+            // ئایکۆنە تاکو شوێن نەگرێت (پێشتر ١٢٢px پان بوو)
+            return `<div class="mtr-row" onclick="openMyTrashDetail(${Number(t.id)})">
                     <div class="mtr-info">
                         <div class="mtr-top">
-                            <b>${histEsc(t.customer_name || 'بێ ناو')}</b>
+                            <b>${name}</b>
                             <span class="mtr-code" dir="ltr">${histEsc(code)}</span>
                         </div>
                         <div class="mtr-sub">
                             <span>${total} د.ع</span>
                             <span class="mtr-days${days <= 3 ? ' is-soon' : ''}">
-                                <i class='bx bx-time-five'></i> ${days} ڕۆژ ماوە
+                                <i class='bx bx-time-five'></i> ${days} ڕۆژ
                             </span>
                         </div>
                     </div>
-                    <button type="button" class="mtr-restore" onclick="restoreMyTrash(${Number(t.id)}, this)">
-                        <i class='bx bx-undo'></i> گەڕاندنەوە
+                    <button type="button" class="mtr-restore" title="گەڕاندنەوە"
+                        aria-label="گەڕاندنەوەی ئۆردەری ${name}"
+                        onclick="event.stopPropagation(); restoreMyTrash(${Number(t.id)}, this)">
+                        <i class='bx bx-undo'></i>
                     </button>
                 </div>`;
         }
 
-        async function loadMyTrash() {
+        // وردەکاریی تەواوی ئۆردەرە سڕاوەکە — هەمان دیمەنی ئەدمین
+        // (`trashDetailBody`)، بەڵام **بەبێ** دوگمەی سڕینەوەی هەمیشەیی
+        async function openMyTrashDetail(id) {
+            const t = _myTrash.find(x => Number(x.id) === Number(id));
+            if (!t) return;
+
+            const r = {
+                id: t.id, source_table: 'orders', record_id: t.record_id,
+                label: t.order_code || t.record_id, payload: t.payload || null,
+                deleted_at: t.deleted_at, expires_at: t.expires_at
+            };
+
+            document.getElementById('trash-detail-title').innerHTML =
+                `<i class='bx bx-package' style="color:#2481cc;"></i> ${histEsc(r.label)}`;
+            document.getElementById('trash-detail-actions').innerHTML =
+                `<button type="button" class="ticon-lg restore" title="گەڕاندنەوە"
+                    onclick="restoreMyTrash(${Number(t.id)}, this, true)"><i class='bx bx-undo'></i></button>`;
+
+            const body = document.getElementById('trash-detail-body');
+            body.innerHTML = TRASH_SPINNER;
+            document.getElementById('trash-detail-modal').classList.add('show');
+
+            try {
+                await ensureTrashPayload(r);
+                t.payload = r.payload;          // کاش — جاری دووەم یەکسەرە
+                body.innerHTML = trashDetailBody(r);
+            } catch (e) {
+                console.warn('openMyTrashDetail:', e);
+                body.innerHTML = `<p style="text-align:center; color:#dc3545; padding:30px 0;">نەتوانرا وردەکارییەکان بهێنرێن</p>`;
+            }
+        }
+
+        function renderMyTrash() {
             const box = document.getElementById('my-trash-body');
-            if (!box || !currentUser || !currentUser.code) return;
-            box.innerHTML = `<div class="mtr-empty"><i class='bx bx-loader-alt bx-spin'></i> خەریکی هێنانە...</div>`;
+            if (!box) return;
+            box.innerHTML = _myTrash.length
+                ? _myTrash.map(myTrashRowHtml).join('')
+                : `<div class="mtr-empty"><i class='bx bx-trash'></i> هیچ ئۆردەرێکی سڕاوەت نییە</div>`;
+        }
+
+        // ⚠️ سپینەر تەنها جاری **یەکەم** دەردەکەوێت. دوای ئەوە
+        //    لیستی پێشوو دەمێنێتەوە و بێدەنگ نوێ دەبێتەوە — ئەگەرنا
+        //    هەر کردنەوەیەک ناوەڕۆکەکەی دەسڕییەوە و چاوەڕوانی
+        //    ڕێڕەوی تۆڕ دەکرد، کە وەک لاگ هەست پێدەکرا.
+        async function loadMyTrash(silent) {
+            const box = document.getElementById('my-trash-body');
+            if (!currentUser || !currentUser.code) return;
+            if (box && !silent && !_myTrashLoaded) {
+                box.innerHTML = `<div class="mtr-empty"><i class='bx bx-loader-alt bx-spin'></i> خەریکی هێنانە...</div>`;
+            }
             try {
                 const { data, error } = await supabase.rpc('my_trash_page', {
                     p_code: String(currentUser.code), p_limit: 60, p_offset: 0
                 });
                 if (error) throw error;
-                _myTrash = data || [];
+                // payloadی کاشکراو دەپارێزرێت — ئەگەرنا هەر
+                // نوێبوونەوەیەک وردەکارییەکان لەدەست دەدات
+                const old = {};
+                _myTrash.forEach(t => { if (t.payload) old[String(t.id)] = t.payload; });
+                _myTrash = (data || []).map(t => {
+                    if (old[String(t.id)]) t.payload = old[String(t.id)];
+                    return t;
+                });
+                _myTrashLoaded = true;
                 syncMyTrashCount();
-                box.innerHTML = _myTrash.length
-                    ? _myTrash.map(myTrashRowHtml).join('')
-                    : `<div class="mtr-empty"><i class='bx bx-trash'></i> هیچ ئۆردەرێکی سڕاوەت نییە</div>`;
+                renderMyTrash();
             } catch (e) {
                 console.warn('loadMyTrash:', e);
-                box.innerHTML = `<div class="mtr-empty"><i class='bx bx-error-circle'></i> نەتوانرا بهێنرێت</div>`;
+                if (box && !_myTrashLoaded) {
+                    box.innerHTML = `<div class="mtr-empty"><i class='bx bx-error-circle'></i> نەتوانرا بهێنرێت</div>`;
+                }
             }
         }
 
@@ -9314,7 +9381,7 @@
             el.classList.toggle('is-on', n > 0);
         }
 
-        async function restoreMyTrash(id, btn) {
+        async function restoreMyTrash(id, btn, fromModal) {
             if (!currentUser || !currentUser.code) return;
             if (!confirm('ئەم ئۆردەرە بگەڕێتەوە بۆ لیستی ئۆردەرەکانت؟')) return;
             if (btn) { btn.disabled = true; btn.style.opacity = '0.5'; }
@@ -9326,14 +9393,10 @@
                 if (data && String(data).startsWith('error')) throw new Error(String(data));
 
                 showToast('ئۆردەرەکە گەڕایەوە', 'success');
+                if (fromModal) closeModal(null, 'trash-detail-modal');
                 _myTrash = _myTrash.filter(t => Number(t.id) !== Number(id));
                 syncMyTrashCount();
-                const box = document.getElementById('my-trash-body');
-                if (box) {
-                    box.innerHTML = _myTrash.length
-                        ? _myTrash.map(myTrashRowHtml).join('')
-                        : `<div class="mtr-empty"><i class='bx bx-trash'></i> هیچ ئۆردەرێکی سڕاوەت نییە</div>`;
-                }
+                renderMyTrash();
                 // لیستەکان کۆن بوون — ئۆردەرێکی نوێیان بۆ هاتووەتەوە
                 invalidateMgmtCache();
                 isDashboardDataLoaded = false;
@@ -9350,7 +9413,11 @@
             if (!card) return;
             const open = card.classList.toggle('open');
             btn.setAttribute('aria-expanded', open ? 'true' : 'false');
-            if (open) loadMyTrash();
+            if (!open) return;
+            // داتاکە پێشتر هاتووە → یەکسەر دەردەکەوێت، و بێدەنگ
+            // لە پشتەوە نوێ دەبێتەوە
+            if (_myTrashLoaded) { renderMyTrash(); loadMyTrash(true); }
+            else loadMyTrash();
         }
 
         // ئایا مۆداڵەکە نابێت دووبارە بنەخشێنرێت؟

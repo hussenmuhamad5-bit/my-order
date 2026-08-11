@@ -10797,6 +10797,24 @@ body {
   max-height: 760px;
 }
 
+/* ⚠️ تەنەکەی خۆڵ دەکرێت دەیان ڕیزی هەبێت — بە ٧٦٠px ئەوانی
+   خوارەوە دەبڕدران و دەستیان پێ نەدەگەیشت. ئێستا لیستەکە
+   خۆی دەخزێت. */
+#my-trash-card.open .npc-body {
+  max-height: 70vh;
+}
+
+#my-trash-body {
+  max-height: calc(70vh - 90px);
+  overflow-y: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+#my-trash-body::-webkit-scrollbar {
+  display: none;
+}
+
 .npc-inner {
   padding: 0 18px 16px;
 }
@@ -10987,27 +11005,47 @@ body {
   font-weight: 700;
 }
 
+/* ئایکۆنی تەنها — پێشتر ١٢٢px پان بوو و نیوەی ڕیزەکەی دەگرت.
+   ناوی کردارەکە لە aria-label و title ـدایە. */
 .mtr-restore {
+  position: relative;
   flex-shrink: 0;
-  display: inline-flex;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  display: flex;
   align-items: center;
-  gap: 5px;
-  min-height: 38px;
-  padding: 0 13px;
-  border-radius: var(--r-full);
-  border: 1px solid rgba(36, 129, 204, .28);
+  justify-content: center;
+  border-radius: 11px;
+  border: 1px solid rgba(36, 129, 204, .22);
   background: rgba(36, 129, 204, .08);
   color: var(--primary);
-  font-family: inherit;
-  font-size: 13px;
-  font-weight: 700;
+  font-size: 19px;
   cursor: pointer;
   transition: background .2s ease, transform .2s ease;
 }
 
+/* ناوچەی پەنجە ٤٤px، دیمەن ٣٦px */
+.mtr-restore::before {
+  content: '';
+  position: absolute;
+  inset: -4px;
+}
+
 .mtr-restore:active {
   background: rgba(36, 129, 204, .2);
-  transform: scale(.96);
+  transform: scale(.94);
+}
+
+/* ڕیزەکە خۆی دەکرێتەوە بۆ وردەکاری */
+.mtr-row {
+  cursor: pointer;
+  border-radius: 10px;
+  transition: background .15s ease;
+}
+
+.mtr-row:active {
+  background: rgba(36, 129, 204, .07);
 }
 
 .mtr-empty {
