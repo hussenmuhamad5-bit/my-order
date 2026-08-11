@@ -5404,26 +5404,73 @@ h2 i,
   overflow: hidden !important;
 }
 
-.dash-scan-btn {
+/* دوگمەکانی سەرەوەی داشبۆرد — سکان و زەنگ.
+   ٣٤×٣٤ــە وەک .modal-copy، تاکو هەموو دوگمە بچووکەکانی ئەپەکە
+   یەک شێوەیان هەبێت. پێشتر سکان پیلێکی درێژ بوو بە دەقی
+   «سکانی ئۆردەر»ەوە؛ ئێستا تەنها ئایکۆنە. */
+.dash-scan-btn,
+.dash-bell-btn {
   background: linear-gradient(135deg, rgba(36, 129, 204, 0.14), rgba(36, 129, 204, 0.06));
   border: 1px solid rgba(36, 129, 204, 0.28);
   color: var(--primary);
-  padding: 6px 12px;
+  width: 34px;
+  height: 34px;
+  padding: 0;
   border-radius: var(--r-full);
-  font-size: var(--fs-md);
-  font-weight: var(--font-bold);
+  font-size: 18px;
   display: flex;
   align-items: center;
-  gap: 6px;
+  justify-content: center;
   cursor: pointer;
   box-shadow: 0 2px 8px -2px rgba(36, 129, 204, 0.25);
   transition: all 0.2s ease;
 }
 
-.dash-scan-btn:active {
+.dash-scan-btn:active,
+.dash-bell-btn:active {
   transform: scale(0.94);
   background: rgba(36, 129, 204, 0.25);
   box-shadow: 0 1px 4px -1px rgba(36, 129, 204, 0.3);
+}
+
+.dash-head-end {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* لەنگەری خاڵی سوور */
+.dash-bell-btn {
+  position: relative;
+}
+
+/* خاڵی سوور = ئاگادارکردنەوەی نەخوێندراو.
+   وەک .ocmt-dot، بەڵام بۆردەرەکەی --bg ـە نەک #fff: ئەوە لەسەر
+   سەردێڕی سپی مۆداڵە، ئەمە لەسەر پاشبنەمای داشبۆردە — بە سپی
+   وەک هالەیەک دەردەکەوێت. */
+.dash-bell-dot {
+  display: none;
+  position: absolute;
+  top: -2px;
+  inset-inline-end: -2px;
+  min-width: 15px;
+  height: 15px;
+  padding: 0 3px;
+  border-radius: 8px;
+  background: #ef4444;
+  border: 2px solid var(--bg);
+  color: #fff;
+  font-size: 9px;
+  font-weight: 800;
+  line-height: 11px;
+  text-align: center;
+  box-sizing: content-box;
+  direction: ltr;
+}
+
+.dash-bell-dot.is-on {
+  display: block;
 }
 
 #dashboard-screen>*:not(#orders-list) {
@@ -10464,4 +10511,148 @@ body {
 .cmt-stamp.has-unread {
   background: rgba(239, 68, 68, .14);
   color: #dc2626;
+}
+
+/* =========================================
+   پانێڵی ئاگادارکردنەوەکان
+   -----------------------------------------
+   قەبارەی جێگیر وەک #order-details-modal: سەردێڕ و تابەکان
+   ناجوڵێن، تەنها لیستەکە سکڕۆڵ دەبێت. بەبێ ئەوە پانێڵەکە
+   بەپێی ژمارەی ڕیزەکان قەبارەی دەگۆڕی.
+   ========================================= */
+#notif-modal .modal-content {
+  height: 80vh;
+  max-width: 480px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+#notif-modal .modal-header {
+  flex-shrink: 0;
+}
+
+#notif-magic-tabs {
+  flex-shrink: 0;
+  margin-bottom: 8px;
+}
+
+.notif-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.notif-list::-webkit-scrollbar {
+  display: none;
+}
+
+/* ---- ژمارەی نەخوێندراو لەسەر هەر تابێک ---- */
+.notif-tab-n {
+  display: none;
+  margin-inline-start: 5px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 8px;
+  background: #ef4444;
+  color: #fff;
+  font-size: 9px;
+  font-weight: 800;
+  line-height: 16px;
+  text-align: center;
+}
+
+.notif-tab-n.is-on {
+  display: inline-block;
+}
+
+/* ---- ڕیزەکان — هەمان زمانی بینراوی .olog-row ---- */
+.notif-row {
+  display: flex;
+  gap: 10px;
+  padding: 12px 10px;
+  border-radius: 12px;
+  position: relative;
+}
+
+.notif-row+.notif-row {
+  border-top: 1px solid #eef2f7;
+}
+
+.notif-row.is-clickable {
+  cursor: pointer;
+}
+
+.notif-row.is-clickable:active {
+  background: rgba(36, 129, 204, .1);
+}
+
+/* نەخوێندراو — پاشبنەمایەکی شین و هێمن */
+.notif-row.is-unread {
+  background: rgba(36, 129, 204, .06);
+}
+
+.notif-dot {
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+}
+
+.olog-skel .notif-dot {
+  background: #e8eef5;
+}
+
+.notif-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.notif-top {
+  font-size: var(--fs-md);
+  color: var(--text-main);
+  margin-bottom: 3px;
+  word-break: break-word;
+}
+
+.notif-detail {
+  font-size: var(--fs-sm);
+  color: #475569;
+  line-height: 1.65;
+  word-break: break-word;
+  white-space: pre-line;
+}
+
+.notif-time {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+  font-size: var(--fs-2xs);
+  color: #94a3b8;
+  direction: rtl;
+}
+
+.notif-time i {
+  font-size: 13px;
+}
+
+/* لە fullscreenـدا مۆداڵێکی ناوەڕاست‌کراو سەرەکەی دەکەوێتە ژێر
+   دوگمەکانی تلیگرام (Close و ⌄ و ⋮). لێرەدا لە جیاتی ناوەڕاست،
+   ڕاست لەژێر ناوچە پارێزراوەکە دادەنرێت. */
+:root.tg-fullscreen #notif-modal {
+  align-items: flex-start;
+  padding-top: calc(var(--safe-top-status) + var(--safe-top-tgbar) + 8px);
+}
+
+:root.tg-fullscreen #notif-modal .modal-content {
+  height: calc(88vh - var(--safe-top-status) - var(--safe-top-tgbar));
 }
