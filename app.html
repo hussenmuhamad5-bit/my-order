@@ -7053,8 +7053,8 @@
             const { data: u, error } = await supabase.from('employees')
                 .select('balance, savings').eq('code', code).single();
             if (error) throw error;
-            const txs = await fetchAllUserTx(code);
-            const s = splitWalletByHold(txs, u ? u.balance : 0, u ? u.savings : 0);
+            const w = await fetchTxAndOrderDates(code);
+            const s = splitWalletByHold(w.txs, u ? u.balance : 0, u ? u.savings : 0, w.dates);
             return Math.max(0, Math.round(s.bal.ready));
         }
 
@@ -15503,7 +15503,58 @@
         const PAYOUT_HOLD_DAYS = 10;
         const DAY_MS = 86400000;
 
-        function splitWalletByHold(txs, balance, savings) {
+        // بەرواری ئۆردەر دەقە، بە شێوەی «YYYY-MM-DD hh:mm:ss AM|PM».
+        // هەمان شیکارییەی `getRelativeTime` — بەبێ ئەمە `new Date()`
+        // لە هەندێ وێبگەڕدا NaN دەداتەوە.
+        function parseAppDate(s) {
+            if (!s) return 0;
+            const m = String(s).match(/(\d{4})-(\d{2})-(\d{2})\s+(\d{1,2}):(\d{2}):(\d{2})\s*(AM|PM)/i);
+            if (m) {
+                let h = parseInt(m[4], 10);
+                const ap = m[7].toUpperCase();
+                if (ap === 'PM' && h < 12) h += 12;
+                if (ap === 'AM' && h === 12) h = 0;
+                return new Date(+m[1], +m[2] - 1, +m[3], h, +m[5], +m[6]).getTime();
+            }
+            const d = new Date(s);
+            return isNaN(d.getTime()) ? 0 : d.getTime();
+        }
+
+        // بەرواری **دروستکردنی** ئۆردەرەکان — خولی چاوەڕوانی لێرەوە
+        // دەست پێدەکات، نەک لە کاتی گەیشتن
+        async function fetchOrderDates(ids) {
+            const out = new Map();
+            const list = Array.from(new Set((ids || []).map(String).filter(Boolean)));
+            if (!list.length) return out;
+            const CH = 300;
+            for (let i = 0; i < list.length; i += CH) {
+                const { data, error } = await supabase.from('orders')
+                    .select('id, date').in('id', list.slice(i, i + CH));
+                if (error) throw error;
+                (data || []).forEach(o => {
+                    const t = parseAppDate(o.date);
+                    if (t) out.set(String(o.id), t);
+                });
+            }
+            return out;
+        }
+
+        // جووڵەکان + بەرواری ئۆردەرەکانیان، پێکەوە
+        async function fetchTxAndOrderDates(code) {
+            const txs = await fetchAllUserTx(code);
+            let dates = new Map();
+            try {
+                dates = await fetchOrderDates(txs.map(t => t.order_id));
+            } catch (e) {
+                // نەتوانرا بەروارەکان بهێنرێن → دەگەڕێتەوە بۆ ڕەفتاری
+                // کۆن (کاتی گەیشتن). ژمارەکان دەردەکەون، تەنها خولەکە
+                // دواتر دەست پێدەکات.
+                console.warn('fetchOrderDates:', e);
+            }
+            return { txs: txs, dates: dates };
+        }
+
+        function splitWalletByHold(txs, balance, savings, orderDates) {
             const cutoff = Date.now() - PAYOUT_HOLD_DAYS * DAY_MS;
             const groups = {};              // کلیل: جزدان|ئۆردەر
             // fromOrders + bonus + cut == ready (هەمیشە)
@@ -15536,7 +15587,7 @@
 
                 const key = (isSav ? 's|' : 'b|') + t.order_id;
                 const ts = t.created_at ? new Date(t.created_at).getTime() : 0;
-                if (!groups[key]) groups[key] = { sav: isSav, net: 0, first: ts };
+                if (!groups[key]) groups[key] = { sav: isSav, net: 0, first: ts, oid: String(t.order_id) };
                 groups[key].net += amt;
                 if (ts && (!groups[key].first || ts < groups[key].first)) groups[key].first = ts;
             });
@@ -15545,9 +15596,25 @@
                 const g = groups[k];
                 if (Math.abs(g.net) < 0.01) return;      // گەڕاوەتەوە — هیچی نەماوە
                 const b = g.sav ? out.sav : out.bal;
-                if (g.first && g.first <= cutoff) { b.fromOrders += g.net; return; }
+
+                // ⭐ خولی ١٠ ڕۆژ لە کاتی **دروستکردنی ئۆردەر**ەوە
+                //    دەست پێدەکات، نەک لە کاتی گەیشتنی.
+                //
+                //    ئەنجامەکەی:
+                //      • ئۆردەرێک کە لەناو ١٠ ڕۆژەکەدا گەیشتوو بێت →
+                //        دەمێنێتەوە لە چاوەڕوانی تا ڕۆژی ١٠ـەمی
+                //        دروستکردنەکەی
+                //      • ئۆردەرێک کە ١٠ ڕۆژی بەسەردا تێپەڕیوە و
+                //        دواتر گەیشتوو بکرێت → یەکسەر ڕاکێشانە
+                //
+                //    ئەگەر بەروارەکە نەدۆزرایەوە (ئۆردەر سڕاوەتەوە یان
+                //    لە تەنەکەی خۆڵدایە)، دەگەڕێتەوە بۆ کاتی یەکەم
+                //    جووڵەی پارە — هەمان ڕەفتاری کۆن.
+                const start = (orderDates && orderDates.get(g.oid)) || g.first;
+
+                if (start && start <= cutoff) { b.fromOrders += g.net; return; }
                 b.pending += g.net; b.pendingN++;
-                const due = g.first + PAYOUT_HOLD_DAYS * DAY_MS;
+                const due = start + PAYOUT_HOLD_DAYS * DAY_MS;
                 if (b.due === null || due < b.due) b.due = due;
             });
 
@@ -15876,8 +15943,8 @@
                 note.innerHTML = `<div class="mw-hold-row"><i class='bx bx-loader-alt bx-spin'></i> حیسابکردنی پارەی ئامادە...</div>`;
             }
             try {
-                const txs = await fetchAllUserTx(currentUser.code);
-                renderMyWalletSplit(splitWalletByHold(txs, balance, savings), canSeeSavings);
+                const w = await fetchTxAndOrderDates(currentUser.code);
+                renderMyWalletSplit(splitWalletByHold(w.txs, balance, savings, w.dates), canSeeSavings);
             } catch (e) {
                 // ژمارە هەڵە پیشاندان لە هیچ پیشاندان خراپترە
                 const bal = document.getElementById('my-bal-split');
@@ -15903,12 +15970,12 @@
                 // نموونە یەکسەر دوای زیادکردنی پارە)، و ئەوسا باڵانسی کۆن
                 // بەرامبەر جووڵەی نوێ بەراورد دەکرێت و «جیاوازی»یەکی درۆیین
                 // دەردەکەوێت کە بەڕێوەبەر بە هەڵە ڕاستی دەکاتەوە.
-                const [uRes, txs] = await Promise.all([
+                const [uRes, w] = await Promise.all([
                     supabase.from('employees').select('balance, savings').eq('code', code).single(),
-                    fetchAllUserTx(code)
+                    fetchTxAndOrderDates(code)
                 ]);
                 const u = uRes && uRes.data;
-                walletHoldCache[code] = splitWalletByHold(txs, u ? u.balance : 0, u ? u.savings : 0);
+                walletHoldCache[code] = splitWalletByHold(w.txs, u ? u.balance : 0, u ? u.savings : 0, w.dates);
                 // لەوانەیە بەکارهێنەر جزدانەکەی داخستبێت پێش گەڕانەوەی داتاکە
                 if (window.currentWalletCode === code) renderWalletHoldSplit(walletHoldCache[code]);
             } catch (e) {
@@ -16040,7 +16107,8 @@
                 // ماوەیە ئۆردەرێک گەڕابێتەوە یان کەسێکی تر مووچەی دابێت
                 const { data: u } = await supabase.from('employees').select('balance, savings').eq('code', code).single();
                 const oldB = parseFloat(u.balance || 0), oldS = parseFloat(u.savings || 0);
-                const fresh = splitWalletByHold(await fetchAllUserTx(code), oldB, oldS);
+                const fw = await fetchTxAndOrderDates(code);
+                const fresh = splitWalletByHold(fw.txs, oldB, oldS, fw.dates);
                 if (b > Math.floor(fresh.bal.ready) || s > Math.floor(fresh.sav.ready)) {
                     walletHoldCache[code] = fresh;
                     renderWalletHoldSplit(fresh);
