@@ -2457,6 +2457,25 @@
         // ڕێگاکانی چوونەژوورەوە دەگرێتەوە (پاسوۆرد، ئەکاونتی پاشەکەوت‌کراو،
         // چوونەژوورەوەی خۆکار).
         // ============================================================
+        // ناسنامەی ئەو تلیگرامەی ئێستا ئەپەکەی پێ کراوەتەوە
+        function currentTelegramId() {
+            const tg = window.Telegram && window.Telegram.WebApp;
+            const u = tg && tg.initDataUnsafe && tg.initDataUnsafe.user;
+            return (u && u.id) ? String(u.id) : "";
+        }
+
+        // پەیوەندیی ئەم ئەکاونتە بەم تلیگرامەوە دەسڕدرێتەوە.
+        // بەبێ ئەمە، دوای دەرچوونیش ئاگادارکردنەوەکانی دەهاتن.
+        async function unlinkCurrentChat(code) {
+            const tgId = currentTelegramId();
+            if (!code || !tgId) return;
+            try {
+                await supabase.rpc('unlink_employee_chat', {
+                    p_code: String(code), p_telegram_id: tgId
+                });
+            } catch (e) { console.warn('unlinkChat:', e); }
+        }
+
         async function syncTelegramIdentity() {
             if (!currentUser || !currentUser.code) return;
 
@@ -2468,7 +2487,23 @@
             const tgUsername = u.username || "";
             const tgName = (u.first_name || "") + (u.last_name ? " " + u.last_name : "");
 
-            // هەمان ناسنامەیە → هیچ داواکارییەک نانێردرێت
+            // ⭐ پەیوەندی — هەمیشە، تەنانەت ئەگەر هیچ نەگۆڕابێت.
+            //
+            //    یەک ئەکاونت دەکرێت لەسەر چەند تلیگرامێک کرابێتەوە.
+            //    `employees.telegram_id` تەنها یەک خانەیە، بۆیە
+            //    ئەوەی دواتر بیکاتەوە ئەوانی پێشووی دەسڕێتەوە و
+            //    ئاگادارکردنەوە تەنها بۆ یەکێکیان دەچوو.
+            //    `employee_chats` هەموویان هەڵدەگرێت (db/018).
+            try {
+                await supabase.rpc('link_employee_chat', {
+                    p_code: String(currentUser.code),
+                    p_telegram_id: tgId,
+                    p_username: tgUsername || null,
+                    p_name: tgName || null
+                });
+            } catch (e) { console.warn('linkChat:', e); }
+
+            // هەمان ناسنامەیە → هیچ داواکارییەکی تر نانێردرێت
             if (String(currentUser.telegram_id || "") === tgId
                 && String(currentUser.telegram_username || "") === tgUsername
                 && String(currentUser.telegram_name || "") === tgName) return;
@@ -3369,11 +3404,13 @@
 
 
 
-        function logout() {
-            if (confirm("دڵنیایت دەتەوێت دەربچیت؟")) {
-                localStorage.removeItem('myAppUser');
-                window.location.href = "index.html";
-            }
+        async function logout() {
+            if (!confirm("دڵنیایت دەتەوێت دەربچیت؟")) return;
+            // پەیوەندیی ئەم ئەکاونتە بەم تلیگرامەوە دەسڕدرێتەوە —
+            // ئەگەرنا دوای دەرچوونیش ئاگادارکردنەوەکانی دەهاتن
+            try { await unlinkCurrentChat(currentUser && currentUser.code); } catch (e) { }
+            localStorage.removeItem('myAppUser');
+            window.location.href = "index.html";
         }
 
         // ============ ئاڵوگۆڕی ئەکاونت (Facebook-style) ============
@@ -3388,9 +3425,12 @@
             if (i >= 0) a[i] = e; else a.push(e);
             setSavedAccounts(a);
         }
-        function removeSavedAccountApp(code, ev) {
+        async function removeSavedAccountApp(code, ev) {
             if (ev) ev.stopPropagation();
             if (currentUser && code === currentUser.code) { showToast("ناتوانیت ئەکاونتی ئێستا بسڕیتەوە!", "error"); return; }
+            // لادانی ئەکاونتێک لەم ئامێرە واتای «ئیتر لێرە بەکاری
+            // ناهێنم» — بۆیە ئاگادارکردنەوەکانیشی دەوەستێت
+            try { await unlinkCurrentChat(code); } catch (e) { }
             setSavedAccounts(getSavedAccounts().filter(x => x.code !== code));
             renderSwitcherAccounts();
         }
@@ -3428,6 +3468,25 @@
 
         async function switchAccount(code) {
             if (!currentUser || code === currentUser.code) return;
+
+            // ئەکاونتی ئێستا لەسەر ئەم تلیگرامە دەمێنێتەوە یان نا؟
+            //
+            // بەبێ ئەم پرسیارە، هەر ئەکاونتێک جارێک لێرە بکرێتەوە
+            // هەتاهەتایە ئاگادارکردنەوەکانی بۆ ئەم تلیگرامە دەهات —
+            // تەنانەت دوای ئەوەی کەسەکە ئیتر بەکاری ناهێنێت.
+            const prev = currentUser;
+            if (currentTelegramId()) {
+                const keep = confirm(
+                    'ئاگادارکردنەوەکانی «' + (prev.full_name || prev.code) + '» '
+                    + 'هەر بۆ ئەم تلیگرامە بێت؟\n\n'
+                    + 'باشە = بەڵێ، بەردەوام بێت\n'
+                    + 'پاشگەزبوونەوە = نا، بوەستێت'
+                );
+                if (!keep) {
+                    try { await unlinkCurrentChat(prev.code); } catch (e) { }
+                }
+            }
+
             showToast("ئاڵوگۆڕکردنی ئەکاونت...", "loading");
             try {
                 const { data } = await supabase.from('employees').select('*').eq('code', code).single();
