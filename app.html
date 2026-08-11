@@ -8852,9 +8852,19 @@
                 if (el) el.classList.remove('is-busy');
             }
 
-            // داخستن پێش کردنەوە — تاکو navDrop پێش navPush بێت و
-            // ستاکی دوگمەی گەڕانەوە هاوسەنگ بمێنێتەوە
-            closeModal(null, 'notif-modal');
+            // ⚠️ پانێڵی ئاگادارکردنەوەکان **ناخرێتەوە**. مۆداڵی ئۆردەر
+            //    لەسەری دەکرێتەوە (z-index 2050 بەرامبەر 2000). دوو
+            //    سوودی هەیە:
+            //      • دوای داخستنی ئۆردەرەکە دەگەڕێیتەوە بۆ هەمان
+            //        لیستی ئاگادارکردنەوەکان، نەک بۆ پەڕەی سەرەکی
+            //      • پەردە ڕەشەکە هەرگیز نایەوێت — پێشتر لە نێوان
+            //        داخستن و کردنەوەدا بۆ ساتێک لادەچوو و ئەوە
+            //        ئەو پرتەیە بوو
+            //
+            // is-under پەردەکەی خۆی دەکوژێنێتەوە، ئەگەرنا دوو پەردە
+            // لەسەر یەک دادەنرێن و پاشخانەکە زۆر تاریک دەبێت.
+            const nm = document.getElementById('notif-modal');
+            if (nm && nm.classList.contains('show')) nm.classList.add('is-under');
             openOrderDetails(id);
         }
 
@@ -10923,7 +10933,13 @@
             document.getElementById(modalId).classList.remove('show');
             // پەنجەرەی وردەکاری ئۆردەر داخرا → وەک «پشکنراو» نیشان دەکرێت.
             // ئەمە تاکە ڕێگای داخستنە (X، پاشخان، دەستکاری، سڕینەوە…)
-            if (modalId === 'order-details-modal') reviewOnOrderClosed();
+            if (modalId === 'order-details-modal') {
+                reviewOnOrderClosed();
+                // ئەگەر لە ئاگادارکردنەوەکانەوە کرابووەوە، پانێڵەکە
+                // لە ژێریدا کراوە مابووەوە → پەردەکەی دەگەڕێتەوە
+                const nm = document.getElementById('notif-modal');
+                if (nm) nm.classList.remove('is-under');
+            }
         }
 
         // ============================================================
