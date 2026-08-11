@@ -2439,6 +2439,58 @@
             }
         }
 
+        // ============================================================
+        // ناسنامەی تلیگرام
+        // ------------------------------------------------------------
+        // ئاگادارکردنەوەکان لە داتابەیسەوە ڕاستەوخۆ بۆ Telegram Bot API
+        // دەنێردرێن (db/015)، و `employees.telegram_id` تاکە ڕێگایە بۆ
+        // زانینی ئەوەی پەیامەکە بۆ کێ بچێت. ئەگەر بەتاڵ بێت، ئەو کەسە
+        // بێدەنگ تێدەپەڕێت و هیچ ئاگادارکردنەوەیەکی بۆ ناچێت.
+        //
+        // پێشتر تەنها لە `index.html`ـدا تۆمار دەکرا — واتا:
+        //   • کەسانێک کە پێش زیادکردنی ئەم تایبەتمەندییە چوونەژوورەوە
+        //     هەرگیز ناسنامەیان تۆمار نەکراوە
+        //   • ئەگەر کەسێک بە ئەکاونتێکی تری تلیگرامەوە بێتەوە،
+        //     ناسنامە کۆنەکە دەمێنێتەوە و پەیامەکان بۆ لای هەڵە دەچن
+        //
+        // لێرەدا لە هەر کردنەوەیەکی ئەپەکەدا پشکنین دەکرێت — بۆیە هەموو
+        // ڕێگاکانی چوونەژوورەوە دەگرێتەوە (پاسوۆرد، ئەکاونتی پاشەکەوت‌کراو،
+        // چوونەژوورەوەی خۆکار).
+        // ============================================================
+        async function syncTelegramIdentity() {
+            if (!currentUser || !currentUser.code) return;
+
+            const tg = window.Telegram && window.Telegram.WebApp;
+            const u = tg && tg.initDataUnsafe && tg.initDataUnsafe.user;
+            if (!u || !u.id) return;                 // لە دەرەوەی تلیگرام کراوەتەوە
+
+            const tgId = String(u.id);
+            const tgUsername = u.username || "";
+            const tgName = (u.first_name || "") + (u.last_name ? " " + u.last_name : "");
+
+            // هەمان ناسنامەیە → هیچ داواکارییەک نانێردرێت
+            if (String(currentUser.telegram_id || "") === tgId
+                && String(currentUser.telegram_username || "") === tgUsername
+                && String(currentUser.telegram_name || "") === tgName) return;
+
+            try {
+                const { error } = await supabase.from('employees').update({
+                    telegram_id: tgId,
+                    telegram_username: tgUsername,
+                    telegram_name: tgName
+                }).eq('code', currentUser.code);
+                if (error) throw error;
+
+                currentUser.telegram_id = tgId;
+                currentUser.telegram_username = tgUsername;
+                currentUser.telegram_name = tgName;
+                try { localStorage.setItem('myAppUser', JSON.stringify(currentUser)); } catch (e) { }
+            } catch (e) {
+                // شکستی ئەمە نابێت ڕێگری لە کارکردنی ئەپەکە بکات
+                console.warn('syncTelegramIdentity:', e);
+            }
+        }
+
         // پشکنین پێش هەر کردارێک: (١) کلیلەکە هەیە؟ (٢) دەسەڵاتی ئەم کارەی هەیە؟
         async function ensureAuthorized(permKey) {
             let active = await ensureAccountActive();
@@ -3108,6 +3160,9 @@
 
             // پشکنینی ئاسایش: ئایا کلیلی ئەم ئەکاونتە هێشتا هەیە؟ ئەگەر سڕابێتەوە → دەرچوون
             if (!await ensureAccountActive()) return;
+
+            // ناسنامەی تلیگرام — بەبێی هیچ ئاگادارکردنەوەیەک ناگات
+            try { await syncTelegramIdentity(); } catch (e) { }
 
             // بارکردنی سنووری تیم (ژێردەستەکان) بۆ جێبەجێکردنی مەودای دەسەڵاتەکان
             loadTeamScope();
