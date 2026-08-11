@@ -2584,16 +2584,37 @@
                 if (c) roleByCode[c] = normalizeRole(e.role || '');
             });
             if (myCode && allEmployeesLite.length) {
+                // ⭐ دارەکە لە زنجیرەی **دەسەڵات**ەوە دروست دەبێت،
+                //    نەک لە `creator`.
+                //
+                //    پێشتر تەنها `creator` بەکاردەهات. بەڵام کاتێک
+                //    ئەندامێک دەگوازرێتەوە بۆ بەڕێوەبەرێکی نوێ، تەنها
+                //    `manager` دەگۆڕدرێت — نەک `creator`. ئەنجام:
+                //    بەڕێوەبەرە نوێیەکە قازانجی وەردەگرت بەڵام
+                //    **هیچی نەدەبینی**، و کۆنەکە هێشتا هەمووی دەبینی.
+                //
+                //    باوکی نزیک = ڕاوێژکار → سەرپەرشت → بەڕێوەبەر.
+                //    `creator` تەنها وەک پاشەکەوت بەکاردێت بۆ ئەوانەی
+                //    هیچ زنجیرەیەکیان نییە (ئەگەرنا لە هیچ تیمێکدا
+                //    نەدەبوون).
+                //
+                //    ئۆردەرە کۆنەکانی گوازراوەکان لەڕێی `seller_manager`ی
+                //    سەر ئۆردەرەکەوە دەبینرێن — بڕوانە `orderFilterParams`.
                 let creatorOf = {}, roleOf = {}, childrenByCreator = {};
                 let kingCode = globalKingCode ? String(globalKingCode).trim() : '';
                 allEmployeesLite.forEach(e => {
                     let eCode = String(e.code || '').trim();
-                    let eCreator = String(e.creator || '').trim();
                     if (!eCode) return;
-                    creatorOf[eCode] = eCreator;
                     roleOf[eCode] = normalizeRole(e.role || '');
                     if (!kingCode && roleOf[eCode] === 'پاشا') kingCode = eCode;
-                    (childrenByCreator[eCreator] = childrenByCreator[eCreator] || []).push(eCode);
+
+                    let up = String(e.consultant || '').trim()
+                        || String(e.admin || '').trim()
+                        || String(e.manager || '').trim()
+                        || String(e.creator || '').trim();
+                    if (up === eCode) up = '';
+                    creatorOf[eCode] = up;
+                    (childrenByCreator[up] = childrenByCreator[up] || []).push(eCode);
                 });
                 // سەرکەوتن لە زنجیرەی دروستکەر تا گەیشتن بە بەڕێوەبەری سەرەوە (دروستکراوی پاشا)
                 let root = myCode, guard = 0;
@@ -2630,7 +2651,10 @@
         async function loadTeamScope() {
             if (userRole === 'پاشا') return; // پاشا هەمووی دەبینێت، پێویستی بەمە نییە
             try {
-                const { data } = await supabase.from('employees').select('code,creator,role');
+                // manager/admin/consultant پێویستن: زنجیرەی دەسەڵات
+                // تەنها بە `creator` نییە — بڕوانە `computeMyTeam`
+                const { data } = await supabase.from('employees')
+                    .select('code,creator,role,manager,admin,consultant');
                 if (data) { allEmployeesLite = data; computeMyTeam(); }
             } catch (e) { console.warn('loadTeamScope', e); }
         }
@@ -4688,12 +4712,24 @@
             let dateFrom = document.getElementById('filter-date-from').value;
             let dateTo = document.getElementById('filter-date-to').value;
             let search = document.getElementById('orders-search-input').value.trim();
+            // مێژووی تیم: ئەو ئەندامانەی پێشتر لە ژێر دەستی مندا بوون و
+            // گوازراونەتەوە بۆ کەسێکی تر. ئۆردەرە کۆنەکانیان لەسەر
+            // `orders.seller_manager` تۆمارکراون، بۆیە هێشتا دەیانبینم —
+            // بەڵام ئۆردەرە نوێیەکانیان نا. (بڕوانە db/020)
+            //
+            // تەنها لە تابی تیمدا، و تەنها کاتێک نەچووبینەتە ناو
+            // ئەندامێکی دیاریکراوەوە — ئەگەرنا «داواکارییەکانم» تێکەڵ دەبێت.
+            const histCode = (currentOrdersTab === 'team' && !selectedTeamMember
+                && currentUser && currentUser.code)
+                ? String(currentUser.code) : null;
+
             return {
                 p_sellers: (sellers && sellers.length) ? sellers : null,
                 p_status: (status && status !== 'all') ? status : null,
                 p_date_from: dateFrom || null,
                 p_date_to: dateTo || null,
-                p_search: search || null
+                p_search: search || null,
+                p_hist: histCode
             };
         }
 
@@ -6418,7 +6454,10 @@
             _mgmtResetWindow();
 
             if (currentOrdersTab === "team" && teamViewMode === "members" && !selectedTeamMember) {
-                if (teamMembersData.length === 0) {
+                // تیمەکە بەتاڵە — بەڵام لەوانەیە ئەندامی مێژوویی هەبێت
+                // (گوازراونەتەوە، بەڵام ئۆردەرە کۆنەکانیان هێشتا لای منن)
+                if (teamMembersData.length === 0
+                    && !(mgmtMemberCounts && Object.keys(mgmtMemberCounts).length)) {
                     list.innerHTML = '<p style="text-align:center; color:#888; margin-top:40px;">هیچ ئەندامێک لە تیمەکەتدا نییە.</p>';
                     return;
                 }
@@ -6462,6 +6501,31 @@
 
                     if (count > 0) memberPlan.push({ m: member, mo: mo });
                 });
+
+                // ئەندامە مێژووییەکان — گوازراونەتەوە بۆ بەڕێوەبەرێکی
+                // تر، بۆیە چیتر لە تیمەکەمدا نین. بەڵام ئۆردەرە
+                // کۆنەکانیان هێشتا لای منن (`orders.seller_manager`،
+                // بڕوانە db/020). بەبێ ئەمە کارتێکیان نەدەبوو و
+                // ئۆردەرەکانیان تەنها لە دیمەنی «هەموو»دا دەبینران.
+                if (mgmtMemberCounts) {
+                    let myLower = String((currentUser && currentUser.code) || '').trim().toLowerCase();
+                    let shown = new Set(teamMembersData.map(m => String(m.code || '').trim().toLowerCase()));
+                    let byLower = {};
+                    Object.keys(employeeByCode || {}).forEach(k => {
+                        byLower[String(k).trim().toLowerCase()] = employeeByCode[k];
+                    });
+                    Object.keys(mgmtMemberCounts).forEach(mCode => {
+                        if (shown.has(mCode) || mCode === myLower) return;
+                        let mo = mgmtMemberCounts[mCode];
+                        if (!mo || !mo.total) return;
+                        let emp = byLower[mCode];
+                        if (!emp) return;
+                        if (roleFilter !== "all" && normalizeRole(emp.role) !== roleFilter) return;
+                        if (reviewModeOn() && reviewFilter() === 'todo'
+                            && isMemberReviewed(emp.code, mo)) return;
+                        memberPlan.push({ m: emp, mo: mo });
+                    });
+                }
 
                 if (memberPlan.length === 0) {
                     list.innerHTML = '<p style="text-align:center; color:#888; margin-top:40px;">هیچ ئەنجامێک نەدۆزرایەوە.</p>';
@@ -6563,7 +6627,18 @@
                         .select('code, full_name, role, manager, admin, consultant, creator, date, telegram_status, telegram_id, telegram_username, telegram_name, balance, savings, profit_rate, avatar, receipt_name, postal_code');
                     if (allEmp) {
                         // نوێکردنەوەی سنووری تیم لە هەمان داتا
-                        allEmployeesLite = allEmp.map(e => ({ code: String(e.code || "").trim(), creator: String(e.creator || "").trim(), role: e.role }));
+                        // ⚠️ manager/admin/consultant پێویستن — `computeMyTeam`
+                        //    دارەکەی لەوانەوە دروست دەکات. بەبێیان
+                        //    دەگەڕێتەوە بۆ `creator` و گواستنەوەی ئەندام
+                        //    بێدەنگ کار ناکات.
+                        allEmployeesLite = allEmp.map(e => ({
+                            code: String(e.code || "").trim(),
+                            creator: String(e.creator || "").trim(),
+                            manager: String(e.manager || "").trim(),
+                            admin: String(e.admin || "").trim(),
+                            consultant: String(e.consultant || "").trim(),
+                            role: e.role
+                        }));
                         // هەمان داتا بۆ بۆکسی فرۆشیار خەزن دەکرێت، بۆ ئەوەی
                         // کردنەوەی ئۆردەرێک هیچ داواکارییەکی نوێی نەوێت
                         employeeByCode = {};
@@ -10782,6 +10857,13 @@
                         date: fullDateString,
                         seller_name: receiptDisplayName(),
                         seller_code: currentUser.code,
+                        // وێنەیەکی زنجیرەی دەسەڵات لە کاتی تۆمارکردندا.
+                        // ئەگەر دواتر ئەم ئەندامە بگوازرێتەوە بۆ
+                        // بەڕێوەبەرێکی تر، ئەم ئۆردەرە هەر لای کۆنەکە
+                        // دەمێنێتەوە — مێژووەکەی لەدەست ناچێت. (db/020)
+                        seller_manager: currentUser.manager || null,
+                        seller_admin: currentUser.admin || null,
+                        seller_consultant: currentUser.consultant || null,
                         postal_code: postalForOrder || null,
                         address: address,
                         city: city,
