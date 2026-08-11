@@ -1318,6 +1318,27 @@
             </div>
         </div>
 
+        <!-- ============================================================
+             تەنەکەی خۆڵی خۆم
+             ------------------------------------------------------------
+             هەر ئەندامێک ئەو ئۆردەرانە دەبینێت کە **خۆی** سڕیویەتنەوە،
+             و تەنها دەتوانێت بیانگەڕێنێتەوە. سڕینەوەی هەتاهەتایی
+             لێرەدا نییە — ئەوە تەنها لای ئەدمینە (`manage_trash`).
+             ============================================================ -->
+        <div class="npc-card" id="my-trash-card">
+            <button type="button" class="npc-head" onclick="toggleMyTrashCard(this)" aria-expanded="false">
+                <span class="npc-head-ico"><i class='bx bx-trash'></i></span>
+                <span class="npc-head-txt">
+                    <span class="npc-head-title">تەنەکەی خۆڵ <span class="npc-head-n" id="my-trash-n"></span></span>
+                    <span class="npc-head-sub">ئۆردەرە سڕاوەکانت — ٣٠ ڕۆژ ماوەیان هەیە</span>
+                </span>
+                <i class='bx bx-chevron-down npc-chev'></i>
+            </button>
+            <div class="npc-body">
+                <div class="npc-inner" id="my-trash-body"></div>
+            </div>
+        </div>
+
         <!-- کارتی ناوی سەر وەسڵ -->
         <div
             style="background:#fff; padding:18px 20px; border-radius:12px; margin-top:16px; box-shadow:0 2px 10px rgba(0,0,0,0.05);">
@@ -9192,6 +9213,108 @@
             if (open) renderNotifPrefs();
         }
 
+        // ============================================================
+        // تەنەکەی خۆڵی خۆم (لە پرۆفایل)
+        // ------------------------------------------------------------
+        // ئەندام تەنها ئەو ئۆردەرانە دەبینێت کە خۆی سڕیویەتنەوە
+        // (`trash.deleted_by`)، و تەنها دەتوانێت بیانگەڕێنێتەوە.
+        //
+        // ⚠️ سڕینەوەی هەتاهەتایی لێرەدا **نییە** — ئەوە تەنها لای
+        //    ئەدمینە. `restore_my_trash` لە سێرڤەریشدا خاوەندارێتی
+        //    دەپشکنێت، بۆیە ناکرێت تێپەڕێنرێت.
+        // ============================================================
+        let _myTrash = [];
+
+        function myTrashRowHtml(t) {
+            const days = trashDaysLeft(t.expires_at);
+            const total = Number(t.total || 0).toLocaleString('en-US');
+            const code = String(t.order_code || t.record_id || '').replace(/["\\<>]/g, '');
+            return `<div class="mtr-row">
+                    <div class="mtr-info">
+                        <div class="mtr-top">
+                            <b>${histEsc(t.customer_name || 'بێ ناو')}</b>
+                            <span class="mtr-code" dir="ltr">${histEsc(code)}</span>
+                        </div>
+                        <div class="mtr-sub">
+                            <span>${total} د.ع</span>
+                            <span class="mtr-days${days <= 3 ? ' is-soon' : ''}">
+                                <i class='bx bx-time-five'></i> ${days} ڕۆژ ماوە
+                            </span>
+                        </div>
+                    </div>
+                    <button type="button" class="mtr-restore" onclick="restoreMyTrash(${Number(t.id)}, this)">
+                        <i class='bx bx-undo'></i> گەڕاندنەوە
+                    </button>
+                </div>`;
+        }
+
+        async function loadMyTrash() {
+            const box = document.getElementById('my-trash-body');
+            if (!box || !currentUser || !currentUser.code) return;
+            box.innerHTML = `<div class="mtr-empty"><i class='bx bx-loader-alt bx-spin'></i> خەریکی هێنانە...</div>`;
+            try {
+                const { data, error } = await supabase.rpc('my_trash_page', {
+                    p_code: String(currentUser.code), p_limit: 60, p_offset: 0
+                });
+                if (error) throw error;
+                _myTrash = data || [];
+                syncMyTrashCount();
+                box.innerHTML = _myTrash.length
+                    ? _myTrash.map(myTrashRowHtml).join('')
+                    : `<div class="mtr-empty"><i class='bx bx-trash'></i> هیچ ئۆردەرێکی سڕاوەت نییە</div>`;
+            } catch (e) {
+                console.warn('loadMyTrash:', e);
+                box.innerHTML = `<div class="mtr-empty"><i class='bx bx-error-circle'></i> نەتوانرا بهێنرێت</div>`;
+            }
+        }
+
+        function syncMyTrashCount() {
+            const el = document.getElementById('my-trash-n');
+            if (!el) return;
+            const n = _myTrash.length;
+            el.textContent = n ? String(n) : '';
+            el.classList.toggle('is-on', n > 0);
+        }
+
+        async function restoreMyTrash(id, btn) {
+            if (!currentUser || !currentUser.code) return;
+            if (!confirm('ئەم ئۆردەرە بگەڕێتەوە بۆ لیستی ئۆردەرەکانت؟')) return;
+            if (btn) { btn.disabled = true; btn.style.opacity = '0.5'; }
+            try {
+                const { data, error } = await supabase.rpc('restore_my_trash', {
+                    p_trash_id: id, p_code: String(currentUser.code)
+                });
+                if (error) throw error;
+                if (data && String(data).startsWith('error')) throw new Error(String(data));
+
+                showToast('ئۆردەرەکە گەڕایەوە', 'success');
+                _myTrash = _myTrash.filter(t => Number(t.id) !== Number(id));
+                syncMyTrashCount();
+                const box = document.getElementById('my-trash-body');
+                if (box) {
+                    box.innerHTML = _myTrash.length
+                        ? _myTrash.map(myTrashRowHtml).join('')
+                        : `<div class="mtr-empty"><i class='bx bx-trash'></i> هیچ ئۆردەرێکی سڕاوەت نییە</div>`;
+                }
+                // لیستەکان کۆن بوون — ئۆردەرێکی نوێیان بۆ هاتووەتەوە
+                invalidateMgmtCache();
+                isDashboardDataLoaded = false;
+                isManagementDataLoaded = false;
+            } catch (e) {
+                console.warn('restoreMyTrash:', e);
+                showToast('نەتوانرا بگەڕێندرێتەوە', 'error');
+                if (btn) { btn.disabled = false; btn.style.opacity = ''; }
+            }
+        }
+
+        function toggleMyTrashCard(btn) {
+            const card = btn && btn.closest('.npc-card');
+            if (!card) return;
+            const open = card.classList.toggle('open');
+            btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+            if (open) loadMyTrash();
+        }
+
         // ئایا مۆداڵەکە نابێت دووبارە بنەخشێنرێت؟
         // چات کراوەیە یان دەقێکی نووسراو هەیە → `openOrderDetails`
         // هەموو `innerHTML`ەکە دەسڕێتەوە و ئەو دەقە لەدەست دەچێت.
@@ -10347,7 +10470,10 @@
                 showToast("تەنها ئۆردەری لە حاڵەتی «ئامادە دەکرێت» دەسڕێتەوە!", "error");
                 return;
             }
-            if (!confirm("⚠️ دڵنیایت دەتەوێت ئەم داواکارییە بسڕیتەوە؟")) return;
+            if (!confirm("⚠️ دڵنیایت دەتەوێت ئەم داواکارییە بسڕیتەوە؟\n\n"
+                + "ئۆردەرەکە دەچێتە بەشی «تەنەکەی خۆڵ»ی پرۆفایلەکەت و دەتوانیت "
+                + "لەوێوە بیگەڕێنیتەوە.\n"
+                + "دوای ٣٠ ڕۆژ بە تەواوی دەسڕدرێتەوە و ناگەڕێتەوە.")) return;
 
             closeModal(null, 'order-details-modal');
             showToast("خەریکی سڕینەوە...", "loading");
@@ -10372,8 +10498,8 @@
                 await deleteWithActor('orders', orderId);
 
                 showToast(delWalletBack > 0
-                    ? `🗑️ سڕایەوە — ${Math.round(delWalletBack).toLocaleString()} د.ع گەڕایەوە جزدانەکەت`
-                    : "🗑️ سڕایەوە — بۆ ٣٠ ڕۆژ لە تەنەکەی خۆڵدایە", "success");
+                    ? `چووە تەنەکەی خۆڵ — ${Math.round(delWalletBack).toLocaleString()} د.ع گەڕایەوە جزدانەکەت`
+                    : "چووە تەنەکەی خۆڵی پرۆفایلەکەت — ٣٠ ڕۆژ ماوەی هەیە", "success");
 
                 // ئۆردەرەکە چووەتە تەنەکەی خۆڵ → سێرڤەر هیچی
                 // ناگەڕێنێتەوە → کارتەکەی بێدەنگ لادەبرێت
@@ -13576,7 +13702,22 @@
                 let myName = String(userName).trim();
                 let myRole = String(userRole).trim();
 
-                let query = supabase.from('employees').select('*');
+                // ⚠️ `permissions` بە ئەنقەست نەهێنراوە.
+                //
+                //    ٧٥٪ی تەواوی قەبارەکەیە (١٧٣ لە ٢٣١ کیلۆبایت بۆ ٢٥٣
+                //    کارمەند)، و لیستەکە هیچ کەڵکی لێ وەرناگرێت — تەنها
+                //    ئەو کلیلە پێویستی پێیەتی کە دەکرێتەوە. بۆیە لە
+                //    `openEditFromList`ـدا بۆ یەک کەس دەهێنرێت.
+                //
+                //    ئەمە گرنگە چونکە ئەم فەنکشنە لە شەش شوێن بانگ
+                //    دەکرێت — لەوانە دوای هەر پاشەکەوتکردنێکی کلیل،
+                //    مووچە و جووڵەی جزدان — و هەر جارێک شاشەکە
+                //    دەشاردرێتەوە تا داتاکە دێت.
+                let query = supabase.from('employees').select(
+                    'code, full_name, role, manager, admin, consultant, creator, date,' +
+                    ' telegram_status, telegram_id, telegram_username, telegram_name,' +
+                    ' balance, savings, profit_rate, avatar, receipt_name, postal_code, password'
+                );
 
                 if (myRole !== "پاشا") {
                     query = query.or(`creator.eq.${myCode},manager.eq.${myName},manager.eq.${myCode}`);
@@ -16441,9 +16582,29 @@
 
         let editListScrollTop = 0; // پاراستنی شوێنی سکرۆڵی لیستی کلیلەکان لە چاکسازی
 
-        function openEditFromList(code) {
+        async function openEditFromList(code) {
             let u = allEditableUsers.find(x => x.code === code);
             if (!u) return;
+
+            // ⚠️ دەسەڵاتەکان لە لیستەکەدا نەهێنراون (بڕوانە
+            //    `loadHierarchyUsers`) — بۆ ئەم یەک کەسە دەهێنرێن.
+            //
+            //    ئەگەر شکستی هێنا **نابێت** فۆرمەکە بکرێتەوە:
+            //    `_editOrigPerms` دەبووە دەسەڵاتی بنەڕەتیی پلەکە، و
+            //    پاشەکەوتکردن ئەو دەسەڵاتانەی پاشا دابوونی دەسڕییەوە.
+            if (u.data && u.data.permissions === undefined) {
+                try {
+                    const { data, error } = await supabase.from('employees')
+                        .select('permissions').eq('code', code).single();
+                    if (error) throw error;
+                    u.data.permissions = data ? data.permissions : null;
+                } catch (e) {
+                    console.warn('openEditFromList perms:', e);
+                    showToast('نەتوانرا دەسەڵاتەکان بهێنرێن — دووبارە هەوڵ بدە', 'error');
+                    return;
+                }
+            }
+
             // پاراستنی شوێنی سکرۆڵی لیستی کلیلەکان پێش کردنەوەی فۆرمی چاکسازی
             let listScroller = document.getElementById('edit-users-list');
             if (listScroller) editListScrollTop = listScroller.scrollTop;
