@@ -9145,19 +9145,6 @@
             return s[kind] !== false;
         }
 
-        // دوگمەکە یەکسەر دۆخەکەی دەگۆڕێت (بەبێ چاوەڕوانی سێرڤەر)،
-        // پاشان `setNotifPref` پاشەکەوتی دەکات و لە کاتی شکستدا
-        // دەیگەڕێنێتەوە
-        function toggleNotifPref(channel, scope, kind, btn) {
-            const on = !(btn && btn.classList.contains('is-on'));
-            if (btn) {
-                btn.classList.toggle('is-on', on);
-                btn.classList.toggle('is-off', !on);
-                btn.setAttribute('aria-pressed', on ? 'true' : 'false');
-            }
-            setNotifPref(channel, scope, kind, on);
-        }
-
         async function setNotifPref(channel, scope, kind, on) {
             if (!currentUser || !currentUser.code) return;
             const p = notifPrefs();
@@ -9182,32 +9169,45 @@
             }
         }
 
+        // بنەڕەت تەنها تلیگرام. «سایت» بە کردەوە هەمیشە کراوەیە و
+        // کەس ناکوژێنێتەوە — تلیگرامە ئەوەی دەکرێت بێزارکەر بێت.
+        // بۆیە ٢٠ کۆنترۆڵ دەبنە ١٠، و ئەوی تر لەژێر «زیاتر»دایە.
+        let _notifShowApp = false;
+
+        function notifActiveChannels() {
+            return _notifShowApp ? NOTIF_CHANNELS : NOTIF_CHANNELS.filter(c => c.c === 'tg');
+        }
+
+        // چەند ڕێکخستنێکی سایت کوژێنراوەتەوە؟ (بۆ نیشانەی سەر
+        // دوگمەی «زیاتر» — ئەگەرنا شاراوە دەمێنێتەوە و کەس نازانێت)
+        function notifAppOffCount() {
+            let n = 0;
+            ['own', 'team'].forEach(function (sc) {
+                if (sc === 'team' && !notifCanSeeTeam()) return;
+                NOTIF_PREF_KINDS.forEach(function (x) {
+                    if (!notifPrefOn('app', sc, x.k)) n++;
+                });
+            });
+            return n;
+        }
+
         function notifPrefRows(scope) {
-            const head = `<div class="npc-cols"><span></span><span></span>`
-                + NOTIF_CHANNELS.map(ch => `<span>${ch.t}</span>`).join('')
+            const head = `<div class="npc-cols${_notifShowApp ? '' : ' is-one'}"><span></span><span></span>`
+                + notifActiveChannels().map(ch => `<span>${ch.t}</span>`).join('')
                 + `</div>`;
 
-            // دوو دوگمەی ئایکۆنی لە جیاتی دوو سویچ.
-            //
-            // بنەڕەت «هەمووی کراوەیە»، بۆیە بە سویچ ٢٠ پیلی سەوزی
-            // وەکیەک دەردەکەوتن — دیوارێکی ڕەنگ کە هیچ زانیارییەک
-            // نادات. ئێستا کراوە = هێمن، کوژاوە = دەردەکەوێت.
-            //
-            // دۆخی «کوژاوە» بە هێڵێکی لار نیشان دەدرێت نەک تەنها بە
-            // ڕەنگ — بۆ ئەوانەی ڕەنگ جیا ناکەنەوە.
             return head + NOTIF_PREF_KINDS.map(function (x) {
                 const meta = NOTIF_KIND_META[x.k] || { icon: 'bx-bell', color: '#64748b' };
-                const sw = NOTIF_CHANNELS.map(function (ch) {
+                const sw = notifActiveChannels().map(function (ch) {
                     const on = notifPrefOn(ch.c, scope, x.k);
-                    return `<button type="button" class="npc-ch ${on ? 'is-on' : 'is-off'}"
-                            aria-pressed="${on ? 'true' : 'false'}"
-                            aria-label="${x.t} — ${ch.t}${on ? '' : ' (کوژاوە)'}"
-                            title="${x.t} — ${ch.t}"
-                            onclick="toggleNotifPref('${ch.c}','${scope}','${x.k}', this)">
-                            <i class='bx ${ch.icon}'></i>
-                        </button>`;
+                    return `<label class="glass-toggle is-sm" title="${x.t} — ${ch.t}">
+                            <input type="checkbox" ${on ? 'checked' : ''}
+                                aria-label="${x.t} — ${ch.t}"
+                                onchange="setNotifPref('${ch.c}','${scope}','${x.k}', this.checked)">
+                            <span class="slider-track"></span>
+                        </label>`;
                 }).join('');
-                return `<div class="npc-row">
+                return `<div class="npc-row${_notifShowApp ? '' : ' is-one'}">
                         <span class="npc-row-ico" style="background:${meta.color}1f; color:${meta.color};"><i class='bx ${meta.icon}'></i></span>
                         <span class="npc-row-t">${x.t}</span>
                         ${sw}
@@ -9225,7 +9225,22 @@
                 html += `<div class="npc-sec"><i class='bx bx-group'></i> هی تیمەکەم</div>`
                     + notifPrefRows('team');
             }
+
+            // نیشانە ئەگەر ڕێکخستنێکی سایت کوژێنراوەتەوە بەڵام
+            // شاراوەیە — ئەگەرنا کەس نازانێت بۆچی شتێکی بۆ نایەت
+            const off = _notifShowApp ? 0 : notifAppOffCount();
+            html += `<button type="button" class="npc-more" onclick="toggleNotifAppCol()">
+                    <i class='bx bx-chevron-${_notifShowApp ? 'up' : 'down'}'></i>
+                    ${_notifShowApp ? 'شاردنەوەی ئاگاداری ناو سایت' : 'ڕێکخستنی ئاگاداری ناو سایتیش'}
+                    ${off ? `<span class="npc-more-n">${off}</span>` : ''}
+                </button>`;
+
             box.innerHTML = html;
+        }
+
+        function toggleNotifAppCol() {
+            _notifShowApp = !_notifShowApp;
+            renderNotifPrefs();
         }
 
         function toggleNotifPrefCard(btn) {
