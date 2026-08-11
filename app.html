@@ -1293,6 +1293,31 @@
                     class='bx bx-log-out'></i></button>
         </div>
 
+        <!-- ============================================================
+             ڕێکخستنی ئاگادارکردنەوەکان
+             ------------------------------------------------------------
+             هەر جۆرێک بە جیا دەکوژێنرێتەوە، و «هی خۆم» لە «هی تیمەکەم»
+             جیاوازە. کوژاندنەوە واتا هیچ — نە لە ناو ئەپەکە و نە بۆ
+             تلیگرام. (بۆ شاردنەوەی کاتی، پۆلەکانی ناو پانێڵەکە هەن.)
+
+             ⚠️ کلاسی .npc-* بەکاردێت نەک .pwc-* — چونکە
+                `togglePwCard()` بە querySelector یەکەم کارتی .pwc-card
+                دەگرێت و کارتێکی دووەم تێکی دەدات.
+             ============================================================ -->
+        <div class="npc-card" id="notif-pref-card">
+            <button type="button" class="npc-head" onclick="toggleNotifPrefCard(this)" aria-expanded="false">
+                <span class="npc-head-ico"><i class='bx bx-bell'></i></span>
+                <span class="npc-head-txt">
+                    <span class="npc-head-title">ئاگادارکردنەوەکان</span>
+                    <span class="npc-head-sub">دیاری بکە چی ئاگادارت بکاتەوە</span>
+                </span>
+                <i class='bx bx-chevron-down npc-chev'></i>
+            </button>
+            <div class="npc-body">
+                <div class="npc-inner" id="notif-pref-body"></div>
+            </div>
+        </div>
+
         <!-- کارتی ناوی سەر وەسڵ -->
         <div
             style="background:#fff; padding:18px 20px; border-radius:12px; margin-top:16px; box-shadow:0 2px 10px rgba(0,0,0,0.05);">
@@ -8980,6 +9005,99 @@
             const nm = document.getElementById('notif-modal');
             if (nm && nm.classList.contains('show')) nm.classList.add('is-under');
             openOrderDetails(id);
+        }
+
+        // ============================================================
+        // ڕێکخستنی ئاگادارکردنەوەکان (لە پرۆفایل)
+        // ------------------------------------------------------------
+        // لە `employees.notif_prefs`ـدا هەڵدەگیرێت:
+        //   {"own": {"wallet": false}, "team": {"create": false}}
+        //
+        // خانەی نەبوو = کراوەیە. بۆیە ئەکاونتێکی نوێ هەموو
+        // ئاگادارکردنەوەکانی بۆ دێت بەبێ هیچ ڕێکخستنێک.
+        //
+        // پشکنینەکە لە `notif_emit`ـدا دەکرێت (db/019)، بۆیە
+        // کوژاندنەوە واتا ڕیزەکە **دروستیش نابێت** — نە لە ناو
+        // ئەپەکە و نە بۆ تلیگرام.
+        // ============================================================
+        const NOTIF_PREF_KINDS = [
+            { k: 'create', t: 'ئۆردەری نوێ' },
+            { k: 'status', t: 'گۆڕانی حاڵەت' },
+            { k: 'wallet', t: 'پارە' },
+            { k: 'edit', t: 'دەستکاری ئۆردەر' },
+            { k: 'comment', t: 'کۆمێنت' }
+        ];
+
+        function notifPrefs() {
+            let p = currentUser && currentUser.notif_prefs;
+            if (typeof p === 'string') { try { p = JSON.parse(p); } catch (e) { p = null; } }
+            return (p && typeof p === 'object') ? p : {};
+        }
+
+        function notifPrefOn(scope, kind) {
+            const s = notifPrefs()[scope];
+            if (!s || s[kind] === undefined || s[kind] === null) return true;
+            return s[kind] !== false;
+        }
+
+        async function setNotifPref(scope, kind, on) {
+            if (!currentUser || !currentUser.code) return;
+            const p = notifPrefs();
+            if (!p[scope]) p[scope] = {};
+            p[scope][kind] = !!on;
+
+            currentUser.notif_prefs = p;
+            try { localStorage.setItem('myAppUser', JSON.stringify(currentUser)); } catch (e) { }
+
+            try {
+                const { error } = await supabase.from('employees')
+                    .update({ notif_prefs: p }).eq('code', currentUser.code);
+                if (error) throw error;
+            } catch (e) {
+                console.warn('setNotifPref:', e);
+                showToast('نەتوانرا پاشەکەوت بکرێت', 'error');
+                // گەڕانەوە بۆ دۆخی پێشوو — سویچەکە نابێت درۆ بکات
+                p[scope][kind] = !on;
+                currentUser.notif_prefs = p;
+                renderNotifPrefs();
+            }
+        }
+
+        function notifPrefRows(scope) {
+            return NOTIF_PREF_KINDS.map(function (x) {
+                const meta = NOTIF_KIND_META[x.k] || { icon: 'bx-bell', color: '#64748b' };
+                const on = notifPrefOn(scope, x.k);
+                return `<div class="npc-row">
+                        <span class="npc-row-ico" style="background:${meta.color}1f; color:${meta.color};"><i class='bx ${meta.icon}'></i></span>
+                        <span class="npc-row-t">${x.t}</span>
+                        <label class="glass-toggle">
+                            <input type="checkbox" ${on ? 'checked' : ''}
+                                onchange="setNotifPref('${scope}','${x.k}', this.checked)">
+                            <span class="slider-track"></span>
+                        </label>
+                    </div>`;
+            }).join('');
+        }
+
+        function renderNotifPrefs() {
+            const box = document.getElementById('notif-pref-body');
+            if (!box) return;
+            let html = `<div class="npc-sec"><i class='bx bx-user'></i> هی خۆم</div>`
+                + notifPrefRows('own');
+            // ئەندامی ئاسایی کەسی ژێردەست نییە → بەشی تیمی نییە
+            if (notifCanSeeTeam()) {
+                html += `<div class="npc-sec"><i class='bx bx-group'></i> هی تیمەکەم</div>`
+                    + notifPrefRows('team');
+            }
+            box.innerHTML = html;
+        }
+
+        function toggleNotifPrefCard(btn) {
+            const card = btn && btn.closest('.npc-card');
+            if (!card) return;
+            const open = card.classList.toggle('open');
+            btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+            if (open) renderNotifPrefs();
         }
 
         // ئایا مۆداڵەکە نابێت دووبارە بنەخشێنرێت؟
