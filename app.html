@@ -10,7 +10,13 @@
         content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>ئەپڵیکەیشنی کارمەندان</title>
     <link rel="stylesheet" href="style.css">
-    <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
+    <!-- ئایکۆنەکان لە هەمان سەرچاوەی ئەپەکەوە دێن، نەک لە CDN.
+         پێشتر لە `unpkg.com`ـەوە دەهاتن و لەسەر هەندێک ئینتەرنێت
+         ڕێگریان لێدەکرا — ئەوکات هەموو ئایکۆنەکان دەبوونە
+         چوارگۆشەی بەتاڵ. ئێستا ئەگەر پەڕەکە خۆی بێت، ئایکۆنەکانیش
+         دێن. CDN تەنها وەک پاشەکەوت ماوەتەوە. -->
+    <link href='vendor/css/boxicons.min.css' rel='stylesheet'
+        onerror="this.onerror=null; this.href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css';">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
 
     <!-- ==========================================================
@@ -4809,6 +4815,52 @@
         // data-day و data-daybadges پێویستن بۆ نوێبوونەوەی وردی
         // ڕاستەوخۆ: پێیان دەزانرێت کارتێکی نوێ لە کوێ دابنرێت و
         // ژمارەکانی ڕۆژ چۆن نوێ بکرێنەوە، بەبێ نەخشاندنەوەی لیستەکە.
+        // ============================================================
+        // دۆخی «پەیوەندی نییە» — بە دوگمەی دووبارە هەوڵدانەوە
+        // ------------------------------------------------------------
+        // پێشتر تەنها دەقێکی سوور بوو. ئەگەر کتێبخانەی Supabase
+        // نەهاتبا (CDN ڕێگری لێکرابا)، بەکارهێنەر هیچ ڕێگایەکی
+        // نەبوو جگە لە داخستن و کردنەوەی ئەپەکە.
+        //
+        // ئێستا سەرەتا کتێبخانەکە دووبارە تاقی دەکرێتەوە (لەوانەیە
+        // CDNـێکی تر کاربکات)، پاشان داواکارییەکە.
+        // ============================================================
+        function connErrorHtml(retryCall) {
+            return `<div class="conn-err">
+                    <span class="conn-err-ico"><i class='bx bx-wifi-off'></i></span>
+                    <p class="conn-err-t">پەیوەندی نەکرا</p>
+                    <p class="conn-err-s">ئینتەرنێتەکەت بپشکنە. ئەگەر ئینتەرنێت باشە،
+                        لەوانەیە تۆڕەکەت ڕێگری لە سێرڤەرەکە بکات.</p>
+                    <button type="button" class="conn-err-btn" onclick="retryConnection(&quot;${retryCall}&quot;, this)">
+                        <i class='bx bx-refresh'></i> دووبارە هەوڵبدەرەوە
+                    </button>
+                </div>`;
+        }
+
+        async function retryConnection(call, btn) {
+            if (btn) { btn.disabled = true; btn.innerHTML = "<i class='bx bx-loader-alt bx-spin'></i> هەوڵدان..."; }
+            try {
+                // کتێبخانەکە نەهاتووە → دووبارە تاقی بکەرەوە
+                if (!window.supabase) {
+                    await loadSupabaseScript();
+                    initializeSupabase();
+                }
+                if (!supabase || typeof supabase.from !== 'function') initializeSupabase();
+                isDashboardDataLoaded = false;
+                isManagementDataLoaded = false;
+                invalidateMgmtCache();
+                // eslint-disable-next-line no-eval
+                eval(call);
+            } catch (e) {
+                console.warn('retryConnection:', e);
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = "<i class='bx bx-refresh'></i> دووبارە هەوڵبدەرەوە";
+                }
+                showToast('هێشتا پەیوەندی نەکرا', 'error');
+            }
+        }
+
         function dayHeadHtml(day, countsMap) {
             let dl = formatDayLabel(day);
             let dayAttr = String(day).replace(/["\\]/g, '');
@@ -5602,7 +5654,7 @@
             } catch (err) {
                 console.log(err);
                 if (!isDashboardDataLoaded) {
-                    list.innerHTML = '<p style="text-align:center; color:red; margin-top:40px;">❌ کێشە لە پەیوەندی هەیە.</p>';
+                    list.innerHTML = connErrorHtml('fetchOrders()');
                 }
             }
         }
@@ -6386,7 +6438,7 @@
                     return reloadMgmt();
                 }
                 if (list && !allManagementOrdersArray.length) {
-                    list.innerHTML = '<p style="text-align:center; color:red; margin-top:40px;">❌ هەڵەیەک ڕوویدا لە هێنانەوەی داتاکان.</p>';
+                    list.innerHTML = connErrorHtml('reloadMgmt(true)');
                 }
             }
         }
@@ -6708,7 +6760,7 @@
             } catch (err) {
                 console.log(err);
                 if (!isManagementDataLoaded) {
-                    list.innerHTML = '<p style="text-align:center; color:red; margin-top:40px;">❌ هەڵەیەک ڕوویدا لە هێنانەوەی داتاکان.</p>';
+                    list.innerHTML = connErrorHtml('reloadMgmt(true)');
                 }
             }
         }

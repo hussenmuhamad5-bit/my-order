@@ -36,25 +36,78 @@ function initializeSupabase() {
     }
 }
 
-// Function to load Supabase script dynamically
-function loadSupabaseScript() {
+// ============================================================
+//  بارکردنی کتێبخانەی Supabase
+// ------------------------------------------------------------
+//  ⚠️ پێشتر تەنها یەک CDN بوو. لەسەر هەندێک ئینتەرنێت — بەتایبەتی
+//     لەسەر مۆبایلی هەندێک کۆمپانیا — `cdn.jsdelivr.net` ڕێگری
+//     لێدەکرێت یان خاوە. ئەوکات `window.supabase` هەرگیز دروست
+//     نەدەبوو و هەموو داواکارییەکان شکستیان دەهێنا بە پەیامی
+//     «کێشە لە پەیوەندی هەیە» — لە کاتێکدا ئینتەرنێتەکە باش بوو.
+//
+//  ئێستا سێ سەرچاوە بەدوای یەکەوە تاقی دەکرێنەوە، و هەریەکەیان
+//  کاتی دیاریکراوی هەیە (٨ چرکە) — ئەگەرنا CDNـێکی خاو هەموو
+//  کردنەوەی ئەپەکە ڕادەگرێت.
+// ============================================================
+//  یەکەم سەرچاوە **هەمان سەرچاوەی ئەپەکەیە** (`vendor/`). ئەگەر
+//  پەڕەکە خۆی هاتبێت، ئەم فایلەش دێت — بۆیە هیچ لایەنێکی سێیەم
+//  ناتوانێت ڕێگری بکات. CDNــەکان تەنها وەک پاشەکەوت ماونەتەوە.
+var SUPABASE_CDNS = [
+    'vendor/supabase.min.js',
+    'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js',
+    'https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.min.js'
+];
+
+// ⚠️ `var supabase` لە ئاستی سەرەوەیە، واتا هەر خۆی
+//    `window.supabase`ــە. دوای `createClient`، ئەو خانەیە دەبێتە
+//    **کڵاینتەکە** نەک کتێبخانەکە — بۆیە `window.supabase` بوونی
+//    هەیە بەڵام `createClient`ــی نییە. ئەم ئاڵایە جیاوازییەکە
+//    ڕوون دەکاتەوە، ئەگەرنا دووبارە هەوڵدانەوە هەڵە بڕیار دەدات.
+var _sbLibLoaded = false;
+
+function _loadScriptOnce(src, timeoutMs) {
     return new Promise((resolve, reject) => {
-        if (window.supabase) {
-            resolve();
-            return;
-        }
-        
         const script = document.createElement('script');
-        script.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js';
-        script.onload = () => {
-            console.log('Supabase script loaded');
-            resolve();
+        let done = false;
+        const finish = (ok, err) => {
+            if (done) return;
+            done = true;
+            clearTimeout(timer);
+            ok ? resolve() : reject(err || new Error('load failed'));
         };
-        script.onerror = () => {
-            console.error('Failed to load Supabase script');
-            reject(new Error('Failed to load Supabase script'));
-        };
+        const timer = setTimeout(() => {
+            script.remove();
+            finish(false, new Error('timeout: ' + src));
+        }, timeoutMs || 8000);
+
+        script.src = src;
+        script.onload = () => finish(_sbLibReady(), new Error('loaded but empty: ' + src));
+        script.onerror = () => { script.remove(); finish(false, new Error('error: ' + src)); };
         document.head.appendChild(script);
+    });
+}
+
+function _sbLibReady() {
+    return !!(window.supabase && window.supabase.createClient);
+}
+
+function loadSupabaseScript() {
+    if (_sbLibLoaded || _sbLibReady()) return Promise.resolve();
+
+    let chain = Promise.reject();
+    SUPABASE_CDNS.forEach(src => {
+        chain = chain.catch(() => {
+            if (_sbLibReady()) return;
+            return _loadScriptOnce(src, 8000);
+        });
+    });
+
+    return chain.then(() => {
+        _sbLibLoaded = true;
+        console.log('Supabase script loaded');
+    }).catch(err => {
+        console.error('Failed to load Supabase from all sources', err);
+        throw new Error('Failed to load Supabase script');
     });
 }
 
