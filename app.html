@@ -9010,16 +9010,25 @@
         // ============================================================
         // ڕێکخستنی ئاگادارکردنەوەکان (لە پرۆفایل)
         // ------------------------------------------------------------
+        // دوو کەناڵی **سەربەخۆ**: سایت و تلیگرام. دەکرێت شتێک لە
+        // سایتدا دەربکەوێت بەڵام هیچ بۆ تلیگرام نەچێت — یان بە
+        // پێچەوانەوە.
+        //
         // لە `employees.notif_prefs`ـدا هەڵدەگیرێت:
-        //   {"own": {"wallet": false}, "team": {"create": false}}
+        //   {"app": {"own": {"wallet": false}},
+        //    "tg":  {"team": {"create": false}}}
         //
         // خانەی نەبوو = کراوەیە. بۆیە ئەکاونتێکی نوێ هەموو
         // ئاگادارکردنەوەکانی بۆ دێت بەبێ هیچ ڕێکخستنێک.
         //
-        // پشکنینەکە لە `notif_emit`ـدا دەکرێت (db/019)، بۆیە
-        // کوژاندنەوە واتا ڕیزەکە **دروستیش نابێت** — نە لە ناو
-        // ئەپەکە و نە بۆ تلیگرام.
+        // پشکنینەکە لە `notif_emit`ـدا دەکرێت (db/019):
+        //   app کوژاوە → ڕیزەکە لە `notifications`ـدا دروست نابێت
+        //   tg  کوژاوە → پەیام بۆ تلیگرام ناچێت
         // ============================================================
+        const NOTIF_CHANNELS = [
+            { c: 'app', t: 'سایت' },
+            { c: 'tg', t: 'تلیگرام' }
+        ];
         const NOTIF_PREF_KINDS = [
             { k: 'create', t: 'ئۆردەری نوێ' },
             { k: 'status', t: 'گۆڕانی حاڵەت' },
@@ -9034,17 +9043,18 @@
             return (p && typeof p === 'object') ? p : {};
         }
 
-        function notifPrefOn(scope, kind) {
-            const s = notifPrefs()[scope];
+        function notifPrefOn(channel, scope, kind) {
+            const s = (notifPrefs()[channel] || {})[scope];
             if (!s || s[kind] === undefined || s[kind] === null) return true;
             return s[kind] !== false;
         }
 
-        async function setNotifPref(scope, kind, on) {
+        async function setNotifPref(channel, scope, kind, on) {
             if (!currentUser || !currentUser.code) return;
             const p = notifPrefs();
-            if (!p[scope]) p[scope] = {};
-            p[scope][kind] = !!on;
+            if (!p[channel]) p[channel] = {};
+            if (!p[channel][scope]) p[channel][scope] = {};
+            p[channel][scope][kind] = !!on;
 
             currentUser.notif_prefs = p;
             try { localStorage.setItem('myAppUser', JSON.stringify(currentUser)); } catch (e) { }
@@ -9057,24 +9067,31 @@
                 console.warn('setNotifPref:', e);
                 showToast('نەتوانرا پاشەکەوت بکرێت', 'error');
                 // گەڕانەوە بۆ دۆخی پێشوو — سویچەکە نابێت درۆ بکات
-                p[scope][kind] = !on;
+                p[channel][scope][kind] = !on;
                 currentUser.notif_prefs = p;
                 renderNotifPrefs();
             }
         }
 
         function notifPrefRows(scope) {
-            return NOTIF_PREF_KINDS.map(function (x) {
+            const head = `<div class="npc-cols"><span></span><span></span>`
+                + NOTIF_CHANNELS.map(ch => `<span>${ch.t}</span>`).join('')
+                + `</div>`;
+
+            return head + NOTIF_PREF_KINDS.map(function (x) {
                 const meta = NOTIF_KIND_META[x.k] || { icon: 'bx-bell', color: '#64748b' };
-                const on = notifPrefOn(scope, x.k);
+                const sw = NOTIF_CHANNELS.map(function (ch) {
+                    const on = notifPrefOn(ch.c, scope, x.k);
+                    return `<label class="glass-toggle is-sm" title="${x.t} — ${ch.t}">
+                            <input type="checkbox" ${on ? 'checked' : ''}
+                                onchange="setNotifPref('${ch.c}','${scope}','${x.k}', this.checked)">
+                            <span class="slider-track"></span>
+                        </label>`;
+                }).join('');
                 return `<div class="npc-row">
                         <span class="npc-row-ico" style="background:${meta.color}1f; color:${meta.color};"><i class='bx ${meta.icon}'></i></span>
                         <span class="npc-row-t">${x.t}</span>
-                        <label class="glass-toggle">
-                            <input type="checkbox" ${on ? 'checked' : ''}
-                                onchange="setNotifPref('${scope}','${x.k}', this.checked)">
-                            <span class="slider-track"></span>
-                        </label>
+                        ${sw}
                     </div>`;
             }).join('');
         }
