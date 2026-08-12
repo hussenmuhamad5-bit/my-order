@@ -5825,6 +5825,31 @@
             btn.style.opacity = btn.disabled ? '0.5' : '';
         }
 
+        // ============================================================
+        // ڕەنگ و ئایکۆنی حاڵەتەکان — تاقە سەرچاوە
+        // ------------------------------------------------------------
+        // هەم نیشانەکانی ژماردن (statusCountBadges) و هەم دوگمەکانی
+        // گۆڕینی حاڵەت لێرەوە دەیانخوێننەوە، بۆیە ناتوانن لێک جیا
+        // ببنەوە. حاڵەت بە پارچەی ناو دەدۆزرێتەوە نەک بە یەکسانی —
+        // هەمان شێواز کە order_status_bucket لە db/003 بەکاریدەهێنێت
+        // ============================================================
+        const STATUS_META = {
+            deliv: { icon: 'bx-check-circle', color: '#059669', soft: 'rgba(16,185,129,0.14)' },
+            onway: { icon: 'bx-car', color: '#d97706', soft: 'rgba(245,158,11,0.14)' },
+            prep: { icon: 'bx-package', color: '#2563eb', soft: 'rgba(59,130,246,0.12)' },
+            ret: { icon: 'bx-undo', color: '#dc2626', soft: 'rgba(239,68,68,0.12)' }
+        };
+
+        function statusBucket(status) {
+            const s = String(status || '');
+            if (s.includes('گەیشت')) return 'deliv';
+            if (s.includes('ڕێگا')) return 'onway';
+            if (s.includes('گەڕا') || s.includes('کەنسەڵ')) return 'ret';
+            return 'prep';
+        }
+
+        function statusMeta(status) { return STATUS_META[statusBucket(status)]; }
+
         // دروستکردنی نیشانەی ژمارەی حاڵەتەکان (گەیشتوو/لەڕێگا/ئامادە/گەڕاوە) بە ڕەنگ
         function statusCountBadges(orders) {
             let cP = 0, cO = 0, cD = 0, cR = 0;
@@ -5835,11 +5860,12 @@
                 else if (s.includes("گەڕا") || s.includes("کەنسەڵ")) cR++;
                 else cP++;
             });
-            let b = (n, bg, col, icon) => n > 0 ? `<span style="background:${bg}; color:${col}; font-size:11px; font-weight:700; padding:2px 7px; border-radius:6px; display:inline-flex; align-items:center; gap:3px;"><i class='bx ${icon}'></i>${n}</span>` : '';
-            return b(cD, 'rgba(16,185,129,0.15)', '#059669', 'bx-check-circle')
-                + b(cO, 'rgba(245,158,11,0.15)', '#d97706', 'bx-car')
-                + b(cP, 'rgba(59,130,246,0.15)', '#2563eb', 'bx-package')
-                + b(cR, 'rgba(239,68,68,0.15)', '#dc2626', 'bx-undo');
+            let b = (n, k) => {
+                if (n <= 0) return '';
+                const m = STATUS_META[k];
+                return `<span style="background:${m.soft}; color:${m.color}; font-size:11px; font-weight:700; padding:2px 7px; border-radius:6px; display:inline-flex; align-items:center; gap:3px;"><i class='bx ${m.icon}'></i>${n}</span>`;
+            };
+            return b(cD, 'deliv') + b(cO, 'onway') + b(cP, 'prep') + b(cR, 'ret');
         }
 
         // گۆڕینی AM/PM بۆ پ.ن (پێش نیوەڕۆ) و د.ن (دوای نیوەڕۆ)
@@ -8017,36 +8043,56 @@
                 let canDel = canStatusTransition(o, 'گەیشتووە');
                 let canRet = canStatusTransition(o, 'گەڕاوەتەوە');
 
-                // سنووردارکردنی هەڵبژاردەکان: گەیشتوو ↔ گەڕاوە، لەڕێگادایە → ناتوانێت بگەڕێتەوە ئامادە
-                let mkOpt = (val) => `<div class="custom-dropdown-item ${o.status === val ? 'active' : ''}" onclick="selectNewStatus('${val}', event)">${val}</div>`;
-                let statusOptionsHtml = "";
+                // ئامانجەکانی گۆڕین — حاڵەتی ئێستا **ناخرێتە** ناویانەوە،
+                // چونکە دوگمەیەکی بێکارە (updateOrderStatus خۆی ڕەتی
+                // دەکاتەوە). سنوورەکان وەک خۆیانن:
+                //   گەیشتوو ↔ گەڕاوە تەنها
+                //   لە ڕێگایە → ناتوانێت بگەڕێتەوە ئامادە
+                let stTargets = [];
                 if (o.status === "گەیشتووە") {
-                    statusOptionsHtml = mkOpt('گەیشتووە') + (canRet ? mkOpt('گەڕاوەتەوە') : '');
+                    if (canRet) stTargets.push('گەڕاوەتەوە');
                 } else if (o.status === "گەڕاوەتەوە") {
-                    statusOptionsHtml = mkOpt('گەڕاوەتەوە') + (canDel ? mkOpt('گەیشتووە') : '');
+                    if (canDel) stTargets.push('گەیشتووە');
                 } else if ((o.status || "").includes("ڕێگا")) {
-                    statusOptionsHtml = mkOpt('لە ڕێگایە') + (canDel ? mkOpt('گەیشتووە') : '') + (canRet ? mkOpt('گەڕاوەتەوە') : '');
+                    if (canDel) stTargets.push('گەیشتووە');
+                    if (canRet) stTargets.push('گەڕاوەتەوە');
                 } else {
-                    statusOptionsHtml = mkOpt('ئامادە دەکرێت') + mkOpt('لە ڕێگایە') + (canDel ? mkOpt('گەیشتووە') : '') + (canRet ? mkOpt('گەڕاوەتەوە') : '');
+                    stTargets.push('لە ڕێگایە');
+                    if (canDel) stTargets.push('گەیشتووە');
+                    if (canRet) stTargets.push('گەڕاوەتەوە');
                 }
 
-                statusChangerHtml = `
-            <div style="margin-top: 20px; border-top: 1px dashed #cbd5e1; padding-top: 15px; background: rgba(36, 129, 204, 0.03); border-radius: 12px; padding: 15px;">
-                <label style="font-size:13px; color:var(--primary); font-weight:700; margin-bottom:10px; display:block;"><i class='bx bx-refresh'></i> گۆڕینی حاڵەتی داواکاری</label>
-                
-                <div class="custom-dropdown-wrapper" id="new-status-dropdown-wrapper" style="margin-bottom: 10px;">
-                    <div class="custom-dropdown-header" onclick="toggleFilterDropdown('new-status-list')">
-                        <span id="new-status-display-text">${o.status || 'ئامادە دەکرێت'}</span>
-                        <i class='bx bx-chevron-down'></i>
-                    </div>
-                    <div class="custom-dropdown-list" id="new-status-list" style="display: none;">
-                        ${statusOptionsHtml}
-                    </div>
-                    <input type="hidden" id="new-order-status" value="${o.status || 'ئامادە دەکرێت'}">
-                    <input type="hidden" id="cur-order-status" value="${o.status || 'ئامادە دەکرێت'}">
+                // ئەگەر هیچ گۆڕانێک نەکرێت، بەشەکە بەتەواوی نانەخشێنرێت
+                if (stTargets.length) {
+                    const curMeta = statusMeta(o.status);
+                    const stBtns = stTargets.map(s => {
+                        const m = statusMeta(s);
+                        return '<button type="button" class="st-btn" data-st="' + histEsc(s) + '"'
+                            + ' style="--c:' + m.color + '; --soft:' + m.soft + ';"'
+                            + ' onclick="pickStatusBtn(\'' + o.id + '\', \'' + s + '\')"'
+                            + ' aria-label="گۆڕین بۆ ' + histEsc(s) + '">'
+                            + '<span class="st-btn-ico"><i class="bx ' + m.icon + '"></i></span>'
+                            + '<span class="st-btn-t">' + histEsc(s) + '</span></button>';
+                    }).join('');
+
+                    statusChangerHtml = `
+            <div class="st-changer">
+                <div class="st-head"><i class='bx bx-refresh'></i> گۆڕینی حاڵەتی داواکاری</div>
+
+                <div class="st-now">
+                    <span class="st-now-lbl">ئێستا</span>
+                    <span class="st-now-pill" style="--c:${curMeta.color}; --soft:${curMeta.soft};">
+                        <i class='bx ${curMeta.icon}'></i>${histEsc(o.status || 'ئامادە دەکرێت')}
+                    </span>
                 </div>
 
+                <div class="st-grid">${stBtns}</div>
+
+                <input type="hidden" id="new-order-status" value="${histEsc(o.status || 'ئامادە دەکرێت')}">
+                <input type="hidden" id="cur-order-status" value="${histEsc(o.status || 'ئامادە دەکرێت')}">
+
                 <div id="return-reason-box" class="rr-anim" style="display:none;">
+                    <div class="st-reason-t"><i class='bx bx-help-circle'></i> بۆچی گەڕاوەتەوە؟</div>
                     <div id="return-reason-chips" class="rr-chips">
                         ${RETURN_REASONS.map(r => `<button type="button" class="reason-chip" onclick="pickReturnReason(this)">${r}</button>`).join('')}
                         <button type="button" class="reason-chip" onclick="pickReturnOther()"><i class='bx bx-pencil'></i> هۆکارێکی تر…</button>
@@ -8055,9 +8101,10 @@
                     <button type="button" id="return-reason-change" class="rr-change rr-anim" onclick="resetReturnReason()" style="display:none;"><i class='bx bx-revision'></i> گۆڕینی هۆکار</button>
                 </div>
 
-                <button id="status-save-btn" class="btn rr-anim" style="background:#2481cc; padding:10px; font-size:14px; width:100%; display:none;" onclick="updateOrderStatus('${o.id}')"><i class='bx bx-save'></i> پاشەکەوتکردنی حاڵەت</button>
+                <button id="status-save-btn" class="btn st-confirm rr-anim" style="display:none;" onclick="updateOrderStatus('${o.id}')"><i class='bx bx-undo'></i> پشتڕاستکردنەوەی گەڕانەوە</button>
             </div>
             `;
+                }
             }
 
             let changerInfoHtml = "";
@@ -10014,18 +10061,6 @@
         // بۆکسی هۆکار و دوگمەی پاشەکەوت تەنها کاتێک دەردەکەون کە حاڵەتی
         // نوێ لە حاڵەتی ئێستا جیاواز بێت. ئەگەر هیچ نەگۆڕابێت، هیچ
         // دوگمەیەکی پاشەکەوت نییە — چونکە هیچ شتێک نییە پاشەکەوت بکرێت.
-        function syncStatusChanger(val) {
-            let curEl = document.getElementById('cur-order-status');
-            let cur = curEl ? curEl.value : '';
-            let changed = (val !== cur);
-            rrNeedReason = changed && (val === 'گەڕاوەتەوە');
-
-            rrShow(document.getElementById('return-reason-box'), rrNeedReason);
-            if (!rrNeedReason) resetReturnReason();
-            rrShow(document.getElementById('status-save-btn'), changed);
-            rrSyncSave();
-        }
-
         // دووبارە بارکردنی لیستی ئۆردەرەکان بەبێ لادانی شوێنی سکرۆڵ (دوای گۆڕینی حاڵەت/سڕینەوە/دابەشکردن)
         function refreshOrdersKeepScroll() {
             let mgmtActive = document.getElementById('orders-management-screen').classList.contains('active');
@@ -16074,15 +16109,52 @@
             syncFilterUI();
         });
 
-        function selectNewStatus(value, event) {
-            document.getElementById('new-status-display-text').innerText = value;
-            document.getElementById('new-order-status').value = value;
-            let listItems = document.getElementById('new-status-list').querySelectorAll('.custom-dropdown-item');
-            listItems.forEach(item => item.classList.remove('active'));
-            event.currentTarget.classList.add('active');
-            document.getElementById('new-status-list').style.display = 'none';
-            document.getElementById('new-status-dropdown-wrapper').classList.remove('open');
-            syncStatusChanger(value);
+        // ============================================================
+        // دوگمەکانی گۆڕینی حاڵەت — یەک دەستلێدان = یەک گۆڕان
+        // ------------------------------------------------------------
+        // پێشتر لیستێکی هەڵبژاردن هەبوو و دواتر دەبوو «پاشەکەوت»
+        // لێبدرێت — دوو هەنگاو بۆ کارێکی ساکار.
+        //
+        // «گەڕاوەتەوە» جیاوازە: هۆکار مەرجە، بۆیە تەنها بۆکسی
+        // هۆکارەکە دەکاتەوە و چاوەڕێی پشتڕاستکردنەوە دەکات.
+        // ============================================================
+        let _stBusy = false;
+
+        async function pickStatusBtn(orderId, status) {
+            if (_stBusy) return;
+
+            const hid = document.getElementById('new-order-status');
+            if (hid) hid.value = status;
+
+            const needReason = (status === 'گەڕاوەتەوە');
+
+            // تەنها «گەڕاوەتەوە» دۆخی هەڵبژێردراوی هەیە، چونکە
+            // ئەوانی تر ڕاستەوخۆ جێبەجێ دەبن
+            document.querySelectorAll('.st-btn').forEach(b =>
+                b.classList.toggle('is-on', needReason && b.dataset.st === status));
+
+            rrNeedReason = needReason;
+            rrShow(document.getElementById('return-reason-box'), needReason);
+            rrShow(document.getElementById('status-save-btn'), needReason);
+
+            if (needReason) { rrSyncSave(); return; }
+
+            resetReturnReason();
+
+            // ڕێگری لە دووجار دەستلێدان لە کاتی ناردندا
+            const btn = document.querySelector('.st-btn[data-st="' + status + '"]');
+            const ico = btn ? btn.querySelector('i') : null;
+            const icoCls = ico ? ico.className : '';
+            _stBusy = true;
+            if (btn) btn.classList.add('is-busy');
+            if (ico) ico.className = 'bx bx-loader-alt bx-spin';
+            try {
+                await updateOrderStatus(orderId);
+            } finally {
+                _stBusy = false;
+                if (btn) btn.classList.remove('is-busy');
+                if (ico) ico.className = icoCls;
+            }
         }
 
         // داخستنی لیستەکان کاتێک کلیک لە دەرەوەیان دەکرێت
