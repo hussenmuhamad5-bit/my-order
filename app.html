@@ -7251,8 +7251,9 @@
                 // شوێنێکی هەڵەوە بەردەوام دەبێت
                 delete walletTxCursor[code];
                 delete walletTxDone[code];
+                delete walletTxTotal[code];
                 if (currentUser && String(code) === String(currentUser.code)) {
-                    myTxRows = []; myTxCursor = null; myTxDone = false;
+                    myTxRows = []; myTxCursor = null; myTxDone = false; myTxTotal = -1;
                 }
             } catch (e) { }
             if (currentUser && String(code) === String(currentUser.code)) {
@@ -16309,12 +16310,14 @@
 
                 // یەکەم پەڕە — ئەوانی تر بە دوگمەی «جوڵەی کۆنتر» دێن،
                 // بۆیە هیچ جوڵەیەک ون نابێت (پێشتر لە ٥٠ دەوەستا)
-                myTxRows = []; myTxCursor = null; myTxDone = false;
+                myTxRows = []; myTxCursor = null; myTxDone = false; myTxTotal = -1;
                 const firstPage = await fetchTxPage(currentUser.code, null);
                 myTxRows = firstPage;
                 myTxCursor = firstPage.length ? firstPage[firstPage.length - 1].id : null;
                 myTxDone = firstPage.length < TX_PAGE;
                 renderMyTx();
+                // ژماردن دواتر دێت — لیستەکە بۆی ناوەستێت
+                fetchTxCount(currentUser.code).then(n => { myTxTotal = n; renderMyTx(); });
                 isWalletDataLoaded = true;
             } catch (err) {
                 if (!isWalletDataLoaded) {
@@ -16687,9 +16690,39 @@
             return data || [];
         }
 
-        function txMoreBtnHtml(fnCall) {
+        // کۆی گشتی جوڵەکان — بەبێ هێنانی ڕیزەکان، تەنها ژماردن.
+        // بەبێ ئەمە بەکارهێنەر هیچ ڕێگایەکی نییە بزانێت شتێک ماوە
+        // یان هەمووی پیشان دراوە — و ئەوە خۆی کێشەکە بوو
+        async function fetchTxCount(code) {
+            try {
+                const { count, error } = await supabase.from('transactions')
+                    .select('id', { count: 'exact', head: true })
+                    .eq('user_code', code);
+                if (error) throw error;
+                return count == null ? -1 : count;
+            } catch (e) {
+                console.warn('fetchTxCount:', e);
+                return -1;   // نەزانراو — ژمارەکە پیشان نادرێت
+            }
+        }
+
+        // ڕیزەی ژماردن: «پیشاندراو ١٠٠ لە ٢٥٠»
+        function txCountHtml(shown, total) {
+            if (total < 0) return '';
+            const done = shown >= total;
+            return '<div class="tx-count' + (done ? ' is-all' : '') + '">'
+                + (done
+                    ? '<i class="bx bx-check-circle"></i> هەموو ' + total.toLocaleString('en-US') + ' جوڵەکە پیشان دراون'
+                    : '<i class="bx bx-list-ul"></i> پیشاندراو ' + shown.toLocaleString('en-US')
+                    + ' لە ' + total.toLocaleString('en-US'))
+                + '</div>';
+        }
+
+        function txMoreBtnHtml(fnCall, remaining) {
+            const extra = (remaining != null && remaining > 0)
+                ? ' (' + remaining.toLocaleString('en-US') + ')' : '';
             return '<button type="button" class="tx-more" onclick="' + fnCall + '">'
-                + '<i class="bx bx-chevron-down"></i> جوڵەی کۆنتر پیشان بدە</button>';
+                + '<i class="bx bx-chevron-down"></i> جوڵەی کۆنتر پیشان بدە' + extra + '</button>';
         }
 
         function txMoreSetBusy(sel) {
@@ -16703,7 +16736,7 @@
         }
 
         // ---- جزدانی خۆم ----
-        let myTxRows = [], myTxCursor = null, myTxDone = false, myTxBusy = false;
+        let myTxRows = [], myTxCursor = null, myTxDone = false, myTxBusy = false, myTxTotal = -1;
 
         function renderMyTx() {
             const list = document.getElementById('my-transactions-list');
@@ -16717,8 +16750,10 @@
                 list.innerHTML = `<p style="text-align:center; color:#888;">هێشتا هیچ جووڵەیەکی دارایی نییە.</p>`;
                 return;
             }
+            const remain = myTxTotal < 0 ? null : (myTxTotal - myTxRows.length);
             list.innerHTML = renderTxListWithDayDividers(txs, buildTxItemHtml)
-                + (myTxDone ? '' : txMoreBtnHtml('loadMoreMyTx()'));
+                + (myTxDone ? '' : txMoreBtnHtml('loadMoreMyTx()', remain))
+                + txCountHtml(myTxRows.length, myTxTotal);
         }
 
         async function loadMoreMyTx() {
@@ -16773,7 +16808,7 @@
         }
 
         // دۆخی پەڕەکردن بۆ جزدانی هەر کەسێک
-        let walletTxCursor = {}, walletTxDone = {}, walletTxBusy = false;
+        let walletTxCursor = {}, walletTxDone = {}, walletTxTotal = {}, walletTxBusy = false;
 
         function renderWalletTransactions(txs, code) {
             let list = document.getElementById('wallet-tx-modal-body');
@@ -16783,8 +16818,12 @@
                 list.innerHTML = `<p style="text-align:center; color:#888; font-size:12px; margin: 15px 0;">هیچ جووڵەیەکی دارایی نییە.</p>`;
                 return;
             }
+            const shown = (txs || []).length;
+            const total = code && walletTxTotal[code] != null ? walletTxTotal[code] : -1;
+            const remain = total < 0 ? null : (total - shown);
             list.innerHTML = renderTxListWithDayDividers(txs || [], buildTxItemHtml)
-                + (done ? '' : txMoreBtnHtml('loadMoreUserTx()'));
+                + (done ? '' : txMoreBtnHtml('loadMoreUserTx()', remain))
+                + txCountHtml(shown, total);
         }
 
         async function loadMoreUserTx() {
@@ -16837,7 +16876,15 @@
                 walletTxCache[code] = txs;
                 walletTxCursor[code] = txs.length ? txs[txs.length - 1].id : null;
                 walletTxDone[code] = txs.length < TX_PAGE;
+                walletTxTotal[code] = -1;
                 renderWalletTransactions(walletTxCache[code], code);
+                // ژماردن دواتر دێت — لیستەکە بۆی ناوەستێت
+                fetchTxCount(code).then(n => {
+                    walletTxTotal[code] = n;
+                    if (window.currentWalletCode === code) {
+                        renderWalletTransactions(walletTxCache[code], code);
+                    }
+                });
             } catch (err) {
                 // ئەگەر داتای کۆن هەبوو، لێی بمێنێتەوە؛ ئەگەرنا هەڵە پیشان بدە
                 if (!hasCache) list.innerHTML = `<p style="text-align:center; color:red; font-size:12px; margin: 15px 0;">❌ کێشەیەک لە لۆدکردنی جووڵەکان ڕوویدا.</p>`;
