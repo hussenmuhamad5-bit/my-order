@@ -3346,6 +3346,11 @@
             // یەکەم نەخشاندندا ڕاست بێت، نەک دواتر لەناکاو دەربکەوێت
             try { await refreshNotifUnread(); } catch (e) { }
 
+            // ئەگەر لە دوگمەی ئاگادارکردنەوەی تلیگرامەوە هاتووە،
+            // ڕاستەوخۆ ئەو ئۆردەرە دەکرێتەوە. دوای بارکردنی داتاکان
+            // بانگ دەکرێت، بۆیە زۆربەی جار لە کاشەکەوە دێت
+            try { await openDeepLinkOrder(); } catch (e) { }
+
             // پشکنینی دوورەپەڕ: هەموو ٦٠ چرکە دڵنیابوونەوە کە کلیلەکە هێشتا هەیە
             // (ئەگەر سڕایەوە → دەرچوونی خۆکار، تەنانەت ئەگەر بەکارهێنەر هیچ نەکات)
             // تابەکە شاراوەیە → پێویست ناکات داواکاری بنێردرێت. کاتێک
@@ -9538,6 +9543,47 @@
             renderNotifications();
             const box = document.getElementById('notif-list');
             if (box) box.scrollTop = 0;   // پۆلی نوێ لە سەرەوە دەست پێدەکات
+        }
+
+        // ============================================================
+        // بەستەری ڕاستەوخۆ — لە ئاگادارکردنەوەی تلیگرامەوە
+        // ------------------------------------------------------------
+        // دوگمەی «🔗 کردنەوەی ئۆردەر» لە بۆتەکەدا (db/023) ئەم
+        // بەستەرە دەنێرێت:
+        //     …/app.html?order=<ناسنامە>
+        //
+        // ئەگەر وەک مینی-ئەپ بکرێتەوە، تلیگرام لەوانەیە لەبری ئەوە
+        // `startapp=order_<ناسنامە>` بنێرێت، بۆیە هەردووکیان
+        // دەپشکنرێن.
+        //
+        // ⚠️ تەنها یەک جار کاردەکات لە هەر دانیشتنێکدا. ئەگەر
+        //    پارامەتەرەکە بمێنێتەوە و دووبارە پشکنین بکرێت،
+        //    مۆداڵەکە بە هەر نوێبوونەوەیەک دەکرێتەوە
+        let _deepLinkDone = false;
+
+        function deepLinkOrderId() {
+            try {
+                let id = new URLSearchParams(location.search).get('order');
+                if (!id) {
+                    const tg = window.Telegram && window.Telegram.WebApp;
+                    const sp = (tg && tg.initDataUnsafe && tg.initDataUnsafe.start_param) || '';
+                    const m = String(sp).match(/^order[_-](\d+)$/);
+                    if (m) id = m[1];
+                }
+                return /^\d+$/.test(String(id || '')) ? String(id) : '';
+            } catch (e) { return ''; }
+        }
+
+        async function openDeepLinkOrder() {
+            if (_deepLinkDone) return;
+            const id = deepLinkOrderId();
+            if (!id) return;
+            _deepLinkDone = true;
+            try {
+                await openNotifOrder(id, null);
+            } catch (e) {
+                console.warn('openDeepLinkOrder:', e);
+            }
         }
 
         async function openNotifOrder(orderId, el) {
