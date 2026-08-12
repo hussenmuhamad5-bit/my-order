@@ -301,7 +301,7 @@
 
         <label id="lbl-phone1" for="phone1">ژمارەی مۆبایل</label>
         <div class="phone-field" id="phone1-field">
-            <input type="text" inputmode="tel" id="phone1" dir="ltr" placeholder="07..." value="07" oninput="formatPhone(this)" onpaste="handlePhonePaste(event)" style="text-align: left; direction: ltr;">
+            <input type="text" inputmode="tel" id="phone1" dir="ltr" placeholder="07..." value="07" oninput="formatPhone(this); onPhone1Changed();" onpaste="handlePhonePaste(event)" style="text-align: left; direction: ltr;">
             <button type="button" class="phone-paste-btn" onclick="pastePhone('phone1')" title="پەیستکردنی ژمارە" aria-label="پەیستکردنی ژمارەی مۆبایل"><i class='bx bx-paste'></i></button>
         </div>
         <div class="field-err" id="err-phone1" role="alert"><i class='bx bx-error-circle'></i><span></span></div>
@@ -471,6 +471,34 @@
             oninput="this.style.height = ''; this.style.height = this.scrollHeight + 'px'"
             style="width: 100%; min-height: 45px; padding: 12px 16px; margin-bottom: 15px; font-family: inherit; font-size: 15px; border: 1px solid #e2e8f0; border-radius: 10px; background: #f8fafc; color: var(--text-main); resize: none; overflow: hidden; box-sizing: border-box; transition: border-color 0.2s;"></textarea>
 
+        <!-- گۆڕینی کاڵا — ئۆردەرێکی نوێ کە جێگای کاڵایەکی ئۆردەرێکی
+             پێشووتری هەمان کڕیار دەگرێتەوە. سێ جۆری هەیە و هەر جۆرێک
+             دیاری دەکات کێ تێچووەکە هەڵدەگرێت:
+                 ئەندام — ئەندام کاڵاکانی بە دروستی نەنووسیوە
+                 پاشا   — لە ئامادەکردندا کاڵا دانەنراوە
+                 کڕیار  — کڕیار خۆی داوای گۆڕین دەکات
+             ئۆردەری ڕەسەن هەرگیز دەستکاری ناکرێت — قازانجەکەی پێشتر
+             دابەشکراوە. کاڵای نوێ لە سەبەتەی سەرەوە دێت. -->
+        <div class="switch-group exchange-switch">
+            <label style="font-size:13px; color:#475569; font-weight:700;"><i class='bx bx-transfer-alt'></i>
+                گۆڕینی کاڵایە؟</label>
+            <label class="switch">
+                <input type="checkbox" id="switch-exchange" onchange="toggleExchangeSection(this.checked)">
+                <div class="slider">
+                    <div class="circle"><svg class="cross" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="4">
+                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                        </svg><svg class="checkmark" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="4">
+                            <polyline points="20 6 9 17 4 12"></polyline>
+                        </svg></div>
+                </div>
+            </label>
+        </div>
+
+        <div id="exchange-section" style="display:none;"></div>
+
         <div
             style="background:#fff; padding:15px; border-radius:10px; margin-bottom:15px; border:1px solid #e2e8f0; box-shadow:0 2px 5px rgba(0,0,0,0.02);">
             <div style="display:flex; justify-content:space-between; margin-bottom:8px; color:#555;">
@@ -510,7 +538,8 @@
                  خاوەنی ئۆردەرەکە لە جزدانی خۆیەوە دەیدات. بەهەردوو حاڵەت
                  شۆفێر تەنها ئەوەی ماوە وەردەگرێت، و کۆی گشتی و دابەشکردنی
                  قازانج بە هیچ شێوەیەک ناگۆڕێن. -->
-            <div class="switch-group" style="margin-top:14px; padding-top:12px; border-top:1px dashed #ccc;">
+            <div class="switch-group" id="prepaid-switch-group"
+                style="margin-top:14px; padding-top:12px; border-top:1px dashed #ccc;">
                 <label style="font-size:13px; color:#475569; font-weight:700;">پارە پێشوەخت دراوە؟</label>
                 <label class="switch">
                     <input type="checkbox" id="switch-prepaid" onchange="togglePrepaidSection(this.checked)">
@@ -6955,6 +6984,7 @@
             document.querySelectorAll('.social-check').forEach(cb => cb.checked = false);
             document.getElementById('amount-received').value = '';
             applyPrepaidState(0, '', '');
+            applyExchangeState(null);
 
             cart = [];
             giftCart = [];
@@ -7302,12 +7332,312 @@
             return m ? m.label : '';
         }
 
+        // ============================================================
+        // گۆڕینی کاڵا
+        // ------------------------------------------------------------
+        // سێ جۆری گۆڕین هەیە و هەریەکەیان دیاری دەکات کێ تێچووەکە
+        // هەڵدەگرێت. **تەنها یەکێکیان کاردەکات** لە هەر گۆڕینێکدا.
+        //
+        //   ئەندام — ئەندام بیری چووە کاڵاکان بە دروستی بنووسێت
+        //   پاشا   — پاشا لە ئامادەکردندا بیری چووە هەمووی دابنێت
+        //   کڕیار  — کڕیار خۆی داوای گۆڕینی کاڵا دەکات
+        //
+        // ⚠️ لە ئۆردەری گۆڕیندا ئەم بڕانە دەتوانن نێگەتیڤ بن:
+        //    amount_received / grand_total / cod_amount /
+        //    items_total / member_profit
+        // بۆیە هەموو ئەو پشکنینانەی «> 0»یان تێدایە لێرەدا هەڵەن.
+        // ============================================================
+        const EXCHANGE_MODE_MEMBER = 'ئەندام';
+        const EXCHANGE_MODE_KING = 'پاشا';
+        const EXCHANGE_MODE_CUSTOMER = 'کڕیار';
+        const EXCHANGE_MODES = [EXCHANGE_MODE_MEMBER, EXCHANGE_MODE_KING, EXCHANGE_MODE_CUSTOMER];
+
+        const EXCHANGE_MEMBER_DELIVERY = 5000;   // کرێی گەیاندن لەسەر ئەندام
+        const EXCHANGE_FEE_DEFAULT = 5000;       // کرێی گۆڕین لەسەر کڕیار
+        const EXCHANGE_FEE_OPTIONS = [4000, 5000];
+        const EXCHANGE_FEE_STEP = 500;
+        const EXCHANGE_SOURCE = 'گۆڕین';
+
+        function isExchangeOrder(o) {
+            return !!(o && o.exchange_of_order_id);
+        }
+
+        function exchangeModeOf(o) {
+            const t = String((o && o.exchange_type) || '').trim();
+            return EXCHANGE_MODES.includes(t) ? t : '';
+        }
+
+        // ------------------------------------------------------------
+        // ژمێرەری گۆڕین — نیشانەکان بە شێوەی جزدانن: نێگەتیڤ = نەقس
+        //
+        //   ئەندام : memberTx = −(کرێی گەیاندن + جیاوازی نرخ)
+        //            کڕیار هیچ نادات
+        //   پاشا   : پارەی شۆفێر لە پاشا کەم دەکرێتەوە
+        //            ئەندام و کڕیار هیچ نادەن
+        //   کڕیار  : customerCash = کرێی گۆڕین + جیاوازی نرخ
+        //            ئەندام هیچ نادات
+        //
+        // پاشا هەمیشە پاشماوەکەیە — وەک ئۆردەری ئاسایی (app.html:18109)
+        // ------------------------------------------------------------
+        function computeExchange(input) {
+            const mode = input.mode;
+            const oldCost = Number(input.oldCost || 0);
+            const newCost = Number(input.newCost || 0);
+            const deliveryFee = Number(input.deliveryFee != null ? input.deliveryFee : EXCHANGE_MEMBER_DELIVERY);
+            const changeFee = Number(input.changeFee != null ? input.changeFee : EXCHANGE_FEE_DEFAULT);
+            const realDriverFee = Number(input.realDriverFee || 0);
+            const driverPaid = Number(input.driverPaid != null ? input.driverPaid : realDriverFee);
+
+            const priceDiff = newCost - oldCost;
+
+            let memberTx = 0, customerCash = 0, receiptTotal = 0;
+
+            if (mode === EXCHANGE_MODE_MEMBER) {
+                // نێگەتیڤ = نەقس، پۆزەتیڤ = خێر (کاتێک کاڵای نوێ زۆر هەرزانترە)
+                memberTx = -(deliveryFee + priceDiff);
+                receiptTotal = deliveryFee + priceDiff;
+            } else if (mode === EXCHANGE_MODE_KING) {
+                receiptTotal = driverPaid;
+            } else if (mode === EXCHANGE_MODE_CUSTOMER) {
+                customerCash = changeFee + priceDiff;
+                receiptTotal = customerCash;
+            }
+
+            const kingTx = customerCash - driverPaid - memberTx;
+
+            return {
+                mode, priceDiff, memberTx, customerCash, kingTx, receiptTotal,
+                driverPaid, driverVariance: driverPaid - realDriverFee,
+
+                // بەرامبەری ستوونەکانی orders — بەم شێوەیە فۆرمولای
+                // member_profit وەک خۆی دەمێنێتەوە (app.html:11040)
+                amountReceived: customerCash,
+                deliveryPrice: mode === EXCHANGE_MODE_MEMBER ? deliveryFee
+                    : mode === EXCHANGE_MODE_CUSTOMER ? changeFee : 0,
+                itemsTotal: mode === EXCHANGE_MODE_KING ? 0 : priceDiff,
+                memberProfit: memberTx,
+                changeFee: mode === EXCHANGE_MODE_CUSTOMER ? changeFee : 0,
+
+                customerDirection: customerCash > 0 ? 'collect'
+                    : customerCash < 0 ? 'refund' : 'none'
+            };
+        }
+
+        // ------------------------------------------------------------
+        // ڕیزەکانی کاڵا — ڕیزی گەڕاوە نێگەتیڤە، بۆیە:
+        //   کۆی item_prices == items_total
+        //   کۆی item_qtys   == 0 → بەڕێوەبەر/سەرپەرشت دووبارە قازانج ناکەن
+        //
+        // ⚠️ بڕی گەڕاوە دەبێت "-1" بێت نەک "0":
+        //    parseInt('0')  || 1  ===  1   ← دەیژمێرێت وەک یەک دانە
+        //    parseInt('-1') || 1  === -1   ← دروست
+        // ------------------------------------------------------------
+        function buildExchangeItemLines(o) {
+            const names = [], qtys = [], prices = [];
+            const isKing = o.mode === EXCHANGE_MODE_KING;
+
+            if (o.newName) {
+                names.push(o.newName);
+                qtys.push(String(o.newQty || 1));
+                // لە جۆری «پاشا»دا کڕیار پێشتر پارەی کاڵاکەی داوە
+                prices.push(String(isKing ? 0 : Number(o.newCost || 0)));
+            }
+            if (o.oldName && Number(o.oldCost || 0) > 0) {
+                names.push('گەڕاندنەوە: ' + o.oldName);
+                qtys.push(String(-(o.oldQty || 1)));
+                prices.push(String(isKing ? 0 : -Number(o.oldCost || 0)));
+            }
+
+            return {
+                item_names: names.join('\n'),
+                item_qtys: qtys.join('\n'),
+                item_prices: prices.join('\n')
+            };
+        }
+
+        // بڕی پارە بە نیشانەی ڕوون — U+2212ی ڕاستەقینە بەکاردێت
+        function exMoney(v) {
+            const n = Math.round(Number(v) || 0);
+            return (n < 0 ? '−' : '') + Math.abs(n).toLocaleString('en-US');
+        }
+        function exSigned(v) {
+            const n = Math.round(Number(v) || 0);
+            return (n > 0 ? '+' : n < 0 ? '−' : '') + Math.abs(n).toLocaleString('en-US');
+        }
+
+        // ------------------------------------------------------------
+        // وەسڵی گۆڕینی کاڵا — ڕیزی «کۆی گشتی» بەپێی جۆری گۆڕین دەگۆڕێت
+        //
+        //   ئەندام → کۆی گشتی لەسەر ئەندام (نەقس یان خێر)
+        //   پاشا   → کۆی گشتی لەسەر پاشا (پارەی شۆفێر)
+        //   کڕیار  → وەردەگیرێت لە کڕیار / بدرێتەوە بە کڕیار
+        // ------------------------------------------------------------
+        function exchangeReceiptHtml(o) {
+            const mode = exchangeModeOf(o);
+            const oldCost = Number(o.returned_items_total || 0);
+            const priceDiff = Number(o.items_total || 0);
+            const newCost = oldCost + priceDiff;
+            const memberTx = Number(o.member_profit || 0);
+            const custCash = orderFullValue(o);
+            const changeFee = Number(o.change_fee || 0);
+            const dPaid = o.driver_fee_paid == null ? null : Number(o.driver_fee_paid);
+            const dSys = o.driver_fee_system == null ? null : Number(o.driver_fee_system);
+
+            const row = (label, val, opt) => {
+                const s = opt || {};
+                // بڕەکە هەرگیز نابێت بشکێت بۆ دوو دێڕ — `white-space:nowrap`
+                return '<div style="display:flex; justify-content:space-between; align-items:baseline;'
+                    + ' gap:10px; margin-bottom:8px; font-size:'
+                    + (s.big ? '16px' : '14px') + '; color:' + (s.color || '#555')
+                    + (s.big ? '; font-weight:bold; margin-top:4px' : '') + ';">'
+                    + '<span style="line-height:1.5;">' + label + '</span>'
+                    + '<strong dir="ltr" style="white-space:nowrap;">' + val + ' د.ع</strong></div>';
+            };
+            const rule = '<hr style="border:0; border-top:1px dashed #ccc; margin:10px 0;">';
+
+            let body = '';
+
+            // زانیاری کاڵاکان — لە جۆری «پاشا»دا نرخ نییە،
+            // چونکە کڕیار پێشتر پارەی ئەو کاڵایانەی داوە
+            if (mode !== EXCHANGE_MODE_KING) {
+                if (oldCost > 0) body += row('قیمەتی کاڵا (کۆن):', exMoney(oldCost));
+                if (newCost !== 0) body += row('قیمەتی کاڵا (نوێ):', exMoney(newCost));
+                if (priceDiff !== 0) {
+                    body += row('جیاوازی نرخ:', exSigned(priceDiff),
+                        { color: priceDiff > 0 ? '#dc2626' : '#059669' });
+                }
+            }
+
+            if (mode === EXCHANGE_MODE_MEMBER) {
+                body += row('کرێی گەیاندن:', exMoney(o.delivery_price));
+                body += rule;
+                const isBonus = memberTx > 0;
+                body += row(
+                    isBonus ? 'خێر بۆ ئەندام:' : 'کۆی گشتی لەسەر ئەندام:',
+                    exMoney(Math.abs(memberTx)),
+                    { big: true, color: isBonus ? '#059669' : '#dc2626' });
+                body += '<div style="font-size:12px; color:#64748b; margin-top:6px;">'
+                    + '<i class="bx bx-info-circle"></i> کڕیار هیچ نادات</div>';
+
+            } else if (mode === EXCHANGE_MODE_KING) {
+                const miss = String(o.item_names || '').split('\n').filter(s => s.trim());
+                if (miss.length) {
+                    body += '<div style="font-size:14px; color:#555; margin-bottom:8px;">'
+                        + '<i class="bx bx-package"></i> کاڵای نەگەیشتوو: <b>'
+                        + histEsc(miss.join('، ')) + '</b></div>';
+                }
+                if (dPaid != null) body += row('پارەی شۆفێر:', exMoney(dPaid));
+                if (dSys != null) body += row('نرخی ڕاستەی سیستەم:', exMoney(dSys));
+                if (dPaid != null && dSys != null && dPaid !== dSys) {
+                    const v = dPaid - dSys;
+                    body += row(v > 0 ? 'زیادەی شۆفێر (لەسەر پاشا):' : 'کەمی شۆفێر (بۆ پاشا):',
+                        exMoney(Math.abs(v)), { color: v > 0 ? '#dc2626' : '#059669' });
+                }
+                body += rule;
+                body += row('کۆی گشتی لەسەر پاشا:',
+                    exMoney(dPaid == null ? 0 : dPaid),
+                    { big: true, color: '#dc2626' });
+                body += '<div style="font-size:12px; color:#64748b; margin-top:6px;">'
+                    + '<i class="bx bx-info-circle"></i> ئەندام و کڕیار هیچ نادەن</div>';
+
+            } else if (mode === EXCHANGE_MODE_CUSTOMER) {
+                body += row('کرێی گۆڕین:', exMoney(changeFee));
+                body += rule;
+                const refund = custCash < 0;
+                body += row(
+                    refund ? 'کۆی گشتی بدرێتەوە بە کڕیار:' : 'کۆی گشتی وەردەگیرێت لە کڕیار:',
+                    exMoney(Math.abs(custCash)),
+                    { big: true, color: refund ? '#dc2626' : 'var(--primary)' });
+                if (refund) {
+                    body += '<div class="ex-refund-warn"><i class="bx bx-error"></i>'
+                        + '<span>شۆفێر دەبێت <b dir="ltr">' + exMoney(Math.abs(custCash))
+                        + ' د.ع</b> بداتەوە بە کڕیار</span></div>';
+                }
+            }
+
+            const parentLink = o.exchange_of_order_id
+                ? '<div class="ex-parent" onclick="openOrderDetails(\'' + o.exchange_of_order_id + '\')">'
+                + '<i class="bx bx-link-external"></i> ئۆردەری ڕەسەن: '
+                + '<b dir="ltr">' + histEsc(o.exchange_of_order_code || o.exchange_of_order_id) + '</b></div>'
+                : '';
+
+            const reason = o.exchange_reason
+                ? '<div style="font-size:13px; color:#64748b; margin-bottom:10px;">'
+                + '<i class="bx bx-message-square-detail"></i> ' + histEsc(o.exchange_reason) + '</div>'
+                : '';
+
+            return '<div class="detail-row">'
+                + '<span class="detail-label"><i class="bx bx-transfer-alt"></i> وەسڵی گۆڕینی کاڵا'
+                + '<span class="ex-badge ex-badge-' + exchangeModeSlug(mode) + '">' + histEsc(mode) + '</span></span>'
+                + '<div style="background:#fff; padding:15px; border-radius:10px; margin-top:5px; border:1px solid #e2e8f0; box-shadow:0 2px 5px rgba(0,0,0,0.02);">'
+                + parentLink + reason + body
+                + '</div></div>';
+        }
+
+        function exchangeModeSlug(mode) {
+            return mode === EXCHANGE_MODE_MEMBER ? 'member'
+                : mode === EXCHANGE_MODE_KING ? 'king'
+                    : mode === EXCHANGE_MODE_CUSTOMER ? 'customer' : 'none';
+        }
+
+        // بۆکسی پارە لە زانیاری ئۆردەر — ئۆردەری گۆڕین وەسڵی خۆی هەیە
+        function orderMoneyBoxHtml(o, detailProfit) {
+            if (isExchangeOrder(o)) return exchangeReceiptHtml(o);
+            return `
+            <div class="detail-row">
+                <span class="detail-label"><i class='bx bx-wallet'></i> دراوی داواکاری ${paidStampHtml(o)}</span>
+                <div style="background:#fff; padding:15px; border-radius:10px; margin-top:5px; border:1px solid #e2e8f0; box-shadow:0 2px 5px rgba(0,0,0,0.02);">
+                    <div style="display:flex; justify-content:space-between; margin-bottom:8px; color:#555; font-size:14px;">
+                        <span>کۆی نرخی کاڵاکان:</span>
+                        <strong>${Number(o.items_total || 0).toLocaleString()} دینار</strong>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; margin-bottom:8px; color:#555; font-size:14px;">
+                        <span>نرخی گەیاندن:</span>
+                        <strong>${Number(o.delivery_price || 0).toLocaleString()} دینار</strong>
+                    </div>
+                    ${Number(o.gift_total || 0) > 0 ? `<div style="display:flex; justify-content:space-between; margin-bottom:8px; color:#1e7a4d; font-size:14px;">
+                        <span><i class='bx bx-gift'></i> کاڵای دیاری:</span>
+                        <strong>− ${Number(o.gift_total).toLocaleString()} دینار</strong>
+                    </div>` : ''}
+                    <div style="display:flex; justify-content:space-between; margin-bottom:8px; font-size:14px; color:${detailProfit < 0 ? '#dc2626' : '#059669'};">
+                        <span><i class='bx bx-trending-up'></i> قازانجی ئۆردەر:</span>
+                        <strong>${detailProfit.toLocaleString()} دینار</strong>
+                    </div>
+                    ${orderIsPrepaid(o) ? `<div style="display:flex; justify-content:space-between; margin-bottom:8px; color:#0f766e; font-size:14px;">
+                        <span><i class='bx bx-check-shield'></i> پارەی پێشوەخت دراو${paymentMethodLabel(o.payment_method) ? ` (${paymentMethodLabel(o.payment_method)})` : ''}:</span>
+                        <strong>${orderPrepaid(o).toLocaleString()} دینار</strong>
+                    </div>` : ''}
+                    <hr style="border:0; border-top:1px dashed #ccc; margin:10px 0;">
+                    <div style="display:flex; justify-content:space-between; color:var(--primary); font-size:18px; font-weight:bold;">
+                        <span>کۆی گشتی:</span>
+                        <span dir="ltr">${Number(o.grand_total || 0).toLocaleString()} د.ع</span>
+                    </div>
+                    ${orderIsPrepaid(o) ? `<div class="prepaid-cod${orderCod(o) <= 0 ? ' is-full' : ''}" style="margin-top:12px;">
+                        <span><i class='bx bx-cycling'></i> شۆفێر لە کڕیار وەریدەگرێت</span>
+                        <span class="prepaid-cod-amt" dir="ltr">${orderCod(o).toLocaleString()} د.ع</span>
+                    </div>` : ''}
+                    ${orderIsPrepaid(o) && o.payment_proof_url ? `<div style="margin-top:10px;">
+                        <span style="font-size:12px; color:#64748b; display:block; margin-bottom:6px;"><i class='bx bx-receipt'></i> سکرینشۆتی پارەدان</span>
+                        <img src="${o.payment_proof_url}" loading="lazy" class="pay-proof-view"
+                            onclick="openImageGallery(['${o.payment_proof_url}'], 0)">
+                    </div>` : ''}
+                </div>
+            </div>`;
+        }
+
         function orderPrepaid(o) {
             const n = parseFloat(o && o.prepaid_amount);
             return (!isNaN(n) && n > 0) ? n : 0;
         }
 
         function orderFullValue(o) {
+            // ئۆردەری گۆڕین دەکرێت سفر یان نێگەتیڤ بێت (پارە دەدرێتەوە
+            // بە کڕیار)، بۆیە پشکنینی «> 0» لێرەدا بەکارنایەت — ئەگەر
+            // بەکاربهێنرێت، بڕە نێگەتیڤەکە بێدەنگانە پشتگوێ دەخرێت
+            if (isExchangeOrder(o)) {
+                const a = parseFloat(o.amount_received);
+                return isNaN(a) ? Number(o.grand_total || 0) : a;
+            }
             return (o && o.amount_received != null && parseFloat(o.amount_received) > 0)
                 ? parseFloat(o.amount_received) : Number((o && o.grand_total) || 0);
         }
@@ -7317,6 +7647,9 @@
         function orderCod(o) {
             const c = parseFloat(o && o.cod_amount);
             if (!isNaN(c)) return c;
+            // لە گۆڕیندا `Math.max(0, …)` نابێت بەکاربێت — ئەو بڕە
+            // نێگەتیڤە واتای «شۆفێر پارە دەداتەوە بە کڕیار»ە
+            if (isExchangeOrder(o)) return orderFullValue(o) - orderPrepaid(o);
             return Math.max(0, orderFullValue(o) - orderPrepaid(o));
         }
 
@@ -7336,8 +7669,83 @@
             return `<span class="print-stamp"><i class='bx bx-lock-alt'></i>پرێنتکراو</span>`;
         }
 
+        // ------------------------------------------------------------
+        // دەقی وەسڵی گۆڕین بۆ کۆپیکردن (تلیگرام/واتسئاپ)
+        //
+        // ⚠️ لێرەدا `dir="ltr"` نییە، بۆیە کۆدی ئۆردەر بە LRI/PDI
+        //    دەپێچرێتەوە — بەبێ ئەوە «1000-hUwk5» بە پێچەوانە
+        //    دەردەکەوێت لە ناو دەقی کوردیدا (وەک db/015:471)
+        // ------------------------------------------------------------
+        const LRI = '⁦', PDI = '⁩';
+        const exWrap = (s) => LRI + String(s == null ? '' : s) + PDI;
+
+        function exchangeCopyText(o, mode) {
+            const exMode = exchangeModeOf(o) || 'گۆڕین';
+            const oldCost = Number(o.returned_items_total || 0);
+            const priceDiff = Number(o.items_total || 0);
+            const newCost = oldCost + priceDiff;
+            const memberTx = Number(o.member_profit || 0);
+            const custCash = orderFullValue(o);
+            const L = [];
+
+            L.push(`🔁 وەسڵی گۆڕینی کاڵا — لەسەر ${exMode}`);
+            if (o.order_code) L.push(`🧾 کۆدی گۆڕین: ${exWrap(o.order_code)}`);
+            if (o.exchange_of_order_code) L.push(`↩️ ئۆردەری ڕەسەن: ${exWrap(o.exchange_of_order_code)}`);
+            L.push(COPY_SEP);
+            if (o.customer_name) L.push(`👤 کڕیار: ${o.customer_name}`);
+            if (o.address) L.push(`📍 ${o.address}`);
+            if (mode !== 'customer') {
+                const phones = [o.phone1, o.phone2].filter(Boolean).join(' / ');
+                if (phones) L.push(`📱 ${exWrap(phones)}`);
+            }
+            if (o.exchange_reason) L.push(`📝 هۆکار: ${o.exchange_reason}`);
+            L.push(COPY_SEP);
+
+            // بەشی کاڵاکان — ئەگەر بەتاڵ بوو، جیاکەرەوەی دووبارە نانووسرێت
+            const _n = L.length;
+            if (exMode === EXCHANGE_MODE_KING) {
+                const miss = String(o.item_names || '').split('\n').filter(s => s.trim());
+                if (miss.length) L.push(`📦 کاڵای نەگەیشتوو: ${miss.join('، ')}`);
+            } else {
+                if (o.returned_item_names) L.push(`↩️ کاڵای گەڕاوە: ${o.returned_item_names}`);
+                if (oldCost > 0) L.push(`قیمەتی کاڵا (کۆن): ${exWrap(exMoney(oldCost))} د.ع`);
+                if (newCost !== 0) L.push(`قیمەتی کاڵا (نوێ): ${exWrap(exMoney(newCost))} د.ع`);
+                if (priceDiff !== 0) L.push(`جیاوازی نرخ: ${exWrap(exSigned(priceDiff))} د.ع`);
+            }
+            if (L.length > _n) L.push(COPY_SEP);
+            if (exMode === EXCHANGE_MODE_MEMBER) {
+                L.push(`کرێی گەیاندن: ${exWrap(exMoney(o.delivery_price))} د.ع`);
+                L.push(memberTx > 0
+                    ? `🎁 خێر بۆ ئەندام: ${exWrap(exMoney(memberTx))} د.ع`
+                    : `💰 کۆی گشتی لەسەر ئەندام: ${exWrap(exMoney(Math.abs(memberTx)))} د.ع`);
+                L.push('کڕیار هیچ نادات');
+            } else if (exMode === EXCHANGE_MODE_KING) {
+                const dp = o.driver_fee_paid == null ? null : Number(o.driver_fee_paid);
+                const ds = o.driver_fee_system == null ? null : Number(o.driver_fee_system);
+                if (dp != null) L.push(`پارەی شۆفێر: ${exWrap(exMoney(dp))} د.ع`);
+                if (ds != null) L.push(`نرخی ڕاستەی سیستەم: ${exWrap(exMoney(ds))} د.ع`);
+                if (dp != null && ds != null && dp !== ds) {
+                    const v = dp - ds;
+                    L.push(`${v > 0 ? 'زیادەی شۆفێر (لەسەر پاشا)' : 'کەمی شۆفێر (بۆ پاشا)'}: ${exWrap(exMoney(Math.abs(v)))} د.ع`);
+                }
+                L.push(`💰 کۆی گشتی لەسەر پاشا: ${exWrap(exMoney(dp == null ? 0 : dp))} د.ع`);
+                L.push('ئەندام و کڕیار هیچ نادەن');
+            } else {
+                L.push(`کرێی گۆڕین: ${exWrap(exMoney(o.change_fee))} د.ع`);
+                L.push(custCash < 0
+                    ? `💵 کۆی گشتی بدرێتەوە بە کڕیار: ${exWrap(exMoney(Math.abs(custCash)))} د.ع`
+                    : `💰 کۆی گشتی وەردەگیرێت لە کڕیار: ${exWrap(exMoney(custCash))} د.ع`);
+                if (custCash < 0) L.push(`⚠️ شۆفێر دەبێت ${exWrap(exMoney(Math.abs(custCash)))} د.ع بداتەوە بە کڕیار`);
+            }
+
+            return L.join('\n');
+        }
+
         function buildOrderCopyText(o, mode) {
             if (!o) return '';
+            // ئۆردەری گۆڕین وەسڵی خۆی هەیە — دەقی ئۆردەری ئاسایی
+            // بڕە هەڵەکان پیشان دەدات (کۆی گشتی، قازانج، هتد)
+            if (isExchangeOrder(o)) return exchangeCopyText(o, mode);
             const L = [];
             const imgs = orderImageLinks(o);
             const total = Number(o.grand_total || 0).toLocaleString('en-US');
@@ -7595,6 +8003,10 @@
                 actionButtonsHtml = `<div style="display:flex; gap:10px; margin-top:20px;">${editBtn}${delBtn}</div>`;
             }
 
+            // گۆڕینی کاڵا لێرە دەستپێناکات — لە فۆڕمی ئۆردەری نوێدایە،
+            // وەک سویچی «پارە پێشوەخت دراوە؟». ئەندام ئۆردەرێکی نوێ
+            // دەنووسێت و لەوێ نیشانەی دەکات کە گۆڕینە
+
             // گۆڕینی حاڵەت: بەپێی مەودا (تیم/هەموان) لەسەر ئەم ئۆردەرە.
             // تا قوفڵی پرێنت لانەبردرێت، هیچ گۆڕینێکی حاڵەت نییە.
             let canChangeStatus = canActOnOrder(o, 'status') && !printLocked;
@@ -7754,45 +8166,7 @@
                 <span class="detail-label"><i class='bx bx-time-five'></i> کاتی داواکاری</span>
                 <div class="detail-value" dir="ltr" style="text-align:right;">${formatDateTimeKurdish(o.date || o.created_at)}</div>
             </div>
-            <div class="detail-row">
-                <span class="detail-label"><i class='bx bx-wallet'></i> دراوی داواکاری ${paidStampHtml(o)}</span>
-                <div style="background:#fff; padding:15px; border-radius:10px; margin-top:5px; border:1px solid #e2e8f0; box-shadow:0 2px 5px rgba(0,0,0,0.02);">
-                    <div style="display:flex; justify-content:space-between; margin-bottom:8px; color:#555; font-size:14px;">
-                        <span>کۆی نرخی کاڵاکان:</span>
-                        <strong>${Number(o.items_total || 0).toLocaleString()} دینار</strong>
-                    </div>
-                    <div style="display:flex; justify-content:space-between; margin-bottom:8px; color:#555; font-size:14px;">
-                        <span>نرخی گەیاندن:</span>
-                        <strong>${Number(o.delivery_price || 0).toLocaleString()} دینار</strong>
-                    </div>
-                    ${Number(o.gift_total || 0) > 0 ? `<div style="display:flex; justify-content:space-between; margin-bottom:8px; color:#1e7a4d; font-size:14px;">
-                        <span><i class='bx bx-gift'></i> کاڵای دیاری:</span>
-                        <strong>− ${Number(o.gift_total).toLocaleString()} دینار</strong>
-                    </div>` : ''}
-                    <div style="display:flex; justify-content:space-between; margin-bottom:8px; font-size:14px; color:${detailProfit < 0 ? '#dc2626' : '#059669'};">
-                        <span><i class='bx bx-trending-up'></i> قازانجی ئۆردەر:</span>
-                        <strong>${detailProfit.toLocaleString()} دینار</strong>
-                    </div>
-                    ${orderIsPrepaid(o) ? `<div style="display:flex; justify-content:space-between; margin-bottom:8px; color:#0f766e; font-size:14px;">
-                        <span><i class='bx bx-check-shield'></i> پارەی پێشوەخت دراو${paymentMethodLabel(o.payment_method) ? ` (${paymentMethodLabel(o.payment_method)})` : ''}:</span>
-                        <strong>${orderPrepaid(o).toLocaleString()} دینار</strong>
-                    </div>` : ''}
-                    <hr style="border:0; border-top:1px dashed #ccc; margin:10px 0;">
-                    <div style="display:flex; justify-content:space-between; color:var(--primary); font-size:18px; font-weight:bold;">
-                        <span>کۆی گشتی:</span>
-                        <span dir="ltr">${Number(o.grand_total || 0).toLocaleString()} د.ع</span>
-                    </div>
-                    ${orderIsPrepaid(o) ? `<div class="prepaid-cod${orderCod(o) <= 0 ? ' is-full' : ''}" style="margin-top:12px;">
-                        <span><i class='bx bx-cycling'></i> شۆفێر لە کڕیار وەریدەگرێت</span>
-                        <span class="prepaid-cod-amt" dir="ltr">${orderCod(o).toLocaleString()} د.ع</span>
-                    </div>` : ''}
-                    ${orderIsPrepaid(o) && o.payment_proof_url ? `<div style="margin-top:10px;">
-                        <span style="font-size:12px; color:#64748b; display:block; margin-bottom:6px;"><i class='bx bx-receipt'></i> سکرینشۆتی پارەدان</span>
-                        <img src="${o.payment_proof_url}" loading="lazy" class="pay-proof-view"
-                            onclick="openImageGallery(['${o.payment_proof_url}'], 0)">
-                    </div>` : ''}
-                </div>
-            </div>
+            ${orderMoneyBoxHtml(o, detailProfit)}
             ${profitSplitHtml}
             ${changerInfoHtml}
             ${statusChangerHtml}
@@ -10756,7 +11130,14 @@
             for (let i = 0; i < names.length; i++) {
                 if (!names[i].trim()) continue;
                 let q = parseInt(qtys[i]) || 1;
-                let p = parseInt(prices[i]) / q || 0;
+                let rawP = parseInt(prices[i]);
+                // ⚠️ ڕیزی «کاڵای گەڕاوە» لە ئۆردەری گۆڕیندا نێگەتیڤە
+                //    (بڕ ‎-1 و نرخ نێگەتیڤ). نابێت بچێتە سەبەتەوە —
+                //    ئەگەرنا وەک کاڵایەکی نوێی زیادە دەژمێردرێت و
+                //    نرخی کاڵای نوێ دوو ئەوەندە دەبێت. بەشی گۆڕین
+                //    خۆی بەڕێوەی دەبات
+                if (rawP < 0 || q < 0) continue;
+                let p = rawP / q || 0;
                 cart.push({ name: names[i].trim(), qty: q, unitPrice: p });
             }
 
@@ -10775,6 +11156,7 @@
             syncGiftSwitch();
             document.getElementById('amount-received').value = (o.amount_received != null && o.amount_received !== "") ? o.amount_received : "";
             applyPrepaidState(o.prepaid_amount, o.payment_method, o.payment_proof_url);
+            await applyExchangeState(o);
             updateCartUI();
 
             document.getElementById('order-notes').value = o.notes || "";
@@ -10920,8 +11302,54 @@
             let rawReceived = toEnglishDigits(document.getElementById('amount-received').value).replace(/,/g, '').replace(/\D/g, '');
             let amountReceived = parseFloat(rawReceived) || 0;
 
+            // ============================================================
+            // گۆڕینی کاڵا — بڕەکان دەژمێردرێن، لە خانەکانەوە نایەن
+            // ------------------------------------------------------------
+            // ⚠️ خانەی «پارەی وەرگیراو» لێرەدا بەکارنایەت: خوێندنەوەکەی
+            //    سەرەوە `.replace(/\D/g, '')` بەکاردەهێنێت، کە نیشانەی
+            //    نێگەتیڤ لادەبات — بۆیە «بدرێتەوە بە کڕیار»ی ٥,٠٠٠
+            //    دەبووە «وەرگیراوی» ٥,٠٠٠. هەمیشە لە exchangeFormCalc
+            //    وەریدەگرین
+            // ============================================================
+            const exOn = exchangeFormOn();
+            let exData = null, exCalc = null;
+            if (exOn) {
+                exData = exchangeFormData();
+                exCalc = exchangeFormCalc();
+                if (!exData || !exData.mode) {
+                    showToast("جۆری گۆڕین هەڵبژێرە — ئەندام یان پاشا یان کڕیار", "error"); return;
+                }
+                if (!exData.parent) {
+                    showToast("ئۆردەری ڕەسەن هەڵبژێرە — ئەوەی دەگۆڕدرێت", "error"); return;
+                }
+                if (exData.mode !== EXCHANGE_MODE_KING && exData.newCost <= 0 && exData.oldCost <= 0) {
+                    showToast("نرخی کاڵای نوێ بنووسە", "error"); return;
+                }
+
+                // ڕیزەکانی کاڵا: نوێیەکان لە سەبەتەوە + ڕیزی گەڕاوە بە
+                // نێگەتیڤ، بۆ ئەوەی کۆی item_prices == items_total بێت.
+                // ⚠️ بڕی گەڕاوە دەبێت نێگەتیڤ بێت نەک سفر —
+                //    parseInt('0') || 1 === 1 (دەیژمێرێت وەک یەک دانە)
+                const exIsKing = exData.mode === EXCHANGE_MODE_KING;
+                const exNames = cart.map(c => c.name);
+                const exQtys = cart.map(c => String(c.qty));
+                const exPrices = cart.map(c => String(exIsKing ? 0 : c.qty * c.unitPrice));
+                if (!exIsKing && exData.oldName && exData.oldCost > 0) {
+                    exNames.push('گەڕاندنەوە: ' + exData.oldName);
+                    exQtys.push(String(-exData.oldQty));
+                    exPrices.push(String(-exData.oldCost));
+                }
+                itemNames = exNames.join('\n');
+                itemQtys = exQtys.join('\n');
+                itemPrices = exPrices.join('\n');
+                itemsTotal = exCalc.itemsTotal;
+                deliveryPrice = exCalc.deliveryPrice;
+                amountReceived = exCalc.amountReceived;
+            }
+
             // پشکنین: پارەی وەرگیراو دەبێت بنووسرێت
-            if (amountReceived <= 0) {
+            // (لە گۆڕیندا دەکرێت سفر یان نێگەتیڤ بێت — بەڵگەی هەڵە نییە)
+            if (!exOn && amountReceived <= 0) {
                 showOrderErrs([{ k: 'received', m: 'بڕی پارەی وەرگیراو بنووسە — ئەو بڕەی لە کڕیارەوە وەردەگیرێت.' }]);
                 showToast("بڕی پارەی وەرگیراو بنووسە", "error");
                 return;
@@ -10932,8 +11360,14 @@
             let giftPrices = giftCart.map(g => String(g.qty * g.unitPrice)).join('\n');
             let giftTotal = Number(giftTotalOf(giftCart));
 
+            // لە گۆڕیندا کاڵای دیاری نییە — ژمێرەرەکە لەسەر بنەمای
+            // «بێ دیاری» دروستکراوە، بۆیە فۆرمولای قازانج تێک نەچێت
+            if (exOn) { giftNames = ""; giftQtys = ""; giftPrices = ""; giftTotal = 0; }
+
             // پشکنین: کۆی کاڵاکان و گەیاندن و دیاری نابێت زیاتربن لە پارەی وەرگیراو
-            if ((itemsTotal + giftTotal + deliveryPrice) > amountReceived) {
+            // (لە گۆڕیندا ئەم پشکنینە بەکارنایەت — پاشا بەئەنقەست
+            //  زەرەرەکە هەڵدەگرێت، بۆ نموونە «لەسەر پاشا» کۆی گشتی سفرە)
+            if (!exOn && (itemsTotal + giftTotal + deliveryPrice) > amountReceived) {
                 // پەیامەکە دەڵێت **چەند** کەمە، نەک تەنها «هەڵەیە» —
                 // بۆیە بەکارهێنەر ڕاستەوخۆ دەزانێت چی بنووسێت
                 const need = itemsTotal + giftTotal + deliveryPrice;
@@ -10949,7 +11383,9 @@
             }
 
             // ---- پشکنینی پارەی پێشوەخت دراو ----
-            const prepaidOn = !!(document.getElementById('switch-prepaid') || {}).checked;
+            // لە گۆڕیندا پارەی پێشوەخت نییە — سویچەکەی خۆشی شاراوەتەوە
+            // (بڕوانە toggleExchangeSection). ئەمە پارێزەری دووەمە
+            const prepaidOn = !exOn && !!(document.getElementById('switch-prepaid') || {}).checked;
             let prepaidAmount = prepaidOn ? readMoneyInput('prepaid-amount') : 0;
             let paymentMethod = prepaidOn ? formPaymentMethod() : '';
 
@@ -11025,7 +11461,10 @@
                     }
                 }
             }
-            if (prepaidAmount > amountReceived) {
+            // ⚠️ لە گۆڕیندا ئەم پشکنینە بەکارنایەت: کاتێک پارە دەدرێتەوە
+            //    بە کڕیار، amountReceived نێگەتیڤە و `0 > -5000` ڕاستە،
+            //    بۆیە ئۆردەرەکە بە هەڵە ڕەت دەکرایەوە
+            if (!exOn && prepaidAmount > amountReceived) {
                 showToast("⚠️ پارەی پێشوەخت دراو زیاترە لە کۆی گشتی! ناتوانرێت تۆمار بکرێت.", "error");
                 return;
             }
@@ -11077,7 +11516,9 @@
                         gift_qtys: giftQtys,
                         gift_prices: giftPrices,
                         gift_total: giftTotal,
-                        notes: notes
+                        notes: notes,
+                        source: exOn ? EXCHANGE_SOURCE : "سایت",
+                        ...exchangeColumns(exOn, exData, exCalc)
                     };
 
                     // دۆخی پێش دەستکاری — بۆ زانینی ئەوەی چی گۆڕا
@@ -11172,9 +11613,11 @@
                         gift_total: giftTotal,
                         notes: notes,
                         order_code: orderCode,
-                        source: "سایت",
+                        source: exOn ? EXCHANGE_SOURCE : "سایت",
                         tg_info: "",
-                        status: "ئامادە دەکرێت"
+                        status: "ئامادە دەکرێت",
+                        ...exchangeColumns(exOn, exData, exCalc),
+                        ...exchangeOwnerColumns(exOn, exData)
                     }]).select('id, order_code');
 
                     if (error) throw error;
@@ -13009,6 +13452,11 @@
                 sumProfitEl.innerText = orderProfit.toLocaleString();
                 sumProfitEl.parentElement.style.color = orderProfit < 0 ? '#dc2626' : '#059669';
             }
+
+            // لە گۆڕیندا ژمارەکان جیاوازن: کۆی کاڵاکان دەبێتە جیاوازی
+            // نرخ، و پارەی وەرگیراو خۆکارانە دەژمێردرێت (دەکرێت سفر
+            // یان نێگەتیڤ بێت). بۆیە ئەم بڕانە دەنووسرێنەوە
+            if (exchangeFormOn()) exApplyFormTotals();
 
             // ---- پارەی پێشوەخت دراو ----
             // تەنها پیشاندانە: نە کۆی گشتی و نە قازانج دەستیان لێ نادرێت
@@ -17647,6 +18095,515 @@
         // ئەم پلانە کاتێک ئۆردەرەکە هی خۆیان بێت، پاشەکەوتەکەیان ١٠٠٠ دینارە
         const SAVINGS_HIGH_ROLES = ['بەڕێوەبەر', 'سەرپەرشت', 'ڕاوێژکار'];
 
+        // ============================================================
+        // گۆڕینی کاڵا — لە فۆڕمی ئۆردەری نوێدا
+        // ------------------------------------------------------------
+        // ڕێک وەک سویچی «پارە پێشوەخت دراوە؟» کاردەکات:
+        //   ١) ئەندام ئۆردەرێکی نوێ دەنووسێت (کڕیار، ناونیشان، کاڵا)
+        //   ٢) سویچی «گۆڕینی کاڵایە؟» دادەگیرسێنێت
+        //   ٣) ئۆردەرە گەیشتووەکانی هەمان کڕیار دێنە خوارەوە
+        //   ٤) جۆری گۆڕین و کاڵای گەڕاوە هەڵدەبژێردرێن
+        //
+        // کاڵای نوێ لە سەبەتەکەی سەرەوە دێت — هەمان شێوازی ئاسایی.
+        //
+        // ئۆردەری ڕەسەن هەرگیز دەستکاری ناکرێت — قازانجەکەی پێشتر
+        // دابەشکراوە و `distribute_order_profit` جارێکی تر ڕێگە نادات
+        // (ALREADY_DISTRIBUTED). ئەم ئۆردەرە نوێیە بە ڕەسەنەکەوە
+        // دەبەسترێتەوە بە `exchange_of_order_id`.
+        // ============================================================
+        let exForm = { mode: '', parent: null, oldIdx: -1, parents: null, phone: '', loading: false, err: false };
+
+        function exchangeFormOn() {
+            const sw = document.getElementById('switch-exchange');
+            return !!(sw && sw.checked);
+        }
+
+        // ژمارەی مۆبایل گۆڕا → ئۆردەرەکانی ئەم کڕیارە دووبارە دەهێنرێن.
+        // بە دواخستنێکی کورت، تاوەکو لە کاتی نووسینی هەر ژمارەیەکدا
+        // داواکاری نەنێردرێت
+        let _exPhoneT = 0;
+        function onPhone1Changed() {
+            if (!exchangeFormOn()) return;
+            clearTimeout(_exPhoneT);
+            _exPhoneT = setTimeout(() => exLoadParents(), 500);
+        }
+
+        function exResetForm() {
+            exForm = { mode: '', parent: null, oldIdx: -1, parents: null, phone: '', loading: false, err: false };
+        }
+
+        // نرخی ڕاستەی شۆفێر بۆ شاری فۆڕمەکە — هاوشێوەی getFormDeliveryPrice
+        function getFormRealDriverFee() {
+            const cityInput = document.getElementById('city-input');
+            const cityName = cityInput ? cityInput.value.trim() : "";
+            const cityObj = (typeof dbCitiesList !== 'undefined' && dbCitiesList)
+                ? dbCitiesList.find(c => c.name === cityName) : null;
+            return cityObj ? Number(cityObj.real_price || 0) : 4000;
+        }
+
+        // ڕیزەکانی کاڵای ئۆردەرێک — تەنها ئەوانەی نرخیان پۆزەتیڤە.
+        // ئەگەر ڕەسەنەکە خۆی گۆڕینێک بێت، ڕیزە نێگەتیڤەکانی (کاڵای
+        // گەڕاوە) نابێت وەک کاڵای گەڕاندنەوە هەڵبژێردرێن
+        function exchangeParentLines(o) {
+            const names = String(o.item_names || '').split('\n');
+            const qtys = String(o.item_qtys || '').split('\n');
+            const prices = String(o.item_prices || '').split('\n');
+            const out = [];
+            for (let i = 0; i < names.length; i++) {
+                const nm = (names[i] || '').trim();
+                const pr = parseFloat(prices[i]) || 0;
+                if (!nm || pr <= 0) continue;
+                out.push({ idx: i, name: nm, qty: parseInt(qtys[i]) || 1, cost: pr });
+            }
+            return out;
+        }
+
+        async function toggleExchangeSection(isChecked) {
+            const box = document.getElementById('exchange-section');
+            if (box) box.style.display = isChecked ? 'block' : 'none';
+
+            // پارەی پێشوەخت لەگەڵ گۆڕیندا پێکەوە ناچن — بڕی گۆڕین
+            // خۆی دەژمێردرێت و دەکرێت نێگەتیڤ بێت. بۆیە سویچەکە
+            // دەکوژێتەوە و دەشاردرێتەوە
+            const preSw = document.getElementById('switch-prepaid');
+            const preGrp = document.getElementById('prepaid-switch-group');
+            if (isChecked && preSw && preSw.checked) {
+                preSw.checked = false;
+                togglePrepaidSection(false);
+            }
+            if (preGrp) preGrp.style.display = isChecked ? 'none' : '';
+
+            if (!isChecked) {
+                exResetForm();
+                exSyncReceivedField();
+                updateCartUI();
+                return;
+            }
+            exRenderSection();
+            await exLoadParents();
+            updateCartUI();
+        }
+
+        // ئۆردەرە گەیشتووەکانی هەمان کڕیار — بە ژمارەی مۆبایل
+        async function exLoadParents(force) {
+            const phoneEl = document.getElementById('phone1');
+            const phone = phoneEl ? phoneEl.value.trim() : '';
+            if (phone.replace(/\D/g, '').length < 10) {
+                exForm.parents = []; exForm.phone = phone; exForm.err = false;
+                exRenderSection();
+                return;
+            }
+            if (!force && exForm.parents && exForm.phone === phone) return;
+
+            exForm.loading = true; exForm.phone = phone; exForm.err = false;
+            exRenderSection();
+            try {
+                const { data, error } = await supabase.from('orders')
+                    .select('id, order_code, date, status, customer_name, address, item_names, item_qtys, item_prices, items_total, seller_code, seller_name, seller_manager, seller_admin, seller_consultant, postal_code')
+                    .eq('phone1', phone)
+                    .ilike('status', '%گەیشت%')
+                    .order('id', { ascending: false })
+                    .limit(20);
+                if (error) throw error;
+                // مەودای بینین — ئەندام تەنها ئەو ئۆردەرانە دەبینێت
+                // کە دەسەڵاتی بینینیانی هەیە
+                exForm.parents = (data || []).filter(o => canActOnOrder(o, 'view'));
+                // ئەگەر ئەوەی هەڵبژێردرابوو چیتر لە لیستەکەدا نەبوو
+                if (exForm.parent && !exForm.parents.some(p => p.id === exForm.parent.id)) {
+                    exForm.parent = null; exForm.oldIdx = -1;
+                }
+            } catch (e) {
+                console.error('exLoadParents:', e);
+                exForm.parents = []; exForm.err = true;
+            }
+            exForm.loading = false;
+            exRenderSection();
+            updateCartUI();
+        }
+
+        function exSetMode(mode) {
+            exForm.mode = mode;
+            if (mode === EXCHANGE_MODE_KING) exForm.oldIdx = -1;
+            exRenderSection();
+            updateCartUI();
+        }
+
+        function exSelectParent(id) {
+            const p = (exForm.parents || []).find(x => String(x.id) === String(id));
+            exForm.parent = p || null;
+            exForm.oldIdx = -1;
+            exRenderSection();
+            updateCartUI();
+        }
+
+        function exSelectOldItem(idx) {
+            exForm.oldIdx = Number(idx);
+            exRenderSection();
+            updateCartUI();
+        }
+
+        // هۆکارەکە لە دۆخەکەدا هەڵدەگیرێت، نەک لە خانەکە — چونکە
+        // بەشەکە بە هەر گۆڕانێکی جۆر/ئۆردەر دووبارە دەنەخشێنرێتەوە
+        function exSetReason(v) { exForm.reason = v; }
+
+        function exSetFee(v) {
+            const el = document.getElementById('ex-fee');
+            if (el) { el.value = String(v); updateCartUI(); }
+        }
+
+        function exAdjustFee(delta) {
+            const el = document.getElementById('ex-fee');
+            if (!el) return;
+            let v = distRead('ex-fee') + delta;
+            if (v < 0) v = 0;
+            el.value = String(v);
+            updateCartUI();
+        }
+
+        // خوێندنەوەی دۆخی ئێستای فۆڕمەکە — null ئەگەر گۆڕین کوژاوە
+        function exchangeFormData() {
+            if (!exchangeFormOn() || !exForm.mode) return null;
+            const p = exForm.parent;
+            const lines = p ? exchangeParentLines(p) : [];
+            const picked = lines.find(l => l.idx === exForm.oldIdx) || null;
+            const newCost = Number(cart.reduce((s, i) => s + (i.qty * i.unitPrice), 0));
+
+            const feeEl = document.getElementById('ex-fee');
+            const fee = feeEl ? distRead('ex-fee')
+                : (exForm.mode === EXCHANGE_MODE_MEMBER ? EXCHANGE_MEMBER_DELIVERY : EXCHANGE_FEE_DEFAULT);
+
+            return {
+                mode: exForm.mode,
+                parent: p,
+                oldName: picked ? picked.name : '',
+                oldQty: picked ? picked.qty : 0,
+                oldCost: picked ? picked.cost : 0,
+                newCost: newCost,
+                fee: fee,
+                realDriverFee: getFormRealDriverFee()
+            };
+        }
+
+        function exchangeFormCalc() {
+            const f = exchangeFormData();
+            if (!f) return null;
+            return computeExchange({
+                mode: f.mode,
+                oldCost: f.oldCost,
+                newCost: f.mode === EXCHANGE_MODE_KING ? 0 : f.newCost,
+                deliveryFee: f.mode === EXCHANGE_MODE_MEMBER ? f.fee : EXCHANGE_MEMBER_DELIVERY,
+                changeFee: f.mode === EXCHANGE_MODE_CUSTOMER ? f.fee : 0,
+                realDriverFee: f.realDriverFee,
+                driverPaid: f.realDriverFee
+            });
+        }
+
+        // ============================================================
+        // ڕێکخستنی دۆخی گۆڕین — لە پاککردنەوە و دەستکاریکردنەوە
+        // بانگ دەکرێت. هاوشێوەی `applyPrepaidState`
+        // ============================================================
+        async function applyExchangeState(o) {
+            const sw = document.getElementById('switch-exchange');
+            const box = document.getElementById('exchange-section');
+            const preGrp = document.getElementById('prepaid-switch-group');
+            const isEx = isExchangeOrder(o);
+
+            exResetForm();
+            if (sw) sw.checked = isEx;
+            if (box) { box.style.display = isEx ? 'block' : 'none'; box.innerHTML = ''; }
+            if (preGrp) preGrp.style.display = isEx ? 'none' : '';
+
+            if (!isEx) { exSyncReceivedField(); return; }
+
+            exForm.mode = exchangeModeOf(o);
+            exForm.reason = o.exchange_reason || '';
+            exForm.fee = (exForm.mode === EXCHANGE_MODE_MEMBER)
+                ? Number(o.delivery_price || EXCHANGE_MEMBER_DELIVERY)
+                : Number(o.change_fee || EXCHANGE_FEE_DEFAULT);
+
+            exRenderSection();
+            await exLoadParents(true);
+
+            // ئۆردەری ڕەسەن لەوانەیە لە لیستەکەدا نەبێت (بۆ نموونە
+            // ژمارەی مۆبایلەکە دواتر گۆڕدرابێت)، بۆیە بە ناسنامە
+            // بەجیا دەهێنرێت
+            let p = (exForm.parents || []).find(x => String(x.id) === String(o.exchange_of_order_id));
+            if (!p && o.exchange_of_order_id) {
+                try {
+                    const { data } = await supabase.from('orders')
+                        .select('id, order_code, date, status, customer_name, item_names, item_qtys, item_prices, items_total, seller_code, seller_name, seller_manager, seller_admin, seller_consultant, postal_code')
+                        .eq('id', o.exchange_of_order_id).single();
+                    if (data) { p = data; exForm.parents = [data].concat(exForm.parents || []); }
+                } catch (e) { console.error('applyExchangeState parent:', e); }
+            }
+            exForm.parent = p || null;
+
+            // ڕیزی کاڵای گەڕاوە بە ناو و نرخ دەدۆزرێتەوە — ئیندێکسەکە
+            // تۆمار نەکراوە، تەنها ناو و کۆی نرخەکەی
+            if (p && o.returned_item_names) {
+                const want = String(o.returned_item_names).trim();
+                const cost = Number(o.returned_items_total || 0);
+                const lines = exchangeParentLines(p);
+                const line = lines.find(l => l.name === want && l.cost === cost)
+                    || lines.find(l => l.name === want);
+                exForm.oldIdx = line ? line.idx : -1;
+            }
+
+            exRenderSection();
+            updateCartUI();
+        }
+
+        // ============================================================
+        // خاوەندارێتی ئۆردەری گۆڕین
+        // ------------------------------------------------------------
+        // ⚠️ خاوەنەکە لە ئۆردەری ڕەسەنەوە دێت، نەک لەوەی فۆڕمەکە
+        //    پڕ دەکاتەوە. ئەگەرنا کاتێک بەڕێوەبەرێک گۆڕینێک بۆ
+        //    ئەندامێک تۆمار دەکات، لە جۆری «لەسەر ئەندام»دا ئەو
+        //    ٥,٠٠٠ + جیاوازی نرخە لە جزدانی بەڕێوەبەرەکە دەبڕدرێت
+        //    لەبری ئەندامەکە — پارە لە کەسی هەڵە وەردەگیرێت.
+        //
+        // هەروەها گۆڕین درێژەی ئۆردەری ڕەسەنە: هەمان کەس کە لەوێ
+        // قازانجی کردووە، لێرەش بەرپرسیارە.
+        // ============================================================
+        function exchangeOwnerColumns(on, data) {
+            if (!on || !data || !data.parent || !data.parent.seller_code) return {};
+            const p = data.parent;
+            const out = {
+                seller_code: p.seller_code,
+                seller_manager: p.seller_manager || null,
+                seller_admin: p.seller_admin || null,
+                seller_consultant: p.seller_consultant || null
+            };
+            if (p.seller_name) out.seller_name = p.seller_name;
+            if (p.postal_code) out.postal_code = p.postal_code;
+            return out;
+        }
+
+        // ستوونەکانی گۆڕین بۆ نووسین.
+        // ⚠️ کاتێک گۆڕین کوژاوەیە هەموویان بە `null` دەگەڕێنەوە — ئەگەرنا
+        //    ئۆردەرێکی گۆڕین کە دەستکاری بکرێت و سویچەکەی بکوژێتەوە،
+        //    پاشماوەی بەستنەوەکەی تێدا دەمێنێتەوە و بە هەڵە وەک
+        //    گۆڕین دەژمێردرێت
+        function exchangeColumns(on, data, calc) {
+            if (!on || !data || !calc) {
+                return {
+                    exchange_of_order_id: null,
+                    exchange_of_order_code: null,
+                    exchange_type: null,
+                    exchange_reason: null,
+                    change_fee: 0,
+                    returned_item_names: null,
+                    returned_items_total: 0,
+                    refund_method: null
+                };
+            }
+            return {
+                exchange_of_order_id: data.parent.id,
+                exchange_of_order_code: data.parent.order_code || String(data.parent.id),
+                exchange_type: data.mode,
+                exchange_reason: String(exForm.reason || '').trim() || null,
+                change_fee: calc.changeFee,
+                returned_item_names: data.oldName || null,
+                returned_items_total: data.oldCost,
+                refund_method: calc.customerCash < 0 ? 'cash_via_driver' : null,
+                driver_fee_system: data.realDriverFee
+            };
+        }
+
+        // ============================================================
+        // نەخشاندنی بەشی گۆڕین
+        // ============================================================
+        function exRenderSection() {
+            const box = document.getElementById('exchange-section');
+            if (!box || !exchangeFormOn()) return;
+            const mode = exForm.mode;
+
+            const modeBtn = (m, icon, desc) =>
+                '<button type="button" class="ex-mode-btn ex-mode-' + exchangeModeSlug(m)
+                + (mode === m ? ' is-on' : '') + '" onclick="exSetMode(\'' + m + '\')">'
+                + '<i class="bx ' + icon + '"></i><span class="ex-mode-t">' + m + '</span>'
+                + '<span class="ex-mode-d">' + desc + '</span></button>';
+
+            let h = '<div class="ex-sec-t">١) گۆڕینەکە لەسەر کێیە؟</div>'
+                + '<div class="ex-modes">'
+                + modeBtn(EXCHANGE_MODE_MEMBER, 'bx-user', 'ئەندام کاڵاکانی بە دروستی نەنووسیوە')
+                + modeBtn(EXCHANGE_MODE_KING, 'bx-package', 'لە ئامادەکردندا کاڵا دانەنراوە')
+                + modeBtn(EXCHANGE_MODE_CUSTOMER, 'bx-user-voice', 'کڕیار خۆی داوای گۆڕینی دەکات')
+                + '</div>';
+
+            if (!mode) {
+                box.innerHTML = h + '<div class="ex-hint"><i class="bx bx-info-circle"></i>'
+                    + '<span>جۆرەکە هەڵبژێرە بۆ ئەوەی بەردەوام بیت</span></div>';
+                return;
+            }
+
+            // ---- ٢) ئۆردەری ڕەسەن ----
+            h += '<div class="ex-sec-t">٢) کام ئۆردەری ئەم کڕیارە دەگۆڕدرێت؟</div>';
+            if (exForm.loading) {
+                h += '<div class="ex-hint"><i class="bx bx-loader-alt bx-spin"></i>'
+                    + '<span>خەریکی هێنانی ئۆردەرەکانی ئەم کڕیارەم...</span></div>';
+            } else if (exForm.err) {
+                h += '<div class="ex-hint"><i class="bx bx-error"></i>'
+                    + '<span>نەتوانرا ئۆردەرەکان بهێنرێن — '
+                    + '<b onclick="exLoadParents(true)" style="cursor:pointer; text-decoration:underline;">دووبارە هەوڵبدە</b></span></div>';
+            } else if (!exForm.parents || !exForm.parents.length) {
+                h += '<div class="ex-hint"><i class="bx bx-info-circle"></i><span>'
+                    + (String(exForm.phone || '').replace(/\D/g, '').length < 10
+                        ? 'سەرەتا ژمارەی مۆبایلی کڕیار بنووسە'
+                        : 'هیچ ئۆردەرێکی گەیشتوو بۆ ئەم ژمارەیە نەدۆزرایەوە')
+                    + '</span></div>';
+            } else {
+                h += '<div class="ex-picks">' + exForm.parents.map(p => {
+                    const on = exForm.parent && exForm.parent.id === p.id;
+                    const cnt = exchangeParentLines(p).length;
+                    return '<div class="ex-pick' + (on ? ' is-on' : '') + '" onclick="exSelectParent(\'' + p.id + '\')">'
+                        + '<i class="bx ' + (on ? 'bx-radio-circle-marked' : 'bx-radio-circle') + '"></i>'
+                        + '<span class="ex-pick-n"><b dir="ltr">' + histEsc(p.order_code || p.id) + '</b>'
+                        + '<small>' + histEsc(String(p.date || '').slice(0, 10)) + ' · ' + cnt + ' کاڵا</small></span>'
+                        + '<span class="ex-pick-p" dir="ltr">' + exMoney(p.items_total) + ' د.ع</span></div>';
+                }).join('') + '</div>';
+            }
+
+            // ---- ٣) کاڵای گەڕاوە ----
+            const isKing = mode === EXCHANGE_MODE_KING;
+            if (exForm.parent && !isKing) {
+                const lines = exchangeParentLines(exForm.parent);
+                const opt = (idx, label, sub) =>
+                    '<div class="ex-pick' + (exForm.oldIdx === idx ? ' is-on' : '') + '" onclick="exSelectOldItem(' + idx + ')">'
+                    + '<i class="bx ' + (exForm.oldIdx === idx ? 'bx-radio-circle-marked' : 'bx-radio-circle') + '"></i>'
+                    + '<span class="ex-pick-n">' + label + '</span>'
+                    + '<span class="ex-pick-p" dir="ltr">' + sub + '</span></div>';
+                h += '<div class="ex-sec-t">٣) چ کاڵایەک دەگەڕێتەوە؟</div><div class="ex-picks">'
+                    + lines.map(l => opt(l.idx, histEsc(l.name) + ' ×' + l.qty, exMoney(l.cost) + ' د.ع')).join('')
+                    + opt(-1, 'هیچ — تەنها زیادکردنی کاڵا', '0 د.ع')
+                    + '</div>';
+            }
+
+            // ---- ٤) کرێ ----
+            if (!isKing) {
+                const isMember = mode === EXCHANGE_MODE_MEMBER;
+                const feeLabel = isMember ? '٤) کرێی گەیاندن (لەسەر ئەندام)' : '٤) کرێی گۆڕین (لە کڕیار)';
+                const cur = document.getElementById('ex-fee');
+                const feeVal = cur ? distRead('ex-fee')
+                    : (exForm.fee || (isMember ? EXCHANGE_MEMBER_DELIVERY : EXCHANGE_FEE_DEFAULT));
+                h += '<div class="ex-sec-t">' + feeLabel + '</div>'
+                    + '<div class="dist-input-row"><div class="dist-input-group">'
+                    + '<button type="button" class="qty-btn plus-btn" onclick="exAdjustFee(' + EXCHANGE_FEE_STEP + ')">+</button>'
+                    + '<input type="text" inputmode="numeric" id="ex-fee" class="qty-input" value="' + feeVal + '" oninput="updateCartUI()">'
+                    + '<button type="button" class="qty-btn minus-btn" onclick="exAdjustFee(' + (-EXCHANGE_FEE_STEP) + ')">−</button>'
+                    + '</div></div>';
+                if (!isMember) {
+                    h += '<div class="ex-fee-quick">' + EXCHANGE_FEE_OPTIONS.map(v =>
+                        '<button type="button" onclick="exSetFee(' + v + ')">' + v.toLocaleString('en-US') + '</button>').join('')
+                        + '</div>';
+                }
+            } else {
+                h += '<div class="ex-sec-t">٣) پارەی شۆفێر</div>'
+                    + '<div class="ex-hint"><i class="bx bx-car"></i><span>نرخی ڕاستەی سیستەم: '
+                    + '<b dir="ltr">' + exMoney(getFormRealDriverFee()) + ' د.ع</b> — لە کاتی دابەشکردندا دەگۆڕدرێت</span></div>';
+            }
+
+            h += '<div class="ex-sec-t">هۆکاری گۆڕین</div>'
+                + '<div class="ex-fields"><input type="text" id="ex-reason" placeholder="بۆچی دەگۆڕدرێت؟" '
+                + 'value="' + histEsc(exForm.reason || '') + '" oninput="exSetReason(this.value)"></div>';
+
+            h += '<div class="ex-hint" style="margin-top:10px;"><i class="bx bx-cart-add"></i>'
+                + '<span>کاڵای نوێ لە سەبەتەکەی سەرەوە دەنووسرێت</span></div>'
+                + '<div id="ex-totals" class="ex-totals" style="margin-top:12px;"></div>';
+
+            box.innerHTML = h;
+            exRenderTotals();
+        }
+
+        function exRenderTotals() {
+            const box = document.getElementById('ex-totals');
+            if (!box) return;
+            const f = exchangeFormData();
+            const r = exchangeFormCalc();
+            if (!f || !r) { box.innerHTML = ''; return; }
+
+            const row = (lbl, val, col, big) =>
+                '<div class="ex-total-row' + (big ? ' is-big' : '') + '"><span>' + lbl + '</span>'
+                + '<b dir="ltr" style="color:' + col + ';">' + exMoney(val) + ' د.ع</b></div>';
+
+            let h = '';
+            if (f.mode !== EXCHANGE_MODE_KING) {
+                if (f.oldCost > 0) h += row('قیمەتی کاڵا (کۆن):', f.oldCost, '#64748b');
+                if (f.newCost !== 0) h += row('قیمەتی کاڵا (نوێ):', f.newCost, '#64748b');
+                if (r.priceDiff !== 0) {
+                    h += row('جیاوازی نرخ:', r.priceDiff, r.priceDiff > 0 ? '#dc2626' : '#059669');
+                }
+            }
+
+            if (f.mode === EXCHANGE_MODE_MEMBER) {
+                const bonus = r.memberTx > 0;
+                h += row('کرێی گەیاندن:', f.fee, '#64748b');
+                h += row(bonus ? 'خێر بۆ ئەندام:' : 'لە ئەندام نەقس دەکرێت:',
+                    Math.abs(r.memberTx), bonus ? '#059669' : '#dc2626', true);
+                h += '<div class="ex-total-note">کڕیار هیچ نادات</div>';
+            } else if (f.mode === EXCHANGE_MODE_KING) {
+                h += row('لە پاشا کەم دەکرێتەوە:', f.realDriverFee, '#dc2626', true);
+                h += '<div class="ex-total-note">ئەندام و کڕیار هیچ نادەن</div>';
+            } else {
+                const refund = r.customerCash < 0;
+                h += row('کرێی گۆڕین:', f.fee, '#64748b');
+                h += row(refund ? 'بدرێتەوە بە کڕیار:' : 'وەردەگیرێت لە کڕیار:',
+                    Math.abs(r.customerCash), refund ? '#dc2626' : '#059669', true);
+                if (refund) {
+                    h += '<div class="ex-refund-warn"><i class="bx bx-error"></i>'
+                        + '<span>شۆفێر دەبێت <b dir="ltr">' + exMoney(Math.abs(r.customerCash))
+                        + ' د.ع</b> بداتەوە بە کڕیار</span></div>';
+                }
+                h += '<div class="ex-total-note">ئەندام هیچ نادات</div>';
+            }
+
+            box.innerHTML = h;
+        }
+
+        // خانەی «پارەی وەرگیراو» لە گۆڕیندا ژمێردراوە، نەک نووسراو
+        function exSyncReceivedField() {
+            const inp = document.getElementById('amount-received');
+            const lbl = document.getElementById('lbl-received');
+            if (!inp) return;
+            const r = exchangeFormCalc();
+            if (r) {
+                inp.value = exMoney(r.customerCash);
+                inp.readOnly = true;
+                inp.style.background = '#eef2f7';
+                inp.style.color = r.customerCash < 0 ? '#dc2626' : '';
+                if (lbl) {
+                    lbl.innerHTML = r.customerCash < 0
+                        ? "<i class='bx bx-money'></i> پارە دەدرێتەوە بە کڕیار (خۆکار)"
+                        : "<i class='bx bx-money'></i> پارەی وەرگیراو لە کڕیار (خۆکار)";
+                }
+            } else {
+                inp.readOnly = false;
+                inp.style.background = '';
+                inp.style.color = '';
+                if (lbl) lbl.innerHTML = "<i class='bx bx-money'></i> پارەی وەرگیراو لە کڕیار";
+            }
+        }
+
+        // پوختەی فۆڕمەکە لە گۆڕیندا جیاوازە — لە updateCartUI بانگ دەکرێت
+        function exApplyFormTotals() {
+            const f = exchangeFormData();
+            const r = exchangeFormCalc();
+            exSyncReceivedField();
+            exRenderTotals();
+            if (!f || !r) return;
+
+            const set = (id, v) => { const e = document.getElementById(id); if (e) e.innerText = v; };
+            set('sum-items', exMoney(r.itemsTotal));
+            set('sum-delivery', exMoney(r.deliveryPrice));
+            set('sum-total', exMoney(r.amountReceived) + " دینار");
+
+            const p = document.getElementById('sum-profit');
+            if (p) {
+                p.innerText = exMoney(r.memberProfit);
+                p.parentElement.style.color = r.memberProfit < 0 ? '#dc2626' : '#059669';
+            }
+        }
+
         async function openDistributionModal(orderId) {
             closeModal(null, 'order-details-modal');
             distributingOrder = allGlobalOrdersData[orderId]; let o = distributingOrder;
@@ -17689,9 +18646,20 @@
                 let cityName = o.address ? o.address.split('-')[0].trim() : ""; let cityObj = dbCitiesList.find(c => c.name === cityName);
                 distData.deliveryCost = cityObj ? cityObj.real_price : 4000;
                 // کۆی گشتی وەرگیراو لە کڕیار: ئەگەر پارەی وەرگیراو تۆمارکرابێت، ئەوە بەکاردێت
-                distData.grandTotal = (o.amount_received != null && parseFloat(o.amount_received) > 0) ? parseFloat(o.amount_received) : parseFloat(o.grand_total);
+                // ⚠️ لە ئۆردەری گۆڕیندا ئەم بڕە دەکرێت سفر یان نێگەتیڤ بێت،
+                // بۆیە پشکنینی «> 0» بەکارنایەت — `orderFullValue` خۆی
+                // جیاوازییەکە دەزانێت
+                distData.grandTotal = isExchangeOrder(o)
+                    ? orderFullValue(o)
+                    : ((o.amount_received != null && parseFloat(o.amount_received) > 0) ? parseFloat(o.amount_received) : parseFloat(o.grand_total));
                 // قازانجی ئەندام و پاشەکەوت (خۆکارانە پڕ دەکرێنەوە)
-                distData.memberProfit = (o.member_profit != null && !isNaN(parseFloat(o.member_profit)) && parseFloat(o.member_profit) > 0) ? parseFloat(o.member_profit) : 0;
+                // ⚠️ لە «گۆڕین لەسەر ئەندام»دا قازانجی ئەندام هەمیشە
+                // نێگەتیڤە (کرێی گەیاندن لێی نەقس دەکرێت). ئەگەر
+                // پشکنینی «> 0» بەکاربهێنرێت، ئەو بڕە بێدەنگانە دەبێتە
+                // سفر و هەرگیز هیچ لە ئەندام نەقس ناکرێت
+                distData.memberProfit = isExchangeOrder(o)
+                    ? (parseFloat(o.member_profit) || 0)
+                    : ((o.member_profit != null && !isNaN(parseFloat(o.member_profit)) && parseFloat(o.member_profit) > 0) ? parseFloat(o.member_profit) : 0);
                 // پاشەکەوتی بنەڕەتی (بۆ خاوەنی ئۆردەرەکە):
                 //  • بەڕێوەبەر / سەرپەرشت / ڕاوێژکار — ئۆردەری خۆیان  → ١٠٠٠
                 //  • ئەندام کە ڕاوێژکاری نییە                          → ١٠٠٠
@@ -17705,11 +18673,38 @@
 
                 isDistKingOrder = (memberData && memberData.role === "پاشا");
                 let isAuthorized = can('distribute_profit');
-                let displayStyle = (isDistKingOrder || !isAuthorized) ? 'display: none;' : '';
 
-                let showManagerStyle = (isDistKingOrder || !isAuthorized || !memberData.manager) ? 'display: none;' : '';
-                let showAdminStyle = (isDistKingOrder || !isAuthorized || !memberData.admin) ? 'display: none;' : '';
-                let showConsultantStyle = (isDistKingOrder || !isAuthorized || !memberData.consultant) ? 'display: none;' : '';
+                // لە ئۆردەری گۆڕیندا هیچ خانەیەکی قازانج دەستکاری ناکرێت:
+                //   • سیلسیلە پێشتر لە ئۆردەری ڕەسەندا قازانجی وەرگرتووە
+                //   • قازانجی ئەندام لە کاتی دروستکردنی گۆڕینەکەدا
+                //     دیاریکراوە و دەکرێت نێگەتیڤ بێت
+                // تەنها پارەی شۆفێر دەمێنێتەوە بۆ دەستکاری
+                const isExOrder = isExchangeOrder(o);
+                let displayStyle = (isDistKingOrder || !isAuthorized || isExOrder) ? 'display: none;' : '';
+
+                let showManagerStyle = (isDistKingOrder || !isAuthorized || !memberData.manager || isExOrder) ? 'display: none;' : '';
+                let showAdminStyle = (isDistKingOrder || !isAuthorized || !memberData.admin || isExOrder) ? 'display: none;' : '';
+                let showConsultantStyle = (isDistKingOrder || !isAuthorized || !memberData.consultant || isExOrder) ? 'display: none;' : '';
+
+                // پوختەی گۆڕین لە سەرەوەی مۆدالەکە — بۆ ئەوەی دەرکەوێت
+                // کێ تێچووەکە هەڵدەگرێت پێش تەسدیقکردن
+                let exDistHtml = '';
+                if (isExOrder) {
+                    const exMode = exchangeModeOf(o) || 'گۆڕین';
+                    const exMember = parseFloat(o.member_profit) || 0;
+                    const exRow = (lbl, val, col) =>
+                        '<div class="exd-row"><span>' + lbl + '</span>'
+                        + '<b dir="ltr" style="color:' + col + ';">' + exMoney(val) + ' د.ع</b></div>';
+                    exDistHtml = '<div class="exd-box">'
+                        + '<div class="exd-head"><i class="bx bx-transfer-alt"></i> گۆڕینی کاڵا'
+                        + '<span class="ex-badge ex-badge-' + exchangeModeSlug(exMode) + '">' + histEsc(exMode) + '</span></div>'
+                        + exRow('لە کڕیار وەردەگیرێت:', orderFullValue(o), orderFullValue(o) < 0 ? '#dc2626' : '#059669')
+                        + exRow(exMember > 0 ? 'خێر بۆ ئەندام:' : 'لە ئەندام نەقس دەکرێت:', Math.abs(exMember), exMember > 0 ? '#059669' : '#dc2626')
+                        + '<div class="exd-note"><i class="bx bx-info-circle"></i> '
+                        + 'بەڕێوەبەر و سەرپەرشت و ڕاوێژکار لەم گۆڕینەدا قازانج وەرناگرن — '
+                        + 'پێشتر لە ئۆردەری ڕەسەندا وەریانگرتووە</div>'
+                        + '</div>';
+                }
 
                 // ============================================================
                 // بۆکسی زانیاری ئۆردەر لە مۆدالی دابەشکردن
@@ -17800,8 +18795,17 @@
                     <div class="dist-prepaid-hint">کۆی گشتی وەک خۆی دەمێنێتەوە — دابەشکردنی قازانج ناگۆڕێت.</div>
                 </div>` : '';
 
+                // سەردێڕی کۆی گشتی — لە گۆڕیندا دەکرێت سفر یان نێگەتیڤ بێت
+                const distTotalLabel = (isExOrder && distData.grandTotal < 0)
+                    ? 'کۆی گشتی بدرێتەوە بە کڕیار'
+                    : (isExOrder && distData.grandTotal === 0)
+                        ? 'کڕیار هیچ نادات'
+                        : 'کۆی گشتی وەرگیراو لە کڕیار';
+                const distTotalColor = distData.grandTotal < 0 ? '#dc2626' : '#10b981';
+
                 let b = document.getElementById('profit-modal-body');
-                b.innerHTML = `<div style="background:#f8fafc; padding:15px; border-radius:12px; border:1px dashed #cbd5e1; margin-bottom:15px; text-align:center;"><span style="font-size:12px; color:#64748b;">کۆی گشتی وەرگیراو لە کڕیار</span><h2 style="margin:5px 0 0 0; color:#10b981;" dir="ltr">${distData.grandTotal.toLocaleString()} د.ع</h2>${distPayHtml}</div>
+                b.innerHTML = `<div style="background:#f8fafc; padding:15px; border-radius:12px; border:1px dashed #cbd5e1; margin-bottom:15px; text-align:center;"><span style="font-size:12px; color:#64748b;">${distTotalLabel}</span><h2 style="margin:5px 0 0 0; color:${distTotalColor};" dir="ltr">${exMoney(Math.abs(distData.grandTotal))} د.ع</h2>${distPayHtml}</div>
+                ${exDistHtml}
                 ${distInfoHtml}
                 <div class="dist-input-row">
                     <label><i class='bx bx-car'></i> نرخی گەیاندن (شۆفێر)</label>
@@ -17936,6 +18940,11 @@
         // زۆرترین بڕ کە دەکرێت بخرێتە ئەم خانەیەوە بەبێ ئەوەی
         // «پاشا» ساڵب بێتەوە
         function distMaxFor(id) {
+            // ⚠️ لە ئۆردەری گۆڕیندا کۆی گشتی زۆرجار سفرە (لە جۆرەکانی
+            // «ئەندام» و «پاشا»دا کڕیار هیچ نادات)، بۆیە ئەم سنوورە
+            // خانەی پارەی شۆفێری دەبڕییەوە بۆ سفر و هەرگیز نەدەکرا
+            // پارەی شۆفێر بنووسرێت. پاشا بەئەنقەست زەرەرەکە هەڵدەگرێت
+            if (isExchangeOrder(distributingOrder)) return Infinity;
             let others = 0;
             DIST_IDS.forEach(k => { if (k !== id) others += distRead(k); });
             return Math.max(0, Math.round(distData.grandTotal || 0) - others);
@@ -17969,16 +18978,35 @@
         function calcKingProfit() {
             let isAuthorized = can('distribute_profit');
             let delivery = distRead('dist-delivery');
-            let manager = (isDistKingOrder || !isAuthorized || !distData.manager.code) ? 0 : distRead('dist-manager');
-            let admin = (isDistKingOrder || !isAuthorized || !distData.admin.code) ? 0 : distRead('dist-admin');
-            let consultant = (isDistKingOrder || !isAuthorized || !distData.consultant.code) ? 0 : distRead('dist-consultant');
-            let member = (isDistKingOrder || !isAuthorized) ? 0 : distRead('dist-member');
-            let savings = (isDistKingOrder || !isAuthorized) ? 0 : distRead('dist-savings');
+            let manager, admin, consultant, member, savings;
+
+            // لە گۆڕیندا هەمان لۆجیکی `confirmDistribution` بەکاردێت:
+            // سیلسیلە سفرە و قازانجی ئەندام لە ئۆردەرەکەوە دێت
+            if (isExchangeOrder(distributingOrder)) {
+                manager = 0; admin = 0; consultant = 0; savings = 0;
+                member = (isDistKingOrder || !isAuthorized)
+                    ? 0 : (parseFloat(distributingOrder.member_profit) || 0);
+            } else {
+                manager = (isDistKingOrder || !isAuthorized || !distData.manager.code) ? 0 : distRead('dist-manager');
+                admin = (isDistKingOrder || !isAuthorized || !distData.admin.code) ? 0 : distRead('dist-admin');
+                consultant = (isDistKingOrder || !isAuthorized || !distData.consultant.code) ? 0 : distRead('dist-consultant');
+                member = (isDistKingOrder || !isAuthorized) ? 0 : distRead('dist-member');
+                savings = (isDistKingOrder || !isAuthorized) ? 0 : distRead('dist-savings');
+            }
+
             let king = Math.round((distData.grandTotal || 0) - (delivery + manager + admin + consultant + member + savings));
             // بڕینەکە پێشتر لە `onDistInput` ڕوویداوە، بۆیە ئەمە
             // تەنها پارێزەرێکی دواییە
-            if (king < 0) king = 0;
-            document.getElementById('dist-king').innerText = king.toLocaleString() + " د.ع";
+            //
+            // ⚠️ لە گۆڕیندا قازانجی پاشا بە ڕاستی نێگەتیڤ دەبێت
+            //    (بۆ نموونە «لەسەر پاشا» تەنها پارەی شۆفێرە)، بۆیە
+            //    نابێت بۆ سفر ببڕدرێتەوە — ئەوە زەرەرەکە دەشارێتەوە
+            if (king < 0 && !isExchangeOrder(distributingOrder)) king = 0;
+            const kEl = document.getElementById('dist-king');
+            if (kEl) {
+                kEl.innerText = exMoney(king) + " د.ع";
+                kEl.style.color = king < 0 ? '#dc2626' : '';
+            }
         }
 
         function adjustDistValue(inputId, delta) {
@@ -18037,11 +19065,36 @@
             let memberP = (isDistKingOrder || !isAuthorized) ? 0 : distRead('dist-member');
             let savingsP = (isDistKingOrder || !isAuthorized) ? 0 : distRead('dist-savings');
 
+            // ==========================================================
+            // ئۆردەری گۆڕین — قازانجەکان لە خانەکانەوە ناخوێندرێنەوە
+            // ----------------------------------------------------------
+            // ١) بەڕێوەبەر/سەرپەرشت/ڕاوێژکار پێشتر لە ئۆردەری ڕەسەندا
+            //    قازانجیان وەرگرتووە، بۆیە لە گۆڕیندا دووبارە
+            //    وەرناگرن. بە دەست سفر دەکرێن — نەک بە پشتبەستن بە
+            //    کۆی بڕەکان، چونکە لە گۆڕینی بڕدا (٢ دانە → ١ دانە)
+            //    ئەو کۆیە نێگەتیڤ دەبێت و قازانجی نێگەتیڤ دروست دەکات
+            //
+            // ٢) قازانجی ئەندام لە ئۆردەرەکەوە دێت نەک لە خانەکەوە،
+            //    چونکە لە «گۆڕین لەسەر ئەندام»دا نێگەتیڤە و خانەکان
+            //    تەنها ژمارەی پۆزەتیڤ قبوڵ دەکەن (formatPriceInput)
+            // ==========================================================
+            const isExDist = isExchangeOrder(distributingOrder);
+            if (isExDist) {
+                managerP = 0; adminP = 0; consultantP = 0; savingsP = 0;
+                memberP = (isDistKingOrder || !isAuthorized)
+                    ? 0 : (parseFloat(distributingOrder.member_profit) || 0);
+            }
+
             // پارێزەری کۆتایی — `onDistInput` پێشتر ڕێگری دەکات، بەڵام
             // ئەگەر بە هەر ڕێگایەک کۆکە تێپەڕی، نابێت قازانجی پاشا
             // ساڵب بێت و لە جزدانەکەی ببڕدرێت
+            //
+            // ⚠️ لە گۆڕیندا ئەم پارێزەرە بەکارنایەت: پاشا بەئەنقەست
+            //    زەرەرەکە هەڵدەگرێت. لە «گۆڕین لەسەر پاشا»دا کۆی گشتی
+            //    سفرە بەڵام پارەی شۆفێر دەدرێت، بۆیە کۆی دابەشکراو
+            //    هەمیشە زیاترە — ئەمە دروستە، نەک هەڵە
             const _distSum = delivery + managerP + adminP + consultantP + memberP + savingsP;
-            if (_distSum > Math.round(distData.grandTotal || 0) + 0.01) {
+            if (!isExDist && _distSum > Math.round(distData.grandTotal || 0) + 0.01) {
                 showToast("کۆی دابەشکراو لە کۆی گشتی زیاترە — بڕەکان ڕاست بکەرەوە", "error");
                 if (confirmBtn) { confirmBtn.disabled = false; confirmBtn.innerHTML = "<i class='bx bx-check-circle'></i> تەسدیقکردن و تۆمارکردن"; }
                 return;
@@ -18092,8 +19145,21 @@
                 };
 
                 // تۆمارکردنی کارمەندان
+                // لە گۆڕیندا وەسفەکە دەبێت ڕوون بکاتەوە بۆچی بڕەکە
+                // نەقس کراوە — ئەندام تەنها «قازانجی ئۆردەر»ی نێگەتیڤ
+                // دەبینێت و نازانێت لەکوێوە هاتووە
+                let memberDesc = `قازانجی ${distData.member.role} لە ئۆردەری ${oCode}`;
+                if (isExDist) {
+                    const exMode = exchangeModeOf(o) || 'گۆڕین';
+                    const exParent = o.exchange_of_order_code || o.exchange_of_order_id || '';
+                    memberDesc = `گۆڕینی کاڵا لەسەر ${exMode}`
+                        + (exParent ? ` — ئۆردەری ${exParent}` : '')
+                        + ` (کرێی گەیاندن ${Number(o.delivery_price || 0).toLocaleString()}`
+                        + `، جیاوازی نرخ ${exSigned(o.items_total)})`;
+                }
+
                 if (!isDistKingOrder && isAuthorized) {
-                    addTx(distData.member.code, memberP, "قازانجی ئۆردەر", `قازانجی ${distData.member.role} لە ئۆردەری ${oCode}`);
+                    addTx(distData.member.code, memberP, "قازانجی ئۆردەر", memberDesc);
                     addTx(distData.member.code, savingsP, "پاشەکەوتی ئۆردەر", `پاشەکەوت لە ئۆردەری ${oCode}`, true);
                     // ئەگەر پاداشتی بەڕێوەبەری تاک هەبێت و بڕەکە دەستکاری نەکرابێت، لە وەسفەکەدا دیاری دەکرێت
                     let mgrDesc = `قازانجی بەڕێوەبەر لە ئۆردەری ${oCode}`;
@@ -18141,7 +19207,16 @@
                     }
                 }
 
-                await supabase.from('orders').update({ status: "گەیشتووە", status_changed_by: userName }).eq('id', o.id);
+                // پارەی شۆفێر تۆمار دەکرێت — پێشتر هەرگیز نەدەنووسرا و
+                // تەنها بە کەمکردنەوە لە قازانجی پاشا دەردەهات، بۆیە
+                // جیاوازی نێوان ئەوەی درا و نرخی ڕاستەی سیستەم
+                // شاراوە دەمایەوە (db/022)
+                await supabase.from('orders').update({
+                    status: "گەیشتووە",
+                    status_changed_by: userName,
+                    driver_fee_paid: delivery,
+                    driver_fee_system: Number(distData.deliveryCost || 0)
+                }).eq('id', o.id);
                 await logOrderAction(o, 'distribute', {
                     from: o.status, to: "گەیشتووە",
                     detail: "ئۆردەرەکەی کردە گەیشتوو و قازانجەکانی دابەشکرد"
