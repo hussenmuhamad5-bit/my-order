@@ -2658,17 +2658,53 @@
                 //    سەر ئۆردەرەکەوە دەبینرێن — بڕوانە `orderFilterParams`.
                 let creatorOf = {}, roleOf = {}, childrenByCreator = {};
                 let kingCode = globalKingCode ? String(globalKingCode).trim() : '';
+
+                // پاسی یەکەم: بەڕێوەبەری هەر کەسێک — پێویستە پێش
+                // دیاریکردنی پارەنتەکان بزانرێت
+                let mgrOf = {};
+                allEmployeesLite.forEach(e => {
+                    let c = String(e.code || '').trim();
+                    if (c) mgrOf[c] = String(e.manager || '').trim();
+                });
+
                 allEmployeesLite.forEach(e => {
                     let eCode = String(e.code || '').trim();
                     if (!eCode) return;
                     roleOf[eCode] = normalizeRole(e.role || '');
                     if (!kingCode && roleOf[eCode] === 'پاشا') kingCode = eCode;
 
-                    let up = String(e.consultant || '').trim()
-                        || String(e.admin || '').trim()
-                        || String(e.manager || '').trim()
-                        || String(e.creator || '').trim();
+                    // ============================================================
+                    // ⭐ خانەی `manager` بڕیاردەری کۆتاییە بۆ ئەوەی
+                    //    ئەم کەسە لە تیمی کێدایە
+                    // ------------------------------------------------------------
+                    // پێشتر پارەنتەکە بەم ڕیزبەندییە هەڵدەبژێردرا:
+                    //     ڕاوێژکار → سەرپەرشت → بەڕێوەبەر → دروستکەر
+                    // یەکەم خانەی پڕ بەکاردەهات، بەبێ هیچ پشکنینێک.
+                    //
+                    // کێشەکە: کاتێک ئەندامێک دەگوازرێتەوە بۆ بەڕێوەبەرێکی
+                    // نوێ، زۆرجار `manager` دەگۆڕدرێت بەڵام ڕاوێژکار/
+                    // سەرپەرشتەکەی هێشتا هی بەڕێوەبەری کۆنن. ئەنجام:
+                    // ئەندامەکە لە دارەکەی بەڕێوەبەری کۆندا دەمێنێتەوە —
+                    // بەڕێوەبەری نوێ جزدان و قازانجی نەدەبینی، و کۆنەکە
+                    // هێشتا دەیدی.
+                    //
+                    // ئێستا ڕاوێژکار/سەرپەرشت تەنها وەک پارەنت قبوڵ
+                    // دەکرێن ئەگەر خۆیان لەژێر **هەمان** بەڕێوەبەردا بن.
+                    // ئەگەرنا ڕاستەوخۆ دەچێتە ژێر بەڕێوەبەرەکەی خۆی.
+                    // ============================================================
+                    let myMgr = String(e.manager || '').trim();
+                    let up = '';
+                    [e.consultant, e.admin].forEach(cand => {
+                        if (up) return;
+                        let c = String(cand || '').trim();
+                        if (!c || c === eCode) return;
+                        // بەبێ بەڕێوەبەر هیچ پشکنینێک نییە؛ ئەگەرنا
+                        // پارەنتەکە دەبێت لەژێر هەمان بەڕێوەبەردا بێت
+                        if (!myMgr || c === myMgr || String(mgrOf[c] || '').trim() === myMgr) up = c;
+                    });
+                    if (!up) up = myMgr || String(e.creator || '').trim();
                     if (up === eCode) up = '';
+
                     creatorOf[eCode] = up;
                     (childrenByCreator[up] = childrenByCreator[up] || []).push(eCode);
                 });
