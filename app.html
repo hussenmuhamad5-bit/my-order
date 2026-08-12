@@ -7247,6 +7247,13 @@
             try {
                 delete walletTxCache[code];
                 delete walletHoldCache[code];
+                // دۆخی پەڕەکردنیش، ئەگەرنا «جوڵەی کۆنتر» لە
+                // شوێنێکی هەڵەوە بەردەوام دەبێت
+                delete walletTxCursor[code];
+                delete walletTxDone[code];
+                if (currentUser && String(code) === String(currentUser.code)) {
+                    myTxRows = []; myTxCursor = null; myTxDone = false;
+                }
             } catch (e) { }
             if (currentUser && String(code) === String(currentUser.code)) {
                 walletReadyState.loaded = false;
@@ -9385,12 +9392,64 @@
             }).join('');
         }
 
+        // ============================================================
+        // ئاگادارکردنەوەکان — بە پەڕە
+        // ------------------------------------------------------------
+        // `notifications_page` هەمیشە `p_before_id`ی هەبووە، بەڵام
+        // کڵاینت هەرگیز بەکاری نەدەهێنا — بۆیە تەنها ٤٠ی دوایی
+        // دەبینران و ئەوانی تر بێدەنگانە ون دەبوون.
+        //
+        // ئاگادارکردنەوەکان دوای بینینیان ٣ ڕۆژ دواتر خۆیان
+        // دەسڕدرێنەوە (db/024)، بۆیە لیستەکە درێژ نابێتەوە
+        // ============================================================
+        const NOTIF_PAGE = 40;
+        let _notifDone = {}, _notifBusy = false;
+
+        function notifListHtml(scope) {
+            const rows = _notifCache[scope] || [];
+            return notifRowsHtml(rows)
+                + (_notifDone[scope] === false
+                    ? '<button type="button" class="tx-more" onclick="loadMoreNotifs()">'
+                    + '<i class="bx bx-chevron-down"></i> ئاگاداری کۆنتر پیشان بدە</button>'
+                    : '');
+        }
+
+        async function loadMoreNotifs() {
+            const scope = _notifTab;
+            if (_notifBusy || _notifDone[scope] !== false) return;
+            _notifBusy = true;
+            txMoreSetBusy('#notif-list');
+            const box = document.getElementById('notif-list');
+            const keep = box ? box.scrollTop : 0;
+            try {
+                const rows = _notifCache[scope] || [];
+                const { data, error } = await supabase.rpc('notifications_page', {
+                    p_user_code: String(currentUser.code),
+                    p_scope: scope,
+                    p_limit: NOTIF_PAGE,
+                    p_before_id: rows.length ? rows[rows.length - 1].id : null
+                });
+                if (error) throw error;
+                const page = data || [];
+                _notifCache[scope] = rows.concat(page);
+                _notifDone[scope] = page.length < NOTIF_PAGE;
+                if (_notifTab === scope && box) {
+                    box.innerHTML = notifListHtml(scope);
+                    box.scrollTop = keep;
+                }
+            } catch (e) {
+                console.warn('loadMoreNotifs:', e);
+                txMoreSetRetry('#notif-list');
+            }
+            _notifBusy = false;
+        }
+
         async function loadNotifications(scope, force) {
             const box = document.getElementById('notif-list');
             if (!box || !currentUser || !currentUser.code) return;
 
             if (!force && _notifLoaded[scope]) {
-                if (_notifTab === scope) box.innerHTML = notifRowsHtml(_notifCache[scope]);
+                if (_notifTab === scope) box.innerHTML = notifListHtml(scope);
                 return;
             }
             if (_notifTab === scope && !(_notifCache[scope] || []).length) {
@@ -9401,13 +9460,14 @@
                 const { data, error } = await supabase.rpc('notifications_page', {
                     p_user_code: String(currentUser.code),
                     p_scope: scope,
-                    p_limit: 40
+                    p_limit: NOTIF_PAGE
                 });
                 if (error) throw error;
                 _notifCache[scope] = data || [];
+                _notifDone[scope] = (data || []).length < NOTIF_PAGE;
                 _notifLoaded[scope] = true;
                 // لەوانەیە بەکارهێنەر تابەکەی گۆڕیبێت لە کاتی هێنانەکەدا
-                if (_notifTab === scope) box.innerHTML = notifRowsHtml(_notifCache[scope]);
+                if (_notifTab === scope) box.innerHTML = notifListHtml(scope);
             } catch (e) {
                 console.warn('loadNotifications:', e);
                 if (_notifTab === scope) {
@@ -16247,12 +16307,14 @@
                 // دەخوێنێتەوە و لیستی خوارەوە نابێت لەبەر ئەوە دوابکەوێت
                 loadMyWalletSplit(me ? me.balance : 0, me ? me.savings : 0, canSeeSavings);
 
-                const { data: txsRaw } = await supabase.from('transactions').select('*').eq('user_code', currentUser.code).order('created_at', { ascending: false }).limit(50);
-                // ئەگەر دەسەڵاتی پاشەکەوت نەبوو، جوڵەکانی پاشەکەوت لە لیستەکە دەشاردرێنەوە
-                let txs = (txsRaw || []).filter(tx => canSeeSavings || !(tx.wallet_type === 'savings' || tx.type === 'پاشەکەوتی ئۆردەر'));
-                if (txs && txs.length > 0) {
-                    list.innerHTML = renderTxListWithDayDividers(txs, buildTxItemHtml);
-                } else { list.innerHTML = `<p style="text-align:center; color:#888;">هێشتا هیچ جووڵەیەکی دارایی نییە.</p>`; }
+                // یەکەم پەڕە — ئەوانی تر بە دوگمەی «جوڵەی کۆنتر» دێن،
+                // بۆیە هیچ جوڵەیەک ون نابێت (پێشتر لە ٥٠ دەوەستا)
+                myTxRows = []; myTxCursor = null; myTxDone = false;
+                const firstPage = await fetchTxPage(currentUser.code, null);
+                myTxRows = firstPage;
+                myTxCursor = firstPage.length ? firstPage[firstPage.length - 1].id : null;
+                myTxDone = firstPage.length < TX_PAGE;
+                renderMyTx();
                 isWalletDataLoaded = true;
             } catch (err) {
                 if (!isWalletDataLoaded) {
@@ -16597,6 +16659,91 @@
         let walletTxCache = {};
         let walletHoldCache = {};
 
+        // ============================================================
+        // جوڵە داراییەکان — بە پەڕە، بەبێ ونبوونی هیچ ڕیزێک
+        // ------------------------------------------------------------
+        // پێشتر جزدانی خۆم `.limit(50)` بوو و هی ئەدمین `.limit(200)`.
+        // هەرکەسێک زیاتر لەوەی هەبووایە، جوڵەکانی دوێنێ و پێشتر
+        // بێدەنگانە ون دەبوون — بەبێ هیچ ئاماژەیەک کە شتێک ماوە.
+        //
+        // ئێستا یەکەم پەڕە دەهێنرێت و دوگمەی «جوڵەی کۆنتر» ئەوانی
+        // تر دەهێنێت. هیچ ون نابێت.
+        //
+        // ⚠️ پەڕەکردن بە `id` دەکرێت نەک `created_at`: `wallet_apply`
+        //    چەند ڕیزێک لە یەک ترانزاکشندا دەنووسێت و `clock_timestamp()`
+        //    کاتەکانیان زۆر لێک نزیک دەکات. بە کاتەکە پەڕە بکەیت،
+        //    ڕیزێک لەوانەیە دووبارە بێتەوە یان بەتەواوی بفەوتێت
+        // ============================================================
+        const TX_PAGE = 100;
+
+        async function fetchTxPage(code, cursor) {
+            let q = supabase.from('transactions').select('*')
+                .eq('user_code', code)
+                .order('id', { ascending: false })
+                .limit(TX_PAGE);
+            if (cursor != null) q = q.lt('id', cursor);
+            const { data, error } = await q;
+            if (error) throw error;
+            return data || [];
+        }
+
+        function txMoreBtnHtml(fnCall) {
+            return '<button type="button" class="tx-more" onclick="' + fnCall + '">'
+                + '<i class="bx bx-chevron-down"></i> جوڵەی کۆنتر پیشان بدە</button>';
+        }
+
+        function txMoreSetBusy(sel) {
+            const b = document.querySelector(sel + ' .tx-more');
+            if (b) { b.disabled = true; b.innerHTML = "<i class='bx bx-loader-alt bx-spin'></i> خەریکە..."; }
+        }
+
+        function txMoreSetRetry(sel) {
+            const b = document.querySelector(sel + ' .tx-more');
+            if (b) { b.disabled = false; b.innerHTML = "<i class='bx bx-refresh'></i> دووبارە هەوڵبدە"; }
+        }
+
+        // ---- جزدانی خۆم ----
+        let myTxRows = [], myTxCursor = null, myTxDone = false, myTxBusy = false;
+
+        function renderMyTx() {
+            const list = document.getElementById('my-transactions-list');
+            if (!list) return;
+            const canSee = can('view_savings');
+            // ئەگەر دەسەڵاتی پاشەکەوت نەبوو، جوڵەکانی پاشەکەوت دەشاردرێنەوە
+            const txs = myTxRows.filter(tx =>
+                canSee || !(tx.wallet_type === 'savings' || tx.type === 'پاشەکەوتی ئۆردەر'));
+
+            if (!txs.length && myTxDone) {
+                list.innerHTML = `<p style="text-align:center; color:#888;">هێشتا هیچ جووڵەیەکی دارایی نییە.</p>`;
+                return;
+            }
+            list.innerHTML = renderTxListWithDayDividers(txs, buildTxItemHtml)
+                + (myTxDone ? '' : txMoreBtnHtml('loadMoreMyTx()'));
+        }
+
+        async function loadMoreMyTx() {
+            if (myTxBusy || myTxDone) return;
+            myTxBusy = true;
+            txMoreSetBusy('#my-transactions-list');
+            const list = document.getElementById('my-transactions-list');
+            const keep = list ? list.scrollTop : 0;
+            try {
+                const page = await fetchTxPage(currentUser.code, myTxCursor);
+                if (page.length) myTxCursor = page[page.length - 1].id;
+                myTxDone = page.length < TX_PAGE;
+                myTxRows = myTxRows.concat(page);
+                renderMyTx();
+                // شوێنی سکرۆڵ دەپارێزرێت — لیستەکە بەتەواوی
+                // دووبارە دەنەخشێنرێتەوە چونکە ناوبڕی ڕۆژەکان
+                // لەوانەیە بەسەر دوو پەڕەدا دابەش ببن
+                if (list) list.scrollTop = keep;
+            } catch (e) {
+                console.warn('loadMoreMyTx:', e);
+                txMoreSetRetry('#my-transactions-list');
+            }
+            myTxBusy = false;
+        }
+
         // کردنەوەی مۆدێلی دواین جوڵە داراییەکان
         function openWalletTransactionsModal() {
             let code = window.currentWalletCode;
@@ -16625,14 +16772,40 @@
             return `<div class="transaction-item ${iconClass}" ${clickAttr} style="${cursorStyle}"><div class="tx-info"><div class="tx-icon ${iconClass}">${iconSign}</div><div class="tx-details"><h4>${tx.type}</h4><p>${tx.description} ${orderBadge}<br><i class='bx bx-calendar'></i> ${dateStr}</p></div></div><div class="tx-amount ${amountClass}">${amountSign}${Number(tx.amount).toLocaleString()}</div></div>`;
         }
 
-        function renderWalletTransactions(txs) {
+        // دۆخی پەڕەکردن بۆ جزدانی هەر کەسێک
+        let walletTxCursor = {}, walletTxDone = {}, walletTxBusy = false;
+
+        function renderWalletTransactions(txs, code) {
             let list = document.getElementById('wallet-tx-modal-body');
             if (!list) return;
-            if (!txs || txs.length === 0) {
+            const done = code ? (walletTxDone[code] !== false) : true;
+            if ((!txs || txs.length === 0) && done) {
                 list.innerHTML = `<p style="text-align:center; color:#888; font-size:12px; margin: 15px 0;">هیچ جووڵەیەکی دارایی نییە.</p>`;
                 return;
             }
-            list.innerHTML = renderTxListWithDayDividers(txs, buildTxItemHtml);
+            list.innerHTML = renderTxListWithDayDividers(txs || [], buildTxItemHtml)
+                + (done ? '' : txMoreBtnHtml('loadMoreUserTx()'));
+        }
+
+        async function loadMoreUserTx() {
+            const code = window.currentWalletCode;
+            if (!code || walletTxBusy || walletTxDone[code] !== false) return;
+            walletTxBusy = true;
+            txMoreSetBusy('#wallet-tx-modal-body');
+            const list = document.getElementById('wallet-tx-modal-body');
+            const keep = list ? list.scrollTop : 0;
+            try {
+                const page = await fetchTxPage(code, walletTxCursor[code]);
+                if (page.length) walletTxCursor[code] = page[page.length - 1].id;
+                walletTxDone[code] = page.length < TX_PAGE;
+                walletTxCache[code] = (walletTxCache[code] || []).concat(page);
+                renderWalletTransactions(walletTxCache[code], code);
+                if (list) list.scrollTop = keep;
+            } catch (e) {
+                console.warn('loadMoreUserTx:', e);
+                txMoreSetRetry('#wallet-tx-modal-body');
+            }
+            walletTxBusy = false;
         }
 
         async function loadUserWalletTransactions(code, force) {
@@ -16643,7 +16816,7 @@
 
             // ئەگەر پێشتر لۆد کراوە و داوای نوێکردنەوە نەکراوە → دەستبەجێ هی کاش پیشان بدە
             if (hasCache && !force) {
-                renderWalletTransactions(walletTxCache[code]);
+                renderWalletTransactions(walletTxCache[code], code);
                 return;
             }
 
@@ -16659,9 +16832,12 @@
                 </div>`;
 
             try {
-                const { data: txs } = await supabase.from('transactions').select('*').eq('user_code', code).order('created_at', { ascending: false }).limit(200);
-                walletTxCache[code] = txs || [];
-                renderWalletTransactions(walletTxCache[code]);
+                // یەکەم پەڕە تەنها — ئەوانی تر بە دوگمەی «جوڵەی کۆنتر»
+                const txs = await fetchTxPage(code, null);
+                walletTxCache[code] = txs;
+                walletTxCursor[code] = txs.length ? txs[txs.length - 1].id : null;
+                walletTxDone[code] = txs.length < TX_PAGE;
+                renderWalletTransactions(walletTxCache[code], code);
             } catch (err) {
                 // ئەگەر داتای کۆن هەبوو، لێی بمێنێتەوە؛ ئەگەرنا هەڵە پیشان بدە
                 if (!hasCache) list.innerHTML = `<p style="text-align:center; color:red; font-size:12px; margin: 15px 0;">❌ کێشەیەک لە لۆدکردنی جووڵەکان ڕوویدا.</p>`;
