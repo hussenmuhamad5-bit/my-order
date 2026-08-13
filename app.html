@@ -1832,9 +1832,20 @@
             <!-- پەڕەی چات — لیستێکی سکڕۆڵکەر + بۆکسی نووسینی چەسپاو لە خوارەوە -->
             <div id="order-comments-pane" style="display:none;">
                 <div id="order-comments-list"></div>
+                <!-- شریتی دەستکاری — لەسەرەوەی بۆکسی نووسین دەردەکەوێت،
+                     وەک تلیگرام. دوگمەی ✕ کردارەکە هەڵدەوەشێنێتەوە. -->
+                <div id="ocmt-editbar" class="ocmt-editbar" style="display:none;">
+                    <i class='bx bx-pencil ocmt-eb-ico'></i>
+                    <div class="ocmt-eb-txt">
+                        <b>دەستکاری</b>
+                        <span id="ocmt-eb-preview"></span>
+                    </div>
+                    <button type="button" class="ocmt-eb-x" onclick="cancelEditComment()"
+                        title="هەڵوەشاندنەوە" aria-label="هەڵوەشاندنەوەی دەستکاری"><i class='bx bx-x'></i></button>
+                </div>
                 <div class="ocmt-composer">
                     <textarea id="ocmt-input" rows="1" placeholder="پەیامێک بنووسە..."
-                        oninput="ocmtGrow(this)" autocomplete="off"></textarea>
+                        oninput="ocmtGrow(this)" onkeydown="ocmtKey(event)" autocomplete="off"></textarea>
                     <button type="button" class="ocmt-send" id="ocmt-send" title="ناردن"
                         onclick="postOrderComment(this)"><i class='bx bx-send'></i></button>
                 </div>
@@ -1897,6 +1908,21 @@
                         class='bx bx-x'></i></button>
             </div>
             <div id="profit-modal-body"></div>
+        </div>
+    </div>
+
+    <!-- کێ کۆمێنتەکەی بینیوە — لەسەر مۆداڵی ئۆردەر دەکرێتەوە،
+         بۆیە z-indexـێکی بەرزتری هەیە -->
+    <div id="cmt-seen-modal" class="modal-overlay is-top" onclick="closeModal(event, 'cmt-seen-modal')">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h3 class="modal-title"><i class='bx bx-check-double'></i> بینراوە لەلایەن
+                    <span class="seen-count" id="cmt-seen-count">0</span>
+                </h3>
+                <button class="modal-close" onclick="closeModal(null, 'cmt-seen-modal')"><i
+                        class='bx bx-x'></i></button>
+            </div>
+            <div id="cmt-seen-body" class="seen-list"></div>
         </div>
     </div>
 
@@ -4409,6 +4435,10 @@
         function reviewOnOrderClosed() {
             const id = _reviewOpenId;
             _reviewOpenId = null;
+
+            // دەستکارییەکی نیوەچڵ بەجێ نامێنێت — ئەگەرنا کردنەوەیەکی
+            // نوێ بە شریتی دەستکاریی ئۆردەرێکی کۆنەوە دەست پێدەکات
+            if (_ocmtEditId) cancelEditComment(false);
 
             // چاتەکە داخرا → کاتژمێرەکە دەوەستێت، و بیرەوەری سکڕۆڵ
             // پاک دەکرێتەوە: کردنەوەیەکی نوێ دەبێت لە نوێترین
@@ -8772,26 +8802,57 @@
                     : '';
             }
 
+            // ============================================================
+            // وێنەی پرۆفایل لەبری ناو
+            // ------------------------------------------------------------
+            // پێشتر ناوەکان دەنووسران، کە لە ٣٦٠pxـدا ڕیزەکەی پڕ دەکرد
+            // و درێژ دەبوویەوە. ئێستا تەنها بازنەیەکی بچووکی وێنە بۆ
+            // هەرکەسێک — بە دەستلێدان ناو و کات دەردەکەون.
+            // ============================================================
+            const MAX_AV = 4;
+            const shown = seen.slice(0, MAX_AV);
+            const rest = seen.length - shown.length;
             const names = seen.map(r => String(r.user_name || r.user_code));
-            const short = names.length <= 2
-                ? names.join('، ')
-                : (names.slice(0, 2).join('، ') + ' +' + (names.length - 2));
 
-            return `<span class="ocmt-seen is-on" title="بینراوە لەلایەن ${histEsc(names.join('، '))}"
-                    onclick="showCommentSeen('${c.id}')"><i class='bx bx-check-double'></i><b>${histEsc(short)}</b></span>`;
+            const avatars = shown.map(r =>
+                '<span class="seen-av">' + avatarHtml(r.avatar, r.user_name || r.user_code, 18) + '</span>'
+            ).join('');
+
+            return '<span class="ocmt-seen is-on" onclick="showCommentSeen(\'' + c.id + '\')"'
+                + ' title="بینراوە لەلایەن ' + histEsc(names.join('، ')) + '">'
+                + '<i class="bx bx-check-double"></i>'
+                + '<span class="seen-avs">' + avatars + '</span>'
+                + (rest > 0 ? '<b class="seen-more">+' + rest + '</b>' : '')
+                + '</span>';
         }
 
-        // پەنجەدانان لەسەر نیشانەی «بینراوە» → ناوەکان لەگەڵ کاتەکانیان
+        // پەنجەدانان لەسەر نیشانەی «بینراوە» → ناو، پلە، و کاتی بینین
         function showCommentSeen(cid) {
             const rows = orderCommentsCache[String(_reviewOpenId)] || [];
             const c = rows.find(x => String(x.id) === String(cid));
             if (!c) return;
             const seen = ocmtSeenOf(c);
             if (!seen.length) { showToast("هێشتا کەس ئەم پەیامەی نەبینیوە", "info"); return; }
-            const txt = seen.slice(0, 5)
-                .map(r => (r.user_name || r.user_code) + ' (' + ocmtTimeText(r.last_read_at) + ')')
-                .join(' · ');
-            showToast("بینراوە لەلایەن " + txt + (seen.length > 5 ? ' …' : ''), "info");
+
+            const body = document.getElementById('cmt-seen-body');
+            const cnt = document.getElementById('cmt-seen-count');
+            if (!body) return;
+
+            body.innerHTML = seen.map(r =>
+                '<div class="seen-row">'
+                + avatarHtml(r.avatar, r.user_name || r.user_code, 38)
+                + '<div class="seen-info">'
+                + '<b>' + histEsc(String(r.user_name || r.user_code)) + '</b>'
+                + (r.role ? '<small>' + histEsc(String(r.role)) + '</small>' : '')
+                + '</div>'
+                + '<div class="seen-when">'
+                + '<b dir="ltr">' + histEsc(formatDateTimeKurdish(r.last_read_at)) + '</b>'
+                + '<small>' + histEsc(ocmtTimeText(r.last_read_at)) + '</small>'
+                + '</div></div>'
+            ).join('');
+
+            if (cnt) cnt.innerText = seen.length;
+            document.getElementById('cmt-seen-modal').classList.add('show');
         }
 
         // واژووی ناوەڕۆک — بۆ زانینی ئەوەی ڕیزەیەک گۆڕاوە یان نا،
@@ -8800,8 +8861,225 @@
         function ocmtSig(c) {
             return [
                 c.body || '', c.edited_at || '', c.deleted_at || '',
-                ocmtSeenOf(c).map(r => r.user_code).join(',')
+                ocmtSeenOf(c).map(r => r.user_code).join(','),
+                // ⚠️ ڕیاکشنەکانیش لێرەن، ئەگەرنا ڕیزەکە دووبارە
+                //    نانەخشێنرێتەوە کاتێک ڕیاکشنێک زیاد یان لادەبرێت
+                reactionsOf(c.id).map(r => r.user_code + ':' + r.emoji).join(',')
             ].join('|');
+        }
+
+        // ============================================================
+        // ڕیاکشنی کۆمێنتەکان (db/025)
+        // ------------------------------------------------------------
+        // هەر کەسێک **یەک** ڕیاکشنی هەیە بۆ هەر کۆمێنتێک:
+        //   • ئایکۆنێکی نوێ  → دەگۆڕدرێت
+        //   • هەمان ئایکۆن   → لادەبرێت
+        //
+        // خوێندنەوە بە یەک بانگ بۆ هەموو ئۆردەرەکە — هەمان شێوازی
+        // `loadCommentReaders`. کۆکردنەوە لە کڵاینتدا دەکرێت.
+        // ============================================================
+        // ١٥ ڕیاکشن، بەپێی داواکاری خاوەنەکە (٢٠٢٦-٠٨-١٣):
+        // لابران: 🤮 🤬 🤡 💩 🐳 و ❤️‍🔥 (ئاگری دووەم)
+        // زیادکرا: 😠
+        // ڕیزبەندی: باوترینەکان لە سەرەتاوە
+        const REACT_EMOJIS = [
+            '👍', '❤️', '🔥', '🎉', '👏',
+            '😁', '🤩', '🤔', '😱', '😢',
+            '😠', '🙏', '💯', '🌚', '🕊️'
+        ];
+        let orderReactionsCache = {};
+        // دوایین ڕیاکشنی خۆم — تەنها بۆ ئەنیمەیشنی «دەرپەڕین»
+        let _lastReact = null;
+
+        // ============================================================
+        // وێنەی ئیمۆجی
+        // ------------------------------------------------------------
+        // یونیکۆد لەسەر هەر ئامێرێک شێوازێکی جیاوازی هەیە (ئەپڵ لەسەر
+        // ئایفۆن، گووگڵ لەسەر ئەندرۆید). بۆ ئەوەی لە هەموو شوێنێکدا
+        // وەک یەک دەربکەون، وێنەی PNG بەکاردێت.
+        //
+        // ئەم ١٥ وێنەیە لە فۆنتێکی ٣٣.٧MBەوە دەرهێنراون (تەیبڵی CBDT)
+        // — تەنها ئەوانەی پێویستن، کۆی گشتی ١٢٦KB.
+        //
+        // ⚠️ ئەگەر وێنەیەک نەهات، خۆکارانە دەگەڕێتەوە بۆ یونیکۆد،
+        //    بۆیە هەرگیز خانەیەکی بەتاڵ نابینرێت
+        // ============================================================
+        const EMOJI_FILE = {
+            '👍': '1f44d', '❤️': '2764', '🔥': '1f525', '🎉': '1f389', '👏': '1f44f',
+            '😁': '1f601', '🤩': '1f929', '🤔': '1f914', '😱': '1f631', '😢': '1f622',
+            '😠': '1f620', '🙏': '1f64f', '💯': '1f4af', '🌚': '1f31a', '🕊️': '1f54a'
+        };
+
+        function emojiFallback(img) {
+            const s = document.createElement('span');
+            s.className = String(img.className || '').replace(/\bis-img\b/, '').trim();
+            s.textContent = img.alt || '';
+            img.replaceWith(s);
+        }
+
+        function emojiHtml(e, cls) {
+            const f = EMOJI_FILE[e];
+            if (!f) return '<span class="' + cls + '">' + e + '</span>';
+            return '<img class="' + cls + ' is-img" src="vendor/emoji/' + f + '.png"'
+                + ' alt="' + e + '" decoding="async" onerror="emojiFallback(this)">';
+        }
+
+        function reactionsOf(cid) {
+            const rows = orderReactionsCache[String(_reviewOpenId)] || [];
+            return rows.filter(r => String(r.comment_id) === String(cid));
+        }
+
+        async function loadCommentReactions(orderId) {
+            const oid = String(orderId || '');
+            if (!oid) return;
+            try {
+                const { data, error } = await supabase.rpc('order_comment_reactions_page', { p_order_id: oid });
+                if (error) throw error;
+                orderReactionsCache[oid] = data || [];
+            } catch (e) { console.warn('loadCommentReactions:', e); }
+        }
+
+        function ocmtReactionsHtml(c) {
+            if (c.deleted_at) return '';
+            const rs = reactionsOf(c.id);
+            if (!rs.length) return '';
+
+            const by = {};
+            rs.forEach(r => {
+                const e = String(r.emoji);
+                if (!by[e]) by[e] = { n: 0, mine: false, who: [] };
+                by[e].n++;
+                by[e].who.push(String(r.user_name || r.user_code));
+                if (String(r.user_code) === String(currentUser.code)) by[e].mine = true;
+            });
+
+            const chips = Object.keys(by).map(e => {
+                const g = by[e];
+                // ئەوەی هەر ئێستا دانراوە دەرپەڕێت — تەنها یەک جار
+                const fresh = _lastReact
+                    && String(_lastReact.cid) === String(c.id)
+                    && _lastReact.emoji === e
+                    && (Date.now() - _lastReact.t) < 900;
+                return '<button type="button" class="ocmt-chip' + (g.mine ? ' is-mine' : '')
+                    + (fresh ? ' is-pop' : '') + '"'
+                    + ' onclick="toggleReaction(' + c.id + ',\'' + e + '\')"'
+                    + ' title="' + histEsc(g.who.join('، ')) + '">'
+                    + emojiHtml(e, 'chip-e') + '<b>' + g.n + '</b></button>';
+            }).join('');
+
+            return '<div class="ocmt-reacts">' + chips + '</div>';
+        }
+
+        // ============================================================
+        // داخستنی هەڵبژێری ڕیاکشن
+        // ------------------------------------------------------------
+        // ⚠️ گوێگرەکە دەبێت لە قۆناغی **capture**دا بێت.
+        //    مۆداڵی ئۆردەر `event.stopPropagation()` بەکاردەهێنێت
+        //    لەسەر `.modal-content`، بۆیە هیچ کلیکێکی ناوەوە
+        //    ناگاتە `document` لە قۆناغی بڵاوبوونەوەدا. ئەنجام:
+        //    هەڵبژێرەکە هەرگیز نەدەخرایەوە و بەکارهێنەر ناچار
+        //    دەبوو ڕیاکشنێک هەڵبژێرێت.
+        //
+        //    قۆناغی capture سەرەوە-بۆ-خوارەوەیە، بۆیە پێش
+        //    `stopPropagation` جێبەجێ دەبێت.
+        //
+        // ⚠️ دەبێت بپشکنرێت ئایا کلیکەکە لە ناو هەڵبژێرەکەدایە:
+        //    ئەگەر لە capture ـدا بسڕدرێتەوە، دوگمەکە لادەبرێت
+        //    پێش ئەوەی `onclick`ـەکەی کار بکات
+        // ============================================================
+        function _reactOutside(ev) {
+            const p = document.getElementById('react-picker');
+            if (p && ev.target && p.contains(ev.target)) return;
+            closeReactPicker();
+        }
+
+        function _reactKey(ev) {
+            if (ev.key === 'Escape') closeReactPicker();
+        }
+
+        function closeReactPicker() {
+            const el = document.getElementById('react-picker');
+            if (el) el.remove();
+            document.removeEventListener('click', _reactOutside, true);
+            document.removeEventListener('touchstart', _reactOutside, true);
+            document.removeEventListener('keydown', _reactKey, true);
+            // سکرۆڵ: هەڵبژێرەکە `position: fixed`ـە، بۆیە ئەگەر
+            // لیستەکە بجووڵێت لە پەیامەکەی جیا دەبێتەوە
+            window.removeEventListener('scroll', closeReactPicker, true);
+        }
+
+        function openReactPicker(cid, ev) {
+            closeReactPicker();
+            const mineNow = (reactionsOf(cid).find(r =>
+                String(r.user_code) === String(currentUser.code)) || {}).emoji || '';
+
+            const el = document.createElement('div');
+            el.className = 'react-picker';
+            el.id = 'react-picker';
+            // `--i` بۆ هاتنە ژوورەوەی پێ‌لەپێ (stagger)
+            el.innerHTML = REACT_EMOJIS.map((e, i) =>
+                '<button type="button" class="rp-btn' + (e === mineNow ? ' is-on' : '') + '"'
+                + ' style="--i:' + i + '"'
+                + ' onclick="toggleReaction(' + cid + ',\'' + e + '\'); closeReactPicker();">'
+                + emojiHtml(e, 'rp-e') + '</button>').join('');
+            document.body.appendChild(el);
+
+            // شوێنی هەڵبژێرەکە — لەسەر دوگمەکە، بەڵام هەرگیز
+            // لە دەرەوەی شاشەکە
+            const r = ev.currentTarget.getBoundingClientRect();
+            const w = el.offsetWidth, h = el.offsetHeight;
+            let left = r.left + r.width / 2 - w / 2;
+            left = Math.max(8, Math.min(left, window.innerWidth - w - 8));
+            let top = r.top - h - 8;
+            if (top < 8) top = r.bottom + 8;
+            el.style.left = left + 'px';
+            el.style.top = top + 'px';
+            requestAnimationFrame(() => el.classList.add('is-in'));
+
+            ev.stopPropagation();
+            // دواخستنێکی بچووک، ئەگەرنا هەمان کلیکەکەی کردیەوە
+            // یەکسەر دایدەخاتەوە
+            setTimeout(() => {
+                document.addEventListener('click', _reactOutside, true);
+                document.addEventListener('touchstart', _reactOutside, true);
+                document.addEventListener('keydown', _reactKey, true);
+                window.addEventListener('scroll', closeReactPicker, true);
+            }, 0);
+        }
+
+        async function toggleReaction(cid, emoji) {
+            const oid = String(_reviewOpenId || '');
+            if (!oid) return;
+            const list = orderReactionsCache[oid] || (orderReactionsCache[oid] = []);
+            const me = String(currentUser.code);
+            const i = list.findIndex(r =>
+                String(r.comment_id) === String(cid) && String(r.user_code) === me);
+
+            // ---- ڕووکار یەکسەر وەڵام دەداتەوە ----
+            // وەک ناردنی کۆمێنت: چاوەڕێی سێرڤەر ناکرێت
+            const removing = (i >= 0 && String(list[i].emoji) === String(emoji));
+            _lastReact = removing ? null : { cid: cid, emoji: emoji, t: Date.now() };
+
+            if (removing) list.splice(i, 1);
+            else if (i >= 0) list[i].emoji = emoji;
+            else list.push({
+                comment_id: cid, user_code: me, user_name: userName,
+                emoji: emoji, created_at: new Date().toISOString()
+            });
+
+            ocmtSync(orderCommentsCache[oid] || []);
+
+            try {
+                const { error } = await supabase.rpc('toggle_comment_reaction', {
+                    p_comment_id: cid, p_user_code: me, p_emoji: emoji
+                });
+                if (error) throw error;
+            } catch (e) {
+                console.warn('toggleReaction:', e);
+                showToast('ڕیاکشنەکە تۆمار نەکرا', 'error');
+                await loadCommentReactions(oid);
+                ocmtSync(orderCommentsCache[oid] || []);
+            }
         }
 
         function ocmtRowHtml(c) {
@@ -8822,17 +9100,24 @@
                        onclick="removeOrderComment(${c.id})"><i class='bx bx-trash'></i></button>`
                 : '';
 
+            // ڕیاکشن بۆ هەموو پەیامێک — تەنانەت هی خۆت
+            const reactBtn = del ? ''
+                : `<button type="button" class="ocmt-act" title="ڕیاکشن"
+                       onclick="openReactPicker(${c.id}, event)"><i class='bx bx-smile'></i></button>`;
+
             return `<div class="ocmt-row ${mine ? 'is-mine' : ''}" data-cid="${c.id}"
                     data-sig="${histEsc(ocmtSig(c))}" data-day="${histEsc(dayKeyOf(c.created_at))}">
                 <div class="ocmt-avatar">${avatarHtml(c.avatar, name, 28)}</div>
                 <div class="ocmt-bubble">
                     ${mine ? '' : `<div class="ocmt-name">${histEsc(name)}${c.role ? `<span class="ocmt-role">${histEsc(String(c.role))}</span>` : ''}</div>`}
                     ${body}
+                    ${ocmtReactionsHtml(c)}
                     <div class="ocmt-foot">
                         <span class="ocmt-time" data-ts="${histEsc(String(c.created_at || ''))}"
                             title="${histEsc(formatLogTime(c.created_at))}">${histEsc(ocmtTimeText(c.created_at))}</span>
                         ${c.edited_at && !del ? `<span class="ocmt-edited">دەستکاری کراوە</span>` : ''}
                         ${ocmtSeenHtml(c)}
+                        ${reactBtn}
                         ${acts}
                     </div>
                 </div>
@@ -9020,12 +9305,14 @@
             else if (!list.querySelector('.ocmt-row')) ocmtSetList(ORDER_COMMENTS_SKELETON, false);
 
             try {
-                // پەیامەکان و خوێنەرەکان پێکەوە دەهێنرێن — یەک چاوەڕوانی
+                // پەیامەکان، خوێنەرەکان و ڕیاکشنەکان پێکەوە دەهێنرێن —
+                // یەک چاوەڕوانی، نەک سێ
                 const [res] = await Promise.all([
                     supabase.rpc('order_comments_page', {
                         p_order_id: oid, p_limit: 100, p_before_id: null
                     }),
-                    loadCommentReaders(oid)
+                    loadCommentReaders(oid),
+                    loadCommentReactions(oid)
                 ]);
                 if (res.error) throw res.error;
                 const data = res.data;
@@ -9110,7 +9397,7 @@
             // سێرڤەر وەڵام بداتەوە — وەک مەسینجەر و تلیگرام.
             input.value = '';
             ocmtGrow(input);
-            if (!editing) ocmtAddPending(body);
+            if (editing) hideEditBar(); else ocmtAddPending(body);
 
             try {
                 if (editing) {
@@ -9119,6 +9406,7 @@
                     });
                     if (error) throw error;
                     _ocmtEditId = null;
+                    _ocmtEditOrig = '';
                 } else {
                     const { error } = await supabase.rpc('post_order_comment', {
                         p_order_id: String(oid),
@@ -9150,7 +9438,7 @@
                     input.value = body;
                     ocmtGrow(input);
                 }
-                if (editing) _ocmtEditId = editing;
+                if (editing) { _ocmtEditId = editing; showEditBar(_ocmtEditOrig); }
                 showToast(String(e.message || '').includes('NOT_ALLOWED')
                     ? "دەسەڵاتت نییە بۆ ئەم پەیامە" : "نەتوانرا پەیامەکە بنێردرێت", "error");
             }
@@ -9163,10 +9451,56 @@
             const input = document.getElementById('ocmt-input');
             if (!input) return;
             _ocmtEditId = cid;
-            input.value = String(row.body || '');
+            // دەقی ڕەسەن هەڵدەگیرێت، تاکو لە کاتی هەڵوەشاندنەوەدا
+            // بزانرێت هیچ نەگۆڕاوە
+            _ocmtEditOrig = String(row.body || '');
+            input.value = _ocmtEditOrig;
             ocmtGrow(input);
             input.focus();
-            showToast("دەستکاری — پاشان بینێرە", "info");
+            showEditBar(_ocmtEditOrig);
+        }
+
+        // ============================================================
+        // شریتی دەستکاری — بە دوگمەی هەڵوەشاندنەوە
+        // ------------------------------------------------------------
+        // پێشتر تەنها تۆستێک دەردەکەوت و **هیچ ڕێگایەک نەبوو** بۆ
+        // هەڵوەشاندنەوە: یان دەبوو بینێریت، یان مۆداڵەکە دابخەیت.
+        // ئێستا وەک تلیگرام شریتێک لەسەرەوەی بۆکسی نووسین دەردەکەوێت.
+        // ============================================================
+        let _ocmtEditOrig = '';
+
+        function showEditBar(text) {
+            const bar = document.getElementById('ocmt-editbar');
+            const prev = document.getElementById('ocmt-eb-preview');
+            if (prev) prev.textContent = String(text || '').replace(/\s+/g, ' ').trim();
+            if (bar) bar.style.display = 'flex';
+        }
+
+        function hideEditBar() {
+            const bar = document.getElementById('ocmt-editbar');
+            if (bar) bar.style.display = 'none';
+        }
+
+        // `refocus = false` کاتێک بەکاردێت کە مۆداڵەکە دادەخرێت —
+        // ئەگەرنا تەختەکلیل بێهۆکار دەکرێتەوە لە کاتی دەرچووندا
+        function cancelEditComment(refocus = true) {
+            const input = document.getElementById('ocmt-input');
+            _ocmtEditId = null;
+            _ocmtEditOrig = '';
+            hideEditBar();
+            if (input) {
+                input.value = '';
+                ocmtGrow(input);
+                if (refocus) input.focus();
+            }
+        }
+
+        // Escape لە بۆکسی نووسیندا = هەڵوەشاندنەوەی دەستکاری
+        function ocmtKey(ev) {
+            if (ev.key === 'Escape' && _ocmtEditId) {
+                ev.preventDefault();
+                cancelEditComment();
+            }
         }
 
         async function removeOrderComment(cid) {
@@ -9193,6 +9527,10 @@
         function switchOrderModalTab(tab) {
             // ⚠️ پێش شاردنەوەی پەڕەکە — دوای ئەوە پێوانەکان سفرن
             if (_ocmtTab === 'comments' && tab !== 'comments') ocmtRememberScroll();
+
+            // دەرچوون لە پەڕەی چات دەستکارییە نیوەچڵەکە هەڵدەوەشێنێتەوە،
+            // ئەگەرنا شریتەکە لەگەڵ ئۆردەرێکی تردا دەردەکەوێتەوە
+            if (tab !== 'comments' && _ocmtEditId) cancelEditComment(false);
 
             _ocmtTab = tab;
             const body = document.getElementById('modal-details-body');
@@ -13222,7 +13560,119 @@
 
         function removeFromCart(index) {
             cart.splice(index, 1);
+            _cartEdit = null;
             updateCartUI();
+        }
+
+        // ============================================================
+        // ڕیزی سەبەتە — دەستکاری و گۆڕینی بڕ لە شوێنی خۆیدا
+        // ------------------------------------------------------------
+        // پێشتر تەنها سڕینەوە هەبوو: بۆ گۆڕینی ناو یان نرخ دەبوو
+        // کاڵاکە بسڕدرێتەوە و لە نوێوە بنووسرێتەوە.
+        //
+        // ئێستا:
+        //   • ناو و نرخ بە دەستلێدان دەستکاری دەکرێن
+        //   • − و + بڕەکە دەگۆڕن
+        //   • کاتێک بڕەکە دەبێتە ١، دوگمەی − دەبێتە سڕینەوە (سوور)
+        //
+        // ⚠️ گۆڕینی − بۆ سڕینەوە مەترسی دەستلێدانی بەهەڵەی هەیە،
+        //    بۆیە ڕەنگەکەی دەگۆڕێت بۆ سوور و ئایکۆنەکەشی — دوو
+        //    نیشانەی بینراو، نەک تەنها یەک
+        // ============================================================
+        let _cartEdit = null;   // {index, field:'name'|'price', value}
+
+        function changeCartQty(index, delta) {
+            const it = cart[index];
+            if (!it) return;
+            const q = (parseInt(it.qty, 10) || 1) + delta;
+            if (q < 1) { removeFromCart(index); return; }
+            it.qty = q;
+            updateCartUI();
+        }
+
+        function editCartField(index, field) {
+            const it = cart[index];
+            if (!it) return;
+            _cartEdit = {
+                index: index, field: field,
+                value: field === 'name' ? String(it.name) : String(it.unitPrice)
+            };
+            updateCartUI();
+        }
+
+        function cartEditTyping(v) { if (_cartEdit) _cartEdit.value = v; }
+
+        function commitCartEdit() {
+            if (!_cartEdit) return;
+            const it = cart[_cartEdit.index];
+            const raw = String(_cartEdit.value == null ? '' : _cartEdit.value);
+            if (it) {
+                if (_cartEdit.field === 'name') {
+                    const v = raw.trim();
+                    if (v) it.name = v;
+                } else {
+                    const v = parseInt(toEnglishDigits(raw).replace(/\D/g, ''), 10);
+                    if (!isNaN(v) && v > 0) it.unitPrice = v;
+                }
+            }
+            _cartEdit = null;
+            updateCartUI();
+        }
+
+        function cancelCartEdit() { _cartEdit = null; updateCartUI(); }
+
+        function cartEditKey(ev) {
+            if (ev.key === 'Enter') { ev.preventDefault(); commitCartEdit(); }
+            else if (ev.key === 'Escape') { ev.preventDefault(); cancelCartEdit(); }
+        }
+
+        function cartRowHtml(item, index) {
+            const qty = parseInt(item.qty, 10) || 1;
+            const unit = Number(item.unitPrice) || 0;
+            const line = qty * unit;
+            const isOne = qty <= 1;
+            const ed = (_cartEdit && _cartEdit.index === index) ? _cartEdit.field : null;
+
+            // ناو — دەق یان خانەی دەستکاری
+            const nameCell = ed === 'name'
+                ? '<input class="cart-edit-input" type="text" value="' + histEsc(_cartEdit.value)
+                + '" oninput="cartEditTyping(this.value)" onblur="commitCartEdit()"'
+                + ' onkeydown="cartEditKey(event)" aria-label="ناوی کاڵا">'
+                : '<button type="button" class="cart-cell cart-name" onclick="editCartField(' + index + ',\'name\')">'
+                + '<span>' + histEsc(item.name) + '</span><i class="bx bx-pencil"></i></button>';
+
+            // نرخی دانە — دەق یان خانەی دەستکاری
+            const priceCell = ed === 'price'
+                ? '<input class="cart-edit-input is-num" type="text" inputmode="numeric" value="' + histEsc(_cartEdit.value)
+                + '" oninput="cartEditTyping(this.value)" onblur="commitCartEdit()"'
+                + ' onkeydown="cartEditKey(event)" aria-label="نرخی دانە">'
+                : '<button type="button" class="cart-cell cart-price" onclick="editCartField(' + index + ',\'price\')">'
+                + '<span dir="ltr">' + unit.toLocaleString('en-US') + '</span>'
+                + '<i class="bx bx-pencil"></i></button>';
+
+            // ⚠️ لە بڕی ١ـدا − دەبێتە سڕینەوە
+            const minusBtn = isOne
+                ? '<button type="button" class="cart-qbtn is-del" onclick="removeFromCart(' + index + ')"'
+                + ' aria-label="سڕینەوەی کاڵا"><i class="bx bx-trash"></i></button>'
+                : '<button type="button" class="cart-qbtn" onclick="changeCartQty(' + index + ',-1)"'
+                + ' aria-label="کەمکردنەوەی بڕ"><i class="bx bx-minus"></i></button>';
+
+            return '<li class="cart-row">'
+                + '<div class="cart-main">' + nameCell
+                + '<div class="cart-sub">' + priceCell
+                + '<span class="cart-x">×' + qty + '</span>'
+                + '<span class="cart-line" dir="ltr">' + line.toLocaleString('en-US') + ' د.ع</span>'
+                + '</div></div>'
+                // ⚠️ ڕیزبەندی DOM: + → ژمارە → − ، هەمان ڕیزبەندی فۆڕمی
+                //    سەرەوە (`qty-btn plus-btn` … `minus-btn`). لە RTLـدا
+                //    یەکەم ئەلێمێنت دەچێتە ڕاست، بۆیە بینراوەکەی دەبێتە
+                //    [−] [ژمارە] [+] — وەک ئەوەی بەکارهێنەر ڕاهاتووە
+                + '<div class="cart-qty">'
+                + '<button type="button" class="cart-qbtn" onclick="changeCartQty(' + index + ',1)"'
+                + ' aria-label="زیادکردنی بڕ"><i class="bx bx-plus"></i></button>'
+                + '<span class="cart-qnum">' + qty + '</span>'
+                + minusBtn
+                + '</div></li>';
         }
 
         function updateGiftQty(change) {
@@ -13589,11 +14039,25 @@
             if (!list) return;
             list.innerHTML = "";
             let itemsTotal = 0;
+            let cartHtml = "";
             cart.forEach((item, index) => {
-                let totalItemPrice = item.qty * item.unitPrice;
-                itemsTotal += totalItemPrice;
-                list.innerHTML += `<li><div><b>${item.qty}x</b> ${item.name} <div style="font-size:13px;color:#28a745; margin-top:3px;">${totalItemPrice.toLocaleString()} دینار</div></div><span onclick="removeFromCart(${index})" style="cursor:pointer; color:#dc3545; font-size:20px; padding:5px;"><i class='bx bx-trash'></i></span></li>`;
+                itemsTotal += (parseInt(item.qty, 10) || 1) * (Number(item.unitPrice) || 0);
+                cartHtml += cartRowHtml(item, index);
             });
+            list.innerHTML = cartHtml;
+
+            // ⚠️ `updateCartUI` لە شوێنی زۆرەوە بانگ دەکرێت (نووسین لە
+            //    خانەی پارە، گۆڕینی پێشوەخت…). هەر بانگێک لیستەکە لە
+            //    نوێوە دروست دەکاتەوە، بۆیە خانەی دەستکاری فۆکەسی
+            //    لەدەست دەدا و نووسینەکە دەوەستا. لێرەدا فۆکەس و
+            //    شوێنی نیشانەکە دەگەڕێنرێنەوە
+            if (_cartEdit) {
+                const ie = list.querySelector('.cart-edit-input');
+                if (ie && document.activeElement !== ie) {
+                    ie.focus();
+                    const v = ie.value; ie.value = ''; ie.value = v;
+                }
+            }
             // دیاریەکان بە جیا — نە لە itemsTotal، نە لە ژمارەی دانەکان
             let giftList = document.getElementById('gift-list');
             let giftTotal = 0;

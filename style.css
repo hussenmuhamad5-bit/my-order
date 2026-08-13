@@ -247,6 +247,21 @@ input::placeholder {
   color: #94a3b8;
 }
 
+/* ============================================================
+   نیشانەی نووسین (caret)
+   ------------------------------------------------------------
+   لە iOS و هەندێک مۆبایلی تردا نیشانەکە سپی یان زۆر ڕوون
+   دەردەکەوت لەسەر پاشبنەمای سپیی خانەکان — بۆیە نەدەزانرا
+   لە نێوان کام دوو پیتەدایە.
+   بەبێ `caret-color` سیستەمەکە ڕەنگی خۆی هەڵدەبژێرێت.
+   ============================================================ */
+input,
+textarea,
+select,
+[contenteditable] {
+  caret-color: var(--primary);
+}
+
 .btn {
   width: 100%;
   height: var(--btn-h);
@@ -10432,6 +10447,100 @@ body {
   font-size: var(--fs-md);
 }
 
+/* ---- شریتی دەستکاری ---- */
+/* لەسەرەوەی بۆکسی نووسین دەردەکەوێت کاتێک پەیامێک دەستکاری دەکرێت.
+   هێڵی ڕەنگاوڕەنگ لای دەست‌پێک (RTL: ڕاست) نیشانەی «کرداری چالاک»ـە،
+   و دوگمەی ✕ لای کۆتایی کردارەکە هەڵدەوەشێنێتەوە — وەک تلیگرام. */
+.ocmt-editbar {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+  padding: 8px 12px;
+  border-radius: 12px 12px 4px 4px;
+  background: rgba(36, 129, 204, .07);
+  border-inline-start: 3px solid var(--primary);
+  animation: eb-in .16s ease-out;
+}
+
+@keyframes eb-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: none; }
+}
+
+.ocmt-eb-ico {
+  flex-shrink: 0;
+  font-size: 18px;
+  color: var(--primary);
+}
+
+.ocmt-eb-txt {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  line-height: 1.35;
+}
+
+.ocmt-eb-txt b {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--primary);
+}
+
+/* پێشبینینی دەقەکە — یەک دێڕ، زیادەکەی بە «…» دەبڕدرێت */
+#ocmt-eb-preview {
+  font-size: 12px;
+  color: var(--text-soft, #64748b);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ocmt-eb-x {
+  flex-shrink: 0;
+  /* ٣٦px بینراوە بەڵام ٤٤px دەستلێدراوە — بڕگەی دەستلێدان بە
+     پاشکۆیەکی نەبینراوەوە فراوان دەکرێت */
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  position: relative;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text-soft, #64748b);
+  font-size: 22px;
+  cursor: pointer;
+  transition: background .15s, color .15s;
+}
+
+.ocmt-eb-x::after {
+  content: '';
+  position: absolute;
+  inset: -6px;
+}
+
+.ocmt-eb-x:active {
+  background: rgba(36, 129, 204, .14);
+  color: var(--primary);
+}
+
+@media (hover: hover) {
+  .ocmt-eb-x:hover {
+    background: rgba(36, 129, 204, .1);
+    color: var(--primary);
+  }
+}
+
+/* شریتەکە و بۆکسی نووسین وەک یەک یەکە دەردەکەون */
+.ocmt-editbar[style*="flex"] + .ocmt-composer {
+  border-top: none;
+  padding-top: 6px;
+}
+
 /* ---- بۆکسی نووسین ---- */
 .ocmt-composer {
   flex-shrink: 0;
@@ -11899,4 +12008,505 @@ body {
 
 .tx-count i {
   font-size: 14px;
+}
+
+
+/* ============================================================
+   ڕیزی سەبەتەی کاڵاکان
+   ------------------------------------------------------------
+   پێشتر تەنها دوگمەی سڕینەوەی هەبوو — بۆ گۆڕینی ناو یان نرخ
+   دەبوو کاڵاکە بسڕدرێتەوە و لە نوێوە بنووسرێتەوە.
+   ئێستا: ناو و نرخ بە دەستلێدان دەستکاری دەکرێن، و − / +
+   بڕەکە دەگۆڕن. لە بڕی ١ـدا − دەبێتە سڕینەوە.
+   ============================================================ */
+
+.cart-list .cart-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: var(--r-sm);
+  margin-bottom: 8px;
+}
+
+.cart-main {
+  flex: 1;
+  min-width: 0;
+}
+
+/* ---- ناو و نرخ: دوگمەن، بەڵام وەک دەق دەردەکەون ---- */
+.cart-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  max-width: 100%;
+  padding: 3px 6px;
+  margin-inline-start: -6px;
+  background: transparent;
+  border: 0;
+  border-radius: 7px;
+  font-family: inherit;
+  color: inherit;
+  text-align: start;
+  cursor: pointer;
+  transition: background .15s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.cart-cell:active {
+  background: rgba(36, 129, 204, 0.09);
+}
+
+/* قەڵەمەکە بێدەنگە تا دەستی لێنەدرێت — ڕووکار شڵەژاو نەبێت */
+.cart-cell i {
+  font-size: 13px;
+  color: #cbd5e1;
+  flex-shrink: 0;
+  transition: color .15s ease;
+}
+
+.cart-cell:active i {
+  color: var(--primary);
+}
+
+.cart-name {
+  font-size: var(--fs-base);
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.cart-name span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cart-sub {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 2px;
+}
+
+.cart-price {
+  font-size: var(--fs-sm);
+  color: var(--text-secondary);
+}
+
+.cart-x {
+  font-size: var(--fs-sm);
+  color: #94a3b8;
+}
+
+.cart-line {
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  color: #059669;
+}
+
+/* ---- خانەی دەستکاری لە شوێنی خۆیدا ---- */
+.cart-edit-input {
+  width: 100%;
+  height: 36px;
+  padding: 0 10px;
+  margin: 0 0 2px;
+  border: 1.5px solid var(--primary);
+  border-radius: 8px;
+  background: #fff;
+  font-family: inherit;
+  font-size: var(--fs-base);
+  font-weight: 700;
+  color: var(--text-main);
+  box-sizing: border-box;
+}
+
+.cart-edit-input.is-num {
+  height: 32px;
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  direction: ltr;
+  text-align: right;
+}
+
+/* ---- گۆڕینی بڕ ---- */
+.cart-qty {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.cart-qbtn {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  background: #f1f5f9;
+  border: 0;
+  border-radius: 9px;
+  color: var(--text-main);
+  cursor: pointer;
+  transition: background .15s ease, color .15s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ناوچەی دەستلێدان دەکرێتە ٤٤px بەبێ گۆڕینی قەبارەی بینراو */
+.cart-qbtn::after {
+  content: '';
+  position: absolute;
+  inset: -5px;
+}
+
+.cart-qbtn i {
+  font-size: 18px;
+}
+
+.cart-qbtn:active {
+  background: #e2e8f0;
+}
+
+/* دوگمەی سڕینەوە — دوو نیشانەی جیاواز: ڕەنگ و ئایکۆن،
+   تاکو بەهەڵە لەگەڵ − تێکەڵ نەبێت */
+.cart-qbtn.is-del {
+  background: rgba(239, 68, 68, 0.1);
+  color: #dc2626;
+}
+
+.cart-qbtn.is-del:active {
+  background: rgba(239, 68, 68, 0.2);
+}
+
+.cart-qnum {
+  min-width: 26px;
+  text-align: center;
+  font-size: var(--fs-md);
+  font-weight: 700;
+  color: var(--text-main);
+  font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cart-cell,
+  .cart-cell i,
+  .cart-qbtn {
+    transition: none;
+  }
+}
+
+
+/* ============================================================
+   «بینراوە لەلایەن» — وێنە لەبری ناو
+   ------------------------------------------------------------
+   پێشتر ناوەکان دەنووسران و ڕیزەکەیان پڕ دەکرد لە ٣٦٠pxـدا.
+   ئێستا بازنەی بچووکی وێنە، و بە دەستلێدان ناو و کات دەردەکەون.
+   ============================================================ */
+
+.seen-avs {
+  display: inline-flex;
+  align-items: center;
+  vertical-align: middle;
+}
+
+/* بازنەکان کەمێک لەسەر یەک دادەنرێن — وەک ستاکێک */
+.seen-av + .seen-av {
+  margin-inline-start: -6px;
+}
+
+.seen-av > div {
+  box-shadow: 0 0 0 1.5px #fff;
+}
+
+.seen-more {
+  margin-inline-start: 3px;
+  font-size: var(--fs-2xs);
+  font-weight: 700;
+  color: var(--text-secondary);
+}
+
+/* ---- پۆپ‌ئەپی وردەکاری ---- */
+.modal-overlay.is-top {
+  z-index: 2100;
+}
+
+.seen-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  margin-inline-start: 4px;
+  border-radius: var(--r-full);
+  background: rgba(36, 129, 204, 0.12);
+  color: var(--primary);
+  font-size: var(--fs-sm);
+  font-weight: 700;
+}
+
+.seen-list {
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.seen-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 4px;
+}
+
+.seen-row + .seen-row {
+  border-top: 1px solid #f1f5f9;
+}
+
+.seen-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.seen-info b {
+  font-size: var(--fs-md);
+  color: var(--text-main);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.seen-info small {
+  font-size: var(--fs-2xs);
+  color: var(--text-secondary);
+}
+
+.seen-when {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.seen-when b {
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  color: var(--primary);
+  white-space: nowrap;
+}
+
+.seen-when small {
+  font-size: var(--fs-2xs);
+  color: #94a3b8;
+  white-space: nowrap;
+}
+
+
+/* ============================================================
+   ڕیاکشنی کۆمێنتەکان (db/025)
+   ============================================================ */
+
+.ocmt-reacts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 6px 0 2px;
+}
+
+.ocmt-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 26px;
+  padding: 2px 8px 2px 6px;
+  background: #f1f5f9;
+  border: 1px solid transparent;
+  border-radius: var(--r-full);
+  font-family: inherit;
+  cursor: pointer;
+  transition: background .15s ease, border-color .15s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ناوچەی دەستلێدان دەکرێتە ٤٤px بەبێ گۆڕینی قەبارەی بینراو */
+.ocmt-chip::after {
+  content: '';
+  position: absolute;
+  inset: -9px;
+}
+
+.ocmt-chip {
+  position: relative;
+}
+
+.ocmt-chip .chip-e {
+  font-size: 14px;
+  line-height: 1;
+}
+
+.ocmt-chip b {
+  font-size: var(--fs-2xs);
+  font-weight: 700;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.ocmt-chip:active {
+  background: #e2e8f0;
+}
+
+/* ڕیاکشنی خۆم — چوارچێوە و ڕەنگ، نەک تەنها ڕەنگ */
+.ocmt-chip.is-mine {
+  background: rgba(36, 129, 204, 0.1);
+  border-color: rgba(36, 129, 204, 0.45);
+}
+
+.ocmt-chip.is-mine b {
+  color: var(--primary);
+}
+
+/* ---- هەڵبژێری ڕیاکشن ---- */
+.react-picker {
+  position: fixed;
+  z-index: 2200;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 2px;
+  /* ٥ ئایکۆن لە هەر ڕیزێکدا → ١٥ ئایکۆن دەبێتە ٣ ڕیزی ڕێک.
+     حساب: ٥×٤٠ + ٤×٢ گەپ + ١٤ پەدینگ + ٢ بۆردەر = ٢٢٤px،
+     بۆیە کەمێک زیاتری پێدەدرێت. ٦ ناچنە ناوی (٢٦٦px) */
+  max-width: min(236px, calc(100vw - 24px));
+  padding: 7px;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: var(--r-lg);
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.18);
+  opacity: 0;
+  transform: scale(0.88);
+  transform-origin: bottom center;
+  transition: opacity .16s ease, transform .16s cubic-bezier(.34, 1.56, .64, 1);
+}
+
+.react-picker.is-in {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.rp-btn {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 0;
+  border-radius: var(--r-full);
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background .13s ease, transform .13s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.rp-btn:active {
+  background: #f1f5f9;
+  transform: scale(1.18);
+}
+
+/* ئەوەی ئێستا هەڵبژێردراوە */
+.rp-btn.is-on {
+  background: rgba(36, 129, 204, 0.14);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .react-picker,
+  .rp-btn,
+  .ocmt-chip {
+    transition: none;
+  }
+  .react-picker { transform: none; }
+}
+
+
+/* ============================================================
+   جووڵەی ڕیاکشنەکان — بێ هیچ فایلێکی زیادە
+   ------------------------------------------------------------
+   ئیمۆجی ئەنیمەیشنی ئامادە ٨.٣MB بوو (WebP) یان ١.٧MB (Lottie)،
+   کە بۆ مینی-ئەپێک زۆر گەورەیە. لەبری ئەوە جووڵەکە لە خودی
+   ڕووکارەکەوە دێت — ٠KB، و لەسەر ئایفۆن ئیمۆجییەکان هەر
+   شێوازی ئەپڵیان هەیە چونکە یونیکۆدن.
+   ============================================================ */
+
+/* ---- دەرپەڕینی چیپ کاتێک ڕیاکشن دەدەیت ---- */
+@keyframes react-pop {
+  0%   { transform: scale(1); }
+  35%  { transform: scale(1.28); }
+  60%  { transform: scale(0.94); }
+  100% { transform: scale(1); }
+}
+
+.ocmt-chip.is-pop {
+  animation: react-pop .42s cubic-bezier(.34, 1.56, .64, 1);
+}
+
+/* ئیمۆجییەکە کەمێک زیاتر دەجووڵێت لە چیپەکە */
+@keyframes emoji-pop {
+  0%   { transform: scale(1) rotate(0); }
+  30%  { transform: scale(1.45) rotate(-9deg); }
+  55%  { transform: scale(0.92) rotate(5deg); }
+  100% { transform: scale(1) rotate(0); }
+}
+
+.ocmt-chip.is-pop .chip-e {
+  display: inline-block;
+  animation: emoji-pop .52s cubic-bezier(.34, 1.56, .64, 1);
+}
+
+/* ---- هاتنە ژوورەوەی پێ‌لەپێی ئایکۆنەکانی هەڵبژێر ---- */
+@keyframes rp-in {
+  from { opacity: 0; transform: scale(.4) translateY(6px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.react-picker.is-in .rp-btn {
+  animation: rp-in .26s cubic-bezier(.34, 1.56, .64, 1) backwards;
+  /* هەر ئایکۆنێک کەمێک دواتر دێت — شەپۆلێکی نەرم */
+  animation-delay: calc(var(--i, 0) * 14ms);
+}
+
+/* ئەوەی ئێستا هەڵبژێردراوە: تەنها پاشبنەما، بێ جووڵەی بەردەوام.
+   ئەنیمەیشنێکی بێکۆتایی لە هەڵبژێرێکدا شێواندنە، نەک ڕێنمایی —
+   `.rp-btn.is-on` ی پاشبنەما بەشی خۆی دەکات. */
+
+@media (prefers-reduced-motion: reduce) {
+  .ocmt-chip.is-pop,
+  .ocmt-chip.is-pop .chip-e,
+  .react-picker.is-in .rp-btn {
+    animation: none;
+  }
+}
+
+/* وێنەی ئیمۆجی — قەبارەی یەکسان لەسەر هەموو ئامێرێک.
+   `.is-img` تەنها لەسەر وێنەکان دادەنرێت، بۆیە ئەگەر
+   وێنەیەک نەهات و بگەڕێتەوە بۆ یونیکۆد، ئەم یاسایانە
+   کاریگەرییان نابێت. */
+.chip-e.is-img {
+  width: 15px;
+  height: 15px;
+  display: block;
+  object-fit: contain;
+}
+
+.rp-e.is-img {
+  width: 26px;
+  height: 26px;
+  display: block;
+  object-fit: contain;
+  pointer-events: none;
 }
