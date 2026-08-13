@@ -8299,7 +8299,7 @@
             ${reviewPanelHtml(o)}
             <div class="detail-section" style="margin-top:14px;">
                 <div class="detail-label"><i class='bx bx-history'></i> مێژووی کردارەکان</div>
-                <div id="order-log-box" class="order-log-box">${cachedLogs ? orderLogsHtml(cachedLogs) : ORDER_LOG_SKELETON}</div>
+                <div id="order-log-box" class="order-log-box">${cachedLogs ? (orderLogsHtml(cachedLogs) + ologMoreHtml(o.id)) : ORDER_LOG_SKELETON}</div>
             </div>
             ${actionButtonsHtml}
         `;
@@ -8669,26 +8669,90 @@
             }).join('');
         }
 
+        // ---- پەڕەکردنی مێژوو ----
+        // پێشتر `.limit(50)` بوو بەبێ هیچ ڕێگایەکی درێژکردنەوە —
+        // ئۆردەرێکی چالاک ئاسانە لە ٥٠ تۆمار تێپەڕێت و کۆنەکانی
+        // بێدەنگانە ون بن. تۆمارەکان بە `id desc`ن (نوێترین لە
+        // سەرەوە)، بۆیە کۆنترەکان لە **خوارەوە** زیاد دەکرێن و
+        // پێویستی بە ڕاستکردنەوەی سکڕۆڵ نییە.
+        const OLOG_PAGE = 50;
+        let _ologDone = {}, _ologBusy = false, _ologOrder = null;
+
+        function ologMoreHtml(oid) {
+            return _ologDone[String(oid)] === false
+                ? `<button type="button" class="ocmt-more olog-more" onclick="loadOlderLogs()">`
+                + `<i class='bx bx-chevron-down'></i> مێژووی کۆنتر پیشان بدە</button>`
+                : '';
+        }
+
         async function loadOrderLogs(orderId, order) {
             const box = document.getElementById('order-log-box');
             if (!box) return;
+            const oid = String(orderId);
+            _ologOrder = order || null;
             try {
                 const { data, error } = await supabase.from('order_logs')
                     .select('*')
-                    .eq('order_id', String(orderId))
+                    .eq('order_id', oid)
                     .order('id', { ascending: false })
-                    .limit(50);
+                    .limit(OLOG_PAGE + 1);          // پشکنینی «+١»
                 if (error) throw error;
 
-                orderLogsCache[String(orderId)] = data || [];
+                // لێرەدا ڕیزبەندی بەرەو خوارەوەیە، بۆیە ڕیزی زیادە
+                // کۆترینەیە — واتە **کۆتایی**، پێچەوانەی چات
+                const probe = data || [];
+                const rows = probe.slice(0, OLOG_PAGE);
+                orderLogsCache[oid] = rows;
+                _ologDone[oid] = probe.length <= OLOG_PAGE;
 
                 // هەمان تۆمارەکان کاتی هەنگاوەکانی سەرەوەش پڕ دەکەنەوە
-                if (order) { try { fillOrderStepTimes(data, order); } catch (e) { } }
+                if (order) { try { fillOrderStepTimes(rows, order); } catch (e) { } }
 
-                box.innerHTML = orderLogsHtml(data);
+                box.innerHTML = orderLogsHtml(rows) + ologMoreHtml(oid);
             } catch (e) {
                 console.warn('loadOrderLogs:', e);
                 box.innerHTML = `<div class="order-log-empty"><i class='bx bx-error-circle'></i> نەتوانرا مێژوو باربکرێت</div>`;
+            }
+        }
+
+        async function loadOlderLogs() {
+            const oid = String(_reviewOpenId);
+            if (_ologBusy || _ologDone[oid] !== false) return;
+            const box = document.getElementById('order-log-box');
+            const rows = orderLogsCache[oid] || [];
+            if (!box || !rows.length) return;
+
+            _ologBusy = true;
+            const btn = box.querySelector('.olog-more');
+            if (btn) btn.innerHTML = `<i class='bx bx-loader-alt bx-spin'></i> خەریکی هێنانە...`;
+
+            try {
+                // `id desc` → کۆنتر واتە `id` بچووکتر
+                const { data, error } = await supabase.from('order_logs')
+                    .select('*')
+                    .eq('order_id', oid)
+                    .lt('id', rows[rows.length - 1].id)
+                    .order('id', { ascending: false })
+                    .limit(OLOG_PAGE + 1);
+                if (error) throw error;
+
+                const probe = data || [];
+                const older = probe.slice(0, OLOG_PAGE);
+                if (probe.length <= OLOG_PAGE) _ologDone[oid] = true;
+                if (String(_reviewOpenId) !== oid) return;
+
+                const all = rows.concat(older);
+                orderLogsCache[oid] = all;
+                // کاتی هەنگاوەکان لەگەڵ تۆمارە کۆنەکاندا دروستتر دەبێت —
+                // یەکەم گۆڕانی دۆخ لەوانەیە لە پەڕەی دووەمدا بێت
+                if (_ologOrder) { try { fillOrderStepTimes(all, _ologOrder); } catch (e) { } }
+                box.innerHTML = orderLogsHtml(all) + ologMoreHtml(oid);
+            } catch (e) {
+                console.warn('loadOlderLogs:', e);
+                if (btn) btn.innerHTML = `<i class='bx bx-chevron-down'></i> مێژووی کۆنتر پیشان بدە`;
+                showToast("نەتوانرا مێژووی کۆنتر باربکرێت", "error");
+            } finally {
+                _ologBusy = false;
             }
         }
 
@@ -8703,6 +8767,14 @@
         // ============================================================
         let orderCommentsCache = {};        // orderId → ڕیزەکان
         let unreadCommentMap = new Map();   // orderId → ژمارەی نەخوێندراو
+
+        // ---- پەڕەکردنی چات ----
+        // `order_comments_page` هەمیشە `p_before_id`ی هەبووە، بەڵام
+        // کڵاینت هەرگیز بەکاری نەدەهێنا — بۆیە چاتێکی زیاتر لە ١٠٠
+        // پەیام کۆنەکانی بێدەنگانە ون دەبوون.
+        // `_ocmtDone[oid] === false` واتە هێشتا کۆنتر هەیە.
+        const OCMT_PAGE = 100;              // ⚠️ سێرڤەر لە ٢٠٠ دەیبڕێت
+        let _ocmtDone = {}, _ocmtOlderBusy = false;
         let _ocmtTab = 'info';              // تابی چالاکی مۆداڵەکە
         let _ocmtEditId = null;             // ئەو کۆمێنتەی دەستکاری دەکرێت
         // ئەگەر کۆمێنتێک نووسرابێت، داخستنی مۆداڵەکە نابێت ئۆردەرەکە
@@ -9124,6 +9196,26 @@
             </div>`;
         }
 
+        // دوگمەی «کۆنتر» لە سەرەوەی چاتەکە — تەنها ئەگەر پەیامی
+        // کۆنتر مابێت. کاتێک دەگەینە سەرەتای چاتەکە خۆی لادەچێت.
+        function ocmtMoreHtml() {
+            return _ocmtDone[String(_reviewOpenId)] === false
+                ? `<button type="button" class="ocmt-more" onclick="loadOlderComments()">`
+                + `<i class='bx bx-chevron-up'></i> پەیامی کۆنتر پیشان بدە</button>`
+                : '';
+        }
+
+        // ⚠️ `ocmtSync` بەزۆری ڕێگای **زیادکراو** دەگرێتەبەر و
+        //    `orderCommentsHtml` بانگ ناکات (چونکە سکێلێتۆنەکە خۆی
+        //    `.ocmt-row`ی تێدایە)، بۆیە دوگمەکە دەبێت جیا ڕێک بخرێت —
+        //    ئەگەرنا لە یەکەم بارکردندا هەرگیز دەرناکەوێت.
+        function ocmtSyncMoreBtn(list) {
+            const want = _ocmtDone[String(_reviewOpenId)] === false;
+            const btn = list.querySelector('.ocmt-more');
+            if (want && !btn) list.insertAdjacentHTML('afterbegin', ocmtMoreHtml());
+            else if (!want && btn) btn.remove();
+        }
+
         function orderCommentsHtml(rows) {
             if (!rows || !rows.length) {
                 return `<div class="ocmt-empty"><i class='bx bx-message-rounded-dots'></i>
@@ -9132,7 +9224,8 @@
             // جیاکەرەوەی ڕۆژ — `dayKeyOf` + `formatDayLabel`ی هەبوو
             // بەکاردێن (ئەمڕۆ / دوێنێ / بەروار). سەردێڕی
             // `txDayDividerHtml` بەکارنایەت چونکە بۆ پارەیە.
-            let html = '', lastDay = null;
+            let html = ocmtMoreHtml();
+            let lastDay = null;
             rows.forEach(c => {
                 const day = dayKeyOf(c.created_at);
                 if (day !== lastDay) {
@@ -9243,7 +9336,9 @@
             });
 
             // هەموویان لابران → دۆخی بەتاڵ (جیاکەرەوەی ڕۆژەکانیش لادەچن)
-            if (!list.querySelector('.ocmt-row')) ocmtSetList(orderCommentsHtml([]), true);
+            if (!list.querySelector('.ocmt-row')) { ocmtSetList(orderCommentsHtml([]), true); return; }
+
+            ocmtSyncMoreBtn(list);
         }
 
         // پەیامێکی کاتی — یەکسەر دەردەکەوێت پێش وەڵامی سێرڤەر،
@@ -9309,15 +9404,22 @@
                 // یەک چاوەڕوانی، نەک سێ
                 const [res] = await Promise.all([
                     supabase.rpc('order_comments_page', {
-                        p_order_id: oid, p_limit: 100, p_before_id: null
+                        p_order_id: oid, p_limit: OCMT_PAGE + 1, p_before_id: null
                     }),
                     loadCommentReaders(oid),
                     loadCommentReactions(oid)
                 ]);
                 if (res.error) throw res.error;
-                const data = res.data;
+                const probe = res.data || [];
+                const fresh = ocmtTrimProbe(probe);
 
-                orderCommentsCache[oid] = data || [];
+                // یەکەم بارکردن دیاری دەکات ئایا کۆنتر هەیە یان نا.
+                // دوای ئەوە دەست لێی نادرێت — ئەگەرنا هەر نوێبوونەوەیەک
+                // دوگمەکە دەگەڕێنێتەوە بۆ چاتێک کە بەتەواوی بارکراوە.
+                if (_ocmtDone[oid] === undefined) _ocmtDone[oid] = probe.length <= OCMT_PAGE;
+
+                const data = ocmtMerge(oid, fresh);
+                orderCommentsCache[oid] = data;
                 // مۆداڵەکە لەوانەیە داخرابێت لەم ماوەیەدا
                 if (String(_reviewOpenId) !== oid) return;
 
@@ -9335,6 +9437,91 @@
                     ocmtSetList(`<div class="ocmt-empty"><i class='bx bx-error-circle'></i>
                         <p>نەتوانرا کۆمێنتەکان باربکرێن</p></div>`, true);
                 }
+            }
+        }
+
+        // ============================================================
+        // تێکەڵکردنی پەڕەی نوێ لەگەڵ ئەوانەی پێشتر بارکراون
+        // ------------------------------------------------------------
+        // نوێبوونەوە تەنها **نوێترین** پەڕە دەهێنێت. ئەگەر بەکارهێنەر
+        // «کۆنتر»ی داگرتبێت، ئەو پەیامانە نابێت بفەوتێن — بۆیە
+        // ئەوانەی لە دەرەوەی پەنجەرەکەن وەک خۆیان دەمێننەوە.
+        //
+        // ⚠️ واتای ئەوەیە کە سڕینەوەی پەیامێکی زۆر کۆن لە سێرڤەرەوە
+        //    تا کردنەوەیەکی نوێ دەرناکەوێت. ئەوانەی ناو پەنجەرەکە
+        //    یەکسەر نوێ دەبنەوە.
+        // ============================================================
+        // ============================================================
+        // پشکنینی «+١» — بۆ زانینی ئەوەی ئایا کۆنتر ماوە
+        // ------------------------------------------------------------
+        // ئەگەر داوای `PAGE` بکەین و `PAGE` وەربگرین، نازانین ئایا
+        // ڕێک تەواو بوو یان هێشتا ماوە — بۆیە دوگمەکە دەردەکەوێت و
+        // دەستلێدانەکەی هیچ ناکات. داوای `PAGE + 1` دەکەین: ئەگەر
+        // زیادەکە هات، واتە کۆنتر هەیە. پاشان لادەبرێت.
+        //
+        // ⚠️ `order_comments_page` بە ڕیزبەندی **سەرەوە** دەگەڕێتەوە
+        //    (کۆنترین یەکەم) بەڵام نوێترین `N` هەڵدەبژێرێت — بۆیە
+        //    ڕیزی زیادە کۆنترینەیە، واتە **یەکەم**، نەک کۆتایی.
+        function ocmtTrimProbe(rows) {
+            return rows.length > OCMT_PAGE ? rows.slice(rows.length - OCMT_PAGE) : rows;
+        }
+
+        function ocmtMerge(oid, fresh) {
+            const old = orderCommentsCache[oid] || [];
+            if (!fresh.length) return old.length ? old : fresh;
+            const edge = Number(fresh[0].id);          // کۆنترین ڕیزی ئەم پەڕەیە
+            const older = old.filter(c => Number(c.id) < edge);
+            return older.length ? older.concat(fresh) : fresh;
+        }
+
+        // ============================================================
+        // «پەیامی کۆنتر پیشان بدە»
+        // ------------------------------------------------------------
+        // کێرسەر بە `id`ـە نەک `created_at` — دوو پەیام دەکرێت لە
+        // هەمان چرکەدا بنووسرێن.
+        //
+        // دوای زیادکردنی سەرەوە، شوێنی سکڕۆڵ **دەبێت** ڕاست بکرێتەوە،
+        // ئەگەرنا لیستەکە دەبازێت و بەکارهێنەر ئەو پەیامە لەدەست دەدات
+        // کە لێی دەڕوانی: `scrollTop += (نوێ − کۆن)`.
+        // ============================================================
+        async function loadOlderComments() {
+            const oid = String(_reviewOpenId);
+            if (_ocmtOlderBusy || _ocmtDone[oid] !== false) return;
+            const list = document.getElementById('order-comments-list');
+            const rows = orderCommentsCache[oid] || [];
+            if (!list || !rows.length) return;
+
+            _ocmtOlderBusy = true;
+            const btn = list.querySelector('.ocmt-more');
+            if (btn) btn.innerHTML = `<i class='bx bx-loader-alt bx-spin'></i> خەریکی هێنانە...`;
+
+            try {
+                const { data, error } = await supabase.rpc('order_comments_page', {
+                    p_order_id: oid, p_limit: OCMT_PAGE + 1, p_before_id: rows[0].id
+                });
+                if (error) throw error;
+                const probe = data || [];
+                const older = ocmtTrimProbe(probe);
+
+                // پەڕەیەکی ناتەواو واتە گەیشتینە سەرەتای چاتەکە
+                if (probe.length <= OCMT_PAGE) _ocmtDone[oid] = true;
+
+                if (String(_reviewOpenId) !== oid) return;
+
+                if (older.length) {
+                    orderCommentsCache[oid] = older.concat(orderCommentsCache[oid] || []);
+                    const h0 = list.scrollHeight, t0 = list.scrollTop;
+                    ocmtSetList(orderCommentsHtml(orderCommentsCache[oid]), false);
+                    list.scrollTop = t0 + (list.scrollHeight - h0);
+                } else if (btn) {
+                    btn.remove();
+                }
+            } catch (e) {
+                console.warn('loadOlderComments:', e);
+                if (btn) btn.innerHTML = `<i class='bx bx-chevron-up'></i> پەیامی کۆنتر پیشان بدە`;
+                showToast("نەتوانرا پەیامە کۆنەکان باربکرێن", "error");
+            } finally {
+                _ocmtOlderBusy = false;
             }
         }
 
@@ -10285,12 +10472,61 @@
             }
         }
 
+        // ---- پەڕەکردنی تەنەکەی خۆم ----
+        // `my_trash_page` هەمیشە `p_offset`ی هەبووە و `loadMoreTrash`
+        // (تەنەکەی ئەدمین) بەکاری دەهێنێت — بەڵام لێرەدا هەمیشە `0`
+        // بوو، بۆیە دوای ٦٠ دانە هیچی تر نەدەبینرا.
+        const MTR_PAGE = 60;
+        let _myTrashDone = false, _myTrashBusy = false;
+
         function renderMyTrash() {
             const box = document.getElementById('my-trash-body');
             if (!box) return;
-            box.innerHTML = _myTrash.length
-                ? _myTrash.map(myTrashRowHtml).join('')
-                : `<div class="mtr-empty"><i class='bx bx-trash'></i> هیچ ئۆردەرێکی سڕاوەت نییە</div>`;
+            if (!_myTrash.length) {
+                box.innerHTML = `<div class="mtr-empty"><i class='bx bx-trash'></i> هیچ ئۆردەرێکی سڕاوەت نییە</div>`;
+                return;
+            }
+            box.innerHTML = _myTrash.map(myTrashRowHtml).join('')
+                + (_myTrashDone ? '' :
+                    `<button type="button" class="ocmt-more" onclick="loadMoreMyTrash()">`
+                    + `<i class='bx bx-chevron-down'></i> کۆنتر پیشان بدە</button>`);
+        }
+
+        // payloadە کاشکراوەکان دەپارێزرێن — ئەگەرنا هەر
+        // نوێبوونەوەیەک وردەکارییەکان لەدەست دەدات
+        function mtrKeepPayload(rows) {
+            const old = {};
+            _myTrash.forEach(t => { if (t.payload) old[String(t.id)] = t.payload; });
+            return (rows || []).map(t => {
+                if (old[String(t.id)]) t.payload = old[String(t.id)];
+                return t;
+            });
+        }
+
+        async function loadMoreMyTrash() {
+            if (_myTrashBusy || _myTrashDone) return;
+            _myTrashBusy = true;
+            const box = document.getElementById('my-trash-body');
+            const btn = box ? box.querySelector('.ocmt-more') : null;
+            if (btn) btn.innerHTML = `<i class='bx bx-loader-alt bx-spin'></i> خەریکی هێنانە...`;
+            try {
+                const { data, error } = await supabase.rpc('my_trash_page', {
+                    p_code: String(currentUser.code),
+                    p_limit: MTR_PAGE + 1, p_offset: _myTrash.length
+                });
+                if (error) throw error;
+                const probe = data || [];
+                const rows = probe.slice(0, MTR_PAGE);
+                if (probe.length <= MTR_PAGE) _myTrashDone = true;
+                if (rows.length) _myTrash = _myTrash.concat(mtrKeepPayload(rows));
+                renderMyTrash();
+            } catch (e) {
+                console.warn('loadMoreMyTrash:', e);
+                if (btn) btn.innerHTML = `<i class='bx bx-chevron-down'></i> کۆنتر پیشان بدە`;
+                showToast("نەتوانرا زیاتر باربکرێت", "error");
+            } finally {
+                _myTrashBusy = false;
+            }
         }
 
         // ⚠️ سپینەر تەنها جاری **یەکەم** دەردەکەوێت. دوای ئەوە
@@ -10304,18 +10540,19 @@
                 box.innerHTML = `<div class="mtr-empty"><i class='bx bx-loader-alt bx-spin'></i> خەریکی هێنانە...</div>`;
             }
             try {
+                // نوێبوونەوە هەموو ئەو پەنجەرەیە دەهێنێتەوە کە
+                // بەکارهێنەر کردوویەتییەوە — ئەگەرنا لیستەکە
+                // دەکشێتەوە بۆ ٦٠ دانە دوای هەر نوێبوونەوەیەک.
+                // هەروەها لادانی offset ڕاست دەکاتەوە کاتێک ڕیزێک
+                // لە نێواندا گەڕێندراوەتەوە.
+                const want = Math.max(MTR_PAGE, _myTrash.length);
                 const { data, error } = await supabase.rpc('my_trash_page', {
-                    p_code: String(currentUser.code), p_limit: 60, p_offset: 0
+                    p_code: String(currentUser.code), p_limit: want + 1, p_offset: 0
                 });
                 if (error) throw error;
-                // payloadی کاشکراو دەپارێزرێت — ئەگەرنا هەر
-                // نوێبوونەوەیەک وردەکارییەکان لەدەست دەدات
-                const old = {};
-                _myTrash.forEach(t => { if (t.payload) old[String(t.id)] = t.payload; });
-                _myTrash = (data || []).map(t => {
-                    if (old[String(t.id)]) t.payload = old[String(t.id)];
-                    return t;
-                });
+                const probe = data || [];
+                _myTrashDone = probe.length <= want;
+                _myTrash = mtrKeepPayload(probe.slice(0, want));
                 _myTrashLoaded = true;
                 syncMyTrashCount();
                 renderMyTrash();
