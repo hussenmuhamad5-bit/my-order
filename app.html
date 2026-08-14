@@ -8469,8 +8469,33 @@
             });
             let entries = Object.values(net).filter(e => Math.round(e.amount) !== 0);
 
+            // ⚠️ ئەم پشکنینە پێش پاڵاوتنی مەودا دەکرێت — مانای ئەوەیە
+            //    قازانجی **هەموو** ئۆردەرەکە گەڕێندراوەتەوە، نەک ئەوەی
+            //    ئەم بینەرە هیچی بۆ نەماوە
             if (entries.length === 0) {
                 return `<div class="oprofit-note is-returned"><i class='bx bx-undo'></i> قازانجەکە گەڕێندراوەتەوە — هیچ کەسێک پارەیەکی لەم ئۆردەرەی نەماوە</div>`;
+            }
+
+            // ============================================================
+            // مەودای بینین — کێ چی دەبینێت
+            // ------------------------------------------------------------
+            // تەنها ئەوانەی **دەسەڵاتی دابەشکردنی قازانجیان** لەسەر ئەم
+            // ئۆردەرە هەیە (و پاشا) هەموو وردەکارییەکان دەبینن:
+            // قازانجی پاشا، سیلسیلەی تەواو، و کرێی ڕاستەی شۆفێر.
+            //
+            // ئەوانی تر تەنها **قازانجی خۆیان + خاوەنی ئۆردەرەکە**
+            // دەبینن (لەگەڵ پاشەکەوتەکانیان)، و لەبری کرێی شۆفێر
+            // «نرخی گەیاندن»ی ئەندام دەبینن — ئەو بڕەی کڕیار داویەتی،
+            // نەک ئەوەی کۆمپانیا دەیدات بە شۆفێر.
+            //
+            //   ئەندامی ئاسایی → خۆی (= خاوەنەکەیە)
+            //   ڕاوێژکار/سەرپەرشت/بەڕێوەبەر → خۆی + خاوەنی ئۆردەرەکە
+            // ============================================================
+            const fullView = canActOnOrder(o, 'distribute');
+            if (!fullView) {
+                const myCode = String((currentUser && currentUser.code) || '').trim();
+                const ownerCode = String(o.seller_code || '').trim();
+                entries = entries.filter(e => e.code === myCode || e.code === ownerCode);
             }
 
             const emp = await resolveProfitEmployees(entries.map(e => e.code));
@@ -8497,19 +8522,32 @@
                 }
             });
 
-            // شۆفێر — بە دەرهاوێشتە (بڕوانە سەرەوە)
             let base = (o.amount_received != null && parseFloat(o.amount_received) > 0)
                 ? parseFloat(o.amount_received) : parseFloat(o.grand_total || 0);
-            let distributed = entries.reduce((s, e) => s + e.amount, 0);
-            let driver = base - distributed;
-            if (Math.round(driver) !== 0) {
-                html += oprofitRow('bx-cycling', 'شۆفێری گەیاندن', '', driver, 'is-driver');
-            }
 
-            html += `<div class="oprofit-row is-total">
+            if (fullView) {
+                // شۆفێر — بە دەرهاوێشتە (بڕوانە سەرەوە).
+                // ⚠️ `distributed` دەبێت لەسەر ڕیزە **پاڵێونەکراوەکان**
+                //    بژمێردرێت، بەڵام لە دۆخی تەواودا هەمووی هەن
+                let distributed = entries.reduce((s, e) => s + e.amount, 0);
+                let driver = base - distributed;
+                if (Math.round(driver) !== 0) {
+                    html += oprofitRow('bx-cycling', 'شۆفێری گەیاندن', '', driver, 'is-driver');
+                }
+
+                // کۆی گشتی تەنها لێرە مانای هەیە — لە دۆخی پاڵێوراودا
+                // ڕیزەکان تەواو نین، بۆیە «کۆ»یەک هەڵە دەبوایە
+                html += `<div class="oprofit-row is-total">
                         <span class="oprofit-who">کۆی گشتی</span>
                         <b class="oprofit-amt" dir="ltr">${Math.round(base).toLocaleString()} د.ع</b>
                      </div>`;
+            } else {
+                // نرخی گەیاندن بەپێی ئەندام — نەک کرێی ڕاستەی شۆفێر
+                const dp = parseFloat(o.delivery_price || 0);
+                if (Math.round(dp) !== 0) {
+                    html += oprofitRow('bx-package', 'نرخی گەیاندن', '', dp, 'is-driver');
+                }
+            }
             return html;
         }
 
