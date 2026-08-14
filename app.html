@@ -2767,14 +2767,72 @@
         }
 
         async function loadTeamScope() {
-            if (userRole === 'پاشا') return; // پاشا هەمووی دەبینێت، پێویستی بەمە نییە
+            // ⚠️ پاشا پێویستی بە `computeMyTeam` نییە (هەمووی دەبینێت)،
+            //    بەڵام هێشتا پێویستی بەم داتایە هەیە بۆ زنجیرەی ناوەکان
+            //    لە ئاگادارییەکاندا (`hierarchyChain`). ٢٥٩ کارمەند
+            //    ~١٥KBـە — یەک بانگ، پاشان لە بیرگەدا دەمێنێتەوە.
+            const isKing = (userRole === 'پاشا');
             try {
                 // manager/admin/consultant پێویستن: زنجیرەی دەسەڵات
                 // تەنها بە `creator` نییە — بڕوانە `computeMyTeam`
                 const { data } = await supabase.from('employees')
-                    .select('code,creator,role,manager,admin,consultant');
-                if (data) { allEmployeesLite = data; computeMyTeam(); }
+                    .select('code,creator,role,manager,admin,consultant,full_name');
+                if (data) {
+                    allEmployeesLite = data;
+                    buildEmpIndex();
+                    if (!isKing) computeMyTeam();
+                }
             } catch (e) { console.warn('loadTeamScope', e); }
+        }
+
+        // ============================================================
+        // زنجیرەی سیلسیلە — «بەڕێوەبەر-سەرپەرشت-ڕاوێژکار-ئەندام»
+        // ------------------------------------------------------------
+        // نموونە: لارین-ئەڤین-شیلان-کەوسەر
+        //
+        // تەنها **ناوی یەکەم** بەکاردێت — «سەروین حسن عزیز» ڕیزەکەی
+        // پڕ دەکرد و ناوی باوک و باپیر هیچ زانیارییەکی زیادە نادات.
+        //
+        // ⚠️ ئیندێکسەکە یەک جار دروست دەکرێت. بەبێ ئەو، هەر ڕیزێکی
+        //    ئاگاداری `find`ێکی خۆی دەکرد بەسەر ٢٥٩ کارمەنددا —
+        //    ٤٠ ڕیز × ٤ ئاستی سیلسیلە × ٢٥٩ = ~٤١,٠٠٠ بەراورد.
+        // ============================================================
+        let _empIndex = null;
+
+        function buildEmpIndex() {
+            _empIndex = Object.create(null);
+            allEmployeesLite.forEach(e => {
+                if (e && e.code) _empIndex[String(e.code).trim()] = e;
+            });
+        }
+
+        function empByCode(code) {
+            if (!_empIndex) buildEmpIndex();
+            return _empIndex[String(code || '').trim()] || null;
+        }
+
+        function firstNameOf(s) {
+            return String(s || '').trim().split(/\s+/)[0] || '';
+        }
+
+        // زنجیرەکە لە سەرەوەوە بۆ خوارەوە: بەڕێوەبەر → ئەندام.
+        // ئەو ئاستانەی بەتاڵن دەڕۆن، و دووبارەبووەکان لادەبرێن
+        // (ئەگەر کەسێک هەم بەڕێوەبەر هەم سەرپەرشت بێت).
+        function hierarchyChain(code, fallbackName) {
+            const e = empByCode(code);
+            if (!e) return firstNameOf(fallbackName);
+
+            const seen = Object.create(null);
+            const out = [];
+            [e.manager, e.admin, e.consultant, e.code].forEach(c => {
+                const key = String(c || '').trim();
+                if (!key || seen[key]) return;
+                seen[key] = 1;
+                const p = empByCode(key);
+                const nm = firstNameOf(p ? p.full_name : (key === String(e.code) ? fallbackName : ''));
+                if (nm) out.push(nm);
+            });
+            return out.join('-');
         }
 
         // ئایا ئەم کۆدە لە تیمی مندایە (خۆم یان یەکێک لە ژێردەستەکانم)؟
@@ -6837,14 +6895,20 @@
                         //    دارەکەی لەوانەوە دروست دەکات. بەبێیان
                         //    دەگەڕێتەوە بۆ `creator` و گواستنەوەی ئەندام
                         //    بێدەنگ کار ناکات.
+                        // ⚠️ `full_name` پێویستە — `hierarchyChain` لێرەوە
+                        //    ناوەکان دەخوێنێتەوە. بەبێی، زنجیرەی
+                        //    ئاگادارییەکان بەتاڵ دەبێتەوە دوای
+                        //    سەردانی ئەم شاشەیە.
                         allEmployeesLite = allEmp.map(e => ({
                             code: String(e.code || "").trim(),
                             creator: String(e.creator || "").trim(),
                             manager: String(e.manager || "").trim(),
                             admin: String(e.admin || "").trim(),
                             consultant: String(e.consultant || "").trim(),
+                            full_name: e.full_name,
                             role: e.role
                         }));
+                        buildEmpIndex();
                         // هەمان داتا بۆ بۆکسی فرۆشیار خەزن دەکرێت، بۆ ئەوەی
                         // کردنەوەی ئۆردەرێک هیچ داواکارییەکی نوێی نەوێت
                         employeeByCode = {};
@@ -9181,7 +9245,7 @@
                     data-sig="${histEsc(ocmtSig(c))}" data-day="${histEsc(dayKeyOf(c.created_at))}">
                 <div class="ocmt-avatar">${avatarHtml(c.avatar, name, 28)}</div>
                 <div class="ocmt-bubble">
-                    ${mine ? '' : `<div class="ocmt-name">${histEsc(name)}${c.role ? `<span class="ocmt-role">${histEsc(String(c.role))}</span>` : ''}</div>`}
+                    ${mine ? '' : `<div class="ocmt-name" title="${histEsc(name)}">${histEsc(firstNameOf(name) || name)}${c.role ? `<span class="ocmt-role">${histEsc(String(c.role))}</span>` : ''}</div>`}
                     ${body}
                     ${ocmtReactionsHtml(c)}
                     <div class="ocmt-foot">
@@ -9825,6 +9889,11 @@
         let _notifUnread = { own: 0, team: 0 };
         let _notifLoaded = { own: false, team: false };
 
+        // نەخوێندراوەکان بەپێی (پۆل → جۆر) — بۆ ژمارەی سەر چیپەکان.
+        // بە یەک بانگی `my_notif_unread_by_kind` پڕ دەکرێتەوە (db/026)،
+        // نەک یەک بانگ بۆ هەر چیپێک.
+        let _notifKindUnread = { own: {}, team: {} };
+
         // پۆلەکانی پەڕەکە. «گۆڕانی حاڵەت» هەردوو `status` و
         // `distribute` دەگرێتەوە — دابەشکردنی قازانج خۆی گۆڕانێکی
         // حاڵەتە (ئۆردەرەکە دەبێتە «گەیشتووە»).
@@ -9926,7 +9995,10 @@
                 const meta = NOTIF_KIND_META[n.kind] || { icon: 'bx-bell', color: '#64748b' };
                 // ناسنامەی ئۆردەر دەچێتە ناو onclickـەوە → تەنها پیت و ژمارە
                 const oid = String(n.order_id || '').replace(/[^0-9A-Za-z_-]/g, '');
-                const who = n.actor_name ? histEsc(n.actor_name) : '';
+                // ناوی تەواو («سەروین حسن عزیز») ڕیزەکەی پڕ دەکرد.
+                // لەبری ئەو، ناوی یەکەم + سیلسیلەکەی:
+                //     بەڕێوەبەر-سەرپەرشت-ڕاوێژکار-ئەندام
+                const who = histEsc(hierarchyChain(n.actor_code, n.actor_name));
                 const body = n.body ? histEsc(n.body) : '';
 
                 // کۆدی ئۆردەر ناوێکە نەک ڕستە — نابێت بەناوەڕاستدا
@@ -9938,8 +10010,13 @@
                     title = title.split(histEsc(code)).join(
                         '<span class="notif-code" dir="ltr">' + histEsc(code) + '</span>');
                 }
+                // هەموو ڕیزێک دەستی لێدەدرێت — دەستلێدان واتای
+                // «ئەمەم بینی». ئەوانەی ئۆردەریان پێوەیە دەشکرێنەوە.
+                const nid = String(n.id || '').replace(/[^0-9]/g, '');
                 const cls = 'notif-row' + (n.read_at ? '' : ' is-unread') + (oid ? ' is-clickable' : '');
-                const click = oid ? ` onclick="openNotifOrder('${oid}', this)"` : '';
+                const click = nid
+                    ? ` onclick="notifRowClick('${nid}', '${oid}', this)"`
+                    : (oid ? ` onclick="openNotifOrder('${oid}', this)"` : '');
                 return `<div class="${cls}"${click}>
                         <span class="notif-dot" style="background:${meta.color}1f; color:${meta.color};"><i class='bx ${meta.icon}'></i></span>
                         <div class="notif-body">
@@ -10089,7 +10166,9 @@
 
             // یەکسەر لە ڕووکاردا، پاشان لە سێرڤەر
             _notifUnread[scope] = 0;
+            _notifKindUnread[scope] = {};
             syncNotifBadge();
+            renderNotifChips();
             (_notifCache[scope] || []).forEach(n => {
                 if (!n.read_at) n.read_at = new Date().toISOString();
             });
@@ -10116,7 +10195,7 @@
             // بە ئەنیمەیشن — کلیکی بەکارهێنەرە
             syncMagicSlider(parent.closest('.magic-tabs-wrapper') || parent, true);
 
-            loadNotifications(tab).then(() => markNotifRead(tab, true));
+            loadNotifications(tab).then(refreshNotifKindCounts);
         }
 
         function openNotifPanel() {
@@ -10141,7 +10220,13 @@
             //    شاراوەیە (offsetWidth سفرە). هەمان فێڵی openFilterSheet.
             requestAnimationFrame(function () { syncMagicSlider(wrap, false); });
 
-            loadNotifications(_notifTab).then(() => markNotifRead(_notifTab, true));
+            // ⚠️ کردنەوەی پانێڵەکە **هیچ** ئاگادارییەک بە خوێندراوە
+            //    نیشان ناکات. پێشتر وای دەکرد، بۆیە بەکارهێنەر یەک
+            //    ئاگادارییەکی دەکردەوە و کاتێک دەگەڕایەوە هەمووی
+            //    خوێندراو ببوو. ئێستا:
+            //       دەستلێدانی ڕیزێک → تەنها ئەو ڕیزە
+            //       دوگمەی ✓✓        → هەمووی
+            loadNotifications(_notifTab).then(refreshNotifKindCounts);
         }
 
         function renderNotifications() {
@@ -10149,13 +10234,100 @@
             if (box) box.innerHTML = notifRowsHtml(_notifCache[_notifTab]);
         }
 
+        function notifSumKinds(m) {
+            let t = 0;
+            for (const k in (m || {})) t += Number(m[k]) || 0;
+            return t;
+        }
+
+        // ژمارەی نەخوێندراوی ئەم پۆلە بۆ ئەم چیپە.
+        // «هەمووی» کۆی هەموو جۆرەکانە، نەک ژمارەیەکی جیا.
+        function notifChipCount(f) {
+            const m = _notifKindUnread[_notifTab] || {};
+            if (!f.kinds) return notifSumKinds(m);
+            return f.kinds.reduce((s, k) => s + (Number(m[k]) || 0), 0);
+        }
+
         function renderNotifChips() {
             const box = document.getElementById('notif-chips');
             if (!box) return;
-            box.innerHTML = NOTIF_FILTERS.map(f =>
-                `<button type="button" class="notif-chip${f.k === _notifKind ? ' is-on' : ''}"
-                    onclick="setNotifKind('${f.k}')">${f.t}</button>`
-            ).join('');
+            box.innerHTML = NOTIF_FILTERS.map(f => {
+                const n = notifChipCount(f);
+                // ٩٩+ تاکو چیپەکە پان نەبێتەوە
+                const badge = n > 0
+                    ? `<span class="notif-chip-n">${n > 99 ? '99+' : n}</span>` : '';
+                return `<button type="button" class="notif-chip${f.k === _notifKind ? ' is-on' : ''}"
+                    onclick="setNotifKind('${f.k}')">${f.t}${badge}</button>`;
+            }).join('');
+        }
+
+        // یەک بانگ هەموو ژمارەکانی هەردوو پۆل دەهێنێت
+        async function refreshNotifKindCounts() {
+            if (!currentUser || !currentUser.code) return;
+            try {
+                const { data, error } = await supabase.rpc('my_notif_unread_by_kind', {
+                    p_user_code: String(currentUser.code)
+                });
+                if (error) throw error;
+                const next = { own: {}, team: {} };
+                (data || []).forEach(r => {
+                    const s = String(r.scope || '');
+                    if (!next[s]) next[s] = {};
+                    next[s][String(r.kind || '')] = Number(r.n) || 0;
+                });
+                _notifKindUnread = next;
+
+                // ⚠️ یەک سەرچاوەی ڕاستی. `_notifUnread` لێرەوە
+                //    دەردەهێنرێت نەک بە بانگێکی جیا — ئەگەرنا
+                //    باجی سەرەوە و ژمارەی چیپەکان لێک جیا دەبنەوە.
+                _notifUnread = {
+                    own: notifSumKinds(next.own),
+                    team: notifSumKinds(next.team)
+                };
+                syncNotifBadge();
+                renderNotifChips();
+            } catch (e) { console.warn('refreshNotifKindCounts:', e); }
+        }
+
+        // ============================================================
+        // نیشانکردنی **یەک** ئاگاداری بە خوێندراوە
+        // ------------------------------------------------------------
+        // دەستلێدانی ڕیزێک واتای «ئەمەم بینی» — نەک هەمووی.
+        // ڕووکار یەکسەر وەڵام دەداتەوە، پاشان سێرڤەر.
+        // ============================================================
+        async function markOneNotifRead(id, el) {
+            const nid = String(id || '');
+            if (!nid || !currentUser || !currentUser.code) return;
+
+            let row = null, scope = _notifTab;
+            for (const s of ['own', 'team']) {
+                const hit = (_notifCache[s] || []).find(n => String(n.id) === nid);
+                if (hit) { row = hit; scope = s; break; }
+            }
+            if (!row || row.read_at) return;      // پێشتر خوێندراوەتەوە
+
+            row.read_at = new Date().toISOString();
+            if (el) el.classList.remove('is-unread');
+
+            // باجەکان یەکسەر کەم دەبنەوە
+            if (_notifUnread[scope] > 0) _notifUnread[scope]--;
+            const m = _notifKindUnread[scope];
+            if (m && m[row.kind] > 0) m[row.kind]--;
+            syncNotifBadge();
+            renderNotifChips();
+
+            try {
+                await supabase.rpc('mark_notification_read', {
+                    p_id: Number(nid), p_user_code: String(currentUser.code)
+                });
+            } catch (e) { console.warn('markOneNotifRead:', e); }
+        }
+
+        // دەستلێدانی ڕیز: هەمیشە نیشان دەکرێت، و ئەگەر ئۆردەری
+        // پێوە بەستراوە بێت دەکرێتەوە
+        function notifRowClick(id, oid, el) {
+            markOneNotifRead(id, el);
+            if (oid) openNotifOrder(oid, el);
         }
 
         function setNotifKind(k) {
@@ -11196,7 +11368,10 @@
                     loadNotifications(_notifTab, true).then(() => {
                         const nl2 = document.getElementById('notif-list');
                         if (nl2 && ntop > 0) nl2.scrollTop = ntop;
-                        markNotifRead(_notifTab, true);
+                        // ⚠️ هەرگیز `markNotifRead` لێرە بانگ مەکە —
+                        //    ئاگادارییەکی نوێ هاتووە و ئەگەر خۆکارانە
+                        //    خوێندراو بکرێت، بەکارهێنەر هەرگیز نایبینێت
+                        refreshNotifKindCounts();
                     });
                 });
             }
