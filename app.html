@@ -17225,7 +17225,7 @@
                 myTxRows = []; myTxCursor = null; myTxDone = false; myTxTotal = -1;
                 const firstPage = await fetchTxPage(currentUser.code, null);
                 myTxRows = firstPage;
-                myTxCursor = firstPage.length ? firstPage[firstPage.length - 1].id : null;
+                myTxCursor = txCursorOf(firstPage);
                 myTxDone = firstPage.length < TX_PAGE;
                 renderMyTx();
                 // ژماردن دواتر دێت — لیستەکە بۆی ناوەستێت
@@ -17584,20 +17584,36 @@
         // ئێستا یەکەم پەڕە دەهێنرێت و دوگمەی «جوڵەی کۆنتر» ئەوانی
         // تر دەهێنێت. هیچ ون نابێت.
         //
-        // ⚠️ پەڕەکردن بە `id` دەکرێت نەک `created_at`: `wallet_apply`
-        //    چەند ڕیزێک لە یەک ترانزاکشندا دەنووسێت و `clock_timestamp()`
-        //    کاتەکانیان زۆر لێک نزیک دەکات. بە کاتەکە پەڕە بکەیت،
-        //    ڕیزێک لەوانەیە دووبارە بێتەوە یان بەتەواوی بفەوتێت
+        // ⚠️ ڕیزبەندی و پەڕەکردن بە **`(created_at, id)`**ی هاوبەش
+        //    دەکرێت — بڕوانە db/027.
+        //
+        //    پێشتر `order by id desc` بوو. لە `notifications` و
+        //    `order_comments`ـدا `id` ژمارەیەکی زنجیرەییە بۆیە ئەوە
+        //    دروستە، بەڵام `transactions.id` جۆری **uuid**ـە و uuid
+        //    هیچ ڕیزبەندییەکی کاتی نییە — واتە لیستەکە هەڕەمەکی
+        //    دەردەکەوت.
+        //
+        //    بەڵام تەنها `created_at`ـیش بەس نییە: `wallet_apply`
+        //    چەند ڕیزێک لە یەک ترانزاکشندا دەنووسێت و کاتی یەکسانیان
+        //    پێدەدات (٥٤٪ی ڕیزەکان هاوکاتێکیان هەیە). بۆیە `id` وەک
+        //    شکێنەری یەکسانی بەکاردێت — ئەگەرنا ڕیز دەفەوتێت.
         // ============================================================
         const TX_PAGE = 100;
 
+        // کێرسەر = دوایین ڕیزی پەڕەکە. `null` واتە لە سەرەتاوە.
+        function txCursorOf(rows) {
+            if (!rows || !rows.length) return null;
+            const last = rows[rows.length - 1];
+            return { at: last.created_at, id: last.id };
+        }
+
         async function fetchTxPage(code, cursor) {
-            let q = supabase.from('transactions').select('*')
-                .eq('user_code', code)
-                .order('id', { ascending: false })
-                .limit(TX_PAGE);
-            if (cursor != null) q = q.lt('id', cursor);
-            const { data, error } = await q;
+            const { data, error } = await supabase.rpc('wallet_tx_page', {
+                p_user_code: String(code),
+                p_limit: TX_PAGE,
+                p_before_at: cursor ? cursor.at : null,
+                p_before_id: cursor ? cursor.id : null
+            });
             if (error) throw error;
             return data || [];
         }
@@ -17676,7 +17692,7 @@
             const keep = list ? list.scrollTop : 0;
             try {
                 const page = await fetchTxPage(currentUser.code, myTxCursor);
-                if (page.length) myTxCursor = page[page.length - 1].id;
+                if (page.length) myTxCursor = txCursorOf(page);
                 myTxDone = page.length < TX_PAGE;
                 myTxRows = myTxRows.concat(page);
                 renderMyTx();
@@ -17747,7 +17763,7 @@
             const keep = list ? list.scrollTop : 0;
             try {
                 const page = await fetchTxPage(code, walletTxCursor[code]);
-                if (page.length) walletTxCursor[code] = page[page.length - 1].id;
+                if (page.length) walletTxCursor[code] = txCursorOf(page);
                 walletTxDone[code] = page.length < TX_PAGE;
                 walletTxCache[code] = (walletTxCache[code] || []).concat(page);
                 renderWalletTransactions(walletTxCache[code], code);
@@ -17786,7 +17802,7 @@
                 // یەکەم پەڕە تەنها — ئەوانی تر بە دوگمەی «جوڵەی کۆنتر»
                 const txs = await fetchTxPage(code, null);
                 walletTxCache[code] = txs;
-                walletTxCursor[code] = txs.length ? txs[txs.length - 1].id : null;
+                walletTxCursor[code] = txCursorOf(txs);
                 walletTxDone[code] = txs.length < TX_PAGE;
                 walletTxTotal[code] = -1;
                 renderWalletTransactions(walletTxCache[code], code);
