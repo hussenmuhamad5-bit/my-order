@@ -10345,14 +10345,26 @@
 
         // ---- چارتى ٣٠ ڕۆژ — SVGی دەستکرد، بێ هیچ کتێبخانەیەک ----
         // هێڵ + ڕووبەری ٢٠٪ (ئامۆژگاری ui-ux-pro-max بۆ trend over time)
+        // ⚠️ ئەندازەکە **یەک سەرچاوەیە** بۆ نەخشاندن و بۆ
+        //    دەستلێدان. پێشتر `statsSvg` بۆشاییەکی ٣٠ یەکەیی لای
+        //    ڕاست بەجێدەهێشت (بۆ پێتی نرخی کۆتایی) بەڵام
+        //    `sxChartHover` دەستلێدانی ٠–١٠٠٪ی بۆکسەکەی دەژمارد —
+        //    بۆیە خاڵی هەڵبژێردراو لای ڕاست تا ١٠٪ لادەدا.
+        const SXC = { W: 320, H: 110, PT: 14, PB: 18, PL: 4, PR: 30 };
+        // شوێنی خاڵەکان بە ڕێژەی بۆکسەکە — لە کاتی نەخشاندندا پڕ دەبێت
+        let _sxGeo = null;
+
         function statsSvg(daily, key, color) {
-            const W = 320, H = 110, PT = 14, PB = 18, PL = 4, PR = 30;
+            const W = SXC.W, H = SXC.H, PT = SXC.PT, PB = SXC.PB, PL = SXC.PL, PR = SXC.PR;
             const vals = (daily || []).map(d => Number(d[key]) || 0);
             const n = vals.length;
             if (!n) return '';
             const max = Math.max.apply(null, vals.concat([1]));
             const x = i => PL + (W - PL - PR) * (n === 1 ? .5 : i / (n - 1));
             const y = v => PT + (H - PT - PB) * (1 - v / max);
+            // بە ڕێژە، نەک بە یەکەی viewBox — چونکە SVGەکە
+            // `preserveAspectRatio="none"`ـە و پانی بۆکسەکە دەگرێت
+            _sxGeo = { pts: vals.map((v, i) => ({ x: x(i) / W * 100, y: y(v) / H * 100 })) };
             let line = '', area = 'M' + x(0).toFixed(1) + ',' + (H - PB);
             let mi = 0;
             vals.forEach((v, i) => {
@@ -10443,7 +10455,8 @@
         // ============================================================
         // کۆمپۆنێنتەکانی داشبۆرد — دۆنەت، هیت‌مەپ، شریتی ئامۆژگاری
         // ============================================================
-        const SX_DAYS = ['شەم', 'یەک', 'دوو', 'سێ', 'چوار', 'پێنج', 'هەی'];
+        const SX_DAYS = ['شەممە', 'یەکشەممە', 'دووشەممە', 'سێشەممە',
+                         'چوارشەممە', 'پێنجشەممە', 'هەینی'];
         const SX_SLOTS = ['٠٠', '٠٣', '٠٦', '٠٩', '١٢', '١٥', '١٨', '٢١'];
 
         // ---- دۆنەتی دۆخی ئۆردەرەکان ----
@@ -10677,9 +10690,8 @@
             if (sxIn('when')) {
                 html += '<div class="sx-card is-wide"' + rise() + '>'
                     + '<div class="sx-card-head"><b><i class="bx bx-time-five"></i> چالاکی بەپێی کاتژمێر</b>'
-                    + (d.peak ? '<span class="sx-peak">لووتکە ' + SX_DAYS[d.peak.d] + ' · '
-                        + SX_SLOTS[d.peak.s] + ':٠٠</span>' : '')
-                    + '</div>' + statsHeatHtml(d.hours, d.peak) + '</div>';
+                    + '<small class="sx-hint">٣٠ ڕۆژ</small></div>'
+                    + statsHeatHtml(d.hours, d.peak) + '</div>';
             }
 
             // ---- زۆرترین کاڵا / شار ----
@@ -10748,36 +10760,65 @@
             const s = SX_SERIES.find(x => x.k === _statsSeries) || SX_SERIES[0];
             boxC.innerHTML = statsSvg(d.daily, s.k, s.c)
                 + '<span class="sx-cross" id="sx-cross"></span>'
+                + '<span class="sx-dot" id="sx-dot"></span>'
                 + '<div class="sx-tt" id="sx-tt"></div>';
-            // ⚠️ کرۆسهێر پێویستی بە شوێنی pointerـە بەرامبەر بۆکسەکە.
-            //    SVGەکە `preserveAspectRatio="none"`ـە، بۆیە viewBoxـەکە
-            //    ناگونجێت لەگەڵ pixelـەکان — بە ڕێژە دەژمێردرێت.
-            boxC.onpointermove = ev => sxChartHover(ev, boxC, d.daily, s);
-            boxC.onpointerleave = () => sxChartHover(null, boxC);
+
+            const on = ev => { sxChartHover(ev, boxC, d.daily, s); };
+            const off = () => sxChartHover(null, boxC);
+            // دەستلێدان و ڕاکێشان هەردووکیان — یەک پەنجەلێدان بەسە
+            boxC.onpointerdown = ev => { try { boxC.setPointerCapture(ev.pointerId); } catch (e) { } on(ev); };
+            boxC.onpointermove = on;
+            boxC.onpointerup = off;
+            boxC.onpointercancel = off;
+            boxC.onpointerleave = off;
         }
 
         function sxChartHover(ev, boxC, daily, ser) {
             const cross = document.getElementById('sx-cross');
             const tt = document.getElementById('sx-tt');
-            if (!cross || !tt) return;
-            if (!ev) { cross.style.opacity = '0'; tt.style.opacity = '0'; return; }
+            const dot = document.getElementById('sx-dot');
+            if (!cross || !tt || !dot) return;
+            if (!ev) {
+                cross.style.opacity = '0'; tt.style.opacity = '0'; dot.style.opacity = '0';
+                return;
+            }
             const rows = daily || [];
-            if (!rows.length) return;
+            const geo = _sxGeo;
+            if (!rows.length || !geo || !geo.pts.length) return;
+            const n = rows.length;
             const r = boxC.getBoundingClientRect();
-            // ⚠️ RTL: پەڕەکە ڕاست-بۆ-چەپە بەڵام چارتەکە LTRـە،
-            //    بۆیە ڕێژەکە لە لای چەپەوە دەژمێردرێت
-            let f = (ev.clientX - r.left) / Math.max(1, r.width);
+
+            // ⚠️ خاڵەکان لە `PL` تا `W - PR`ی viewBoxـەکەن، نەک
+            //    لە ٠ تا `W`. دەستلێدان دەبێت بۆ **هەمان مەودا**
+            //    نەخشە بکرێت، ئەگەرنا هەرچی بەرەو ڕاست بچیت
+            //    هەڵەکە زیاتر دەبێت (تا ~١٠٪ لە کۆتاییدا).
+            //    RTL کاریگەری نییە: `clientX` و `left` هەردووکیان
+            //    فیزیکین، نەک لۆژیکی.
+            const L = SXC.PL / SXC.W, R = (SXC.W - SXC.PR) / SXC.W;
+            let f = ((ev.clientX - r.left) / Math.max(1, r.width) - L) / Math.max(0.0001, R - L);
             f = Math.max(0, Math.min(1, f));
-            const i = Math.round(f * (rows.length - 1));
+            const i = Math.min(n - 1, Math.max(0, Math.round(f * (n - 1))));
             const row = rows[i] || {};
-            const x = (rows.length === 1) ? 50 : (i / (rows.length - 1)) * 100;
-            cross.style.insetInlineStart = 'auto';
-            cross.style.left = x + '%';
+            const pt = geo.pts[i] || { x: 50, y: 50 };
+
+            cross.style.left = pt.x + '%';
             cross.style.opacity = '1';
-            tt.style.left = x + '%';
-            tt.style.opacity = '1';
+            dot.style.left = pt.x + '%';
+            dot.style.top = pt.y + '%';
+            dot.style.opacity = '1';
+
             tt.innerHTML = '<b dir="ltr">' + (Number(row[ser.k]) || 0).toLocaleString('en-US') + '</b>'
                 + '<span dir="ltr">' + histEsc(String(row.d || '')) + '</span>';
+            // تووڵتیپەکە لە دەرەوەی کارتەکە دەرناچێت — لە دوو
+            // لاکەدا دەچەمێتەوە لەبری ناوەڕاستکردن
+            tt.style.left = pt.x + '%';
+            const half = (tt.offsetWidth || 60) / 2;
+            const px = pt.x / 100 * r.width;
+            let shift = -half;
+            if (px + shift < 2) shift = 2 - px;
+            else if (px - half + tt.offsetWidth > r.width - 2) shift = r.width - 2 - tt.offsetWidth - px;
+            tt.style.transform = 'translateX(' + Math.round(shift) + 'px)';
+            tt.style.opacity = '1';
         }
         function setStatsSeries(k) {
             if (_statsSeries === k) return;

@@ -10452,7 +10452,11 @@ body {
    ═══════════════════════════════════════════════════════════ */
 
 #stats-screen {
-  padding: 12px 14px 90px;
+  /* ⚠️ بۆشایی خوارەوە **زیاد مەکە** — `body` پێشتر
+     `calc(8rem + safe-area)`ـی هەیە بۆ ناڤی خوارەوە. زیادکردنی
+     بۆشاییەکی تر لێرە بۆشاییەکی دووجارە دروست دەکات (١٦٤px)
+     لە کۆتایی سکڕۆڵدا. هەموو شاشەکانی تر هیچ زیاد ناکەن. */
+  padding: 12px 14px 0;
 }
 
 /* ناوەڕۆکەکە ناوەندکراوە و لەسەر شاشەی گەورە سنووری پانی هەیە —
@@ -10504,7 +10508,7 @@ body {
   }
 
   #stats-screen {
-    padding: 22px 26px 100px;
+    padding: 22px 26px 0;
   }
 
   .sx-wrap {
@@ -11312,10 +11316,26 @@ body {
   transition: opacity .15s;
 }
 
+/* خاڵی نیشانە — ڕێک لەسەر خاڵی داتاکە دادەنرێت */
+.sx-dot {
+  position: absolute;
+  width: 11px;
+  height: 11px;
+  margin: -5.5px 0 0 -5.5px;
+  border-radius: 50%;
+  background: #fff;
+  border: 2.5px solid var(--primary);
+  box-shadow: 0 1px 4px rgba(15, 23, 42, .25);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .12s;
+  z-index: 4;
+}
+
 .sx-tt {
   position: absolute;
   top: -4px;
-  transform: translateX(-50%);
+  /* ⚠️ `transform` لە JSـەوە دادەنرێت بۆ چەمانەوە لە قەراغەکاندا */
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -11441,12 +11461,15 @@ body {
   align-items: center;
 }
 
+/* ستوونی ناوی ڕۆژ `auto`ـە، بۆیە بەپێی درێژترین ناو
+   («پێنجشەممە») خۆی فراوان دەبێت و خانەکان یەکسان دەمێننەوە */
 .sx-hm-day {
-  font-size: 9px;
+  font-size: 9.5px;
   font-weight: 700;
-  color: #94a3b8;
-  padding-inline-end: 4px;
+  color: #64748b;
+  padding-inline-end: 6px;
   white-space: nowrap;
+  text-align: start;
 }
 
 .sx-hm-c {
