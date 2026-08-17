@@ -10590,10 +10590,18 @@
         ];
         let _sxGroup = 'all';
         function sxIn(g) { return _sxGroup === 'all' || _sxGroup === g; }
+        // ⚠️ تەنها **بەنتۆکە** دەنەخشێنرێتەوە. شریتی ئامۆژگاری،
+        //    سەرەوە (کێ)، کارتی ئاست و چیپەکان لە شوێنی خۆیان
+        //    دەمێننەوە — ئەگەرنا هەموو سەرەوە دەلەرزێتەوە و
+        //    ئەنیمەیشنی هاتنە ژوورەوە دووبارە دەبێتەوە.
         function setStatsGroup(k) {
             if (_sxGroup === k) return;
             _sxGroup = k;
-            renderStats();
+            // چیپەکان لە شوێنی خۆیان دەگۆڕدرێن، بێ نەخشاندنەوە
+            document.querySelectorAll('.sx-groups .notif-chip').forEach((b, i) => {
+                b.classList.toggle('is-on', SX_GROUPS[i] && SX_GROUPS[i].k === k);
+            });
+            renderStatsBento();
         }
 
         function renderStats() {
@@ -10655,8 +10663,29 @@
                     + (g.k === _sxGroup ? ' is-on' : '') + '" onclick="setStatsGroup(\'' + g.k + '\')">'
                     + g.t + '</button>').join('') + '</div>';
 
-            // ---- بەنتۆ گرید ----
-            html += '<div class="sx-bento">';
+            // ---- بەنتۆ گرید — بەشی گۆڕاو ----
+            html += '<div class="sx-bento" id="sx-bento">' + statsBentoHtml(d) + '</div>';
+
+            box.innerHTML = html;
+            renderStatsSeries();
+            renderStatsTip();
+        }
+
+        // نەخشاندنەوەی تەنها بەنتۆکە — بۆ گۆڕینی پاڵاوتن
+        function renderStatsBento() {
+            const el = document.getElementById('sx-bento');
+            const d = _statsCacheT[_statsTarget || 'me'];
+            if (!el || !d) return;
+            el.innerHTML = statsBentoHtml(d);
+            renderStatsSeries();
+        }
+
+        // ناوەڕۆکی بەنتۆکە — لە `renderStats` و `renderStatsBento` هەردووکیان
+        function statsBentoHtml(d) {
+            const who = d.who || {}, at = d.alltime || {}, m = d.month || {}, pv = d.prev || {};
+            const isMember = who.mode === 'member';
+            let html = '', _dl = 0;
+            const rise = () => ' style="--d:' + ((_dl++) * 45) + 'ms"';
 
             // KPI ی ئەم مانگە
             if (sxIn('money')) {
@@ -10736,10 +10765,7 @@
                     + '</div>';
             }
 
-            html += '</div>';          // sx-bento
-            box.innerHTML = html;
-            renderStatsSeries();
-            renderStatsTip();
+            return html;
         }
 
         // چیپەکانی چارت + نەخشاندنی SVGەکە — جیا، تاکو گۆڕینی
