@@ -4840,7 +4840,7 @@
         // بە `id` دەگەڕێینەوە نەک بە `range`: ئۆردەری نوێ لە کاتی هێنانەوەدا
         // زیاد دەکرێت، و لەگەڵ `range` ئەوە هەموو ڕیزەکان یەک خانە دەجوڵێنێت
         // و ڕیزێک لە سنووری پەڕەکاندا دووبارە دەبێتەوە. `id` کلیلی سەرەکییە،
-        // بۆیە خێراترینیشە. (هەمان بیرۆکەی `fetchAllUserTx` لە دێڕی ١١٣٢٢)
+        // بۆیە خێراترینیشە. (هەمان بیرۆکەی `wallet_tx_hold` — db/028)
         // ============================================================
         const PG_PAGE = 1000;
         async function fetchAllOrders(makeQuery, maxPages = 400) {
@@ -9923,9 +9923,40 @@
         // ============================================================
         let _notifTab = 'own';
         let _notifKind = 'all';
-        let _notifCache = { own: [], team: [] };
         let _notifUnread = { own: 0, team: 0 };
-        let _notifLoaded = { own: false, team: false };
+
+        // ============================================================
+        // کاش بەپێی (پۆل + جۆر) — نەک تەنها پۆل
+        // ------------------------------------------------------------
+        // ⚠️ پێشتر کاشەکە تەنها بەپێی پۆل بوو (`own`/`team`) و جۆرەکە
+        //    لە کڵاینتدا پاڵاو دەکرا بەسەر ئەو پەڕەیەدا کە بارکرابوو.
+        //    ئەنجام: چیپی «دەستکاری» دەیوت ٢٦ بەڵام لیستەکە تەنها ٢
+        //    ڕیزی پیشان دەدا — چونکە ژمارەکە لە داتابەیسەوە دەهات
+        //    بەڵام لیستەکە لە ٤٠ ڕیزی نوێترینەوە پاڵاو دەکرا.
+        //    بەکارهێنەرێک ٢٩ «دەستکاری»ی هەبوو و ٠یان لەو ٤٠ ڕیزەدا.
+        //
+        //    ئێستا پاڵاوتنەکە لەسەر سێرڤەرە (`p_kinds`، db/029)، بۆیە
+        //    هەر جۆرێک پەڕەکردنی خۆی و کۆتایی خۆی هەیە.
+        // ============================================================
+        let _notifCache = {};       // 'scope|kind' → ڕیزەکان
+
+        function notifKindsParam() {
+            const f = notifFilterOf(_notifKind);
+            return f.kinds || null;         // null = هەموو جۆرەکان
+        }
+
+        function notifKey(scope, kind) {
+            return scope + '|' + (kind === undefined ? _notifKind : kind);
+        }
+
+        // هەموو ئەو کاشانەی سەر بە ئەم پۆلەن — نیشانکردنی خوێندراو
+        // دەبێت هەموویان بگرێتەوە، نەک تەنها ئەوەی ئێستا دیارە
+        function notifKeysOf(scope) {
+            const pre = scope + '|';
+            return Object.keys(_notifCache).filter(k => k.indexOf(pre) === 0);
+        }
+
+        let _notifLoaded = {};      // هەمان کلیل
 
         // نەخوێندراوەکان بەپێی (پۆل → جۆر) — بۆ ژمارەی سەر چیپەکان.
         // بە یەک بانگی `my_notif_unread_by_kind` پڕ دەکرێتەوە (db/026)،
@@ -9951,13 +9982,6 @@
             return NOTIF_FILTERS[0];
         }
 
-        // ڕیزەکان پێشتر بە نوێترین‌بۆ‌کۆنترین لە سێرڤەرەوە دێن
-        // (`order by id desc`)، بۆیە لێرەدا تەنها پاڵاوتن دەکرێت
-        function notifApplyKind(list) {
-            const f = notifFilterOf(_notifKind);
-            if (!f.kinds) return list || [];
-            return (list || []).filter(n => f.kinds.indexOf(n.kind) !== -1);
-        }
 
         // ڕیزە کۆنەکان ئیمۆجییان لە سەرەتای ناونیشاندا هەیە (پێش
         // ئەوەی لە db/015 لابردرێن). لە هەندێک ئامێردا وەک چوارگۆشەی
@@ -10016,7 +10040,10 @@
         }
 
         function notifRowsHtml(list) {
-            const rows = notifApplyKind(list);
+            // ⚠️ پاڵاوتنی جۆر لێرە **ناکرێت** — سێرڤەر خۆی دەیکات
+            //    (`p_kinds`, db/029). پاڵاوتنی لێرە واتای ئەوە بوو کە
+            //    تەنها ئەو ڕیزانە دەبینران کە لە پەڕەی یەکەمدا بوون.
+            const rows = list || [];
             if (!rows.length) {
                 if (_notifKind !== 'all') {
                     return notifStateHtml('bx-filter-alt',
@@ -10083,34 +10110,37 @@
         let _notifDone = {}, _notifBusy = false;
 
         function notifListHtml(scope) {
-            const rows = _notifCache[scope] || [];
+            const key = notifKey(scope);
+            const rows = _notifCache[key] || [];
             return notifRowsHtml(rows)
-                + (_notifDone[scope] === false
+                + (_notifDone[key] === false
                     ? '<button type="button" class="tx-more" onclick="loadMoreNotifs()">'
                     + '<i class="bx bx-chevron-down"></i> ئاگاداری کۆنتر پیشان بدە</button>'
                     : '');
         }
 
         async function loadMoreNotifs() {
-            const scope = _notifTab;
-            if (_notifBusy || _notifDone[scope] !== false) return;
+            const scope = _notifTab, key = notifKey(scope);
+            if (_notifBusy || _notifDone[key] !== false) return;
             _notifBusy = true;
             txMoreSetBusy('#notif-list');
             const box = document.getElementById('notif-list');
             const keep = box ? box.scrollTop : 0;
             try {
-                const rows = _notifCache[scope] || [];
+                const rows = _notifCache[key] || [];
                 const { data, error } = await supabase.rpc('notifications_page', {
                     p_user_code: String(currentUser.code),
                     p_scope: scope,
                     p_limit: NOTIF_PAGE,
-                    p_before_id: rows.length ? rows[rows.length - 1].id : null
+                    p_before_id: rows.length ? rows[rows.length - 1].id : null,
+                    p_kinds: notifKindsParam()
                 });
                 if (error) throw error;
                 const page = data || [];
-                _notifCache[scope] = rows.concat(page);
-                _notifDone[scope] = page.length < NOTIF_PAGE;
-                if (_notifTab === scope && box) {
+                _notifCache[key] = rows.concat(page);
+                _notifDone[key] = page.length < NOTIF_PAGE;
+                // بەکارهێنەر لەوانەیە پۆل یان جۆری گۆڕیبێت لە کاتی هێنانەکەدا
+                if (notifKey(_notifTab) === key && box) {
                     box.innerHTML = notifListHtml(scope);
                     box.scrollTop = keep;
                 }
@@ -10125,11 +10155,12 @@
             const box = document.getElementById('notif-list');
             if (!box || !currentUser || !currentUser.code) return;
 
-            if (!force && _notifLoaded[scope]) {
+            const key = notifKey(scope);
+            if (!force && _notifLoaded[key]) {
                 if (_notifTab === scope) box.innerHTML = notifListHtml(scope);
                 return;
             }
-            if (_notifTab === scope && !(_notifCache[scope] || []).length) {
+            if (_notifTab === scope && !(_notifCache[key] || []).length) {
                 box.innerHTML = NOTIF_SKELETON;
             }
 
@@ -10137,14 +10168,16 @@
                 const { data, error } = await supabase.rpc('notifications_page', {
                     p_user_code: String(currentUser.code),
                     p_scope: scope,
-                    p_limit: NOTIF_PAGE
+                    p_limit: NOTIF_PAGE,
+                    p_before_id: null,
+                    p_kinds: notifKindsParam()
                 });
                 if (error) throw error;
-                _notifCache[scope] = data || [];
-                _notifDone[scope] = (data || []).length < NOTIF_PAGE;
-                _notifLoaded[scope] = true;
-                // لەوانەیە بەکارهێنەر تابەکەی گۆڕیبێت لە کاتی هێنانەکەدا
-                if (_notifTab === scope) box.innerHTML = notifListHtml(scope);
+                _notifCache[key] = data || [];
+                _notifDone[key] = (data || []).length < NOTIF_PAGE;
+                _notifLoaded[key] = true;
+                // لەوانەیە بەکارهێنەر پۆل/جۆری گۆڕیبێت لە کاتی هێنانەکەدا
+                if (notifKey(_notifTab) === key) box.innerHTML = notifListHtml(scope);
             } catch (e) {
                 console.warn('loadNotifications:', e);
                 if (_notifTab === scope) {
@@ -10207,8 +10240,13 @@
             _notifKindUnread[scope] = {};
             syncNotifBadge();
             renderNotifChips();
-            (_notifCache[scope] || []).forEach(n => {
-                if (!n.read_at) n.read_at = new Date().toISOString();
+            // ⚠️ هەموو کاشەکانی ئەم پۆلە، نەک تەنها ئەوەی ئێستا دیارە —
+            //    ئەگەرنا گەڕانەوە بۆ چیپێکی تر ڕیزە خوێندراوەکان
+            //    دووبارە وەک نوێ دەردەکەون
+            notifKeysOf(scope).forEach(k => {
+                (_notifCache[k] || []).forEach(n => {
+                    if (!n.read_at) n.read_at = new Date().toISOString();
+                });
             });
             const box = document.getElementById('notif-list');
             if (box && !keepHighlight && _notifTab === scope) {
@@ -10269,7 +10307,7 @@
 
         function renderNotifications() {
             const box = document.getElementById('notif-list');
-            if (box) box.innerHTML = notifRowsHtml(_notifCache[_notifTab]);
+            if (box) box.innerHTML = notifListHtml(_notifTab);
         }
 
         function notifSumKinds(m) {
@@ -10297,6 +10335,14 @@
                 return `<button type="button" class="notif-chip${f.k === _notifKind ? ' is-on' : ''}"
                     onclick="setNotifKind('${f.k}')">${f.t}${badge}</button>`;
             }).join('');
+
+            // ⚠️ `innerHTML` سکڕۆڵی ڕیزەکە سفر دەکاتەوە، و ئەم فەنکشنە
+            //    ئێستا لە هەر نیشانکردنێکدا بانگ دەکرێت — بەبێ ئەمە
+            //    چیپە چالاکەکە دەردەچێت لە دیدەوە.
+            //    `scrollIntoView` بەکارنایەت: پەڕەکەش بە درێژی
+            //    دەبزوێنێت. لێرەدا تەنها ئەم بۆکسە دەبزوێت.
+            const on = box.querySelector('.notif-chip.is-on');
+            if (on) box.scrollLeft = on.offsetLeft - (box.clientWidth - on.offsetWidth) / 2;
         }
 
         // یەک بانگ هەموو ژمارەکانی هەردوو پۆل دەهێنێت
@@ -10337,14 +10383,21 @@
             const nid = String(id || '');
             if (!nid || !currentUser || !currentUser.code) return;
 
+            // ⚠️ هەمان ئاگاداری لە چەند کاشێکدا هەیە («هەمووی» و
+            //    جۆرەکەی خۆی)، بۆیە **هەموو** وێنەکانی دەگۆڕدرێن —
+            //    ئەگەرنا گۆڕینی چیپ دووبارە وەک نەخوێندراو پیشانی دەدات
             let row = null, scope = _notifTab;
-            for (const s of ['own', 'team']) {
-                const hit = (_notifCache[s] || []).find(n => String(n.id) === nid);
-                if (hit) { row = hit; scope = s; break; }
-            }
+            const copies = [];
+            Object.keys(_notifCache).forEach(k => {
+                const hit = (_notifCache[k] || []).find(n => String(n.id) === nid);
+                if (!hit) return;
+                copies.push(hit);
+                if (!row) { row = hit; scope = k.split('|')[0]; }
+            });
             if (!row || row.read_at) return;      // پێشتر خوێندراوەتەوە
 
-            row.read_at = new Date().toISOString();
+            const now = new Date().toISOString();
+            copies.forEach(c => { c.read_at = now; });
             if (el) el.classList.remove('is-unread');
 
             // باجەکان یەکسەر کەم دەبنەوە
@@ -10372,9 +10425,13 @@
             if (_notifKind === k) return;
             _notifKind = k;
             renderNotifChips();
-            renderNotifications();
             const box = document.getElementById('notif-list');
             if (box) box.scrollTop = 0;   // پۆلی نوێ لە سەرەوە دەست پێدەکات
+            // ⚠️ **دەبێت** لە سێرڤەرەوە بهێنرێت. پاڵاوتنی ئەو ڕیزانەی
+            //    لە بیرگەدان تەنها ئەوانە دەبینێت کە لە پەڕەی یەکەمدان —
+            //    ئەوە خۆی ئەو بەگە بوو کە چیپەکەی ٢٦ دەنووسی و
+            //    لیستەکەی ٢ ڕیزی پیشان دەدا.
+            loadNotifications(_notifTab);
         }
 
         // ============================================================
@@ -11177,8 +11234,34 @@
             } catch (e) { console.warn('rtRefreshCounts:', e); }
         }
 
+        // ============================================================
+        // ناسنامەکان بۆ داواکارییەکی داتابەیس ئامادە دەکات
+        // ------------------------------------------------------------
+        // ⚠️ فلتەر **پێش** map — نەک بەپێچەوانەوە.
+        //    `String(null)` دەبێتە دەقی `'null'` کە **ڕاستە**، بۆیە
+        //    لە `.filter(Boolean)`ـدا دەرباز دەبێت و دەچێتە ناو
+        //    داواکارییەکەوە. پاشان Postgres هەموو داواکارییەکە
+        //    ڕەت دەکاتەوە:
+        //        invalid input syntax for type bigint: "null"
+        //
+        //    ئەمە خولی ١٠ ڕۆژەی جزدانی تێکدا (بڕوانە db/028) و
+        //    هەمان شێوە لە `rtPatchOrders` و `writePrintFields`ـیشدا
+        //    هەبوو. ئێستا هەموویان لێرەوە تێدەپەڕن.
+        // ============================================================
+        function toIdList(ids) {
+            const out = [], seen = Object.create(null);
+            (ids || []).forEach(v => {
+                if (v === null || v === undefined) return;
+                const s = String(v).trim();
+                if (!s || s === 'null' || s === 'undefined' || seen[s]) return;
+                seen[s] = 1;
+                out.push(s);
+            });
+            return out;
+        }
+
         async function rtPatchOrders(ids) {
-            const idList = Array.from(ids || []).map(String).filter(Boolean);
+            const idList = toIdList(ids);
             if (!idList.length) return;
 
             // داتاکە گۆڕاوە → کاشی تابەکانی بەڕێوەبردن کۆن بووە، و
@@ -11397,8 +11480,9 @@
                     // پانێڵەکە داخراوە → تەنها باجەکە بەسە
                     const nm = document.getElementById('notif-modal');
                     if (!nm || !nm.classList.contains('show')) return;
-                    _notifLoaded.own = false;
-                    _notifLoaded.team = false;
+                    // هەموو کاشەکان کۆن بوون — هەر جۆرێک لەوانەیە
+                    // ڕیزی نوێی هەبێت، نەک تەنها ئەوەی ئێستا دیارە
+                    _notifLoaded = {};
                     // شوێنی سکڕۆڵ دەپارێزرێت — ڕیزە نوێیەکان لە
                     // سەرەوە زیاد دەبن و نابێت بەکارهێنەر بجوڵێت
                     const nl = document.getElementById('notif-list');
@@ -11482,7 +11566,10 @@
         // نووسین لە داتابەیس + نوێکردنەوەی بیرگەی ناوخۆیی، تا ڕووکار
         // یەکسەر دۆخی نوێ نیشان بدات بەبێ چاوەڕوانی داواکارییەکی تر
         async function writePrintFields(ids, fields) {
-            const list = ids.map(String);
+            // ⚠️ ئەمە **نووسینە** — ناسنامەیەکی پووچ هەموو
+            //    نوێکردنەوەکە دەکوژێت. بڕوانە `toIdList`
+            const list = toIdList(ids);
+            if (!list.length) return;
             const { error } = await supabase.from('orders').update(fields).in('id', list);
             if (error) throw error;
             list.forEach(id => {
@@ -17481,38 +17568,38 @@
             return isNaN(d.getTime()) ? 0 : d.getTime();
         }
 
-        // بەرواری **دروستکردنی** ئۆردەرەکان — خولی چاوەڕوانی لێرەوە
-        // دەست پێدەکات، نەک لە کاتی گەیشتن
-        async function fetchOrderDates(ids) {
-            const out = new Map();
-            const list = Array.from(new Set((ids || []).map(String).filter(Boolean)));
-            if (!list.length) return out;
-            const CH = 300;
-            for (let i = 0; i < list.length; i += CH) {
-                const { data, error } = await supabase.from('orders')
-                    .select('id, date').in('id', list.slice(i, i + CH));
-                if (error) throw error;
-                (data || []).forEach(o => {
-                    const t = parseAppDate(o.date);
-                    if (t) out.set(String(o.id), t);
-                });
-            }
-            return out;
-        }
-
-        // جووڵەکان + بەرواری ئۆردەرەکانیان، پێکەوە
+        // ============================================================
+        // جووڵەکان + بەرواری تۆمارکردنی ئۆردەرەکانیان — یەک بانگ
+        // ------------------------------------------------------------
+        // ⚠️ پێشتر ئەمە دوو داواکاری بوو و جۆینەکە بە دەست لە
+        //    کڵاینتدا دەکرا. لیستی ناسنامەکان بەم شێوەیە دروست
+        //    دەکرا: `ids.map(String).filter(Boolean)` — و `map`
+        //    پێش `filter` بوو، بۆیە `null` (ڕیزی مووچە/پاداشت)
+        //    دەبووە دەقی `'null'` کە ڕاستە و دەرباز دەبوو.
+        //    داواکارییەکە دەکەوت بە:
+        //        invalid input syntax for type bigint: "null"
+        //    هەڵەکە بێدەنگ هەڵدەگیرا → **هەموو** بەروارەکان ون
+        //    دەبوون → خولی ١٠ ڕۆژە لە کاتی گەیشتنەوە دەستی
+        //    پێدەکردەوە. بڕوانە db/028.
+        //
+        //    ئێستا جۆینەکە لەسەر سێرڤەرە. هیچ لیستێکی ناسنامە
+        //    دروست ناکرێت، بۆیە ئەم جۆرە هەڵەیە ناتوانێت
+        //    دووبارە ببێتەوە.
+        // ============================================================
         async function fetchTxAndOrderDates(code) {
-            const txs = await fetchAllUserTx(code);
-            let dates = new Map();
-            try {
-                dates = await fetchOrderDates(txs.map(t => t.order_id));
-            } catch (e) {
-                // نەتوانرا بەروارەکان بهێنرێن → دەگەڕێتەوە بۆ ڕەفتاری
-                // کۆن (کاتی گەیشتن). ژمارەکان دەردەکەون، تەنها خولەکە
-                // دواتر دەست پێدەکات.
-                console.warn('fetchOrderDates:', e);
-            }
-            return { txs: txs, dates: dates };
+            const { data, error } = await supabase.rpc('wallet_tx_hold', {
+                p_user_code: String(code)
+            });
+            if (error) throw error;
+
+            const rows = data || [];
+            const dates = new Map();
+            rows.forEach(r => {
+                if (!r.order_id || !r.order_date) return;
+                const t = parseAppDate(r.order_date);
+                if (t) dates.set(String(r.order_id), t);
+            });
+            return { txs: rows, dates: dates };
         }
 
         function splitWalletByHold(txs, balance, savings, orderDates) {
@@ -17857,26 +17944,6 @@
             }
         }
 
-        // هەموو جووڵەکانی بەکارهێنەرێک — بە پەڕە پەڕە، چونکە Supabase
-        // بە بنەڕەت لە ١٠٠٠ ڕیز دەوەستێت و کۆکردنەوەی ناتەواو دەبێت
-        async function fetchAllUserTx(code) {
-            const PAGE = 1000;
-            let all = [], from = 0;
-            for (let i = 0; i < 50; i++) {          // سنوورێکی ئاسایش
-                const { data, error } = await supabase
-                    .from('transactions')
-                    .select('order_id, amount, wallet_type, type, created_at')
-                    .eq('user_code', code)
-                    .order('created_at', { ascending: true })
-                    .range(from, from + PAGE - 1);
-                if (error) throw error;
-                if (!data || !data.length) break;
-                all = all.concat(data);
-                if (data.length < PAGE) break;
-                from += PAGE;
-            }
-            return all;
-        }
 
         // دوو دێڕی وردی ژێر ژمارەکە — بەرزی کەم، چونکە بەشی دەستکاری
         // بەردەستی سنووردارە و هەرچی درێژتر بێت، دوگمەکانی خوارەوە
