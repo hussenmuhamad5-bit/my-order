@@ -1781,6 +1781,9 @@
             <div class="modal-header">
                 <h3 class="modal-title is-sm"><i class='bx bx-bell'></i> ئاگادارکردنەوەکان</h3>
                 <div class="modal-head-actions">
+                    <!-- تەنها بۆ پاشا و بەڕێوەبەر — بە JS پیشان دەدرێت -->
+                    <button class="modal-copy is-accent" id="notif-compose-btn" style="display:none;"
+                        title="ئاگاداری نوێ" onclick="openAnnounceCompose()"><i class='bx bx-plus'></i></button>
                     <button class="modal-copy" id="notif-readall-btn" title="هەمووی وەک خوێندراوە"
                         onclick="markNotifRead(_notifTab)"><i class='bx bx-check-double'></i></button>
                     <button class="modal-close" onclick="closeModal(null, 'notif-modal')"><i
@@ -1805,6 +1808,61 @@
             <div class="notif-chips" id="notif-chips"></div>
 
             <div class="notif-list" id="notif-list"></div>
+        </div>
+    </div>
+
+    <!-- ============================================================
+         نووسینی ئاگاداری — پاشا و بەڕێوەبەر
+         ⚠️ z-index لە پانێڵی ئاگاداری بەرزترە (2000)، چونکە
+            لەسەری دەکرێتەوە
+         ============================================================ -->
+    <div id="announce-compose-modal" class="modal-overlay" style="z-index: 2060;"
+        onclick="closeModal(event, 'announce-compose-modal')">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h3 class="modal-title is-sm"><i class='bx bx-broadcast'></i> ئاگادارییەکی نوێ</h3>
+                <div class="modal-head-actions">
+                    <button class="modal-close" onclick="closeModal(null, 'announce-compose-modal')">
+                        <i class='bx bx-x'></i></button>
+                </div>
+            </div>
+
+            <div class="anc-body">
+                <div class="anc-to" id="anc-to"></div>
+
+                <textarea id="anc-text" class="anc-text" rows="4" maxlength="1500"
+                    placeholder="چی دەتەوێت ئەندامەکان بیزانن؟"
+                    oninput="ancOnInput()"></textarea>
+                <div class="anc-count"><span id="anc-count">0</span> / 1500</div>
+
+                <div class="anc-imgs" id="anc-imgs"></div>
+
+                <label class="anc-add" id="anc-add">
+                    <i class='bx bx-image-add'></i> وێنە زیاد بکە
+                    <span class="anc-add-n" id="anc-add-n">0/3</span>
+                    <input type="file" accept="image/*" multiple hidden
+                        id="anc-file" onchange="ancPickImages(this)">
+                </label>
+            </div>
+
+            <button type="button" class="anc-send" id="anc-send" onclick="submitAnnouncement(this)">
+                <i class='bx bx-send'></i> ناردن
+            </button>
+        </div>
+    </div>
+
+    <!-- ============================================================
+         ئاگاداریی نەبینراو — خۆکارانە لە کاتی چوونەژوورەوە
+         ============================================================ -->
+    <div id="announce-popup-modal" class="modal-overlay" style="z-index: 2070;">
+        <div class="modal-content is-announce" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h3 class="modal-title is-sm"><i class='bx bx-broadcast'></i> ئاگاداری</h3>
+            </div>
+            <div class="anp-list" id="anp-list"></div>
+            <button type="button" class="anp-ok" onclick="closeAnnouncePopup()">
+                <i class='bx bx-check'></i> تێگەیشتم
+            </button>
         </div>
     </div>
 
@@ -3426,6 +3484,9 @@
 
             // بارکردنی سنووری تیم (ژێردەستەکان) بۆ جێبەجێکردنی مەودای دەسەڵاتەکان
             loadTeamScope();
+            // ئاگاداریی نەبینراو → پۆپ‌ئەپ. دواخراوە تاکو ڕووکارەکە
+            // سەرەتا بنەخشێنرێت — ئەگەرنا لەسەر شاشەیەکی بەتاڵ دەردەکەوێت
+            setTimeout(() => { try { checkUnreadAnnouncements(); } catch (e) { } }, 1200);
             // کۆدی کلیلە سڕاوەکان — بۆ نیشانەی «خاوەنەکەی سڕاوەتەوە» لەسەر ئۆردەرەکان
             refreshDeletedOwners();
 
@@ -8514,7 +8575,7 @@
             let html = '';
             entries.forEach(e => {
                 if (e.isSav) {
-                    html += oprofitRow('bx-piggy-bank', `پاشەکەوتی ${e.name}`, '', e.amount, 'is-savings');
+                    html += oprofitRow('bx-coin-stack', `پاشەکەوتی ${e.name}`, '', e.amount, 'is-savings');
                 } else if (e.isKing) {
                     html += oprofitRow('bx-crown', e.name, 'پاشا', e.amount, 'is-king');
                 } else {
@@ -9182,10 +9243,16 @@
             window.removeEventListener('scroll', closeReactPicker, true);
         }
 
-        function openReactPicker(cid, ev) {
+        // `fn` ناوی ئەو فەنکشنەیە کە بانگ دەکرێت — بۆیە هەڵبژێرەکە
+        // هەم بۆ کۆمێنت هەم بۆ ئاگاداری بەکاردێت بەبێ دووبارەکردنەوە
+        function openReactPicker(cid, ev, fn) {
             closeReactPicker();
-            const mineNow = (reactionsOf(cid).find(r =>
-                String(r.user_code) === String(currentUser.code)) || {}).emoji || '';
+            const isAnn = (fn === 'toggleAnnounceReaction');
+            const mineNow = isAnn
+                ? ((announceCache[String(cid)] || {}).my_emoji || '')
+                : ((reactionsOf(cid).find(r =>
+                    String(r.user_code) === String(currentUser.code)) || {}).emoji || '');
+            const call = fn || 'toggleReaction';
 
             const el = document.createElement('div');
             el.className = 'react-picker';
@@ -9194,7 +9261,7 @@
             el.innerHTML = REACT_EMOJIS.map((e, i) =>
                 '<button type="button" class="rp-btn' + (e === mineNow ? ' is-on' : '') + '"'
                 + ' style="--i:' + i + '"'
-                + ' onclick="toggleReaction(' + cid + ',\'' + e + '\'); closeReactPicker();">'
+                + ' onclick="' + call + '(' + Number(cid) + ',\'' + e + '\'); closeReactPicker();">'
                 + emojiHtml(e, 'rp-e') + '</button>').join('');
             document.body.appendChild(el);
 
@@ -9968,6 +10035,8 @@
         // حاڵەتە (ئۆردەرەکە دەبێتە «گەیشتووە»).
         const NOTIF_FILTERS = [
             { k: 'all', t: 'هەمووی', kinds: null },
+            // ئاگاداریی دەستی — لە پێشەوە، چونکە گرنگترینە
+            { k: 'announce', t: 'ئاگاداری', kinds: ['announce'] },
             { k: 'create', t: 'ئۆردەری نوێ', kinds: ['create'] },
             { k: 'status', t: 'گۆڕانی حاڵەت', kinds: ['status', 'distribute'] },
             { k: 'wallet', t: 'پارە', kinds: ['wallet'] },
@@ -10003,7 +10072,8 @@
             status: { icon: 'bx-transfer', color: '#8b5cf6' },
             distribute: { icon: 'bx-check-circle', color: '#10b981' },
             wallet: { icon: 'bx-wallet', color: '#10b981' },
-            comment: { icon: 'bx-message-rounded-dots', color: '#2481cc' }
+            comment: { icon: 'bx-message-rounded-dots', color: '#2481cc' },
+            announce: { icon: 'bx-broadcast', color: '#e11d48' }
         };
 
         // ئەندامی ئاسایی کەسی ژێردەست نییە → تابی تیمی بۆ نییە
@@ -10057,6 +10127,9 @@
                         'گۆڕانی حاڵەتی ئۆردەر، پارەی جزدان و کۆمێنتەکان لێرە کۆدەبنەوە');
             }
             return rows.map(n => {
+                // ئاگاداریی دەستی کارتێکی دەوڵەمەندە — دەق، وێنە، ڕیاکشن
+                if (n.kind === 'announce' && n.announce_id) return announceCardHtml(n);
+
                 const meta = NOTIF_KIND_META[n.kind] || { icon: 'bx-bell', color: '#64748b' };
                 // ناسنامەی ئۆردەر دەچێتە ناو onclickـەوە → تەنها پیت و ژمارە
                 const oid = String(n.order_id || '').replace(/[^0-9A-Za-z_-]/g, '');
@@ -10094,6 +10167,326 @@
                         </div>
                     </div>`;
             }).join('');
+        }
+
+        // ============================================================
+        // ئاگاداریی دەستی — تێبینی بۆ ئەندامەکان (db/030)
+        // ------------------------------------------------------------
+        //   پاشا      → هەموو بەکارهێنەران
+        //   بەڕێوەبەر → تەنها تیمی خۆی
+        //
+        // ⚠️ ئەم پشکنینە تەنها بۆ ڕووکارە. دەسەڵاتی ڕاستەقینە لە
+        //    `post_announcement`ـدایە — بەڕێوەبەرێک هەرگیز ناتوانێت
+        //    بۆ دەرەوەی تیمەکەی بنێرێت، تەنانەت ئەگەر کۆدی
+        //    کڵاینتیش بگۆڕێت.
+        // ============================================================
+        const ANNOUNCE_MAX_IMAGES = 3;
+        let announceCache = {};      // announce_id → ناوەڕۆک
+        let _ancFiles = [];          // وێنە هەڵبژێردراوەکان (پێش ناردن)
+        let _ancBusy = false;
+        let _anpShown = [];          // ئەوانەی لە پۆپ‌ئەپدا پیشان دران
+
+        function canPostAnnounce() {
+            const r = String(userRole || '').trim();
+            return r === 'پاشا' || r === 'بەڕێوەبەر';
+        }
+
+        // ---- هێنانی ناوەڕۆک بۆ ئەو ڕیزانەی لەم پەڕەیەدان ----
+        // یەک بانگ بۆ هەموو پەڕەکە، نەک یەک بانگ بۆ هەر ڕیزێک
+        async function loadAnnouncements(rows) {
+            const ids = toIdList((rows || [])
+                .filter(n => n.kind === 'announce')
+                .map(n => n.announce_id))
+                .filter(id => !announceCache[id]);
+            if (!ids.length) return;
+            try {
+                const { data, error } = await supabase.rpc('announcements_by_ids', {
+                    p_ids: ids.map(Number),
+                    p_user_code: String(currentUser.code)
+                });
+                if (error) throw error;
+                (data || []).forEach(a => { announceCache[String(a.id)] = a; });
+            } catch (e) { console.warn('loadAnnouncements:', e); }
+        }
+
+        function announceReactionsHtml(a) {
+            let list = [];
+            try { list = Array.isArray(a.reactions) ? a.reactions : JSON.parse(a.reactions || '[]'); }
+            catch (e) { list = []; }
+            const mine = a.my_emoji || '';
+            const chips = list.map(r =>
+                `<button type="button" class="anc-chip${r.emoji === mine ? ' is-mine' : ''}"
+                    onclick="event.stopPropagation(); toggleAnnounceReaction(${Number(a.id)}, '${histEsc(r.emoji)}')">`
+                // ⚠️ کلاسەکە پێویستە — `.chip-e.is-img` قەبارەی وێنەکە
+                //    دیاری دەکات. بەبێی، ئیمۆجییەکە بە قەبارەی ڕەسەن
+                //    (١٣٦px) دەردەکەوێت و کارتەکە تێکدەدات.
+                + emojiHtml(r.emoji, 'chip-e') + `<b dir="ltr">${Number(r.n) || 0}</b></button>`).join('');
+            return `<div class="anc-reacts">${chips}
+                <button type="button" class="anc-chip is-add"
+                    onclick="event.stopPropagation(); openAnnounceReactPicker(${Number(a.id)}, event)">
+                    <i class='bx bx-smile'></i></button></div>`;
+        }
+
+        function announceCardHtml(n) {
+            const a = announceCache[String(n.announce_id)];
+            const nid = String(n.id || '').replace(/[^0-9]/g, '');
+            // هێشتا نەهاتووە → کارتێکی سووک، دواتر خۆی پڕ دەبێتەوە
+            if (!a) {
+                return `<div class="notif-row is-announce${n.read_at ? '' : ' is-unread'}" data-ann="pending">
+                    <span class="notif-dot" style="background:#e11d481f; color:#e11d48;"><i class='bx bx-broadcast'></i></span>
+                    <div class="notif-body"><div class="notif-top"><b>${histEsc(notifCleanTitle(n.title))}</b></div>
+                    <div class="notif-detail">${histEsc(n.body || '')}</div></div></div>`;
+            }
+            const imgs = (a.images || []).map((u, i) =>
+                `<img src="${histEsc(u)}" alt="" loading="lazy"
+                    onclick="event.stopPropagation(); openAnnounceImage('${histEsc(u)}')">`).join('');
+            const canDel = String(a.author_code) === String(currentUser.code) || userRole === 'پاشا';
+            return `<div class="notif-row is-announce${n.read_at ? '' : ' is-unread'}"
+                    onclick="markOneNotifRead('${nid}', this)">
+                <div class="anc-card">
+                    <div class="anc-head">
+                        <span class="anc-ico"><i class='bx bx-broadcast'></i></span>
+                        <div class="anc-who">
+                            <b>${histEsc(firstNameOf(a.author_name) || a.author_code)}</b>
+                            <span>${histEsc(getRelativeTime(a.created_at))}</span>
+                        </div>
+                        ${canDel ? `<button type="button" class="anc-del" title="سڕینەوە"
+                            onclick="event.stopPropagation(); removeAnnouncement(${Number(a.id)})">
+                            <i class='bx bx-trash'></i></button>` : ''}
+                    </div>
+                    <div class="anc-text-view">${histEsc(a.body || '')}</div>
+                    ${imgs ? `<div class="anc-gallery is-n${(a.images || []).length}">${imgs}</div>` : ''}
+                    ${announceReactionsHtml(a)}
+                </div>
+            </div>`;
+        }
+
+        // ---- ڕیاکشن ----
+        function openAnnounceReactPicker(id, ev) {
+            openReactPicker(id, ev, 'toggleAnnounceReaction');
+        }
+
+        async function toggleAnnounceReaction(id, emoji) {
+            const a = announceCache[String(id)];
+            if (!a || !currentUser) return;
+            let list = [];
+            try { list = Array.isArray(a.reactions) ? a.reactions : JSON.parse(a.reactions || '[]'); }
+            catch (e) { list = []; }
+            const was = a.my_emoji || '';
+
+            // ڕووکار یەکسەر — پاشان سێرڤەر
+            const bump = (em, d) => {
+                const hit = list.find(r => r.emoji === em);
+                if (hit) { hit.n += d; if (hit.n <= 0) list = list.filter(r => r !== hit); }
+                else if (d > 0) list.push({ emoji: em, n: 1 });
+            };
+            if (was === emoji) { bump(emoji, -1); a.my_emoji = null; }
+            else { if (was) bump(was, -1); bump(emoji, 1); a.my_emoji = emoji; }
+            a.reactions = list;
+            renderNotifications();
+
+            try {
+                const { error } = await supabase.rpc('toggle_announcement_reaction', {
+                    p_announcement_id: Number(id),
+                    p_user_code: String(currentUser.code),
+                    p_emoji: String(emoji)
+                });
+                if (error) throw error;
+            } catch (e) {
+                console.warn('toggleAnnounceReaction:', e);
+                delete announceCache[String(id)];
+                await loadAnnouncements(_notifCache[notifKey(_notifTab)] || []);
+                renderNotifications();
+                showToast('نەتوانرا ڕیاکشنەکە تۆمار بکرێت', 'error');
+            }
+        }
+
+        function openAnnounceImage(url) {
+            // بینەری وێنەی ئێستا دووبارە بەکاردێت ئەگەر هەبوو
+            if (typeof openImageViewer === 'function') { openImageViewer(url); return; }
+            try { window.open(url, '_blank'); } catch (e) { }
+        }
+
+        // ---- نووسین ----
+        function openAnnounceCompose() {
+            if (!canPostAnnounce()) return;
+            _ancFiles = [];
+            const t = document.getElementById('anc-text');
+            if (t) t.value = '';
+            const to = document.getElementById('anc-to');
+            if (to) {
+                to.innerHTML = (userRole === 'پاشا')
+                    ? `<i class='bx bx-globe'></i> بۆ <b>هەموو بەکارهێنەرانی سیستەمەکە</b>`
+                    : `<i class='bx bx-group'></i> بۆ <b>تیمەکەی خۆت</b> — هەموو پلەکان`;
+            }
+            ancRenderImages();
+            ancOnInput();
+            document.getElementById('announce-compose-modal').classList.add('show');
+            setTimeout(() => { if (t) t.focus(); }, 120);
+        }
+
+        function ancOnInput() {
+            const t = document.getElementById('anc-text');
+            const c = document.getElementById('anc-count');
+            const b = document.getElementById('anc-send');
+            const n = t ? t.value.trim().length : 0;
+            if (c) c.textContent = String(n);
+            if (b) b.disabled = (n === 0 || _ancBusy);
+        }
+
+        function ancRenderImages() {
+            const box = document.getElementById('anc-imgs');
+            const n = document.getElementById('anc-add-n');
+            const add = document.getElementById('anc-add');
+            if (n) n.textContent = _ancFiles.length + '/' + ANNOUNCE_MAX_IMAGES;
+            if (add) add.classList.toggle('is-full', _ancFiles.length >= ANNOUNCE_MAX_IMAGES);
+            if (!box) return;
+            box.innerHTML = _ancFiles.map((f, i) =>
+                `<div class="anc-img"><img src="${f.url}" alt="">
+                    <button type="button" onclick="ancRemoveImage(${i})"><i class='bx bx-x'></i></button>
+                </div>`).join('');
+        }
+
+        function ancPickImages(input) {
+            const files = Array.from(input.files || []);
+            input.value = '';
+            const room = ANNOUNCE_MAX_IMAGES - _ancFiles.length;
+            if (room <= 0) { showToast('ئەوپەڕی ' + ANNOUNCE_MAX_IMAGES + ' وێنە', 'info'); return; }
+            files.slice(0, room).forEach(f => {
+                if (!/^image\//.test(f.type || '')) return;
+                _ancFiles.push({ file: f, url: URL.createObjectURL(f) });
+            });
+            if (files.length > room) showToast('تەنها ' + room + ' وێنەی تر جێگای هەبوو', 'info');
+            ancRenderImages();
+        }
+
+        function ancRemoveImage(i) {
+            const f = _ancFiles[i];
+            if (f && f.url) { try { URL.revokeObjectURL(f.url); } catch (e) { } }
+            _ancFiles.splice(i, 1);
+            ancRenderImages();
+        }
+
+        async function submitAnnouncement(btn) {
+            if (_ancBusy) return;
+            const t = document.getElementById('anc-text');
+            const body = t ? t.value.trim() : '';
+            if (!body) return;
+            if (!await ensureAccountActive()) return;
+
+            _ancBusy = true;
+            const old = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = `<i class='bx bx-loader-alt bx-spin'></i> خەریکی ناردنە...`;
+
+            try {
+                // وێنەکان: کۆمپرێس → ئاپلۆد. هەمان پایپلاینی ئۆردەرەکان.
+                const urls = [];
+                for (let i = 0; i < _ancFiles.length; i++) {
+                    btn.innerHTML = `<i class='bx bx-loader-alt bx-spin'></i> وێنەی ${i + 1} لە ${_ancFiles.length}...`;
+                    const blob = await compressImage(_ancFiles[i].file);
+                    urls.push(await uploadToSupabase(blob, _ancFiles[i].file.name || 'photo.jpg'));
+                }
+
+                btn.innerHTML = `<i class='bx bx-loader-alt bx-spin'></i> خەریکی ناردنە...`;
+                const { error } = await supabase.rpc('post_announcement', {
+                    p_author_code: String(currentUser.code),
+                    p_body: body,
+                    p_images: urls,
+                    p_audience: null          // ⚠️ سێرڤەر خۆی بڕیار دەدات
+                });
+                if (error) throw error;
+
+                _ancFiles.forEach(f => { try { URL.revokeObjectURL(f.url); } catch (e) { } });
+                _ancFiles = [];
+                closeModal(null, 'announce-compose-modal');
+                showToast('ئاگادارییەکە نێردرا', 'success');
+
+                _notifLoaded = {};
+                await loadNotifications(_notifTab, true);
+                refreshNotifKindCounts();
+            } catch (e) {
+                console.warn('submitAnnouncement:', e);
+                const m = String(e.message || '');
+                showToast(
+                    m.includes('NOT_ALLOWED') ? 'دەسەڵاتت نییە بۆ ناردنی ئاگاداری'
+                        : m.includes('TOO_MANY') ? 'ئەوپەڕی ٣ وێنە'
+                            : 'نەتوانرا بنێردرێت — دووبارە هەوڵبدەرەوە', 'error');
+            } finally {
+                _ancBusy = false;
+                btn.disabled = false;
+                btn.innerHTML = old;
+                ancOnInput();
+            }
+        }
+
+        async function removeAnnouncement(id) {
+            if (!confirm('ئەم ئاگادارییە بسڕدرێتەوە؟')) return;
+            try {
+                const { error } = await supabase.rpc('delete_announcement', {
+                    p_id: Number(id), p_user_code: String(currentUser.code)
+                });
+                if (error) throw error;
+                delete announceCache[String(id)];
+                _notifLoaded = {};
+                await loadNotifications(_notifTab, true);
+                refreshNotifKindCounts();
+                showToast('سڕایەوە', 'success');
+            } catch (e) {
+                console.warn('removeAnnouncement:', e);
+                showToast('نەتوانرا بسڕدرێتەوە', 'error');
+            }
+        }
+
+        // ============================================================
+        // پۆپ‌ئەپی خۆکاری — کاتێک دێیتە ژوورەوە
+        // ------------------------------------------------------------
+        // ئەوانەی هێشتا نەبینراون یەکسەر دەردەکەون. دوای «تێگەیشتم»
+        // بە خوێندراوە نیشان دەکرێن، بەڵام لە بەشی ئاگاداریدا
+        // دەمێننەوە تاکو دواتر بیانبینێتەوە.
+        // ============================================================
+        async function checkUnreadAnnouncements() {
+            if (!currentUser || !currentUser.code) return;
+            try {
+                const { data, error } = await supabase.rpc('my_unread_announcements', {
+                    p_user_code: String(currentUser.code)
+                });
+                if (error) throw error;
+                const rows = data || [];
+                if (!rows.length) return;
+
+                rows.forEach(a => { announceCache[String(a.id)] = a; });
+                _anpShown = rows.map(a => String(a.notif_id));
+
+                const box = document.getElementById('anp-list');
+                if (!box) return;
+                box.innerHTML = rows.map(a => {
+                    const imgs = (a.images || []).map(u =>
+                        `<img src="${histEsc(u)}" alt="" loading="lazy"
+                            onclick="openAnnounceImage('${histEsc(u)}')">`).join('');
+                    return `<div class="anp-item">
+                        <div class="anc-head">
+                            <span class="anc-ico"><i class='bx bx-broadcast'></i></span>
+                            <div class="anc-who">
+                                <b>${histEsc(firstNameOf(a.author_name) || a.author_code)}</b>
+                                <span>${histEsc(getRelativeTime(a.created_at))}</span>
+                            </div>
+                        </div>
+                        <div class="anc-text-view">${histEsc(a.body || '')}</div>
+                        ${imgs ? `<div class="anc-gallery is-n${(a.images || []).length}">${imgs}</div>` : ''}
+                    </div>`;
+                }).join('');
+
+                document.getElementById('announce-popup-modal').classList.add('show');
+            } catch (e) { console.warn('checkUnreadAnnouncements:', e); }
+        }
+
+        function closeAnnouncePopup() {
+            document.getElementById('announce-popup-modal').classList.remove('show');
+            // ⚠️ یەک بە یەک نیشان دەکرێن — `markOneNotifRead` باجەکان و
+            //    چیپەکانیش نوێ دەکاتەوە، بۆیە دەستکاری زیادە ناوێت
+            _anpShown.forEach(nid => { markOneNotifRead(nid, null); });
+            _anpShown = [];
         }
 
         // ============================================================
@@ -10137,6 +10530,8 @@
                 });
                 if (error) throw error;
                 const page = data || [];
+                // ناوەڕۆکی ئاگاداریەکان — یەک بانگ بۆ هەموو پەڕەکە
+                await loadAnnouncements(page);
                 _notifCache[key] = rows.concat(page);
                 _notifDone[key] = page.length < NOTIF_PAGE;
                 // بەکارهێنەر لەوانەیە پۆل یان جۆری گۆڕیبێت لە کاتی هێنانەکەدا
@@ -10173,6 +10568,7 @@
                     p_kinds: notifKindsParam()
                 });
                 if (error) throw error;
+                await loadAnnouncements(data || []);
                 _notifCache[key] = data || [];
                 _notifDone[key] = (data || []).length < NOTIF_PAGE;
                 _notifLoaded[key] = true;
@@ -10288,6 +10684,10 @@
             if (!canTeam) _notifTab = 'own';
             if (ownBtn) ownBtn.classList.toggle('active', _notifTab === 'own');
             if (teamBtn) teamBtn.classList.toggle('active', _notifTab === 'team');
+
+            // دوگمەی نووسین — تەنها پاشا و بەڕێوەبەر
+            const cb = document.getElementById('notif-compose-btn');
+            if (cb) cb.style.display = canPostAnnounce() ? '' : 'none';
 
             renderNotifChips();
             m.classList.add('show');
