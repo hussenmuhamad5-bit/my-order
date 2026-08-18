@@ -11423,9 +11423,12 @@
         //   opts.react = ڕیاکشنەکان
         function announceBodyHtml(a, opts) {
             opts = opts || {};
-            const imgs = (a.images || []).map(u =>
+            // ⚠️ ناسنامە + ژمارە دەنێردرێن، نەک لینکەکە — بەوە بینەرەکە
+            //    هەموو وێنەکانی ئاگادارییەکە وەردەگرێت و دەتوانیت
+            //    بیانخشێنیت، ڕێک وەک وێنەی کاڵاکانی ئۆردەر.
+            const imgs = (a.images || []).map((u, i) =>
                 `<img src="${histEsc(u)}" alt="" loading="lazy"
-                    onclick="event.stopPropagation(); openAnnounceImage('${histEsc(u)}')">`).join('');
+                    onclick="event.stopPropagation(); openAnnounceImage(${Number(a.id)}, ${i})">`).join('');
             // نووسەرەکەی یان پاشا — هەمان پارێزەری `delete_announcement`
             // و `edit_announcement`. ⚠️ ڕووکارە؛ یاسا ڕاستەقینەکە لە SQLـدایە.
             const canManage = opts.manage && currentUser
@@ -11636,10 +11639,16 @@
             box.innerHTML = html;
         }
 
-        function openAnnounceImage(url) {
-            // بینەری وێنەی ئێستا دووبارە بەکاردێت ئەگەر هەبوو
-            if (typeof openImageViewer === 'function') { openImageViewer(url); return; }
-            try { window.open(url, '_blank'); } catch (e) { }
+        // ⚠️ پێشتر `openImageViewer`ی بانگ دەکرد — فەنکشنێک کە
+        //    **بوونی نییە** — بۆیە هەمیشە دەکەوتە پاشەکشەکەی و
+        //    وێنەکە لە تابێکی نوێدا دەکرایەوە. ناوی ڕاست
+        //    `openImageGallery(images, i)`ـە، هەمان ئەوەی
+        //    وێنەی کاڵاکانی ئۆردەر بەکاری دەهێنێت.
+        function openAnnounceImage(id, i) {
+            const a = announceCache[String(id)];
+            const imgs = (a && a.images) || [];
+            if (!imgs.length) return;
+            openImageGallery(imgs, Number(i) || 0);
         }
 
         // ---- نووسین ----
