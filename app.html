@@ -10370,7 +10370,8 @@
         const RANK_PAGE = 30;
         // `scope` ئێستا هەڵبژاردەی بەکارهێنەرە، نەک دەرئەنجامی ڕۆڵ
         let _rank = { metric: 'points', period: 'week', scope: 'team', rows: [], me: null,
-                      total: 0, busy: false, hasTeam: true };
+                      total: 0, busy: false, hasTeam: true,
+                      ahead: null, chaser: null, leader: null };
         // دۆخی تابی ئامارەکان: هی خۆم / تیمەکەم
         let _statsMode = 'me';
         // ⚠️ ئەو کلیلەی **ئێستا لە DOMـدایە**. بەبێ ئەمە هەر
@@ -10400,7 +10401,33 @@
             return ['پاشا', 'بەڕێوەبەر', 'سەرپەرشت', 'ڕاوێژکار'].indexOf(userRole) !== -1;
         }
 
+        // ============================================================
+        // دۆخە بنەڕەتییەکانی شاشەی ئامار — یەک جار، لە یەکەم کردنەوەدا
+        // ------------------------------------------------------------
+        //  پلەکان    · ئەندام → «هەمووی» (تابلۆی گشتی، نەک تەنها تیمەکەی)
+        //              ئەوانی تر → «تیمەکەم»
+        //  ئامارەکان · هەرکەسێک سوێچی تیمی هەبێت → دۆخی تیم
+        //              (پاشا «هەمووی» دەبینێت، بەڕێوەبەر «تیمەکەم»)
+        //              ئەندام → «هی خۆم»، چونکە سوێچەکەی نییە
+        //
+        // ⚠️ لێرەدا `userRole` بەکاردێت نەک `canTeamMode()` — ئەوی
+        //    دووەم `_statsCacheT['me']`ـی دەوێت، کە لەم ساتەدا هێشتا
+        //    نەهاتووە. هەمان لیستی پلەی پاشەکشەی `canTeamMode`.
+        // ⚠️ **یەک جار.** ئەگەر لە هەر کردنەوەیەکدا دابنرێتەوە،
+        //    هەڵبژاردەی بەکارهێنەر لە هەر گەڕانەوەیەکدا دەسڕدرێتەوە.
+        // ============================================================
+        const SX_TEAM_ROLES = ['پاشا', 'بەڕێوەبەر', 'سەرپەرشت', 'ڕاوێژکار'];
+        let _sxDefaultsDone = false;
+
+        function sxApplyDefaults() {
+            if (_sxDefaultsDone || !currentUser) return;
+            _sxDefaultsDone = true;
+            _rank.scope = (userRole === 'ئەندام') ? 'all' : 'team';
+            _statsMode = (SX_TEAM_ROLES.indexOf(userRole) !== -1) ? 'team' : 'me';
+        }
+
         function openStatsScreen() {
+            sxApplyDefaults();
             requestAnimationFrame(() =>
                 syncMagicSlider(document.getElementById('stats-magic-tabs'), false));
             if (_statsTab === 'stats') loadStats();
@@ -11077,6 +11104,12 @@
                     });
                     if (error) throw error;
                     d = data;
+                    // ⚠️ کاش دەکرێت — ئەگەرنا `canTeamMode()` هەرگیز
+                    //    `can_team`ی سێرڤەر نابینێت و دەکەوێتە
+                    //    پاشەکشەی لیستی پلە. ئێستا کە دۆخی بنەڕەتی
+                    //    «تیم»ـە، شاشەی ئامار لەوانەیە هەرگیز
+                    //    `me` نەهێنێت، بۆیە ئەمە تاکە سەرچاوەیە.
+                    if (d) _statsCacheT['me'] = d;
                 }
                 const pts = Number((d.alltime || {}).points) || 0;
                 const lv = statsLevelOf(pts);
@@ -11197,10 +11230,13 @@
                 if (c) {
                     _rank.rows = c.rows; _rank.me = c.me;
                     _rank.total = c.total; _rank.hasTeam = c.hasTeam;
+                    _rank.ahead = c.ahead; _rank.chaser = c.chaser; _rank.leader = c.leader;
                     renderRank();
                     return;
                 }
-                _rank.rows = []; _rank.me = null; _rank.total = 0; renderRank(true);
+                _rank.rows = []; _rank.me = null; _rank.total = 0;
+                _rank.ahead = null; _rank.chaser = null; _rank.leader = null;
+                renderRank(true);
             }
             _rank.busy = true;
             const box = document.getElementById('rank-pane');
@@ -11216,13 +11252,19 @@
                 if (error) throw error;
                 _rank.rows = _rank.rows.concat(data.rows || []);
                 _rank.me = data.me || null;
+                // کێبڕکێ: ئەوەی سەرەوەم، ئەوەی دوامەوە، و یەکەم (db/040)
+                _rank.ahead = data.ahead || null;
+                _rank.chaser = data.chaser || null;
+                _rank.leader = data.leader || null;
                 _rank.total = Number(data.total) || 0;
                 _rank.scope = data.scope || 'team';
                 _rank.hasTeam = data.has_team !== false;
                 // ئەنجامەکە خەزن دەکرێت — «زیاتر پیشان بدە»یش
                 // لێرەدا کۆدەبێتەوە، بۆیە گەڕانەوە هەموویان دەهێنێت
                 _rankCache[rankKey()] = { rows: _rank.rows, me: _rank.me,
-                                          total: _rank.total, hasTeam: _rank.hasTeam };
+                                          total: _rank.total, hasTeam: _rank.hasTeam,
+                                          ahead: _rank.ahead, chaser: _rank.chaser,
+                                          leader: _rank.leader };
                 // ⚠️ busy پێش نەخشاندن لادەبرێت — renderRank «هێنانی
                 //    پلەکان...» پیشان دەدات کاتێک busy && !rows، واتە
                 //    ئەنجامێکی بەتاڵ («ئەمڕۆ» بەیانی) بۆ هەمیشە لە
@@ -11275,6 +11317,108 @@
                 + '</div>';
         }
 
+        // ============================================================
+        // کارتی «شوێنی تۆ» — جەرگەی پێشبڕکێیەکە
+        // ------------------------------------------------------------
+        // مرۆڤ بە ژمارەی کۆتایی هان نادرێت، بە **مەودای نزیک** هان
+        // دەدرێت: «٤٣ خاڵت ماوە بۆ ئەوەی ئيلاف ببەزێنیت» کارێکە
+        // دەکرێت، بەڵام «١,٠٢٤ خاڵ» تەنها ژمارەیەکە.
+        //
+        // سێ ئاست:
+        //   ١. ئامانجی نزیک — ئەوەی ڕاست لە سەرەوەتە + شریتی مەودا
+        //   ٢. پەستان       — ئەوەی دوامەوەیە، چەند نزیکە
+        //   ٣. ئامانجی کۆتایی — پلەی یەکەم
+        //
+        // ⚠️ ناوی شاراوەکان: `name` لە سێرڤەرەوە `null` دەگەڕێتەوە
+        //    (`rank_display_name`). هەرگیز مەیدۆزەوە — «کەسێک»
+        //    دەنووسرێت. بڕوانە [[permissions-hierarchy]].
+        // ============================================================
+        function rankRivalName(x) {
+            return (x && x.name) ? histEsc(firstNameOf(x.name) || x.name) : 'کەسێک';
+        }
+
+        function rankGapHtml(n) {
+            return '<bdi dir="ltr">' + Math.round(Math.abs(Number(n) || 0)).toLocaleString('en-US')
+                + '</bdi> ' + rankUnitOf(_rank.metric);
+        }
+
+        function rankUnitOf(metric) {
+            return metric === 'points' ? 'خاڵ' : metric === 'orders' ? 'ئۆردەر' : 'د.ع';
+        }
+
+        function rankHeroHtml() {
+            const me = _rank.me;
+            // هێشتا لە ڕیزبەندیدا نییە — هانێکی جیاوازی دەوێت
+            if (!me) {
+                return '<div class="rkhero is-out">'
+                    + '<span class="rkhero-ico"><i class="bx bx-run"></i></span>'
+                    + '<div><b>هێشتا لە ڕیزبەندیدا نیت</b>'
+                    + '<span>یەکەم ئۆردەری گەیشتووت دەتخاتە ناو تابلۆکەوە</span></div></div>';
+            }
+
+            const rank = Number(me.rank) || 0;
+            const ahead = _rank.ahead, chaser = _rank.chaser, leader = _rank.leader;
+            const isFirst = rank === 1;
+            const gap = ahead ? (Number(ahead.value) - Number(me.value)) : 0;
+
+            // ---- بانەری هان ----
+            let call, tone;
+            if (isFirst) {
+                tone = 'is-crown';
+                call = chaser
+                    ? '<b>تۆ لە سەرەوەیت 👑</b> — ' + rankGapHtml(Number(me.value) - Number(chaser.value))
+                    + ' پێشترت لە ' + rankRivalName(chaser) + '. بیپارێزە.'
+                    : '<b>تۆ لە سەرەوەیت 👑</b>';
+            } else if (rank <= 3) {
+                tone = 'is-close';
+                call = 'تەنها <b>' + rankGapHtml(gap) + '</b>ت ماوە بۆ <b>پلەی یەکەم</b>!';
+            } else {
+                tone = '';
+                call = '<b>' + rankGapHtml(gap) + '</b>ت ماوە بۆ ئەوەی <b>'
+                    + rankRivalName(ahead) + '</b> ببەزێنیت';
+            }
+
+            // ---- شریتی مەودا: من بەرامبەر ئەوەی سەرەوەم ----
+            // ⚠️ ڕێژەکە بەرامبەر ئەوەی سەرەوەمە، نەک بەرامبەر یەکەم —
+            //    ئامانجی نزیک ئەوەیە کە دەکرێت، و شریتێکی نزیکی پڕ
+            //    هاندەرترە لە شریتێکی هەمیشە بەتاڵ.
+            const pct = (ahead && Number(ahead.value) > 0)
+                ? Math.max(4, Math.min(100, Number(me.value) / Number(ahead.value) * 100))
+                : 100;
+
+            let html = '<div class="rkhero ' + tone + '">'
+                + '<div class="rkhero-top">'
+                + '<span class="rkhero-rank"><small>#</small><b>' + rank + '</b></span>'
+                + '<div class="rkhero-who"><b>پلەی تۆ</b>'
+                + '<span>لە <bdi dir="ltr">' + (Number(_rank.total) || 0) + '</bdi> کەس · '
+                + rankValueHtml(me.value, _rank.metric) + '</span></div>'
+                + (isFirst ? '<span class="rkhero-crown"><i class="bx bxs-crown"></i></span>' : '')
+                + '</div>'
+                + '<div class="rkhero-call">' + call + '</div>';
+
+            if (ahead) {
+                html += '<div class="rkhero-bar"><div style="width:' + pct.toFixed(1) + '%;"></div>'
+                    + '<span class="rkhero-tgt"><i class="bx bx-up-arrow-alt"></i> '
+                    + rankRivalName(ahead) + '</span></div>';
+            }
+
+            // ---- ئامانجی کۆتایی + پەستانی دواوە ----
+            let feet = '';
+            if (leader && !isFirst) {
+                feet += '<span><i class="bx bxs-trophy"></i> یەکەم: <b>'
+                    + rankRivalName(leader) + '</b> · ' + rankValueHtml(leader.value, _rank.metric)
+                    + '</span>';
+            }
+            if (chaser && !isFirst) {
+                feet += '<span class="is-warn"><i class="bx bx-walk"></i> <b>'
+                    + rankRivalName(chaser) + '</b> تەنها '
+                    + rankGapHtml(Number(me.value) - Number(chaser.value)) + ' لە دواتەوەیە</span>';
+            }
+            if (feet) html += '<div class="rkhero-feet">' + feet + '</div>';
+
+            return html + '</div>';
+        }
+
         function renderRank(loadingOnly) {
             const box = document.getElementById('rank-pane');
             if (!box) return;
@@ -11309,6 +11453,9 @@
                 return;
             }
 
+            // ---- کارتی «شوێنی تۆ» — لە سەرەوەی هەموو شتێک ----
+            html += rankHeroHtml();
+
             // ---- پۆدیۆم — تەنها کاتێک لە سەرەتاوەین و ٣+ کەس هەیە ----
             const podium = (_rank.rows[0] && _rank.rows[0].rank === 1 && _rank.rows.length >= 3)
                 ? _rank.rows.slice(0, 3) : null;
@@ -11322,6 +11469,7 @@
                     return '<div class="sx-pod' + (place === 0 ? ' is-first' : '') + (me ? ' is-me' : '')
                         + '"' + (canDrillStats() && !me && r.code
                             ? ' onclick="openMemberStats(\'' + histEsc(String(r.code)) + '\')"' : '') + '>'
+                        + (place === 0 ? '<span class="sx-pod-crown"><i class="bx bxs-crown"></i></span>' : '')
                         + '<span class="sx-pod-medal" style="color:' + medal[place] + ';">'
                         + '<i class="bx bxs-medal"></i><b>' + r.rank + '</b></span>'
                         + (r.name == null
