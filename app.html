@@ -11426,15 +11426,21 @@
             const imgs = (a.images || []).map(u =>
                 `<img src="${histEsc(u)}" alt="" loading="lazy"
                     onclick="event.stopPropagation(); openAnnounceImage('${histEsc(u)}')">`).join('');
-            const canDel = opts.del && currentUser
+            // نووسەرەکەی یان پاشا — هەمان پارێزەری `delete_announcement`
+            // و `edit_announcement`. ⚠️ ڕووکارە؛ یاسا ڕاستەقینەکە لە SQLـدایە.
+            const canManage = opts.manage && currentUser
                 && (String(a.author_code) === String(currentUser.code) || userRole === 'پاشا');
             return `<div class="anc-head">
                     <span class="anc-ico"><i class='bx bx-broadcast'></i></span>
                     <div class="anc-who">
                         <b>${histEsc(firstNameOf(a.author_name) || a.author_code)}</b>
-                        <span>${histEsc(getRelativeTime(a.created_at))}</span>
+                        <span>${histEsc(getRelativeTime(a.created_at))}${a.edited_at
+                    ? ' · دەستکاریکراوە' : ''}</span>
                     </div>
-                    ${canDel ? `<button type="button" class="anc-del" title="سڕینەوە"
+                    ${canManage ? `<button type="button" class="anc-del is-edit" title="دەستکاری"
+                        onclick="event.stopPropagation(); openAnnounceEdit(${Number(a.id)})">
+                        <i class='bx bx-edit'></i></button>
+                        <button type="button" class="anc-del" title="سڕینەوە"
                         onclick="event.stopPropagation(); removeAnnouncement(${Number(a.id)})">
                         <i class='bx bx-trash'></i></button>` : ''}
                 </div>
@@ -11471,7 +11477,7 @@
             }
             return `<div class="notif-row is-announce${n.read_at ? '' : ' is-unread'}"
                     onclick="openAnnounceFromRow(${Number(a.id)}, '${nid}', this)">
-                <div class="anc-card">${announceBodyHtml(a, { del: true, react: true })}</div>
+                <div class="anc-card">${announceBodyHtml(a, { manage: true, react: true })}</div>
             </div>`;
         }
 
@@ -11637,8 +11643,14 @@
         }
 
         // ---- نووسین ----
+        // ⚠️ `null` = ناردنی نوێ · ژمارە = دەستکاریی ئەو ئاگادارییە.
+        //    هەمان مۆداڵ بۆ هەردووکیان — دوو مۆداڵی جیاواز واتای
+        //    دوو نەخشێنەر و دووبارە هەمان داوی «پۆپ‌ئەپ ڕیاکشنی نەبوو».
+        let _ancEditId = null;
+
         function openAnnounceCompose() {
             if (!canPostAnnounce()) return;
+            _ancEditId = null;
             _ancFiles = [];
             const t = document.getElementById('anc-text');
             if (t) t.value = '';
@@ -11648,6 +11660,41 @@
                     ? `<i class='bx bx-globe'></i> بۆ <b>هەموو بەکارهێنەرانی سیستەمەکە</b>`
                     : `<i class='bx bx-group'></i> بۆ <b>تیمەکەی خۆت</b> — هەموو پلەکان`;
             }
+            ancSetMode();
+            ancRenderImages();
+            ancOnInput();
+            document.getElementById('announce-compose-modal').classList.add('show');
+            setTimeout(() => { if (t) t.focus(); }, 120);
+        }
+
+        // سەردێڕ و دوگمەی مۆداڵەکە بەپێی دۆخ
+        function ancSetMode() {
+            const ttl = document.querySelector('#announce-compose-modal .modal-title');
+            const btn = document.getElementById('anc-send');
+            const edit = _ancEditId !== null;
+            if (ttl) ttl.innerHTML = edit
+                ? `<i class='bx bx-edit'></i> دەستکاریی ئاگاداری`
+                : `<i class='bx bx-broadcast'></i> ئاگاداریی نوێ`;
+            if (btn) btn.innerHTML = edit
+                ? `<i class='bx bx-check'></i> پاشەکەوتکردن`
+                : `<i class='bx bx-send'></i> ناردن`;
+        }
+
+        async function openAnnounceEdit(id) {
+            const a = announceCache[String(id)];
+            if (!a || !currentUser) return;
+            _ancEditId = Number(id);
+            _ancFiles = [];               // ⚠️ وێنە کۆنەکان دەمێننەوە
+            const t = document.getElementById('anc-text');
+            if (t) t.value = a.body || '';
+            const to = document.getElementById('anc-to');
+            if (to) {
+                const n = (a.images || []).length;
+                to.innerHTML = `<i class='bx bx-info-circle'></i> `
+                    + (n ? `<b>${n} وێنە</b>ی ئێستا دەمێنێتەوە` : 'تەنها دەقەکە دەگۆڕدرێت')
+                    + ` — مەودای ناردن ناگۆڕدرێت`;
+            }
+            ancSetMode();
             ancRenderImages();
             ancOnInput();
             document.getElementById('announce-compose-modal').classList.add('show');
@@ -11718,18 +11765,35 @@
                 }
 
                 btn.innerHTML = `<i class='bx bx-loader-alt bx-spin'></i> خەریکی ناردنە...`;
-                const { error } = await supabase.rpc('post_announcement', {
-                    p_author_code: String(currentUser.code),
-                    p_body: body,
-                    p_images: urls,
-                    p_audience: null          // ⚠️ سێرڤەر خۆی بڕیار دەدات
-                });
-                if (error) throw error;
+                if (_ancEditId !== null) {
+                    // ⚠️ `p_images: null` = وێنە کۆنەکان وەک خۆیان.
+                    //    تەنها ئەگەر وێنەی نوێ زیادکرابێت دەگۆڕدرێن.
+                    const { error } = await supabase.rpc('edit_announcement', {
+                        p_id: _ancEditId,
+                        p_user_code: String(currentUser.code),
+                        p_body: body,
+                        p_images: urls.length ? urls : null
+                    });
+                    if (error) throw error;
+                    // کاشەکە دەبێت بسڕدرێتەوە — ئەگەرنا دەقی کۆن دەمێنێتەوە
+                    delete announceCache[String(_ancEditId)];
+                } else {
+                    const { error } = await supabase.rpc('post_announcement', {
+                        p_author_code: String(currentUser.code),
+                        p_body: body,
+                        p_images: urls,
+                        p_audience: null          // ⚠️ سێرڤەر خۆی بڕیار دەدات
+                    });
+                    if (error) throw error;
+                }
 
+                const wasEdit = _ancEditId !== null;
+                _ancEditId = null;
                 _ancFiles.forEach(f => { try { URL.revokeObjectURL(f.url); } catch (e) { } });
                 _ancFiles = [];
                 closeModal(null, 'announce-compose-modal');
-                showToast('ئاگادارییەکە نێردرا', 'success');
+                closeAnnouncePopup();
+                showToast(wasEdit ? 'گۆڕانکارییەکە پاشەکەوت کرا' : 'ئاگادارییەکە نێردرا', 'success');
 
                 _notifLoaded = {};
                 await loadNotifications(_notifTab, true);
@@ -11793,7 +11857,7 @@
             if (!rows.length) return false;
             _anpIds = rows.map(a => String(a.id));
             box.innerHTML = rows.map(a =>
-                `<div class="anp-item">${announceBodyHtml(a, { react: true })}</div>`).join('');
+                `<div class="anp-item">${announceBodyHtml(a, { manage: true, react: true })}</div>`).join('');
             document.getElementById('announce-popup-modal').classList.add('show');
             return true;
         }
