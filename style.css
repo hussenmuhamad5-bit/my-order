@@ -10567,17 +10567,10 @@ body.sx-wide {
     font-size: 10px;
   }
 
-  .sx-kpi {
-    padding: 16px 18px;
-  }
-
-  .sx-kpi b {
-    font-size: 20px;
-  }
-
-  .sx-kpi span {
-    font-size: 12px;
-  }
+  /* ⚠️ یاساکانی `.sx-kpi` لێرە نین — بۆ خوارەوە گوێزراونەتەوە،
+     دوای یاسا بنەڕەتییەکانیان. مێدیا کوێری تایبەتمەندیی زیاتری
+     نییە، بۆیە ئەگەر لێرە بن ڕیزبەندیی سەرچاوە دەیانبەزێنێت و
+     بێ‌کار دەبن (هەمان دۆخی `.sx-bento`، سەیری تێبینییەکەی بکە). */
 
   .sx-level,
   .sx-scope-all {
@@ -11128,32 +11121,19 @@ body.sx-wide {
   box-sizing: border-box;
 }
 
+/* ⚠️ خانەکانی ناوەوە `.sx-kpi.is-sm`ـن — هەمان پۆلی خوارەوە.
+   شێوازیان لە بەشی «خانەی ئامار»ەوە دێت، لێرە هیچ دووبارە
+   ناکرێتەوە؛ ئەگەرنا دووبارە دوو شێوازی جیاواز دروست دەبن. */
+/* ⚠️ `auto-flow: column` نەک `repeat(3,…)` — کاتێک قازانج شاراوەیە
+   تەنها دوو خانە دەمێنێتەوە، و بە ڕیزی ڕەق ستوونی سێیەم بەتاڵ
+   دەمایەوە. بەم شێوەیە هەرچەند خانە هەبێت بە یەکسانی دابەش دەبن. */
 .sx-scope-all {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
   gap: 8px;
   margin-bottom: 10px;
   align-content: center;
-}
-
-.sx-scope-all > div {
-  padding: 10px 8px;
-  border: 1px solid #e9edf3;
-  border-radius: 13px;
-  background: #fff;
-  text-align: center;
-}
-
-.sx-scope-all span {
-  display: block;
-  font-size: 10px;
-  color: #94a3b8;
-  margin-bottom: 4px;
-}
-
-.sx-scope-all b {
-  font-size: 15px;
-  color: var(--text-main);
 }
 
 /* ═══ گریدی بەنتۆ ═══
@@ -11292,14 +11272,50 @@ body.sx-wide {
   font-size: 12px;
   color: var(--text-main);
   overflow: hidden;
-  text-overflow: ellipsis;
   white-space: nowrap;
   animation: sx-tip-in .5s ease-out;
+}
+
+/* سێ‌خاڵ تەنها کاتێک مانشێتەکە ناجوڵێت (ئەنیمەیشن لابراوە) */
+.sx-tip-txt:not(.is-mq) {
+  text-overflow: ellipsis;
+}
+
+/* ⚠️ ئەمە ئەوەیە کە دەجوڵێت؛ `.sx-tip-txt` تەنها پەنجەرەکەیە.
+   دەبێت `inline-block` بێت — ئەگەرنا `scrollWidth` سفر دەداتەوە
+   و پێوانەکە هەڵە دەبێت. */
+.sx-tip-run {
+  display: inline-block;
+  white-space: nowrap;
+  will-change: transform;
+}
+
+/* ═══ مانشێت — وەک شریتی تەلەڤیزیۆن ═══
+   ⚠️ دەقەکە RTLـە، بۆیە بەشە شاراوەکەی لای **چەپە**. بۆ دەرخستنی
+      دەبێت بەرەو **ڕاست** بجوڵێت. `translateX` هەمیشە فیزیکییە —
+      لە RTLـدا ناپێچرێتەوە، بۆیە `--mq` هەمیشە ئەرێنییە.
+   ڕێژەکان لەگەڵ `SX_MQ_MOVE`ی ناو `app.html` بەستراونەتەوە:
+      ١٢→٤٥٪ و ٥٧→٩٠٪ = ٣٣٪ی خولەکە جوڵەیە. ئەگەر ئێرە بگۆڕیت،
+      ئەوێش بگۆڕە، ئەگەرنا خێراییەکە لەگەڵ درێژی دەق دەگۆڕێت. */
+.sx-tip-txt.is-mq .sx-tip-run {
+  animation: sx-mq var(--mqd, 9s) linear infinite;
+}
+
+@keyframes sx-mq {
+  0%, 12%   { transform: translateX(0); }
+  45%, 57%  { transform: translateX(var(--mq, 0px)); }
+  90%, 100% { transform: translateX(0); }
 }
 
 @keyframes sx-tip-in {
   from { opacity: 0; transform: translateY(8px); }
   to   { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sx-tip-txt.is-mq .sx-tip-run {
+    animation: none;
+  }
 }
 
 .sx-tip-dots {
@@ -11569,25 +11585,77 @@ body.sx-wide {
   margin-bottom: 10px;
 }
 
+/* ═══ خانەی ئامار — یەک شێواز بۆ هەموو ژمارەکان ═══
+   هەم کۆی گشتیی سەرەوە (`.sx-scope-all`) هەم KPIـی مانگانە هەمان
+   پۆل بەکاردەهێنن، تاکو لە سەرانسەری شاشەکەدا یەک ڕیتم هەبێت.
+
+   ⚠️ گرید بەکاردێت، نەک `position:absolute` بۆ چیپی گۆڕان. بەو شێوەیە
+      چیپەکە ستوونی خۆی هەیە و ناونیشانەکان لە هەموو خانەکاندا
+      هاوتەریب دەبن — تەنانەت لەو خانانەشدا کە چیپیان نییە
+      (پێشتر `padding-inline-end:42px` هەمیشە دانرابوو، بۆیە
+      ناونیشانی «گەڕاوە» بێ‌هۆکار پاڵ‌نراوە دەردەکەوت).
+   ⚠️ `min-height` + `align-content:space-between` وا دەکات ژمارەکان
+      لە هەموو خانەکاندا لەسەر یەک هێڵ بن، چ ناونیشان کورت بێت چ درێژ. */
 .sx-kpi {
-  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "lbl delta"
+    "val val";
+  align-content: space-between;
+  /* ⚠️ `column-gap: 0` بە ئەنقەست — بۆشاییەکی ستوونی هەمیشە
+     دادەنرێت، تەنانەت لەو خانانەشدا کە چیپی گۆڕانیان نییە،
+     بۆیە ناونیشانەکەیان بێ‌هۆکار تەسک دەبێتەوە و دەشکێتەوە.
+     لەبری ئەوە `margin`ێک لەسەر خودی چیپەکە دادەنرێت. */
+  row-gap: 6px;
+  column-gap: 0;
+  min-height: 68px;
+  box-sizing: border-box;
   padding: 11px 12px;
   border: 1px solid #e9edf3;
-  border-radius: 13px;
+  border-radius: 14px;
   background: #fff;
 }
 
+/* هەموو خانەکانی یەک ڕیز یەک بەرزییان هەیە، تەنانەت ئەگەر
+   ناونیشانێک بۆ دوو دێڕ بشکێتەوە */
+.sx-bento > .sx-kpi {
+  align-self: stretch;
+}
+
+/* ناونیشانی بەش — «ئەم مانگە» یەک جار لە سەرەوە، نەک لە هەر
+   خانەیەکدا دووبارە.
+   ⚠️ ئەمە تەنها جوانکاری نییە: کاتێک «· ئەم مانگە» لە ناونیشانی
+      هەر خانەیەکدا بوو، تەنها ئەوانەی چیپی گۆڕانیان هەبوو بۆ دوو
+      دێڕ دەشکانەوە (٩٨px دەیویست، ٨٣px بەردەست بوو) و ئەوەی
+      چیپی نەبوو نەدەشکایەوە — بۆیە خانەکان لە یەکتر نەدەچوون. */
+.sx-sec {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 2px 2px -2px;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #64748b;
+}
+
+.sx-sec i {
+  font-size: 14px;
+  color: var(--primary);
+}
+
 .sx-kpi > span:first-child {
-  display: block;
+  grid-area: lbl;
   font-size: 10.5px;
+  line-height: 1.35;
   color: #94a3b8;
-  margin-bottom: 5px;
-  /* چیپی گۆڕان لە گۆشەکەدایە — بۆشایی بۆی دەهێڵدرێتەوە */
-  padding-inline-end: 42px;
 }
 
 .sx-kpi b {
-  font-size: 14.5px;
+  grid-area: val;
+  font-size: 15px;
+  line-height: 1.2;
   color: var(--text-main);
 }
 
@@ -11595,15 +11663,27 @@ body.sx-wide {
   color: #d97706;
 }
 
+/* هەمان خانە، بەڵام سێ لە ڕیزێکدا (کۆی گشتی) — تەنها ناونیشان
+   بچووکتر دەبێتەوە تاکو بێ بڕین بگونجێت */
+.sx-kpi.is-sm {
+  padding: 10px;
+}
+
+.sx-kpi.is-sm > span:first-child {
+  font-size: 9.5px;
+}
+
 .sx-delta {
-  position: absolute;
-  top: 9px;
-  inset-inline-end: 10px;
+  grid-area: delta;
+  align-self: start;
+  justify-self: end;
   display: inline-flex;
   align-items: center;
+  margin-inline-start: 8px;
   gap: 2px;
   font-size: 10px;
   font-weight: 800;
+  line-height: 1.35;
   color: #94a3b8;
 }
 
@@ -11613,6 +11693,39 @@ body.sx-wide {
 
 .sx-delta.is-down {
   color: #ef4444;
+}
+
+/* ⚠️ ئەم بلۆکە **دەبێت** لێرە بێت — دوای یاسا بنەڕەتییەکانی
+   `.sx-kpi`. پێشتر لەگەڵ بلۆکی گەورەی ٧٢٠pxدا لە سەرەوە بوو،
+   بەڵام مێدیا کوێری تایبەتمەندیی زیاتری نییە، بۆیە یاسا
+   بنەڕەتییەکانی خوارەوە دەیانبەزاند و بە تەواوی بێ‌کار بوون. */
+@media (min-width: 720px) {
+  .sx-kpi {
+    padding: 16px 18px;
+    min-height: 92px;
+  }
+
+  .sx-kpi b {
+    font-size: 20px;
+  }
+
+  /* ⚠️ `> span:first-child` — نەک `span`ی گشتی، ئەگەرنا چیپی
+     گۆڕانیش گەورە دەبێت و لەگەڵ ناونیشانەکە تێکەڵ دەبێت */
+  .sx-kpi > span:first-child {
+    font-size: 12px;
+  }
+
+  .sx-kpi.is-sm {
+    padding: 14px 15px;
+  }
+
+  .sx-kpi.is-sm > span:first-child {
+    font-size: 11.5px;
+  }
+
+  .sx-delta {
+    font-size: 11.5px;
+  }
 }
 
 /* ---- کارتە گشتییەکان ---- */
@@ -14557,4 +14670,281 @@ body.sx-wide {
   display: block;
   object-fit: contain;
   pointer-events: none;
+}
+
+/* ═══ ئاماری ئاگاداری — کێ بینیویەتی، کێ ڕیاکشنی کردووە (db/037) ═══
+   ⚠️ چیپەکە تەنها کاتێک دەردەکەوێت کە `seen_n` سفر یان زیاتر بێت.
+      بۆ ئەندام سێرڤەر `null` دەگەڕێنێتەوە، بۆیە هیچ دەرناکەوێت. */
+.anc-seen {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  margin-top: 9px;
+  padding: 7px 10px;
+  border: 1px dashed #cbd5e1;
+  border-radius: 11px;
+  background: #f8fafc;
+  font-family: inherit;
+  font-size: 11.5px;
+  color: #475569;
+  cursor: pointer;
+  transition: background .15s, border-color .15s;
+}
+
+.anc-seen b {
+  font-weight: 800;
+  color: var(--text-main);
+}
+
+.anc-seen > i:first-child {
+  font-size: 15px;
+  color: var(--primary);
+}
+
+/* ئایکۆنی کۆتایی بۆ لای کۆتایی پاڵ دەنرێت — RTL، بۆیە `auto`ی
+   سەرەتا نەک کۆتایی */
+.anc-seen > i:last-child {
+  margin-inline-start: auto;
+  font-size: 16px;
+  color: #94a3b8;
+}
+
+.anc-seen:active {
+  background: #f1f5f9;
+  border-color: var(--primary);
+}
+
+.modal-content.is-anst {
+  max-height: 82vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.anst-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+}
+
+.anst-body::-webkit-scrollbar {
+  display: none;
+}
+
+.anst-top {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 9px;
+  margin-bottom: 10px;
+}
+
+/* هەمان شێوازی خانەکانی ئامار (`.sx-kpi`) — یەک ڕیتم */
+.anst-kpi {
+  min-height: 78px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 11px 12px;
+  border: 1px solid #e9edf3;
+  border-radius: 14px;
+  background: #fff;
+}
+
+.anst-kpi > span {
+  font-size: 10.5px;
+  line-height: 1.35;
+  color: #94a3b8;
+}
+
+.anst-kpi > b {
+  font-size: 17px;
+  line-height: 1.2;
+  color: var(--text-main);
+}
+
+.anst-kpi > b small {
+  font-size: 11px;
+  font-weight: 600;
+  color: #94a3b8;
+}
+
+.anst-bar {
+  margin-top: auto;
+  height: 5px;
+  border-radius: 3px;
+  background: #eef2f7;
+  overflow: hidden;
+}
+
+.anst-bar > div {
+  height: 100%;
+  border-radius: 3px;
+  background: var(--primary);
+  transition: width .35s cubic-bezier(.22, 1, .36, 1);
+}
+
+.anst-emos {
+  margin-top: auto;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.anst-emos span {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10.5px;
+  font-weight: 700;
+  color: #64748b;
+}
+
+.anst-e {
+  width: 15px;
+  height: 15px;
+}
+
+.anst-tabs {
+  margin-bottom: 8px;
+}
+
+.anst-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.anst-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 2px;
+}
+
+.anst-row + .anst-row {
+  border-top: 1px solid #f1f5f9;
+}
+
+.anst-mid {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.3;
+  min-width: 0;
+  flex: 1;
+}
+
+.anst-mid b {
+  font-size: 13px;
+  color: var(--text-main);
+}
+
+.anst-mid span {
+  font-size: 10.5px;
+  color: #94a3b8;
+}
+
+.anst-emo {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 9px;
+  background: #f1f5f9;
+}
+
+/* ═══ بەشی نوقاو لە زانیاری ئۆردەر — بۆ ئۆردەری گەیشتوو ═══
+   هەنگاوەکانی گەیاندن و کاڵاکان و وێنەکان بۆ ئۆردەرێکی گەیشتوو
+   زانیاریی تەواوکراون. داخراو دەمێننەوە تا دەستی لێبدرێت.
+   ⚠️ هیچ زانیارییەک لانەبردراوە — سەردێڕەکە دەڵێت چی لەناوییەتی. */
+.odet-fold {
+  margin-bottom: 9px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #f8fafc;
+  overflow: hidden;
+}
+
+.odet-fold-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 11px 12px;
+  border: 0;
+  background: transparent;
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #475569;
+  cursor: pointer;
+  transition: background .15s;
+}
+
+.odet-fold-btn:active {
+  background: #eef2f7;
+}
+
+.odet-fold-t {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-main);
+}
+
+.odet-fold-t i {
+  font-size: 16px;
+  color: var(--primary);
+}
+
+.odet-fold-btn small {
+  font-size: 11px;
+  color: #94a3b8;
+  font-weight: 600;
+}
+
+/* ئایکۆنی تیر بۆ لای کۆتایی — RTL، بۆیە `margin-inline-start: auto` */
+.odet-fold-arrow {
+  margin-inline-start: auto;
+  font-size: 20px;
+  color: #94a3b8;
+  transition: transform .22s cubic-bezier(.22, 1, .36, 1);
+}
+
+.odet-fold.is-open .odet-fold-arrow {
+  transform: rotate(180deg);
+}
+
+/* ⚠️ `display:none` نەک `max-height` — بەرزییەکی نەزانراوی
+   دینامیکی هەیە (چوار هەنگاو + n کاڵا + n وێنە)، و
+   `max-height`ێکی هەڵە ناوەڕۆکەکە دەبڕێت. */
+.odet-fold-body {
+  display: none;
+  padding: 0 10px 10px;
+}
+
+.odet-fold.is-open .odet-fold-body {
+  display: block;
+  animation: odet-fold-in .28s cubic-bezier(.22, 1, .36, 1) both;
+}
+
+@keyframes odet-fold-in {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .odet-fold.is-open .odet-fold-body { animation: none; }
+  .odet-fold-arrow { transition: none; }
+}
+
+/* کارتی هەنگاوەکان لەناو بەشی نوقاودا بۆردەری خۆی ناوێت —
+   بۆردەری دەرەکییەکە هەیە */
+.odet-fold-body .osteps-card {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  margin-bottom: 10px;
 }

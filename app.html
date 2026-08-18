@@ -1916,6 +1916,22 @@
         </div>
     </div>
 
+    <!-- ئاماری ئاگاداری — کێ بینیویەتی، کێ ڕیاکشنی کردووە.
+         z-index لە پۆپ‌ئەپی ئاگاداری (٢٠٧٠) بەرزترە چونکە لەسەری
+         دەکرێتەوە، بەڵام لە هەڵبژێری ئیمۆجی (٢٢٠٠) نزمترە. -->
+    <div id="announce-stats-modal" class="modal-overlay" style="z-index: 2090;"
+        onclick="closeModal(event, 'announce-stats-modal')">
+        <div class="modal-content is-anst" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h3 class="modal-title is-sm"><i class='bx bx-bar-chart-square'></i> کێ بینیویەتی</h3>
+                <button class="modal-close" onclick="closeModal(null, 'announce-stats-modal')">
+                    <i class='bx bx-x'></i>
+                </button>
+            </div>
+            <div class="anst-body" id="anst-body"></div>
+        </div>
+    </div>
+
     <div id="order-details-modal" class="modal-overlay" style="z-index: 2050;"
         onclick="closeModal(event, 'order-details-modal')">
         <div class="modal-content" onclick="event.stopPropagation()">
@@ -8184,6 +8200,59 @@
             }
         }
 
+        // ============================================================
+        // ڕیزێکی زانیاری — تەنها ئەگەر نرخێکی ڕاستەقینەی هەبێت
+        // ------------------------------------------------------------
+        // ⚠️ خانەیەکی بەتاڵ کە «-» یان «نییە» پیشان بدات **هیچ**
+        //    زانیارییەک زیاد ناکات، تەنها درێژی پەڕەکە زیاد دەکات.
+        //    بەڵام ئەگەر نرخێک هەبوو، هەرگیز ناشاردرێتەوە — ئەمە
+        //    ڕێکخستنە، نەک کەمکردنی زانیاری.
+        // `opts.raw` = نرخەکە HTMLـە، وەک خۆی دەنووسرێت
+        // `opts.dir` = ئاراستەی نرخەکە (`ltr` بۆ ژمارە)
+        // ============================================================
+        function detailRow(icon, label, value, opts) {
+            opts = opts || {};
+            const v = (value === null || value === undefined) ? '' : String(value).trim();
+            if (!v) return '';
+            const style = opts.dir === 'ltr' ? ' dir="ltr" style="text-align:right;"' : '';
+            return `<div class="detail-row">
+                <span class="detail-label"><i class='bx ${icon}'></i> ${label}</span>
+                <div class="detail-value"${style}>${opts.raw ? v : histEsc(v)}</div>
+            </div>`;
+        }
+
+        // ============================================================
+        // بەشێکی نوقاو — بۆ ئۆردەری گەیشتوو
+        // ------------------------------------------------------------
+        // کاتێک ئۆردەرێک گەیشتووە، هەنگاوەکانی گەیاندن و کاڵاکان و
+        // وێنەکان زانیاریی تەواوکراون — پێویست نییە هەموو جارێک
+        // شاشەکە پڕ بکەن. لێرەدا نوقاو دەکرێن.
+        // ⚠️ **هیچ زانیارییەک لانەبردراوە.** سەردێڕەکە دەڵێت چی
+        //    لەناوییەتی (چەند کاڵا، چەند وێنە)، و یەک دەستلێدان
+        //    هەمووی دەکاتەوە. بڕوانە یاسای «پەڕەکردن، نەک بڕین».
+        // ============================================================
+        function odetFoldHtml(meta, inner) {
+            if (!inner) return '';
+            return `<div class="odet-fold">
+                <button type="button" class="odet-fold-btn" onclick="toggleOrderFold(this)">
+                    <span class="odet-fold-t"><i class='bx bx-layer'></i> هەنگاوەکان و کاڵاکان</span>
+                    ${meta ? `<small>${histEsc(meta)}</small>` : ''}
+                    <i class='bx bx-chevron-down odet-fold-arrow'></i>
+                </button>
+                <div class="odet-fold-body">${inner}</div>
+            </div>`;
+        }
+
+        function toggleOrderFold(btn) {
+            const box = btn && btn.closest('.odet-fold');
+            if (!box) return;
+            const open = box.classList.toggle('is-open');
+            // ⚠️ هێڵی هەنگاوەکان بە پێوانە دادەنرێت، و کاتێک
+            //    شاراوە بوو پێوانەکە سفرە — بۆیە دوای کردنەوە
+            //    دووبارە دادەنرێتەوە
+            if (open) requestAnimationFrame(() => { try { layoutOrderSteps(); } catch (e) { } });
+        }
+
         async function openOrderDetails(orderId) {
             // مۆدی پشکنین: دەیپارێزین تا لە `closeModal`دا نیشان بکرێت
             _reviewOpenId = String(orderId);
@@ -8218,6 +8287,11 @@
 
             // --- گۆڕانکاری سەرەکی لێرەدایە (چارەسەری وێنەکان بە زیرەکی) ---
             let imgHtml = "";
+            // ⚠️ ژمارەی وێنەکان لێرەدا هەڵدەگیرێت، **نەک** لە
+            //    `window.__galleryDetailImages`ـەوە — ئەوە گلۆباڵە و
+            //    وێنەکانی ئۆردەری پێشووی تێدا دەمێنێتەوە، بۆیە
+            //    ئۆردەرێکی بێ وێنە ژمارەی ئەوی پێشووی دەگرت.
+            let nImgs = 0;
             let safeImageUrl = o.image_url ? String(o.image_url) : "";
 
             if (safeImageUrl.trim() !== "" && safeImageUrl !== "null" && safeImageUrl !== "undefined") {
@@ -8226,6 +8300,7 @@
 
                 if (urls.length > 0) {
                     window.__galleryDetailImages = urls;
+                    nImgs = urls.length;
                     let thumbHtml = urls.map((u, i) => `<img src="${u}" style="width: 75px; height: 75px; object-fit: cover; border-radius: 10px; margin: 4px; cursor: pointer; border: 2px solid #cbd5e1; box-shadow: 0 2px 5px rgba(0,0,0,0.1);" onclick="openImageGallery(window.__galleryDetailImages, ${i})">`).join('');
 
                     imgHtml = `
@@ -8240,7 +8315,10 @@
             // -----------------------------------------------------------
 
             let socialsObj = { "1": "ڤایبەر", "2": "واتسئاپ", "3": "تێلیگرام" };
-            let sNames = (o.socials || "").split('').map(n => socialsObj[n]).filter(Boolean).join(' - ') || "نییە";
+            // ⚠️ بێ پاشەکشەی «نییە» — ئەگەر بەتاڵ بوو، `detailRow`
+            //    خۆی ڕیزەکە لادەبات. پاشەکشەیەکی دەقی وا دەکات ڕیزەکە
+            //    هەمیشە دەربکەوێت و هیچیش نەڵێت.
+            let sNames = (o.socials || "").split('').map(n => socialsObj[n]).filter(Boolean).join(' - ');
 
             let names = (o.item_names || "").split('\n');
             let qtys = (o.item_qtys || "").split('\n');
@@ -8440,41 +8518,43 @@
             `;
             }
 
-            b.innerHTML = `
-            ${sellerInfoPlaceholder}
-            ${orderStepsHtml(o)}
-            ${printBoxHtml(o)}
-            ${reasonInfoHtml}
-            <div class="detail-row">
-                <span class="detail-label"><i class='bx bx-user'></i> ناوی کڕیار</span>
-                <div class="detail-value">${o.customer_name || "-"}</div>
-            </div>
-            <div class="detail-row">
-                <span class="detail-label"><i class='bx bx-phone'></i> مۆبایلەکان</span>
-                <div class="detail-value" dir="ltr" style="text-align: right;">${o.phone1 || ""} <br> ${o.phone2 || ""}</div>
-            </div>
-            <div class="detail-row">
-                <span class="detail-label"><i class='bx bx-map'></i> ناونیشانی تەواو</span>
-                <div class="detail-value">${o.address || "-"}</div>
-            </div>
-            <div class="detail-row">
+            // ---- مۆبایلەکان: تەنها ئەوانەی هەن ----
+            // ⚠️ پێشتر `${phone1} <br> ${phone2}` بوو، بۆیە کاتێک
+            //    ژمارەی دووەم نەبوو دێڕێکی بەتاڵ بەجێدەما.
+            const phones = [o.phone1, o.phone2]
+                .map(x => String(x || '').trim()).filter(Boolean);
+
+            // ---- کاڵاکان + دیاری + وێنەکان ----
+            const itemsRowHtml = `<div class="detail-row">
                 <span class="detail-label"><i class='bx bx-package'></i> کاڵاکان بە وردی</span>
                 ${itemsHtml}
-            </div>
-            ${giftHtml}
-            ${imgHtml}
-            <div class="detail-row">
-                <span class="detail-label"><i class='bx bx-chat'></i> سۆشیاڵ میدیا</span>
-                <div class="detail-value">${sNames}</div>
-            </div>
-            <div class="detail-row">
-                <span class="detail-label"><i class='bx bx-note'></i> تێبینی کڕیار</span>
-                <div class="detail-value">${o.notes || "هیچ تێبینییەک نییە."}</div>
-            </div>
-            <div class="detail-row">
-                <span class="detail-label"><i class='bx bx-time-five'></i> کاتی داواکاری</span>
-                <div class="detail-value" dir="ltr" style="text-align:right;">${formatDateTimeKurdish(o.date || o.created_at)}</div>
-            </div>
+            </div>`;
+            const goodsHtml = itemsRowHtml + giftHtml + imgHtml;
+
+            // ---- ئۆردەری گەیشتوو: هەنگاوەکان و کاڵاکان نوقاو دەبن ----
+            // داواکاریی خاوەنەکە: ئۆردەرێکی گەیشتوو کارەکەی تەواوە،
+            // بۆیە ئەم بەشانە بە بنەڕەت داخراون. «گەڕاوەتەوە» ناگرێتەوە —
+            // لەوێدا هەنگاوەکان و هۆکاری گەڕانەوە هێشتا پێویستن.
+            const isDeliveredOnly = /گەیشت/.test(String(o.status || ''));
+            const nItems = names.filter(x => String(x || '').trim()).length;
+            const foldMeta = [
+                nItems ? nItems + ' کاڵا' : '',
+                nImgs ? nImgs + ' وێنە' : ''
+            ].filter(Boolean).join(' · ');
+
+            b.innerHTML = `
+            ${sellerInfoPlaceholder}
+            ${isDeliveredOnly ? '' : orderStepsHtml(o)}
+            ${printBoxHtml(o)}
+            ${reasonInfoHtml}
+            ${detailRow('bx-user', 'ناوی کڕیار', o.customer_name)}
+            ${detailRow('bx-phone', 'مۆبایلەکان', phones.join('<br>'), { raw: true, dir: 'ltr' })}
+            ${detailRow('bx-map', 'ناونیشانی تەواو', o.address)}
+            ${isDeliveredOnly ? odetFoldHtml(foldMeta, orderStepsHtml(o) + goodsHtml) : goodsHtml}
+            ${detailRow('bx-chat', 'سۆشیاڵ میدیا', sNames)}
+            ${detailRow('bx-note', 'تێبینی کڕیار', o.notes)}
+            ${detailRow('bx-time-five', 'کاتی داواکاری',
+                formatDateTimeKurdish(o.date || o.created_at), { dir: 'ltr' })}
             ${orderMoneyBoxHtml(o, detailProfit)}
             ${profitSplitHtml}
             ${changerInfoHtml}
@@ -10091,10 +10171,16 @@
         // پۆلەکانی پەڕەکە. «گۆڕانی حاڵەت» هەردوو `status` و
         // `distribute` دەگرێتەوە — دابەشکردنی قازانج خۆی گۆڕانێکی
         // حاڵەتە (ئۆردەرەکە دەبێتە «گەیشتووە»).
+        // ⚠️ `ownOnly` — ئاگاداری هەمیشە بە `scope='own'` تۆمار دەکرێت
+        //    (`post_announcement`)، و `notifications_page` بە
+        //    `n.scope = p_scope`ـی ڕەق پاڵاوتن دەکات. بۆیە ئەم چیپە
+        //    لەژێر «تیمەکەم»دا **هەرگیز** ناتوانێت شتێکی تێدابێت —
+        //    پیشاندانی تەنها کوێچەیەکی داخراوە.
+        //    پێوانەکراو لەسەر بەرهەم: هەر ٥٢٧ ڕیزی ئاگاداری `own`ـن.
         const NOTIF_FILTERS = [
             { k: 'all', t: 'هەمووی', kinds: null },
             // ئاگاداریی دەستی — لە پێشەوە، چونکە گرنگترینە
-            { k: 'announce', t: 'ئاگاداری', kinds: ['announce'] },
+            { k: 'announce', t: 'ئاگاداری', kinds: ['announce'], ownOnly: true },
             { k: 'create', t: 'ئۆردەری نوێ', kinds: ['create'] },
             { k: 'status', t: 'گۆڕانی حاڵەت', kinds: ['status', 'distribute'] },
             { k: 'wallet', t: 'پارە', kinds: ['wallet'] },
@@ -10344,6 +10430,20 @@
         }
         function sxMoney(v) {
             return '<bdi dir="ltr">' + Math.round(Number(v) || 0).toLocaleString('en-US') + '</bdi> د.ع';
+        }
+        // هەمان شێوە بەڵام بە ژمارەی کورتکراوە — بۆ خانە تەسکەکان
+        function sxShortMoney(v) {
+            return '<bdi dir="ltr">' + sxShort(v) + '</bdi> د.ع';
+        }
+        // ⚠️ خانەی ئامار — **یەک** شێوە بۆ سەرەوە و خوارەوە. هەر
+        //    شوێنێک ژمارەیەکی ناونیشانکراو پیشان دەدات دەبێت لێرەوە
+        //    بێت، ئەگەرنا دووبارە شێوازی جیاواز دروست دەبێت.
+        //    `extra` = چیپی گۆڕان (`sx-delta`)، `attr` = دواخستنی
+        //    هاتنە ژوورەوە (`rise()`).
+        function sxTile(lbl, val, cls, extra, attr) {
+            return '<div class="sx-kpi' + (cls ? ' ' + cls : '') + '"' + (attr || '') + '>'
+                + '<span>' + lbl + '</span><b>' + val + '</b>'
+                + (extra || '') + '</div>';
         }
 
         // گۆڕانکاری بەرامبەر مانگی پێشوو — چیپی سەوز/سوور
@@ -10596,6 +10696,36 @@
             return out;
         }
 
+        // ---- مانشێت: ئەگەر دەقەکە نەگونجا، بجوڵێت تا هەمووی دەربکەوێت ----
+        // دەقەکە RTLـە، بۆیە بەشە شاراوەکەی لای **چەپە**. بۆ دەرخستنی
+        // بەرەو **ڕاست** دەجوڵێت، لەوێ دەوەستێت، پاشان دەگەڕێتەوە —
+        // هیچ وشەیەک نابڕدرێت و سێ‌خاڵیش نامێنێتەوە.
+        // دەگەڕێتەوە: درێژیی خولەکە بە میلی‌چرکە (٠ = پێویستی بە جوڵە نییە).
+        const SX_MQ_PXPS = 34;   // خێرایی — px لە چرکەیەکدا
+        const SX_MQ_MOVE = .33;  // ⚠️ ڕێژەی خولەکە کە جوڵەیە — دەبێت
+        //    لەگەڵ `@keyframes sx-mq`ی `style.css` بگونجێت (١٢→٤٥٪)
+        function sxTipMarquee(box, retry) {
+            const p = box.querySelector('.sx-tip-txt');
+            const run = p && p.querySelector('.sx-tip-run');
+            if (!run) return 0;
+            p.classList.remove('is-mq');
+            run.style.removeProperty('--mq');
+            run.style.removeProperty('--mqd');
+            // کەسانێک ئەنیمەیشنیان لادەبرێت — بۆ ئەوان سێ‌خاڵ باشترە
+            if (window.matchMedia
+                && matchMedia('(prefers-reduced-motion: reduce)').matches) return 0;
+            const w = p.clientWidth;
+            // پەڕەکە هێشتا شاراوەیە → پێوانە بێ‌واتایە. یەک هەوڵی تر
+            if (!w) { if (!retry) requestAnimationFrame(() => sxTipMarquee(box, 1)); return 0; }
+            const over = Math.round(run.scrollWidth - w);
+            if (over <= 2) return 0;
+            const dur = over / (SX_MQ_PXPS * SX_MQ_MOVE);
+            run.style.setProperty('--mq', over + 'px');
+            run.style.setProperty('--mqd', dur.toFixed(1) + 's');
+            p.classList.add('is-mq');
+            return dur * 1000;
+        }
+
         function renderStatsTip() {
             const box = document.getElementById('sx-tip');
             const d = _statsCacheT[_statsTarget || _statsMode];
@@ -10606,14 +10736,19 @@
             box.innerHTML = '<span class="sx-tip-ico" style="background:' + a.c + '1a; color:' + a.c + ';">'
                 + '<i class="bx ' + a.i + '"></i></span>'
                 + '<span class="sx-tip-tag">' + a.tag + '</span>'
-                + '<p class="sx-tip-txt">' + a.t + '</p>'
+                + '<p class="sx-tip-txt"><span class="sx-tip-run">' + a.t + '</span></p>'
                 + '<span class="sx-tip-dots">'
                 + tips.map((_, i) => '<i class="' + (i === (_sxTipI % tips.length) ? 'is-on' : '') + '"'
                     + ' onclick="setStatsTip(' + i + ')"></i>').join('')
                 + '</span>';
             box.style.display = '';
+            // ⚠️ دەبێت **دوای** `display`ـەکە بێت — ئەگەرنا پانییەکە سفرە
+            const mq = sxTipMarquee(box);
             clearTimeout(_sxTipT);
-            if (tips.length > 1) _sxTipT = setTimeout(() => { _sxTipI++; renderStatsTip(); }, 6000);
+            // ⚠️ ئامۆژگارییەکە مەگۆڕە پێش ئەوەی مانشێتەکە خولی خۆی
+            //    تەواو بکات — ئەگەرنا کۆتایی دەقەکە هەرگیز نابینرێت
+            if (tips.length > 1) _sxTipT = setTimeout(() => { _sxTipI++; renderStatsTip(); },
+                Math.max(6000, mq + 700));
         }
         function setStatsTip(i) { _sxTipI = i; renderStatsTip(); }
 
@@ -10703,10 +10838,11 @@
                     + '</div></div></div>';
             } else {
                 html += '<div class="sx-scope-all"' + rise() + '>'
-                    + '<div><span>ئۆردەری گەیشتوو</span><b dir="ltr">' + (Number(at.delivered) || 0).toLocaleString('en-US') + '</b></div>'
-                    + '<div><span>کۆی فرۆش</span><b dir="ltr">' + sxShort(at.sales) + '</b></div>'
+                    + sxTile('ئۆردەری گەیشتوو', '<bdi dir="ltr">'
+                        + (Number(at.delivered) || 0).toLocaleString('en-US') + '</bdi>', 'is-sm')
+                    + sxTile('کۆی فرۆش', sxShortMoney(at.sales), 'is-sm')
                     + (d.hide_profit === true ? ''
-                        : '<div><span>قازانجی ئەندامان</span><b dir="ltr">' + sxShort(at.profit) + '</b></div>')
+                        : sxTile('قازانجی ئەندامان', sxShortMoney(at.profit), 'is-sm'))
                     + '</div>';
             }
 
@@ -10750,20 +10886,28 @@
             //    (`null`)، بۆیە خانەکانی لێرەش لادەبرێن.
             const noProfit = d.hide_profit === true;
 
-            // KPI ی ئەم مانگە
+            // KPI ی ئەم مانگە — هەر چوارەکیان یەک شێوە: ناونیشان
+            // لای سەرەوە، چیپی گۆڕان بەرامبەری، ژمارە لای خوارەوە.
+            // ⚠️ ماوەکە («ئەم مانگە») یەک جار لە ناونیشانی بەشەکەدایە،
+            //    نەک لە هەر خانەیەکدا. ئەگەر بیگەڕێنیتەوە ناو خانەکان،
+            //    ناونیشانەکان بۆ دوو دێڕ دەشکێنەوە — بەڵام تەنها
+            //    ئەوانەی چیپی گۆڕانیان هەیە، و ڕیزبەندییەکە تێک دەچێت.
+            const sxNum = v => '<bdi dir="ltr">' + (Number(v) || 0).toLocaleString('en-US') + '</bdi>';
+            html += '<div class="sx-sec"' + rise() + '>'
+                + '<i class="bx bx-calendar"></i> ئەم مانگە</div>';
             if (sxIn('money')) {
-                html += '<div class="sx-kpi"' + rise() + '><span>فرۆش · ئەم مانگە</span><b>' + sxMoney(m.sales) + '</b>'
-                    + sxDelta(m.sales, pv.sales) + '</div>'
-                    + (noProfit ? ''
-                        : '<div class="sx-kpi"' + rise() + '><span>قازانج · ئەم مانگە</span><b>' + sxMoney(m.profit) + '</b>'
-                        + sxDelta(m.profit, pv.profit) + '</div>');
+                html += sxTile('فرۆش', sxMoney(m.sales), '',
+                    sxDelta(m.sales, pv.sales), rise())
+                    + (noProfit ? '' : sxTile('قازانج', sxMoney(m.profit), '',
+                        sxDelta(m.profit, pv.profit), rise()));
             }
-            html += '<div class="sx-kpi"' + rise() + '><span>ئۆردەری گەیشتوو</span><b><bdi dir="ltr">'
-                + (Number(m.orders) || 0).toLocaleString('en-US') + '</bdi></b>'
-                + sxDelta(m.orders, pv.orders) + '</div>'
-                + '<div class="sx-kpi' + (Number(m.returned) > 0 ? ' is-warn' : '') + '"' + rise() + '>'
-                + '<span>گەڕاوە · ئەم مانگە</span><b><bdi dir="ltr">'
-                + (Number(m.returned) || 0).toLocaleString('en-US') + '</bdi></b></div>';
+            html += sxTile('گەیشتوو', sxNum(m.orders), '',
+                sxDelta(m.orders, pv.orders), rise())
+                // ⚠️ `prev.returned` لە سێرڤەرەوە نایەت، بۆیە ئەم خانەیە
+                //    چیپی گۆڕانی نییە. ستوونەکەی بەتاڵ دەمێنێتەوە و
+                //    ئەندازەی خانەکە هەر وەک ئەوانی تر دەمێنێتەوە.
+                + sxTile('گەڕاوە', sxNum(m.returned),
+                    Number(m.returned) > 0 ? 'is-warn' : '', '', rise());
 
             // ---- چارتى ٣٠ ڕۆژ ----
             if (sxIn('money')) {
@@ -11272,6 +11416,49 @@
                     <i class='bx bx-smile'></i></button></div>`;
         }
 
+        // ناوەڕۆکی ئاگاداری — **یەک** نەخشێنەر بۆ لیستەکە و بۆ
+        // پۆپ‌ئەپەکە. پێشتر هەریەکەیان HTMLی خۆی دروست دەکرد، بۆیە
+        // ڕیاکشنەکان تەنها لە لیستەکەدا هەبوون و لە پۆپ‌ئەپەکەدا نا.
+        //   opts.del   = دوگمەی سڕینەوە (تەنها لە لیستەکەدا)
+        //   opts.react = ڕیاکشنەکان
+        function announceBodyHtml(a, opts) {
+            opts = opts || {};
+            const imgs = (a.images || []).map(u =>
+                `<img src="${histEsc(u)}" alt="" loading="lazy"
+                    onclick="event.stopPropagation(); openAnnounceImage('${histEsc(u)}')">`).join('');
+            const canDel = opts.del && currentUser
+                && (String(a.author_code) === String(currentUser.code) || userRole === 'پاشا');
+            return `<div class="anc-head">
+                    <span class="anc-ico"><i class='bx bx-broadcast'></i></span>
+                    <div class="anc-who">
+                        <b>${histEsc(firstNameOf(a.author_name) || a.author_code)}</b>
+                        <span>${histEsc(getRelativeTime(a.created_at))}</span>
+                    </div>
+                    ${canDel ? `<button type="button" class="anc-del" title="سڕینەوە"
+                        onclick="event.stopPropagation(); removeAnnouncement(${Number(a.id)})">
+                        <i class='bx bx-trash'></i></button>` : ''}
+                </div>
+                <div class="anc-text-view">${histEsc(a.body || '')}</div>
+                ${imgs ? `<div class="anc-gallery is-n${(a.images || []).length}">${imgs}</div>` : ''}
+                ${opts.react ? announceReactionsHtml(a) : ''}
+                ${announceSeenChipHtml(a)}`;
+        }
+
+        // چیپی «کێ بینیویەتی» — تەنها بۆ نووسەرەکە یان پاشا.
+        // ⚠️ `seen_n` لە سێرڤەرەوە `null` دەگەڕێتەوە بۆ ئەوانی تر
+        //    (`announcements_by_ids`, db/037). RLS نییە، بۆیە ئەمە
+        //    پارێزەر نییە — تەنها ڕووکارە. پارێزەرەکە لە SQLـدایە.
+        function announceSeenChipHtml(a) {
+            if (a.seen_n === null || a.seen_n === undefined) return '';
+            const seen = Number(a.seen_n) || 0, tot = Number(a.total_n) || 0;
+            return `<button type="button" class="anc-seen"
+                    onclick="event.stopPropagation(); openAnnounceStats(${Number(a.id)})">
+                <i class='bx bx-show'></i>
+                <b><bdi dir="ltr">${seen}</bdi></b> لە <bdi dir="ltr">${tot}</bdi> بینیویانە
+                <i class='bx bx-chevron-left'></i>
+            </button>`;
+        }
+
         function announceCardHtml(n) {
             const a = announceCache[String(n.announce_id)];
             const nid = String(n.id || '').replace(/[^0-9]/g, '');
@@ -11282,28 +11469,17 @@
                     <div class="notif-body"><div class="notif-top"><b>${histEsc(notifCleanTitle(n.title))}</b></div>
                     <div class="notif-detail">${histEsc(n.body || '')}</div></div></div>`;
             }
-            const imgs = (a.images || []).map((u, i) =>
-                `<img src="${histEsc(u)}" alt="" loading="lazy"
-                    onclick="event.stopPropagation(); openAnnounceImage('${histEsc(u)}')">`).join('');
-            const canDel = String(a.author_code) === String(currentUser.code) || userRole === 'پاشا';
             return `<div class="notif-row is-announce${n.read_at ? '' : ' is-unread'}"
-                    onclick="markOneNotifRead('${nid}', this)">
-                <div class="anc-card">
-                    <div class="anc-head">
-                        <span class="anc-ico"><i class='bx bx-broadcast'></i></span>
-                        <div class="anc-who">
-                            <b>${histEsc(firstNameOf(a.author_name) || a.author_code)}</b>
-                            <span>${histEsc(getRelativeTime(a.created_at))}</span>
-                        </div>
-                        ${canDel ? `<button type="button" class="anc-del" title="سڕینەوە"
-                            onclick="event.stopPropagation(); removeAnnouncement(${Number(a.id)})">
-                            <i class='bx bx-trash'></i></button>` : ''}
-                    </div>
-                    <div class="anc-text-view">${histEsc(a.body || '')}</div>
-                    ${imgs ? `<div class="anc-gallery is-n${(a.images || []).length}">${imgs}</div>` : ''}
-                    ${announceReactionsHtml(a)}
-                </div>
+                    onclick="openAnnounceFromRow(${Number(a.id)}, '${nid}', this)">
+                <div class="anc-card">${announceBodyHtml(a, { del: true, react: true })}</div>
             </div>`;
+        }
+
+        // دەستلێدانی ڕیز = «بینیم» + کردنەوەی بینەرەکە بۆ سەیرکردنەوە،
+        // هەمان پۆپ‌ئەپی کاتی چوونەژوورەوە
+        function openAnnounceFromRow(id, nid, el) {
+            if (nid) markOneNotifRead(nid, el);
+            openAnnounceViewer(id);
         }
 
         // ---- ڕیاکشن ----
@@ -11329,6 +11505,7 @@
             else { if (was) bump(was, -1); bump(emoji, 1); a.my_emoji = emoji; }
             a.reactions = list;
             renderNotifications();
+            anpRefresh();
 
             try {
                 const { error } = await supabase.rpc('toggle_announcement_reaction', {
@@ -11342,8 +11519,115 @@
                 delete announceCache[String(id)];
                 await loadAnnouncements(_notifCache[notifKey(_notifTab)] || []);
                 renderNotifications();
+                anpRefresh();
                 showToast('نەتوانرا ڕیاکشنەکە تۆمار بکرێت', 'error');
             }
+        }
+
+        // ============================================================
+        // ئاماری ئاگاداری — کێ بینیویەتی، کێ ڕیاکشنی کردووە
+        // ------------------------------------------------------------
+        // یەک بانگ (`announcement_stats`) کاتێک داوا بکرێت، نەک
+        // لەگەڵ هەر پەڕەیەکی لیستەکە. ناوەڕۆکەکە کاش دەکرێت بەڵام
+        // بە هەر کردنەوەیەک نوێ دەبێتەوە — «کێ بینیویەتی» بەخێرایی
+        // دەگۆڕێت و ژمارەیەکی کۆن بێ‌سوودە.
+        // ⚠️ پارێزەرەکە لە SQLـدایە (نووسەرەکە یان پاشا). ئەم
+        //    فەنکشنە تەنها ڕووکارە.
+        let _anstTab = 'seen';      // 'seen' | 'react'
+        let _anstData = null;
+        let _anstId = null;
+
+        async function openAnnounceStats(id) {
+            if (!currentUser || !currentUser.code) return;
+            _anstId = Number(id);
+            _anstTab = 'seen';
+            _anstData = null;
+            const box = document.getElementById('anst-body');
+            if (!box) return;
+            box.innerHTML = '<div class="sx-loading"><i class="bx bx-loader-alt bx-spin"></i>'
+                + ' هێنانی ئامارەکان...</div>';
+            document.getElementById('announce-stats-modal').classList.add('show');
+            try {
+                const { data, error } = await supabase.rpc('announcement_stats', {
+                    p_id: _anstId, p_user_code: String(currentUser.code)
+                });
+                if (error) throw error;
+                _anstData = data || {};
+                renderAnnounceStats();
+            } catch (e) {
+                console.warn('openAnnounceStats:', e);
+                const denied = String(e.message || '').includes('NOT_ALLOWED');
+                box.innerHTML = '<div class="sx-empty is-error"><i class="bx bx-error-circle"></i> '
+                    + (denied ? 'دەسەڵاتت نییە' : 'نەتوانرا ئامارەکان بهێنرێن') + '</div>';
+            }
+        }
+
+        function setAnnounceStatsTab(t) {
+            if (_anstTab === t) return;
+            _anstTab = t;
+            renderAnnounceStats();
+        }
+
+        function anstRowHtml(r, trailing) {
+            return `<div class="anst-row">
+                ${avatarHtml(null, r.name || r.code || '', 30)}
+                <div class="anst-mid">
+                    <b>${histEsc(firstNameOf(r.name) || r.code || '')}</b>
+                    <span>${histEsc(r.role || '')} · ${histEsc(getRelativeTime(r.at))}</span>
+                </div>
+                ${trailing || ''}
+            </div>`;
+        }
+
+        function renderAnnounceStats() {
+            const box = document.getElementById('anst-body');
+            const d = _anstData;
+            if (!box || !d) return;
+            const seenBy = Array.isArray(d.seen_by) ? d.seen_by : [];
+            const reactors = Array.isArray(d.reactors) ? d.reactors : [];
+            const reactions = Array.isArray(d.reactions) ? d.reactions : [];
+            const total = Number(d.total) || 0, seen = Number(d.seen) || 0;
+            const pct = total ? Math.round(seen * 100 / total) : 0;
+
+            let html = `<div class="anst-top">
+                <div class="anst-kpi">
+                    <span>بینیویانە</span>
+                    <b><bdi dir="ltr">${seen}</bdi> <small>لە ${total}</small></b>
+                    <div class="anst-bar"><div style="width:${pct}%;"></div></div>
+                </div>
+                <div class="anst-kpi">
+                    <span>ڕیاکشن</span>
+                    <b><bdi dir="ltr">${reactors.length}</bdi></b>
+                    <div class="anst-emos">${reactions.map(r =>
+                        `<span>${emojiHtml(r.emoji, 'anst-e')}<bdi dir="ltr">${Number(r.n) || 0}</bdi></span>`
+                    ).join('')}</div>
+                </div>
+            </div>
+            <div class="sx-chips anst-tabs">
+                <button type="button" class="notif-chip${_anstTab === 'seen' ? ' is-on' : ''}"
+                    onclick="setAnnounceStatsTab('seen')">
+                    بینەران <bdi dir="ltr">${seenBy.length}</bdi></button>
+                <button type="button" class="notif-chip${_anstTab === 'react' ? ' is-on' : ''}"
+                    onclick="setAnnounceStatsTab('react')">
+                    ڕیاکشن <bdi dir="ltr">${reactors.length}</bdi></button>
+            </div>`;
+
+            // ⚠️ هیچ لیستێک نابڕدرێت — سنووری سەرەوە ژمارەی
+            //    کارمەندانە (٢٦٣)، و ئەمە یەک بانگی داواکراوە.
+            //    بڕوانە یاسای «پەڕەکردن، نەک بڕین».
+            if (_anstTab === 'seen') {
+                html += seenBy.length
+                    ? `<div class="anst-list">${seenBy.map(r => anstRowHtml(r)).join('')}</div>`
+                    : '<div class="sx-empty"><i class="bx bx-info-circle"></i>'
+                      + ' هێشتا کەس نەیبینیوە</div>';
+            } else {
+                html += reactors.length
+                    ? `<div class="anst-list">${reactors.map(r => anstRowHtml(r,
+                        `<span class="anst-emo">${emojiHtml(r.emoji, 'anst-e')}</span>`)).join('')}</div>`
+                    : '<div class="sx-empty"><i class="bx bx-info-circle"></i>'
+                      + ' هێشتا کەس ڕیاکشنی نەکردووە</div>';
+            }
+            box.innerHTML = html;
         }
 
         function openAnnounceImage(url) {
@@ -11473,6 +11757,9 @@
                 });
                 if (error) throw error;
                 delete announceCache[String(id)];
+                // ⚠️ ئەگەر هەمان ئاگاداری لە پۆپ‌ئەپەکەدا کراوە بێت،
+                //    دەبێت دابخرێت — ئەگەرنا کارتێکی بەتاڵ دەمێنێتەوە
+                if (_anpIds.indexOf(String(id)) !== -1) closeAnnouncePopup();
                 _notifLoaded = {};
                 await loadNotifications(_notifTab, true);
                 refreshNotifKindCounts();
@@ -11490,6 +11777,54 @@
         // بە خوێندراوە نیشان دەکرێن، بەڵام لە بەشی ئاگاداریدا
         // دەمێننەوە تاکو دواتر بیانبینێتەوە.
         // ============================================================
+        // ---- بینەری ئاگاداری ----
+        // دوو دۆخ، هەمان پۆپ‌ئەپ:
+        //   ١) کۆمەڵ  — ئەوانەی نەبینراون، لە کاتی چوونەژوورەوە.
+        //               دوای «تێگەیشتم» هەموویان بە بینراو نیشان دەکرێن.
+        //   ٢) تاک    — یەکێک کە بەکارهێنەر خۆی کردییەوە، لە لیستەکەوە
+        //               یان لە بەستەری تلیگرامەوە. ⚠️ لێرەدا هیچ
+        //               نیشانکردنێک نییە — پێشتر کراوە.
+        let _anpIds = [];   // ناسنامەی ئاگادارییەکانی ناو پۆپ‌ئەپەکە
+
+        function anpRender(ids) {
+            const box = document.getElementById('anp-list');
+            if (!box) return false;
+            const rows = ids.map(id => announceCache[String(id)]).filter(Boolean);
+            if (!rows.length) return false;
+            _anpIds = rows.map(a => String(a.id));
+            box.innerHTML = rows.map(a =>
+                `<div class="anp-item">${announceBodyHtml(a, { react: true })}</div>`).join('');
+            document.getElementById('announce-popup-modal').classList.add('show');
+            return true;
+        }
+
+        // ⚠️ ڕیاکشن کە دەگۆڕدرێت، پۆپ‌ئەپەکەش دەبێت نوێ بێتەوە —
+        //    ئەگەرنا ژمارەکە تەنها لە لیستەکەدا دەگۆڕێت
+        function anpRefresh() {
+            const box = document.getElementById('announce-popup-modal');
+            if (!box || !box.classList.contains('show') || !_anpIds.length) return;
+            anpRender(_anpIds.slice());
+        }
+
+        async function openAnnounceViewer(id) {
+            if (!currentUser || !currentUser.code) return;
+            let a = announceCache[String(id)];
+            if (!a) {
+                try {
+                    const { data, error } = await supabase.rpc('announcements_by_ids', {
+                        p_ids: [Number(id)],
+                        p_user_code: String(currentUser.code)
+                    });
+                    if (error) throw error;
+                    a = (data || [])[0];
+                    if (a) announceCache[String(a.id)] = a;
+                } catch (e) { console.warn('openAnnounceViewer:', e); }
+            }
+            if (!a || a.deleted_at) { showToast('ئەم ئاگادارییە نەماوە', 'error'); return; }
+            _anpShown = [];             // دۆخی تاک — هیچ نیشان نەکە
+            anpRender([a.id]);
+        }
+
         async function checkUnreadAnnouncements() {
             if (!currentUser || !currentUser.code) return;
             try {
@@ -11502,36 +11837,18 @@
 
                 rows.forEach(a => { announceCache[String(a.id)] = a; });
                 _anpShown = rows.map(a => String(a.notif_id));
-
-                const box = document.getElementById('anp-list');
-                if (!box) return;
-                box.innerHTML = rows.map(a => {
-                    const imgs = (a.images || []).map(u =>
-                        `<img src="${histEsc(u)}" alt="" loading="lazy"
-                            onclick="openAnnounceImage('${histEsc(u)}')">`).join('');
-                    return `<div class="anp-item">
-                        <div class="anc-head">
-                            <span class="anc-ico"><i class='bx bx-broadcast'></i></span>
-                            <div class="anc-who">
-                                <b>${histEsc(firstNameOf(a.author_name) || a.author_code)}</b>
-                                <span>${histEsc(getRelativeTime(a.created_at))}</span>
-                            </div>
-                        </div>
-                        <div class="anc-text-view">${histEsc(a.body || '')}</div>
-                        ${imgs ? `<div class="anc-gallery is-n${(a.images || []).length}">${imgs}</div>` : ''}
-                    </div>`;
-                }).join('');
-
-                document.getElementById('announce-popup-modal').classList.add('show');
+                anpRender(rows.map(a => a.id));
             } catch (e) { console.warn('checkUnreadAnnouncements:', e); }
         }
 
         function closeAnnouncePopup() {
             document.getElementById('announce-popup-modal').classList.remove('show');
             // ⚠️ یەک بە یەک نیشان دەکرێن — `markOneNotifRead` باجەکان و
-            //    چیپەکانیش نوێ دەکاتەوە، بۆیە دەستکاری زیادە ناوێت
+            //    چیپەکانیش نوێ دەکاتەوە، بۆیە دەستکاری زیادە ناوێت.
+            //    لە دۆخی تاکدا `_anpShown` بەتاڵە، بۆیە هیچ ڕوونادات.
             _anpShown.forEach(nid => { markOneNotifRead(nid, null); });
             _anpShown = [];
+            _anpIds = [];
         }
 
         // ============================================================
@@ -11706,6 +12023,12 @@
             if (_notifTab === tab) return;
             _notifTab = tab;
 
+            // ⚠️ ئەگەر چیپی ئێستا لەم پۆلەدا نەمێنێتەوە (وەک «ئاگاداری»
+            //    لە «تیمەکەم»دا)، بگەڕێوە بۆ «هەمووی» — ئەگەرنا
+            //    بەکارهێنەر لە پاڵاوتنێکی شاراودا دەمێنێتەوە و
+            //    لیستێکی بەتاڵ دەبینێت بەبێ ئەوەی بزانێت بۆچی.
+            if (!notifFiltersFor(tab).some(f => f.k === _notifKind)) _notifKind = 'all';
+
             const parent = el.parentElement;
             parent.querySelectorAll('.magic-tab').forEach(t => t.classList.remove('active'));
             el.classList.add('active');
@@ -11769,10 +12092,15 @@
             return f.kinds.reduce((s, k) => s + (Number(m[k]) || 0), 0);
         }
 
+        // چیپەکانی ئەم پۆلە — ئەوانەی `ownOnly` تەنها لە «هی من»دا
+        function notifFiltersFor(scope) {
+            return NOTIF_FILTERS.filter(f => !f.ownOnly || scope === 'own');
+        }
+
         function renderNotifChips() {
             const box = document.getElementById('notif-chips');
             if (!box) return;
-            box.innerHTML = NOTIF_FILTERS.map(f => {
+            box.innerHTML = notifFiltersFor(_notifTab).map(f => {
                 const n = notifChipCount(f);
                 // ٩٩+ تاکو چیپەکە پان نەبێتەوە
                 const badge = n > 0
@@ -11908,13 +12236,34 @@
             } catch (e) { return ''; }
         }
 
+        // هەمان شێواز بۆ ئاگاداری — دوگمەی «🔗 کردنەوەی ئاگاداری»ی
+        // بۆتەکە (db/035) ئەم بەستەرە دەنێرێت:
+        //     …/app.html?announce=<ناسنامە>
+        function deepLinkAnnounceId() {
+            try {
+                let id = new URLSearchParams(location.search).get('announce');
+                if (!id) {
+                    const tg = window.Telegram && window.Telegram.WebApp;
+                    const sp = (tg && tg.initDataUnsafe && tg.initDataUnsafe.start_param) || '';
+                    const m = String(sp).match(/^announce[_-](\d+)$/);
+                    if (m) id = m[1];
+                }
+                return /^\d+$/.test(String(id || '')) ? String(id) : '';
+            } catch (e) { return ''; }
+        }
+
         async function openDeepLinkOrder() {
             if (_deepLinkDone) return;
+            const aid = deepLinkAnnounceId();
             const id = deepLinkOrderId();
-            if (!id) return;
+            if (!id && !aid) return;
             _deepLinkDone = true;
             try {
-                await openNotifOrder(id, null);
+                // ⚠️ ئاگاداری پێش ئۆردەر — پۆپ‌ئەپەکەی z-indexی بەرزترە
+                //    (٢٠٧٠ بەرامبەر ٢٠٥٠)، بۆیە ئەگەر هەردووکیان
+                //    هەبن ئەوەی سەرەوە دەبێت دواتر بێت
+                if (id) await openNotifOrder(id, null);
+                if (aid) await openAnnounceViewer(aid);
             } catch (e) {
                 console.warn('openDeepLinkOrder:', e);
             }
