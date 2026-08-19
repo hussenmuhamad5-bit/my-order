@@ -1769,7 +1769,7 @@
                     <div class="fchips" id="fchips-date"></div>
                 </div>
 
-                <div class="fcal-wrap">
+                <div id="fcal-home"><div class="fcal-wrap">
                     <!-- بۆکسەکانی بەروار و «ئەمڕۆ» دەلکێن بە سەرەوەی
                          پەنجەرەی سکرۆڵەوە، تا لەکاتی گەڕان بەناو
                          مانگەکاندا هەمیشە بەردەست بن -->
@@ -1799,7 +1799,7 @@
                     </div>
 
                     <div class="fcal" id="fcal" dir="ltr"></div>
-                </div>
+                </div></div>
             </div>
 
             <div class="fsheet-foot">
@@ -1919,6 +1919,32 @@
     <!-- ئاماری ئاگاداری — کێ بینیویەتی، کێ ڕیاکشنی کردووە.
          z-index لە پۆپ‌ئەپی ئاگاداری (٢٠٧٠) بەرزترە چونکە لەسەری
          دەکرێتەوە، بەڵام لە هەڵبژێری ئیمۆجی (٢٢٠٠) نزمترە. -->
+    <!-- مەودای دڵخوازی ئامار و پلە.
+         ⚠️ خانەی `type="date"`ی ڕەسەن — لەسەر مۆبایل ڕۆژژمێری خودی
+         سیستەمەکە دەکاتەوە، کە باشترە لە ڕۆژژمێرێکی دەستکردی بچووک.
+         `#fcal`ی شیتی ئۆردەرەکان دووبارە بەکارنایەت چونکە تەواو بە
+         `fsDraft` و `reloadMgmt`ـەوە بەندە. -->
+    <div id="sx-date-sheet" class="modal-overlay" style="z-index: 2095;"
+        onclick="closeModal(event, 'sx-date-sheet')">
+        <div class="modal-content is-sxd" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h3 class="modal-title is-sm"><i class='bx bx-calendar-edit'></i> مەودای دڵخواز</h3>
+                <button class="modal-close" onclick="closeSxDateSheet()"><i class='bx bx-x'></i></button>
+            </div>
+            <!-- ⚠️ ڕۆژژمێرەکە (`.fcal-wrap`) لێرەدا دانانرێت — لە
+                 کاتی کردنەوەدا لە `#fcal-home`ـەوە دەگوێزرێتەوە بۆ
+                 ئێرە، و لە کاتی داخستندا دەگەڕێتەوە. یەک نۆد،
+                 دوو شوێن — بۆیە هەرگیز لێک دوور ناکەونەوە. -->
+            <div class="sxd-body" id="fsheet-body-sx"></div>
+            <div class="sxd-foot">
+                <div class="sxd-info" id="sxd-info">بەروارەکان هەڵبژێرە</div>
+                <button type="button" class="btn sxd-apply" id="sxd-apply" onclick="applySxDateSheet()">
+                    <i class='bx bx-check'></i> پیشاندانی ئەنجامەکان
+                </button>
+            </div>
+        </div>
+    </div>
+
     <div id="announce-stats-modal" class="modal-overlay" style="z-index: 2090;"
         onclick="closeModal(event, 'announce-stats-modal')">
         <div class="modal-content is-anst" onclick="event.stopPropagation()">
@@ -7885,6 +7911,99 @@
         }
 
         // بۆکسی پارە لە زانیاری ئۆردەر — ئۆردەری گۆڕین وەسڵی خۆی هەیە
+        // ============================================================
+        // خاڵی ئەم ئۆردەرە
+        // ------------------------------------------------------------
+        //  فۆرمولی سێرڤەر (`stats_points`, db/041):
+        //      ١٠ خاڵ بۆ هەر ئۆردەرێکی گەیشتوو
+        //    + floor(کۆی وەرگیراو ÷ ٦٠٠٠)
+        //    + floor(کۆی قازانج   ÷ ٢٠٠٠)
+        //    + ٥ خاڵ بۆ هەر کاڵایەکی زیادە (لە دوای یەکەم)
+        //
+        //  ⚠️ `floor`ـەکان لەسەر **کۆ** جێبەجێ دەبن، نەک لەسەر هەر
+        //     ئۆردەرێک بە جیا. بۆیە پاشماوەکان ون نابن — لەگەڵ
+        //     ئۆردەری داهاتوودا کۆدەبنەوە، و ئەمەی لێرە پیشان
+        //     دەدرێت **لانیکەم**ە، نەک ژمارەی تەواوی زیادبوو.
+        //
+        //  ⚠️ ئۆردەری گەڕاوە هیچ خاڵێک نادات — `stats_points` تەنها
+        //     گەیشتووەکان دەژمێرێت، و گەڕانەوە خۆکارانە خاڵەکەی
+        //     دەکشێنێتەوە (خاڵ هەڵناگیرێت، لە ئۆردەرەکانەوە
+        //     دەردەهێنرێت). بڕوانە [[stats-and-levels]].
+        // ============================================================
+        const PTS_PER_ORDER = 10, PTS_RECV_DIV = 6000,
+              PTS_PROFIT_DIV = 2000, PTS_PER_EXTRA_ITEM = 5;
+
+        // ژمارەی کاڵا — دەبێت **تەواو** وەک سێرڤەر بژمێردرێت:
+        //   array_length(string_to_array(btrim(item_names), E'\n'), 1)
+        // ⚠️ دێڕی بەتاڵی ناوەڕاست **پاڵاوت ناکرێت** — سێرڤەر
+        //    دەیژمێرێت، بۆیە ئێرەش دەبێت بیژمێرێت. ئەگەرنا ئەندام
+        //    ژمارەیەکی جیاواز دەبینێت لەوەی بەڕاستی وەریدەگرێت.
+        function orderItemLines(o) {
+            const s = String(o.item_names || '').trim();
+            return s ? s.split('\n').length : 1;
+        }
+
+        function orderPointsParts(o) {
+            const recv = Math.max(0, Number(o.amount_received != null
+                ? o.amount_received : (o.grand_total || 0)) || 0);
+            const prof = Math.max(0, Number(o.member_profit || 0));
+            const extra = Math.max(0, orderItemLines(o) - 1);
+            return {
+                base: PTS_PER_ORDER,
+                recv: Math.floor(recv / PTS_RECV_DIV),
+                profit: Math.floor(prof / PTS_PROFIT_DIV),
+                items: extra * PTS_PER_EXTRA_ITEM,
+                extra: extra,
+                rest: (recv % PTS_RECV_DIV) + (prof % PTS_PROFIT_DIV)
+            };
+        }
+
+        function orderPointsOf(o) {
+            const q = orderPointsParts(o);
+            return q.base + q.recv + q.profit + q.items;
+        }
+
+        function orderPointsRowHtml(o) {
+            const st = String(o.status || '');
+            const returned = /گەڕا/.test(st);
+            const delivered = /گەیشت/.test(st);
+            const q = orderPointsParts(o);
+            const pts = orderPointsOf(o);
+
+            let ico, color, label, val;
+            if (returned) {
+                ico = 'bx-x-circle'; color = '#dc2626';
+                label = 'خاڵی ئەم ئۆردەرە'; val = 'هیچ — ئۆردەری گەڕاوە خاڵ نادات';
+            } else if (delivered) {
+                ico = 'bxs-star'; color = '#d97706';
+                label = 'خاڵت وەرگرت لەم ئۆردەرەوە';
+                val = '<bdi dir="ltr">+' + pts + '</bdi> خاڵ';
+            } else {
+                ico = 'bx-star'; color = '#64748b';
+                label = 'ئەگەر بگات، وەریدەگریت';
+                val = '<bdi dir="ltr">+' + pts + '</bdi> خاڵ';
+            }
+
+            // دابەشکردنەکە — تاکو بزانێت لەکوێوە هاتووە
+            const n = v => '<bdi dir="ltr">' + v + '</bdi>';
+            const parts = returned ? '' : [
+                n(q.base) + ' گەیاندن',
+                q.recv ? n(q.recv) + ' وەرگیراو' : '',
+                q.profit ? n(q.profit) + ' قازانج' : '',
+                q.items ? n(q.items) + ' کاڵای زیادە' : ''
+            ].filter(Boolean).join(' + ');
+
+            return `<div class="opts-row" style="--c:${color};">
+                <span class="opts-ico"><i class='bx ${ico}'></i></span>
+                <div class="opts-mid"><b>${label}</b>
+                    <span>${returned ? 'خاڵ تەنها بۆ ئۆردەری گەیشتووە' : parts}</span></div>
+                <b class="opts-val">${val}</b>
+                ${(!returned && q.rest > 0) ? `<span class="opts-rest">پاشماوەی
+                    <bdi dir="ltr">${q.rest.toLocaleString('en-US')}</bdi> د.ع ون نابێت —
+                    لەگەڵ ئۆردەری داهاتوودا کۆدەبێتەوە</span>` : ''}
+            </div>`;
+        }
+
         function orderMoneyBoxHtml(o, detailProfit) {
             if (isExchangeOrder(o)) return exchangeReceiptHtml(o);
             return `
@@ -7916,6 +8035,7 @@
                         <span>کۆی گشتی:</span>
                         <span dir="ltr">${Number(o.grand_total || 0).toLocaleString()} د.ع</span>
                     </div>
+                    ${orderPointsRowHtml(o)}
                     ${orderIsPrepaid(o) ? `<div class="prepaid-cod${orderCod(o) <= 0 ? ' is-full' : ''}" style="margin-top:12px;">
                         <span><i class='bx bx-cycling'></i> شۆفێر لە کڕیار وەریدەگرێت</span>
                         <span class="prepaid-cod-amt" dir="ltr">${orderCod(o).toLocaleString()} د.ع</span>
@@ -10369,11 +10489,14 @@
         let _statsSeries = 'sales';
         const RANK_PAGE = 30;
         // `scope` ئێستا هەڵبژاردەی بەکارهێنەرە، نەک دەرئەنجامی ڕۆڵ
-        let _rank = { metric: 'points', period: 'week', scope: 'team', rows: [], me: null,
+        let _rank = { metric: 'points', period: 'month', scope: 'team', rows: [], me: null,
                       total: 0, busy: false, hasTeam: true,
-                      ahead: null, chaser: null, leader: null };
+                      ahead: null, chaser: null, leader: null,
+                      from: null, to: null };
         // دۆخی تابی ئامارەکان: هی خۆم / تیمەکەم
         let _statsMode = 'me';
+        // مەودای تابی ئامارەکان — هەمان ئەنجینی پلەکان (SX_RANGES)
+        let _sxRange = { period: 'month', from: null, to: null };
         // ⚠️ ئەو کلیلەی **ئێستا لە DOMـدایە**. بەبێ ئەمە هەر
         //    گۆڕینێکی تاب `renderStats()`ی بانگ دەکرد و هەموو
         //    پەڕەکەی دەنووسییەوە — داتاکە لە کاشەوە دەهات بەڵام
@@ -10567,7 +10690,8 @@
             const box = document.getElementById('stats-pane');
             if (!box || !currentUser) return;
             // کلیل: تارگێتی درێل-داون، یان دۆخی خۆم/تیمەکەم
-            const key = _statsTarget || _statsMode;
+            const key = (_statsTarget || _statsMode) + '|' + _sxRange.period
+                      + '|' + (_sxRange.from || '') + '|' + (_sxRange.to || '');
             // پێشتر لە DOMـدایە → هیچ کارێک نییە
             if (!force && _statsCacheT[key] && _statsShownKey === key) return;
             if (!force && _statsCacheT[key]) { renderStats(); return; }
@@ -10577,10 +10701,13 @@
                 box.innerHTML = '<div class="sx-loading"><i class="bx bx-loader-alt bx-spin"></i> هێنانی ئامارەکان...</div>';
             }
             try {
+                const rr = sxRangeOf(_sxRange.period, _sxRange.from, _sxRange.to);
                 const { data, error } = await supabase.rpc('member_stats', {
                     p_viewer: String(currentUser.code),
                     p_target: _statsTarget,
-                    p_mode: _statsMode
+                    p_mode: _statsMode,
+                    p_from: rr[0],
+                    p_to: rr[1]
                 });
                 if (error) throw error;
                 _statsCacheT[key] = data;
@@ -10755,7 +10882,7 @@
 
         function renderStatsTip() {
             const box = document.getElementById('sx-tip');
-            const d = _statsCacheT[_statsTarget || _statsMode];
+            const d = _statsCacheT[sxStatsKey()];
             if (!box || !d) return;
             const tips = statsTips(d);
             if (!tips.length) { box.style.display = 'none'; return; }
@@ -10801,9 +10928,23 @@
             renderStatsBento();
         }
 
+        // کلیلی کاش — پۆل/تارگێت + مەودا. **هەموو** خوێنەرەکان
+        // دەبێت لێرەوە بێن، ئەگەرنا گۆڕینی مەودا داتای کۆن پیشان دەدات.
+        function sxStatsKey() {
+            return (_statsTarget || _statsMode) + '|' + _sxRange.period
+                 + '|' + (_sxRange.from || '') + '|' + (_sxRange.to || '');
+        }
+
+        function setSxRange(k) {
+            if (k === 'custom') { openSxDateSheet('stats'); return; }
+            if (_sxRange.period === k) return;
+            _sxRange.period = k; _sxRange.from = null; _sxRange.to = null;
+            loadStats(true);
+        }
+
         function renderStats() {
             const box = document.getElementById('stats-pane');
-            const d = _statsCacheT[_statsTarget || _statsMode];
+            const d = _statsCacheT[sxStatsKey()];
             if (!box || !d) return;
             const who = d.who || {}, at = d.alltime || {}, m = d.month || {}, pv = d.prev || {};
             const isMember = who.mode === 'member';
@@ -10877,6 +11018,17 @@
                     + '</div>';
             }
 
+            // ---- مەودای کات ----
+            // ⚠️ **پێش** پاڵاوتنی ناوەوە دێت: مەودا بڕیارێکی گەورەترە
+            //    (چ داتایەک)، پاڵاوتن بڕیارێکی بچووکترە (کام خانە).
+            html += '<div class="sx-chips sx-range">'
+                + SX_RANGES.map(p => '<button type="button" class="notif-chip'
+                    + (p.k === _sxRange.period ? ' is-on' : '') + '" onclick="setSxRange(\'' + p.k + '\')">'
+                    + (p.ico ? '<i class="bx ' + p.ico + '"></i> ' : '')
+                    + (p.k === 'custom' && _sxRange.period === 'custom'
+                        ? sxRangeLabel('custom', _sxRange.from, _sxRange.to) : p.t)
+                    + '</button>').join('') + '</div>';
+
             // ---- پاڵاوتنی ناوەوە ----
             html += '<div class="sx-chips sx-groups">'
                 + SX_GROUPS.map(g => '<button type="button" class="notif-chip'
@@ -10899,7 +11051,7 @@
         // نەخشاندنەوەی تەنها بەنتۆکە — بۆ گۆڕینی پاڵاوتن
         function renderStatsBento() {
             const el = document.getElementById('sx-bento');
-            const d = _statsCacheT[_statsTarget || _statsMode];
+            const d = _statsCacheT[sxStatsKey()];
             if (!el || !d) return;
             el.innerHTML = statsBentoHtml(d);
             renderStatsSeries();
@@ -11015,7 +11167,7 @@
             { k: 'orders', t: 'ئۆردەر', c: '#8b5cf6' }
         ];
         function renderStatsSeries() {
-            const d = _statsCacheT[_statsTarget || _statsMode];
+            const d = _statsCacheT[sxStatsKey()];
             const chips = document.getElementById('sx-series');
             const boxC = document.getElementById('sx-chart-box');
             if (!d || !chips || !boxC) return;
@@ -11205,10 +11357,58 @@
         // ============================================================
         // پلەکان
         // ============================================================
-        const RANK_PERIODS = [
-            { k: 'day', t: 'ئەمڕۆ' }, { k: 'week', t: '٧ ڕۆژ' },
-            { k: 'month', t: 'ئەم مانگە' }, { k: 'all', t: 'هەموو کات' }
+        // ============================================================
+        // ماوەکانی ئامار و پلە — یەک لیست بۆ هەردوو تاب
+        // ------------------------------------------------------------
+        // ⚠️ هەموویان لە کڵاینتەوە دەبنە `from`/`to` و ئاوا دەنێردرێن.
+        //    سێرڤەر ناوی پێشدانراوەکان نازانێت، بۆیە پێشدانراوێکی
+        //    نوێ هیچ گۆڕانێکی داتابەیسی ناوێت.
+        // ⚠️ هەفتە **شەممە → هەینی**ـە (ڕۆژژمێری عێراقی)، نەک ٧ ڕۆژی
+        //    ڕابردوو. `getDay()`: ٠=یەکشەممە … ٦=شەممە، بۆیە
+        //    `(getDay() + 1) % 7` ژمارەی ڕۆژە لە هەفتەیەکی
+        //    شەممە-بنەڕەتدا.
+        // ============================================================
+        const SX_RANGES = [
+            { k: 'today', t: 'ئەمڕۆ' },
+            { k: 'week', t: 'ئەم هەفتەیە' },
+            { k: 'week_prev', t: 'هەفتەی ڕابردوو' },
+            { k: 'month', t: 'ئەم مانگە' },
+            { k: 'month_prev', t: 'مانگی ڕابردوو' },
+            { k: 'all', t: 'هەموو کات' },
+            { k: 'custom', t: 'مەودای دڵخواز', ico: 'bx-calendar-edit' }
         ];
+
+        // دەگەڕێنێتەوە [لە، بۆ] بە 'YYYY-MM-DD'، یان [null, null]
+        function sxRangeOf(k, from, to) {
+            const t = fdToday(), K = fdKey;
+            if (k === 'custom') return [from || null, to || null];
+            if (k === 'today') return [K(t), K(t)];
+            if (k === 'week' || k === 'week_prev') {
+                const dow = (t.getDay() + 1) % 7;              // ٠ = شەممە
+                const sat = fdAddDays(t, -dow);
+                const s = (k === 'week') ? sat : fdAddDays(sat, -7);
+                return [K(s), K(fdAddDays(s, 6))];
+            }
+            if (k === 'month' || k === 'month_prev') {
+                const off = (k === 'month') ? 0 : -1;
+                const s = new Date(t.getFullYear(), t.getMonth() + off, 1);
+                const e = new Date(t.getFullYear(), t.getMonth() + off + 1, 0);
+                return [K(s), K(e)];
+            }
+            return [null, null];                                // all
+        }
+
+        // نووسینی مەودا بۆ بەکارهێنەر
+        function sxRangeLabel(k, from, to) {
+            if (k !== 'custom') {
+                const r = SX_RANGES.find(x => x.k === k);
+                return r ? r.t : k;
+            }
+            if (!from) return 'مەودای دڵخواز';
+            return (from === to) ? fdLabel(from) : fdLabel(from) + ' → ' + fdLabel(to);
+        }
+
+        const RANK_PERIODS = SX_RANGES;
         const RANK_METRICS = [
             { k: 'points', t: 'خاڵ' }, { k: 'orders', t: 'ئۆردەر' },
             { k: 'sales', t: 'فرۆش' }, { k: 'profit', t: 'قازانج', gated: true }
@@ -11221,7 +11421,8 @@
         }
 
         function rankKey() {
-            return _rank.scope + '|' + _rank.metric + '|' + _rank.period;
+            return _rank.scope + '|' + _rank.metric + '|' + _rank.period
+                 + '|' + (_rank.from || '') + '|' + (_rank.to || '');
         }
 
         async function loadRank(reset) {
@@ -11244,6 +11445,9 @@
             }
             _rank.busy = true;
             const box = document.getElementById('rank-pane');
+            // مەودا لە کڵاینتەوە دەژمێردرێت — سێرڤەر ناوی
+            // پێشدانراوەکان نازانێت
+            const rr = sxRangeOf(_rank.period, _rank.from, _rank.to);
             try {
                 const { data, error } = await supabase.rpc('rank_page', {
                     p_viewer: String(currentUser.code),
@@ -11251,7 +11455,9 @@
                     p_period: _rank.period,
                     p_limit: RANK_PAGE,
                     p_offset: _rank.rows.length,
-                    p_scope: _rank.scope
+                    p_scope: _rank.scope,
+                    p_from: rr[0],
+                    p_to: rr[1]
                 });
                 if (error) throw error;
                 _rank.rows = _rank.rows.concat(data.rows || []);
@@ -11292,7 +11498,102 @@
         }
 
         function setRankMetric(k) { if (_rank.metric !== k) { _rank.metric = k; loadRank(true); } }
-        function setRankPeriod(k) { if (_rank.period !== k) { _rank.period = k; loadRank(true); } }
+
+        // ============================================================
+        // شیتی مەودای دڵخواز — بۆ هەردوو تابی ئامار و پلە
+        // ------------------------------------------------------------
+        // ⚠️ ڕۆژژمێری شیتی ئۆردەرەکان (`#fcal`) دووبارە بەکار **نایەت** —
+        //    ئەو تەواو بە `fsDraft` و `reloadMgmt`ـەوە بەندە. لێرەدا
+        //    دوو خانەی `type="date"`ی ڕەسەنی وێبگەڕ بەکاردێن: لەسەر
+        //    مۆبایل ڕۆژژمێری خۆی سیستەمەکە دەکەنەوە، کە باشترە لە
+        //    ڕۆژژمێرێکی دەستکردی بچووک.
+        // ⚠️ `_sxdOn` دیاری دەکات کام تاب داوای کردووە — بەبێ ئەو،
+        //    مەودای پلەکان لەسەر ئامارەکان جێبەجێ دەبێت.
+        // ============================================================
+        let _sxdOn = 'rank';                                  // 'rank' | 'stats'
+        let _sxdDraft = { preset: 'custom', from: null, to: null };
+
+        function openSxDateSheet(which) {
+            _sxdOn = which;
+            const cur = (which === 'rank') ? _rank : _sxRange;
+            const r = sxRangeOf(cur.period, cur.from, cur.to);
+            _sxdDraft = {
+                preset: 'custom',
+                from: r[0] || fdKey(fdToday()),
+                to: r[1] || fdKey(fdToday())
+            };
+
+            // ⭐ ڕۆژژمێرەکە دەگوێزرێتەوە بۆ ئێرە — کۆپی ناکرێتەوە
+            const wrap = document.querySelector('#fcal-home .fcal-wrap')
+                || document.querySelector('.fcal-wrap');
+            const slot = document.getElementById('fsheet-body-sx');
+            if (wrap && slot) slot.appendChild(wrap);
+
+            fcalD = _sxdDraft;
+            fcalOnChange = sxdSync;
+            fcalHover = null;
+            fcalDragEdge = null;
+            fcalFocus = _sxdDraft.from;
+            fcalAlign(_sxdDraft.from);
+            fcalBackMonths = 12;
+
+            document.getElementById('sx-date-sheet').classList.add('show');
+            fcalRender();
+            sxdSync();
+            requestAnimationFrame(() => fcalScrollToMonth(_sxdDraft.from, 'auto'));
+        }
+
+        function closeSxDateSheet() {
+            document.getElementById('sx-date-sheet').classList.remove('show');
+            // ⚠️ **دەبێت** بگەڕێتەوە شوێنی خۆی — ئەگەرنا شیتی
+            //    فلتەری ئۆردەرەکان بێ ڕۆژژمێر دەمێنێتەوە
+            const wrap = document.querySelector('.fcal-wrap');
+            const home = document.getElementById('fcal-home');
+            if (wrap && home) home.appendChild(wrap);
+            fcalD = null;
+            fcalOnChange = null;
+        }
+
+        // کورتەی مەودا + چالاککردنی دوگمەکە
+        function sxdSync() {
+            const info = document.getElementById('sxd-info');
+            const btn = document.getElementById('sxd-apply');
+            const a = _sxdDraft.from, b = _sxdDraft.to || _sxdDraft.from;
+            // ڕۆژژمێرەکە خۆی ڕیزبەندییان دەکات، بۆیە `a <= b` زەمانەتە
+            const n = (a && b) ? fdDaysBetween(a, b) : 0;
+            if (info) {
+                info.innerHTML = n
+                    ? '<i class="bx bx-calendar"></i> ' + fdLabel(a) + ' → ' + fdLabel(b)
+                    + ' · <b>' + n + ' ڕۆژ</b>'
+                    : 'بەرواری دەستپێک هەڵبژێرە';
+            }
+            if (btn) btn.disabled = !a;
+            // خانەکانی سەرەوەی ڕۆژژمێرەکەش نوێ دەکرێنەوە
+            if (typeof fsSyncInputs === 'function') fsSyncInputs();
+        }
+
+        function applySxDateSheet() {
+            const a = _sxdDraft.from;
+            if (!a) return;
+            const b = _sxdDraft.to || a;          // یەک ڕۆژ = مەودایەکی یەک ڕۆژە
+            if (_sxdOn === 'rank') {
+                _rank.period = 'custom'; _rank.from = a; _rank.to = b;
+                closeSxDateSheet();
+                loadRank(true);
+            } else {
+                _sxRange.period = 'custom'; _sxRange.from = a; _sxRange.to = b;
+                closeSxDateSheet();
+                loadStats(true);
+            }
+        }
+
+        function setRankPeriodK(k) {
+            if (k === 'custom') { openSxDateSheet('rank'); return; }
+            if (_rank.period === k && k !== 'custom') return;
+            _rank.period = k; _rank.from = null; _rank.to = null;
+            loadRank(true);
+        }
+        function setRankPeriod(k) { setRankPeriodK(k); }
         function setRankScope(k) { if (_rank.scope !== k) { _rank.scope = k; loadRank(true); } }
 
         function rankLevelChip(pts) {
@@ -11348,6 +11649,113 @@
 
         function rankUnitOf(metric) {
             return metric === 'points' ? 'خاڵ' : metric === 'orders' ? 'ئۆردەر' : 'د.ع';
+        }
+
+        // ============================================================
+        // «خاڵ چۆن کۆدەکەیتەوە؟» — یاساکە بۆ ئەندام
+        // ------------------------------------------------------------
+        // ⚠️ ژمارەکان لێرەدا **دەستکرد نین** — لە `stats_points`ـەوە
+        //    دێن (db/031). ئەگەر ڕۆژێک فۆرمولەکە بگۆڕێت، ئێرەش
+        //    بگۆڕە، ئەگەرنا ئەپەکە درۆ لەگەڵ بەکارهێنەر دەکات.
+        // ============================================================
+        let _rkHowOpen = false;
+        function toggleRankHow() {
+            _rkHowOpen = !_rkHowOpen;
+            const el = document.getElementById('rk-how');
+            if (el) el.classList.toggle('is-open', _rkHowOpen);
+        }
+
+        function rankHowHtml() {
+            return `<div class="rkhow${_rkHowOpen ? ' is-open' : ''}" id="rk-how">
+                <button type="button" class="rkhow-btn" onclick="toggleRankHow()">
+                    <i class='bx bx-help-circle'></i>
+                    <span>خاڵ چۆن کۆدەکەیتەوە؟</span>
+                    <i class='bx bx-chevron-down rkhow-arrow'></i>
+                </button>
+                <div class="rkhow-body">
+                    <div class="rkhow-f">
+                        <span class="rkhow-op"><bdi dir="ltr">${PTS_PER_ORDER}</bdi> خاڵ</span>
+                        <small>بۆ هەر ئۆردەرێکی <b>گەیشتوو</b></small>
+                    </div>
+                    <div class="rkhow-plus">+</div>
+                    <div class="rkhow-f">
+                        <span class="rkhow-op">١ خاڵ</span>
+                        <small>بۆ هەر <b><bdi dir="ltr">${PTS_RECV_DIV.toLocaleString('en-US')}</bdi>
+                            د.ع</b> کە <b>لە کڕیار وەردەگریت</b></small>
+                    </div>
+                    <div class="rkhow-plus">+</div>
+                    <div class="rkhow-f">
+                        <span class="rkhow-op">١ خاڵ</span>
+                        <small>بۆ هەر <b><bdi dir="ltr">${PTS_PROFIT_DIV.toLocaleString('en-US')}</bdi>
+                            د.ع</b> قازانج</small>
+                    </div>
+                    <div class="rkhow-plus">+</div>
+                    <div class="rkhow-f">
+                        <span class="rkhow-op"><bdi dir="ltr">${PTS_PER_EXTRA_ITEM}</bdi> خاڵ</span>
+                        <small>بۆ هەر <b>کاڵایەکی زیادە</b> لە دوای یەکەم</small>
+                    </div>
+                    <ul class="rkhow-note">
+                        <li><i class='bx bx-trending-up'></i> ئۆردەری گەورەتر و
+                            کاڵای زیاتر = خاڵی زیاتر. ئۆردەرێکی
+                            <bdi dir="ltr">30,000</bdi> خاڵی زیاتری هەیە لە
+                            <bdi dir="ltr">20,000</bdi>.</li>
+                        <li><i class='bx bx-check'></i> پاشماوەکان ون نابن —
+                            لەگەڵ ئۆردەری داهاتوودا کۆدەبنەوە.</li>
+                        <li><i class='bx bx-x'></i> ئۆردەری <b>گەڕاوە</b> هیچ
+                            خاڵێک نادات — خاڵەکەی خۆکارانە دەکشێتەوە.</li>
+                        <li><i class='bx bx-info-circle'></i> خاڵ هەڵناگیرێت —
+                            هەر جارێک لە ئۆردەرەکانتەوە دەژمێردرێتەوە، بۆیە
+                            هەرگیز هەڵە ناکات.</li>
+                    </ul>
+                </div>
+            </div>`;
+        }
+
+        // شریتی هان — لەسەر پاشبنەماکە، ژێر پۆدیۆمەکە.
+        // هەمان دەقی `rankHeroHtml` بەڵام یەک دێڕ و بێ کارت.
+        function rankCallHtml() {
+            const me = _rank.me;
+            if (!me) {
+                return '<div class="rkcall is-out"><i class="bx bx-run"></i>'
+                    + ' یەکەم ئۆردەری گەیشتووت دەتخاتە ناو تابلۆکەوە</div>';
+            }
+            const rank = Number(me.rank) || 0;
+            const ahead = _rank.ahead, chaser = _rank.chaser;
+            if (rank === 1) {
+                return '<div class="rkcall is-crown"><i class="bx bxs-crown"></i> '
+                    + (chaser
+                        ? '<b>تۆ لە سەرەوەیت</b> — ' + rankGapHtml(Number(me.value) - Number(chaser.value))
+                        + ' پێشترت. بیپارێزە.'
+                        : '<b>تۆ لە سەرەوەیت</b>') + '</div>';
+            }
+            if (!ahead) return '';
+            const gap = Number(ahead.value) - Number(me.value);
+            const pct = (Number(ahead.value) > 0)
+                ? Math.max(5, Math.min(100, Number(me.value) / Number(ahead.value) * 100)) : 100;
+            return '<div class="rkcall">'
+                + '<div class="rkcall-t">' + (rank <= 3
+                    ? 'تەنها <b>' + rankGapHtml(gap) + '</b>ت ماوە بۆ <b>پلەی یەکەم</b>!'
+                    : '<b>' + rankGapHtml(gap) + '</b>ت ماوە بۆ ئەوەی <b>'
+                    + rankRivalName(ahead) + '</b> ببەزێنیت') + '</div>'
+                + '<div class="rkcall-bar"><div style="width:' + pct.toFixed(1) + '%;"></div></div>'
+                + '</div>';
+        }
+
+        // ڕیزی «تۆ» — لە خوارەوەی پەیکەرەکە دەلکێت.
+        // ⚠️ هەمیشە دەردەکەوێت، تەنانەت ئەگەر لە لیستی بارکراودا بیت —
+        //    مەبەست ئەوەیە شوێنی خۆت هەرگیز لەبەرچاو ون نەبێت.
+        function rankMeBarHtml() {
+            const me = _rank.me;
+            if (!me) return '';
+            const nm = (currentUser && currentUser.full_name) || '';
+            return `<div class="rkme">
+                <span class="rkme-n">${Number(me.rank) || 0}</span>
+                ${avatarHtml(currentUser && currentUser.avatar, nm, 32)}
+                <div class="rkme-mid"><b>تۆ</b>
+                    <span>لە <bdi dir="ltr">${Number(_rank.total) || 0}</bdi> کەس</span></div>
+                ${rankLevelChip(me.level_pts)}
+                <b class="rkme-val" dir="rtl">${rankValueHtml(me.value, _rank.metric)}</b>
+            </div>`;
         }
 
         function rankHeroHtml() {
@@ -11441,9 +11849,12 @@
                 + '" onclick="setRankScope(\'team\')"><i class="bx bx-group"></i> تیمەکەم</button>'
                 + '</div>' : '')
                 + '<div class="sx-chips">'
-                + RANK_PERIODS.map(p => '<button type="button" class="notif-chip'
+                + SX_RANGES.map(p => '<button type="button" class="notif-chip'
                     + (p.k === _rank.period ? ' is-on' : '') + '" onclick="setRankPeriod(\'' + p.k + '\')">'
-                    + p.t + '</button>').join('') + '</div>'
+                    + (p.ico ? '<i class="bx ' + p.ico + '"></i> ' : '')
+                    + (p.k === 'custom' && _rank.period === 'custom'
+                        ? sxRangeLabel('custom', _rank.from, _rank.to) : p.t)
+                    + '</button>').join('') + '</div>'
                 + '<div class="sx-chips">'
                 + metrics.map(mt => '<button type="button" class="notif-chip'
                     + (mt.k === _rank.metric ? ' is-on' : '') + '" onclick="setRankMetric(\'' + mt.k + '\')">'
@@ -11460,46 +11871,54 @@
                 return;
             }
 
-            // ---- کارتی «شوێنی تۆ» — لە سەرەوەی هەموو شتێک ----
-            html += rankHeroHtml();
-
-            // ---- پۆدیۆم — تەنها کاتێک لە سەرەتاوەین و ٣+ کەس هەیە ----
+            // ============================================================
+            // تابلۆی پێشبڕکێ — پۆدیۆم لەسەر پاشبنەما، لیست بەسەریدا
+            // ------------------------------------------------------------
+            // شێوازە جیهانییەکەی تابلۆی پێشبڕکێ: سێ یەکەم لەسەر
+            // پلەکانی جیاواز بەرزی، لەسەر پاشبنەمایەکی ڕەنگاوڕەنگ؛
+            // لیستەکە وەک پەڕەیەکی سپی بەسەریدا هەڵدەکشێت.
+            // ⚠️ ڕیزی «تۆ» لە خوارەوە **دەلکێت** — بەکارهێنەر هەرگیز
+            //    شوێنی خۆی لەبەرچاو ون ناکات، تەنانەت لە دوورترین
+            //    پلەشدا. ئەمە جەرگەی هەستی پێشبڕکێیە.
+            // ============================================================
             const podium = (_rank.rows[0] && _rank.rows[0].rank === 1 && _rank.rows.length >= 3)
                 ? _rank.rows.slice(0, 3) : null;
+
+            html += '<div class="rkboard">';
+
             if (podium) {
-                const medal = ['#f59e0b', '#94a3b8', '#b45309'];
-                // ڕیزبەندی بینین: دووەم — یەکەم — سێیەم
+                // ڕیزبەندیی بینین: دووەم — یەکەم — سێیەم
                 const ord = [podium[1], podium[0], podium[2]];
-                html += '<div class="sx-podium">' + ord.map((r, i) => {
-                    const place = (i === 1) ? 0 : (i === 0 ? 1 : 2);
+                html += '<div class="rkpod">' + ord.map((r, i) => {
+                    const place = (i === 1) ? 1 : (i === 0 ? 2 : 3);
                     const me = r.code && String(r.code) === String(currentUser.code);
-                    return '<div class="sx-pod' + (place === 0 ? ' is-first' : '') + (me ? ' is-me' : '')
-                        + '"' + (canDrillStats() && !me && r.code
-                            ? ' onclick="openMemberStats(\'' + histEsc(String(r.code)) + '\')"' : '') + '>'
-                        + (place === 0 ? '<span class="sx-pod-crown"><i class="bx bxs-crown"></i></span>' : '')
-                        + '<span class="sx-pod-medal" style="color:' + medal[place] + ';">'
-                        + '<i class="bx bxs-medal"></i><b>' + r.rank + '</b></span>'
+                    const tap = canDrillStats() && !me && r.code
+                        ? ' onclick="openMemberStats(\'' + histEsc(String(r.code)) + '\')"' : '';
+                    return '<div class="rkpod-c is-p' + place + (me ? ' is-me' : '') + '"' + tap + '>'
+                        + (place === 1 ? '<i class="bx bxs-crown rkpod-crown"></i>' : '')
+                        + '<div class="rkpod-av">'
                         + (r.name == null
                             ? '<span class="sx-anon is-big"><i class="bx bx-user"></i></span>'
-                            : avatarHtml(r.avatar, r.name || '', place === 0 ? 52 : 42))
-                        + '<b class="sx-pod-name">' + rankNameHtml(r) + '</b>'
-                        + '<span class="sx-pod-val" dir="rtl">' + rankValueHtml(r.value, _rank.metric) + '</span>'
+                            : avatarHtml(r.avatar, r.name || '', place === 1 ? 66 : 54))
+                        + '<span class="rkpod-n">' + r.rank + '</span></div>'
+                        + '<b class="rkpod-name">' + rankNameHtml(r) + '</b>'
+                        + '<span class="rkpod-val" dir="rtl">' + rankValueHtml(r.value, _rank.metric) + '</span>'
+                        + '<div class="rkpod-step"></div>'
                         + '</div>';
                 }).join('') + '</div>';
             }
 
-            html += '<div class="sx-rlist">'
-                + (podium ? _rank.rows.slice(3) : _rank.rows).map(rankRowHtml).join('') + '</div>';
+            // ---- شریتی هان — لەسەر پاشبنەماکە ----
+            html += rankCallHtml();
+            html += '</div>';   // rkboard
 
-            // ---- پلەی خۆم — ئەگەر لە لیستە بارکراوەکەدا نییە ----
-            const meLoaded = _rank.rows.some(r => r.code && String(r.code) === String(currentUser.code));
-            if (_rank.me && !meLoaded) {
-                html += '<div class="sx-mepin"><span class="sx-rn">' + _rank.me.rank + '</span>'
-                    + '<b>پلەی تۆ</b>' + rankLevelChip(_rank.me.level_pts)
-                    + '<b class="sx-rval" dir="rtl">' + rankValueHtml(_rank.me.value, _rank.metric) + '</b></div>';
-            }
+            // ---- لیست — پەڕەی سپی کە بەسەر پاشبنەماکەدا هەڵدەکشێت ----
+            html += '<div class="rksheet">'
+                + '<div class="sx-rlist">'
+                + (podium ? _rank.rows.slice(3) : _rank.rows).map(rankRowHtml).join('')
+                + '</div>';
 
-            // ---- «کۆنتر» + ژمارەی گشتی — هیچ ڕیزێک ون نابێت ----
+            // «کۆنتر» + ژمارەی گشتی — هیچ ڕیزێک ون نابێت
             if (_rank.rows.length < _rank.total) {
                 html += '<button type="button" class="ocmt-more" onclick="loadRank()">'
                     + '<i class="bx bx-chevron-down"></i> زیاتر پیشان بدە</button>';
@@ -11509,6 +11928,13 @@
                     ? '<i class="bx bx-check-circle"></i> هەموو ' + _rank.total + ' کەسەکە پیشان دراون'
                     : '<i class="bx bx-list-ul"></i> پیشاندراو ' + _rank.rows.length + ' لە ' + _rank.total)
                 + '</div>';
+
+            // یاسای خاڵەکان — تەنها لە مێتری «خاڵ»دا واتای هەیە
+            if (_rank.metric === 'points') html += rankHowHtml();
+            html += '</div>';   // rksheet
+
+            // ---- ڕیزی «تۆ»ی لکاو ----
+            html += rankMeBarHtml();
 
             box.innerHTML = html;
         }
@@ -18577,6 +19003,15 @@
         // `fsDraft` تەنها لەناو شیتەکەدا دەژی؛ هەتا «پیشاندانی ئەنجامەکان»
         // نەکرێت هیچ شتێک لەسەر لیستەکە ناگۆڕێت
         let fsDraft = { status: 'all', preset: 'all', from: null, to: null };
+        // ⚠️ ڕۆژژمێرەکە لە دوو شوێندا بەکاردێت — شیتی ئۆردەرەکان و
+        //    شیتی مەودای ئامار/پلە. `fcalD` دیاری دەکات ئێستا کام
+        //    دراوت دەستکاری دەکات. `null` = هی ئۆردەرەکان.
+        //    ⭐ نۆدی `.fcal-wrap` خۆی دەگوێزرێتەوە نێوان دوو شیتەکە،
+        //    بۆیە هەمان مارکئاپ و ID و CSS و ڕووداوەکان دەمێننەوە —
+        //    هیچ کۆپییەک نییە کە لێک دووربکەونەوە.
+        let fcalD = null;
+        let fcalOnChange = null;
+        function fcalDraft() { return fcalD || fsDraft; }
         let fcalAnchor = null;      // یەکەم مانگی دیار (دۆخی تەنیشتیەک)
         let fcalBackMonths = 12;    // چەند مانگ بۆ دواوە لە دۆخی ستوونی
         let fcalHover = null;       // پێشبینینی هۆڤەر لەکاتی نیوە-هەڵبژاردن
@@ -18790,7 +19225,7 @@
                 let start = fdAddMonths(new Date(t.getFullYear(), t.getMonth(), 1), -fcalBackMonths);
                 let end = fdAddMonths(new Date(t.getFullYear(), t.getMonth(), 1), 1);
                 // مەودایەکی کۆنتر لە پەنجەرەکە؟ فراوانی دەکەین تا دیار بێت
-                let lo = fsDraft.from ? fdFromKey(fsDraft.from) : null;
+                let lo = fcalDraft().from ? fdFromKey(fcalDraft().from) : null;
                 if (lo && lo < start) start = new Date(lo.getFullYear(), lo.getMonth(), 1);
                 for (let d = new Date(start); d <= end; d = fdAddMonths(d, 1)) out.push(new Date(d));
             }
@@ -18836,7 +19271,7 @@
         // ڕەنگکردنی مەودا بەبێ نەخشاندنەوەی هەموو ڕۆژژمێرەکە — هۆڤەر
         // دەبێت ڕەوان بێت، بۆیە تەنها کلاسەکان دەگۆڕدرێن
         function fcalPaint() {
-            let lo = fsDraft.from, hi = fsDraft.to;
+            let lo = fcalDraft().from, hi = fcalDraft().to;
             let preview = false;
             // تەنها سەرەتا بەستراوە → هۆڤەر کۆتاییەکە پێشبینی دەکات
             if (lo && !hi && fcalHover) {
@@ -18860,13 +19295,15 @@
         // هەڵبژاردنی ڕۆژ: کلیکی یەکەم سەرەتا، دووەم کۆتایی
         function fcalPick(k) {
             if (!k) return;
-            if (!fsDraft.from || fsDraft.to) { fsDraft.from = k; fsDraft.to = null; }
-            else if (k < fsDraft.from) { fsDraft.to = fsDraft.from; fsDraft.from = k; }
-            else { fsDraft.to = k; }
-            fsDraft.preset = 'custom';
+            const D = fcalDraft();
+            if (!D.from || D.to) { D.from = k; D.to = null; }
+            else if (k < D.from) { D.to = D.from; D.from = k; }
+            else { D.to = k; }
+            D.preset = 'custom';
             fcalHover = null;
             fcalFocus = k;
-            fsRenderChips(); fcalPaint(); fsSyncInputs(); fsRenderSummary();
+            if (fcalOnChange) { fcalPaint(); fcalOnChange(); }
+            else { fsRenderChips(); fcalPaint(); fsSyncInputs(); fsRenderSummary(); }
         }
 
         // ---------- ڕووداوەکانی ڕۆژژمێر ----------
@@ -18891,7 +19328,7 @@
                 let h = host(); if (!h || !h.contains(e.target)) return;
                 let c = cellOf(e.target); if (!c) return;
                 if (fcalDragEdge) { fcalDragTo(c.dataset.k); return; }
-                if (fsDraft.from && !fsDraft.to) { fcalHover = c.dataset.k; fcalPaint(); }
+                if (fcalDraft().from && !fcalDraft().to) { fcalHover = c.dataset.k; fcalPaint(); }
             });
 
             document.addEventListener('pointerout', (e) => {
@@ -18904,9 +19341,9 @@
             // دەستپێکردنەوەی هەڵبژاردن
             document.addEventListener('pointerdown', (e) => {
                 let h = host(); if (!h || !h.contains(e.target)) return;
-                if (!fsDraft.from || !fsDraft.to) return;
+                if (!fcalDraft().from || !fcalDraft().to) return;
                 let c = cellOf(e.target); if (!c) return;
-                if (c.dataset.k === fsDraft.from) fcalDragEdge = 'from';
+                if (c.dataset.k === fcalDraft().from) fcalDragEdge = 'from';
                 else if (c.dataset.k === fsDraft.to) fcalDragEdge = 'to';
                 if (fcalDragEdge) { fcalDragMoved = false; h.classList.add('is-dragging'); }
             });
@@ -18976,7 +19413,9 @@
         }
 
         function fcalMore() {
-            let box = document.getElementById('fsheet-body');
+            // ⚠️ دوو شیت ڕۆژژمێرەکە بەکاردەهێنن — سکرۆڵەری ئەوەی
+            //    کراوەیە دەبێت بدۆزرێتەوە، نەک هەمیشە هی ئۆردەرەکان
+            let box = document.getElementById(fcalD ? 'fsheet-body-sx' : 'fsheet-body');
             let before = box ? box.scrollHeight : 0;
             fcalBackMonths += 12;
             fcalRender();
@@ -19003,7 +19442,9 @@
         function fcalScrollToMonth(k, behavior) {
             if (fcalCols() !== 0) return;
             let d = fdFromKey(k); if (!d) return;
-            let box = document.getElementById('fsheet-body');
+            // ⚠️ دوو شیت ڕۆژژمێرەکە بەکاردەهێنن — سکرۆڵەری ئەوەی
+            //    کراوەیە دەبێت بدۆزرێتەوە، نەک هەمیشە هی ئۆردەرەکان
+            let box = document.getElementById(fcalD ? 'fsheet-body-sx' : 'fsheet-body');
             let el = box && box.querySelector(`.fcm[data-m="${fdMonthKey(d)}"]`);
             if (!box || !el) return;
             // سەردێڕی لکاو (بۆکسەکانی بەروار) شوێن دەگرێت لە سەرەوە،
@@ -19023,8 +19464,8 @@
                 el.value = d ? `${fdPad(d.getDate())}/${fdPad(d.getMonth() + 1)}/${d.getFullYear()}` : '';
                 el.classList.remove('is-bad');
             };
-            put('fcal-from', fsDraft.from);
-            put('fcal-to', fsDraft.to);
+            put('fcal-from', fcalDraft().from);
+            put('fcal-to', fcalDraft().to);
         }
 
         // «ڕۆژ/مانگ/ساڵ» → کلیل. ئەگەر نەگونجا null دەگەڕێنێتەوە.
@@ -19043,21 +19484,23 @@
             let el = document.getElementById(which === 'from' ? 'fcal-from' : 'fcal-to');
             if (!el) return;
             let raw = el.value.trim();
+            const D = fcalDraft();
             if (!raw) {                       // بەتاڵ = لابردنی ئەو لێوارە
-                fsDraft[which] = null;
-                if (which === 'from' && fsDraft.to) { fsDraft.from = fsDraft.to; fsDraft.to = null; }
-                fsDraft.preset = 'custom';
-                fsRenderChips(); fcalPaint(); fsSyncInputs(); fsRenderSummary();
+                D[which] = null;
+                if (which === 'from' && D.to) { D.from = D.to; D.to = null; }
+                D.preset = 'custom';
+                if (fcalOnChange) { fcalPaint(); fcalOnChange(); }
+                else { fsRenderChips(); fcalPaint(); fsSyncInputs(); fsRenderSummary(); }
                 return;
             }
             let k = fsParseTyped(raw);
             if (!k) { el.classList.add('is-bad'); return; }
             el.classList.remove('is-bad');
-            fsDraft[which] = k;
-            if (fsDraft.from && fsDraft.to && fsDraft.from > fsDraft.to) {
-                let t = fsDraft.from; fsDraft.from = fsDraft.to; fsDraft.to = t;
+            D[which] = k;
+            if (D.from && D.to && D.from > D.to) {
+                let t = D.from; D.from = D.to; D.to = t;
             }
-            fsDraft.preset = 'custom';
+            D.preset = 'custom';
             fcalFocus = k;
             fcalAlign(k);
             fcalEnsureMonth(fdFromKey(k));
