@@ -1924,6 +1924,19 @@
          سیستەمەکە دەکاتەوە، کە باشترە لە ڕۆژژمێرێکی دەستکردی بچووک.
          `#fcal`ی شیتی ئۆردەرەکان دووبارە بەکارنایەت چونکە تەواو بە
          `fsDraft` و `reloadMgmt`ـەوە بەندە. -->
+    <!-- ڕێنماییەکانی خاڵ — بە ئایکۆنی «؟»ی گۆشەی تابلۆکە دەکرێتەوە -->
+    <div id="sx-how-sheet" class="modal-overlay" style="z-index: 2096;"
+        onclick="if (event.target.id === 'sx-how-sheet') closeRankHow()">
+        <div class="modal-content is-sxhow">
+            <div class="modal-header">
+                <h3 class="modal-title is-sm"><i class='bx bx-help-circle'></i>
+                    خاڵ چۆن کۆدەکەیتەوە؟</h3>
+                <button class="modal-close" onclick="closeRankHow()"><i class='bx bx-x'></i></button>
+            </div>
+            <div class="sxhow-body" id="sxhow-body"></div>
+        </div>
+    </div>
+
     <!-- هەڵبژێری گشتی — ماوە، پێوەر، پاڵاوتن. یەک شیت بۆ هەموویان. -->
     <div id="sx-pick-sheet" class="modal-overlay" style="z-index: 2096;"
         onclick="if (event.target.id === 'sx-pick-sheet') closeSxPick()">
@@ -11751,61 +11764,89 @@
         //    دێن (db/031). ئەگەر ڕۆژێک فۆرمولەکە بگۆڕێت، ئێرەش
         //    بگۆڕە، ئەگەرنا ئەپەکە درۆ لەگەڵ بەکارهێنەر دەکات.
         // ============================================================
-        let _rkHowOpen = false;
-        function toggleRankHow() {
-            _rkHowOpen = !_rkHowOpen;
-            const el = document.getElementById('rk-how');
-            if (el) el.classList.toggle('is-open', _rkHowOpen);
+        // ============================================================
+        // ڕێنماییەکانی خاڵ — شیتێکی تەواو، بە ئایکۆنێکی «؟»
+        // ------------------------------------------------------------
+        // ⚠️ پێشتر پانێڵێکی داخراو بوو لە **خوارەوەی** لیستەکە —
+        //    ٢٦ ڕیز لە ژێری، بۆیە کەس نەیدەبینی. ئێستا ئایکۆنێکە
+        //    لە گۆشەی تابلۆکە.
+        // ⚠️ ژمارەکان لە `PTS_*`ـەوە دێن، نەک بە دەست — ئەگەر
+        //    فۆرمولەکە بگۆڕێت، ڕێنماییەکەش خۆکارانە دەگۆڕێت.
+        // ============================================================
+        function openRankHow() {
+            const box = document.getElementById('sxhow-body');
+            if (!box) return;
+
+            // نموونەیەکی ڕاستەقینە — هەمان فۆرمولی سێرڤەر
+            const exRecv = 30000, exProfit = 9000, exItems = 2;
+            const pRecv = Math.floor(exRecv / PTS_RECV_DIV);
+            const pProf = Math.floor(exProfit / PTS_PROFIT_DIV);
+            const pItem = (exItems - 1) * PTS_PER_EXTRA_ITEM;
+            const total = PTS_PER_ORDER + pRecv + pProf + pItem;
+            const n = v => '<bdi dir="ltr">' + Number(v).toLocaleString('en-US') + '</bdi>';
+
+            box.innerHTML = `
+                <div class="rkhow-f">
+                    <span class="rkhow-op">${n(PTS_PER_ORDER)} خاڵ</span>
+                    <small>بۆ هەر ئۆردەرێکی <b>گەیشتوو</b></small>
+                </div>
+                <div class="rkhow-plus">+</div>
+                <div class="rkhow-f">
+                    <span class="rkhow-op">١ خاڵ</span>
+                    <small>بۆ هەر <b>${n(PTS_RECV_DIV)} د.ع</b> کە
+                        <b>لە کڕیار وەردەگریت</b></small>
+                </div>
+                <div class="rkhow-plus">+</div>
+                <div class="rkhow-f">
+                    <span class="rkhow-op">١ خاڵ</span>
+                    <small>بۆ هەر <b>${n(PTS_PROFIT_DIV)} د.ع</b> قازانج</small>
+                </div>
+                <div class="rkhow-plus">+</div>
+                <div class="rkhow-f">
+                    <span class="rkhow-op">${n(PTS_PER_EXTRA_ITEM)} خاڵ</span>
+                    <small>بۆ هەر <b>کاڵایەکی زیادە</b> لە دوای یەکەم</small>
+                </div>
+
+                <div class="rkex">
+                    <div class="rkex-h"><i class='bx bx-bulb'></i> نموونە</div>
+                    <div class="rkex-o">ئۆردەرێک بە <b>${n(exRecv)} د.ع</b>،
+                        <b>${n(exItems)} کاڵا</b>، قازانجی <b>${n(exProfit)} د.ع</b></div>
+                    <div class="rkex-rows">
+                        <div><span>گەیاندن</span><small>ئۆردەری گەیشتوو</small>
+                            <b>+${n(PTS_PER_ORDER)}</b></div>
+                        <div><span>وەرگیراو</span>
+                            <small>${n(exRecv)} ÷ ${n(PTS_RECV_DIV)}</small>
+                            <b>+${n(pRecv)}</b></div>
+                        <div><span>قازانج</span>
+                            <small>${n(exProfit)} ÷ ${n(PTS_PROFIT_DIV)}</small>
+                            <b>+${n(pProf)}</b></div>
+                        <div><span>کاڵای زیادە</span>
+                            <small>${n(exItems - 1)} × ${n(PTS_PER_EXTRA_ITEM)}</small>
+                            <b>+${n(pItem)}</b></div>
+                    </div>
+                    <div class="rkex-t"><span>کۆی ئەم ئۆردەرە</span>
+                        <b>${n(total)} خاڵ</b></div>
+                </div>
+
+                <ul class="rkhow-note">
+                    <li><i class='bx bx-trending-up'></i> ئۆردەری گەورەتر و کاڵای
+                        زیاتر = خاڵی زیاتر.</li>
+                    <li><i class='bx bx-check'></i> پاشماوەکان ون نابن — لەگەڵ
+                        ئۆردەری داهاتوودا کۆدەبنەوە.</li>
+                    <li><i class='bx bx-x'></i> ئۆردەری <b>گەڕاوە</b> هیچ خاڵێک
+                        نادات — خاڵەکەی خۆکارانە دەکشێتەوە.</li>
+                    <li><i class='bx bx-info-circle'></i> خاڵ هەڵناگیرێت — هەر
+                        جارێک لە ئۆردەرەکانتەوە دەژمێردرێتەوە، بۆیە هەرگیز
+                        هەڵە ناکات.</li>
+                </ul>`;
+            document.getElementById('sx-how-sheet').classList.add('show');
         }
 
-        function rankHowHtml() {
-            return `<div class="rkhow${_rkHowOpen ? ' is-open' : ''}" id="rk-how">
-                <button type="button" class="rkhow-btn" onclick="toggleRankHow()">
-                    <i class='bx bx-help-circle'></i>
-                    <span>خاڵ چۆن کۆدەکەیتەوە؟</span>
-                    <i class='bx bx-chevron-down rkhow-arrow'></i>
-                </button>
-                <div class="rkhow-body">
-                    <div class="rkhow-f">
-                        <span class="rkhow-op"><bdi dir="ltr">${PTS_PER_ORDER}</bdi> خاڵ</span>
-                        <small>بۆ هەر ئۆردەرێکی <b>گەیشتوو</b></small>
-                    </div>
-                    <div class="rkhow-plus">+</div>
-                    <div class="rkhow-f">
-                        <span class="rkhow-op">١ خاڵ</span>
-                        <small>بۆ هەر <b><bdi dir="ltr">${PTS_RECV_DIV.toLocaleString('en-US')}</bdi>
-                            د.ع</b> کە <b>لە کڕیار وەردەگریت</b></small>
-                    </div>
-                    <div class="rkhow-plus">+</div>
-                    <div class="rkhow-f">
-                        <span class="rkhow-op">١ خاڵ</span>
-                        <small>بۆ هەر <b><bdi dir="ltr">${PTS_PROFIT_DIV.toLocaleString('en-US')}</bdi>
-                            د.ع</b> قازانج</small>
-                    </div>
-                    <div class="rkhow-plus">+</div>
-                    <div class="rkhow-f">
-                        <span class="rkhow-op"><bdi dir="ltr">${PTS_PER_EXTRA_ITEM}</bdi> خاڵ</span>
-                        <small>بۆ هەر <b>کاڵایەکی زیادە</b> لە دوای یەکەم</small>
-                    </div>
-                    <ul class="rkhow-note">
-                        <li><i class='bx bx-trending-up'></i> ئۆردەری گەورەتر و
-                            کاڵای زیاتر = خاڵی زیاتر. ئۆردەرێکی
-                            <bdi dir="ltr">30,000</bdi> خاڵی زیاتری هەیە لە
-                            <bdi dir="ltr">20,000</bdi>.</li>
-                        <li><i class='bx bx-check'></i> پاشماوەکان ون نابن —
-                            لەگەڵ ئۆردەری داهاتوودا کۆدەبنەوە.</li>
-                        <li><i class='bx bx-x'></i> ئۆردەری <b>گەڕاوە</b> هیچ
-                            خاڵێک نادات — خاڵەکەی خۆکارانە دەکشێتەوە.</li>
-                        <li><i class='bx bx-info-circle'></i> خاڵ هەڵناگیرێت —
-                            هەر جارێک لە ئۆردەرەکانتەوە دەژمێردرێتەوە، بۆیە
-                            هەرگیز هەڵە ناکات.</li>
-                    </ul>
-                </div>
-            </div>`;
+        function closeRankHow() {
+            document.getElementById('sx-how-sheet').classList.remove('show');
         }
 
         // شریتی هان — لەسەر پاشبنەماکە، ژێر پۆدیۆمەکە.
-        // هەمان دەقی `rankHeroHtml` بەڵام یەک دێڕ و بێ کارت.
         function rankCallHtml() {
             const me = _rank.me;
             if (!me) {
@@ -11839,22 +11880,18 @@
         // ------------------------------------------------------------
         // ⚠️ باری نەڤیگەیشن لە دۆخی ئاسایی `bottom: 25px`ـە بەڵام لە
         //    فوڵ‌سکریندا `8px + var(--safe-bottom)`، و `--safe-bottom`
-        //    لە تلیگرامەوە دێت نەک لە `env()`ـەوە. بۆیە هەر
-        //    ژمارەیەکی ڕەق لە یەکێک لە دوو دۆخەکەدا هەڵەیە —
-        //    خاوەنەکە بینی کە لە فوڵ‌سکریندا دەچووە ژێر نەڤەکەوە.
-        //    ئێستا شوێنی ڕاستەقینەی نەڤەکە دەپێورێت.
+        //    لە تلیگرامەوە دێت نەک لە `env()`ـەوە. هەر ژمارەیەکی ڕەق
+        //    لە یەکێک لە دوو دۆخەکەدا هەڵەیە.
         // ============================================================
         function syncRkmeOffset() {
             const bc = document.querySelector('#bottom-nav .button-container');
             if (!bc) return;
             const top = bc.getBoundingClientRect().top;
-            if (!top) return;                       // هێشتا نەخشێنراوە
+            if (!top) return;
             const px = Math.round(window.innerHeight - top) + 12;
             document.documentElement.style.setProperty('--rkme-bottom', px + 'px');
         }
 
-        // گۆڕانی قەبارە (کردنەوەی تەختەکلیل، سووڕان، فوڵ‌سکرین) شوێنی
-        // نەڤەکە دەگۆڕێت — بۆیە دووبارە دەپێورێتەوە
         window.addEventListener('resize', () => {
             clearTimeout(window.__rkmeT);
             window.__rkmeT = setTimeout(syncRkmeOffset, 120);
@@ -11998,7 +12035,11 @@
             const podium = (_rank.rows[0] && _rank.rows[0].rank === 1 && _rank.rows.length >= 3)
                 ? _rank.rows.slice(0, 3) : null;
 
-            html += '<div class="rkboard">';
+            html += '<div class="rkboard">'
+                // ⚠️ تەنها لە مێتری «خاڵ»دا واتای هەیە
+                + (_rank.metric === 'points'
+                    ? '<button type="button" class="rkboard-help" title="خاڵ چۆن کۆدەکەیتەوە؟"'
+                    + ' onclick="openRankHow()"><i class="bx bx-question-mark"></i></button>' : '');
 
             if (podium) {
                 // ڕیزبەندیی بینین: دووەم — یەکەم — سێیەم
@@ -12043,8 +12084,6 @@
                     : '<i class="bx bx-list-ul"></i> پیشاندراو ' + _rank.rows.length + ' لە ' + _rank.total)
                 + '</div>';
 
-            // یاسای خاڵەکان — تەنها لە مێتری «خاڵ»دا واتای هەیە
-            if (_rank.metric === 'points') html += rankHowHtml();
             html += '</div>';   // rksheet
 
             // ---- ڕیزی «تۆ»ی لکاو ----
