@@ -11006,6 +11006,7 @@
 
             // ---- دۆخ: هی خۆم / تیمەکەم — تەنها ئەگەر تیمی هەبێت
             //      و لە درێل-داوندا نەبین ----
+            html += '<div class="sxstick">';
             if (!_statsTarget && canTeamMode()) {
                 const teamLabel = (userRole === 'پاشا') ? 'هەمووی' : 'تیمەکەم';
                 // ⚠️ ڕیزبەندی: مەودای فراوانتر **یەکەم** — لە RTLـدا
@@ -11019,6 +11020,22 @@
                     + '" onclick="setStatsMode(\'me\')"><i class="bx bx-user"></i> هی خۆم</button>'
                     + '</div>';
             }
+
+            // ---- کۆنترۆڵەکان: ماوە + چی پیشان بدرێت ----
+            // ⚠️ پێشتر ٧ چیپی ماوە + ٣ چیپی پاڵاوتن بوون. ئێستا دوو
+            //    دوگمە — هەمان شێوازی تابی پلەکان.
+            html += '<div class="sxctl">'
+                + '<button type="button" class="sxctl-b" onclick="openStatsRangePick()">'
+                + '<i class="bx bx-calendar"></i><span>'
+                + histEsc(sxRangeLabel(_sxRange.period, _sxRange.from, _sxRange.to))
+                + '</span><i class="bx bx-chevron-down"></i></button>'
+                + '<button type="button" class="sxctl-b" onclick="openStatsGroupPick()">'
+                + '<i class="bx bx-filter-alt"></i><span>'
+                + histEsc((SX_GROUPS.find(g => g.k === _sxGroup) || {}).t || 'هەمووی')
+                + '</span><i class="bx bx-chevron-down"></i></button>'
+                + '</div>'
+                + '</div>';
+            html += '</div>';   // sxstick
 
             // ⚠️ کارتی ئاست/کورتە **دوای** سوێچەکە دێت. بەرزییان
             //    جیاوازە (٩٠px بەرامبەر ٦٤px)، بۆیە ئەگەر لە سەرەوە
@@ -11051,19 +11068,6 @@
                     + '</div>';
             }
 
-            // ---- کۆنترۆڵەکان: ماوە + چی پیشان بدرێت ----
-            // ⚠️ پێشتر ٧ چیپی ماوە + ٣ چیپی پاڵاوتن بوون. ئێستا دوو
-            //    دوگمە — هەمان شێوازی تابی پلەکان.
-            html += '<div class="sxctl">'
-                + '<button type="button" class="sxctl-b" onclick="openStatsRangePick()">'
-                + '<i class="bx bx-calendar"></i><span>'
-                + histEsc(sxRangeLabel(_sxRange.period, _sxRange.from, _sxRange.to))
-                + '</span><i class="bx bx-chevron-down"></i></button>'
-                + '<button type="button" class="sxctl-b" onclick="openStatsGroupPick()">'
-                + '<i class="bx bx-filter-alt"></i><span>'
-                + histEsc((SX_GROUPS.find(g => g.k === _sxGroup) || {}).t || 'هەمووی')
-                + '</span><i class="bx bx-chevron-down"></i></button>'
-                + '</div>';
 
             // ---- بەنتۆ گرید — بەشی گۆڕاو ----
             html += '<div class="sx-bento" id="sx-bento">' + statsBentoHtml(d) + '</div>';
@@ -11074,6 +11078,7 @@
             box.innerHTML = html;
             _statsShownKey = _statsTarget || _statsMode;
             _sxAnimated = true;
+            requestAnimationFrame(syncSxStickTop);
             renderStatsSeries();
             renderStatsTip();
         }
@@ -11883,6 +11888,14 @@
         //    لە تلیگرامەوە دێت نەک لە `env()`ـەوە. هەر ژمارەیەکی ڕەق
         //    لە یەکێک لە دوو دۆخەکەدا هەڵەیە.
         // ============================================================
+        // بەرزی تابەکان — بەشی دووەمی سەردێڕی لکاو پێویستی پێیەتی
+        function syncSxStickTop() {
+            const t = document.getElementById('stats-magic-tabs');
+            if (!t) return;
+            const h = t.offsetHeight;
+            if (h) document.documentElement.style.setProperty('--sxtabs-h', h + 'px');
+        }
+
         function syncRkmeOffset() {
             const bc = document.querySelector('#bottom-nav .button-container');
             if (!bc) return;
@@ -11894,7 +11907,7 @@
 
         window.addEventListener('resize', () => {
             clearTimeout(window.__rkmeT);
-            window.__rkmeT = setTimeout(syncRkmeOffset, 120);
+            window.__rkmeT = setTimeout(() => { syncSxStickTop(); syncRkmeOffset(); }, 120);
         });
 
         // ڕیزی «تۆ» — لە خوارەوەی پەیکەرەکە دەلکێت.
@@ -11997,7 +12010,8 @@
             // ⚠️ «هەمووی» یەکەم — لە RTLـدا لای ڕاست. هەمان ڕیزبەندیی
             //    سوێچی تابی ئامارەکان: مەودای فراوانتر لای دەستپێکی
             //    خوێندنەوەیە، نەک لای کۆتایی.
-            let html = (_rank.hasTeam
+            let html = '<div class="sxstick">'
+                + (_rank.hasTeam
                 ? '<div class="sx-chips sx-modes">'
                 + '<button type="button" class="notif-chip' + (_rank.scope === 'all' ? ' is-on' : '')
                 + '" onclick="setRankScope(\'all\')"><i class="bx bx-globe"></i> هەمووی</button>'
@@ -12009,7 +12023,8 @@
                 + sxCtlHtml(
                     sxRangeLabel(_rank.period, _rank.from, _rank.to), 'openRankRangePick()',
                     (RANK_METRICS.find(m => m.k === _rank.metric) || {}).t || 'خاڵ',
-                    'openRankMetricPick()');
+                    'openRankMetricPick()')
+                + '</div>';   // sxstick
 
             if (loadingOnly || (_rank.busy && !_rank.rows.length)) {
                 box.innerHTML = html + '<div class="sx-loading"><i class="bx bx-loader-alt bx-spin"></i> هێنانی پلەکان...</div>';
@@ -12090,7 +12105,7 @@
             html += rankMeBarHtml();
             // ⚠️ دوای نەخشاندن دەپێورێت — پێش ئەوە نەڤەکە لەوانەیە
             //    هێشتا شوێنی کۆتایی خۆی نەگرتبێت
-            requestAnimationFrame(syncRkmeOffset);
+            requestAnimationFrame(() => { syncSxStickTop(); syncRkmeOffset(); });
 
             box.innerHTML = html;
         }

@@ -15958,3 +15958,53 @@ body.sx-wide {
   font-weight: 900;
   color: var(--primary);
 }
+
+/* ═══════════════════════════════════════════════════════════
+   سەردێڕی لکاو لە شاشەی ئامار و پلە
+   ───────────────────────────────────────────────────────────
+   تابەکان و کۆنترۆڵەکان دەلکێن؛ تەنها لیستەکە سکڕۆڵ دەبێت.
+   ⚠️ `body` سکڕۆڵەکەیە (هیچ `overflow`ێکی ناوەوە نییە)، بۆیە
+      `sticky` بەرامبەر پەنجەرەکە کاردەکات.
+   ⚠️ `body`ـەکە `padding: 14px 12px`ـی هەیە. بەبێ
+      `margin: 0 -12px` + `padding: 0 12px` ناوەڕۆکەکە لە
+      قەراغەوە دەردەکەوێت لە ژێر سەردێڕە لکاوەکەدا.
+   ⚠️ `--sxtabs-h` بە پێوانە دادەنرێت (`syncSxStickTop`) —
+      بەرزی تابەکان بەپێی فۆنت و شاشە دەگۆڕێت، بۆیە ژمارەیەکی
+      ڕەق شوێنی بەشی دووەم تێکدەدات.
+   ═══════════════════════════════════════════════════════════ */
+.sx-tabs {
+  position: sticky;
+  top: var(--safe-top, 0px);
+  z-index: 20;
+  margin-inline: -12px;
+  padding: 8px 12px 10px;
+  background: var(--bg);
+}
+
+.sxstick {
+  position: sticky;
+  top: calc(var(--safe-top, 0px) + var(--sxtabs-h, 58px));
+  z-index: 19;
+  margin-inline: -12px;
+  padding: 2px 12px 8px;
+  background: var(--bg);
+}
+
+/* ⚠️ ناوەڕۆکی ناو بەشە لکاوەکە نابێت مارجنی خوارەوەی هەبێت —
+   ئەگەرنا بۆشاییەک لە نێوان بەشەکە و لیستەکەدا دەردەکەوێت
+   کە پاشبنەماکەی تێدا دیارە */
+.sxstick > *:last-child {
+  margin-bottom: 0;
+}
+
+/* لێواری نەرم لە خوارەوەی سەردێڕەکە — دیاری دەکات کە ناوەڕۆک
+   لە ژێریدا تێدەپەڕێت */
+.sxstick::after {
+  content: '';
+  position: absolute;
+  inset-inline: 0;
+  bottom: -10px;
+  height: 10px;
+  background: linear-gradient(var(--bg), transparent);
+  pointer-events: none;
+}
