@@ -1924,9 +1924,28 @@
          سیستەمەکە دەکاتەوە، کە باشترە لە ڕۆژژمێرێکی دەستکردی بچووک.
          `#fcal`ی شیتی ئۆردەرەکان دووبارە بەکارنایەت چونکە تەواو بە
          `fsDraft` و `reloadMgmt`ـەوە بەندە. -->
+    <!-- هەڵبژێری گشتی — ماوە، پێوەر، پاڵاوتن. یەک شیت بۆ هەموویان. -->
+    <div id="sx-pick-sheet" class="modal-overlay" style="z-index: 2096;"
+        onclick="if (event.target.id === 'sx-pick-sheet') closeSxPick()">
+        <div class="modal-content is-sxpick">
+            <div class="modal-header">
+                <h3 class="modal-title is-sm" id="sxpick-title"></h3>
+                <button class="modal-close" onclick="closeSxPick()"><i class='bx bx-x'></i></button>
+            </div>
+            <div class="sxpick-list" id="sxpick-list"></div>
+        </div>
+    </div>
+
+    <!-- ⚠️ **هیچ `stopPropagation`ێک لێرەدا نییە.** ڕووداوەکانی
+         ڕۆژژمێر لەسەر `document` گرێدراون، بۆیە ئەگەر پەیکەرەکە
+         بڵاوبوونەوە بوەستێنێت، هەڵبژاردنی ڕۆژ **بەتەواوی** کار
+         ناکات. `closeModal` پێویستی پێی نییە — خۆی پشکنینی
+         `event.target.id` دەکات.
+         ⚠️ داخستن بە `closeSxDateSheet`ـەوە دەبێت، نەک `closeModal` —
+         ئەگەرنا ڕۆژژمێرەکە ناگەڕێتەوە شوێنی خۆی. -->
     <div id="sx-date-sheet" class="modal-overlay" style="z-index: 2095;"
-        onclick="closeModal(event, 'sx-date-sheet')">
-        <div class="modal-content is-sxd" onclick="event.stopPropagation()">
+        onclick="if (event.target.id === 'sx-date-sheet') closeSxDateSheet()">
+        <div class="modal-content is-sxd">
             <div class="modal-header">
                 <h3 class="modal-title is-sm"><i class='bx bx-calendar-edit'></i> مەودای دڵخواز</h3>
                 <button class="modal-close" onclick="closeSxDateSheet()"><i class='bx bx-x'></i></button>
@@ -10921,10 +10940,11 @@
         function setStatsGroup(k) {
             if (_sxGroup === k) return;
             _sxGroup = k;
-            // چیپەکان لە شوێنی خۆیان دەگۆڕدرێن، بێ نەخشاندنەوە
-            document.querySelectorAll('.sx-groups .notif-chip').forEach((b, i) => {
-                b.classList.toggle('is-on', SX_GROUPS[i] && SX_GROUPS[i].k === k);
-            });
+            // ⚠️ تەنها ناونیشانی دوگمەکە دەگۆڕێت، نەک نەخشاندنەوەی
+            //    سەرەوە — ئەگەرنا کارتی ئاست و سەردێڕەکە دەلەرزنەوە
+            //    و ئەنیمەیشنی هاتنە ژوورەوە دووبارە دەبێتەوە.
+            const lbl = document.querySelector('#stats-pane .sxctl-b:last-child span');
+            if (lbl) lbl.textContent = (SX_GROUPS.find(g => g.k === k) || {}).t || 'هەمووی';
             renderStatsBento();
         }
 
@@ -11018,22 +11038,19 @@
                     + '</div>';
             }
 
-            // ---- مەودای کات ----
-            // ⚠️ **پێش** پاڵاوتنی ناوەوە دێت: مەودا بڕیارێکی گەورەترە
-            //    (چ داتایەک)، پاڵاوتن بڕیارێکی بچووکترە (کام خانە).
-            html += '<div class="sx-chips sx-range">'
-                + SX_RANGES.map(p => '<button type="button" class="notif-chip'
-                    + (p.k === _sxRange.period ? ' is-on' : '') + '" onclick="setSxRange(\'' + p.k + '\')">'
-                    + (p.ico ? '<i class="bx ' + p.ico + '"></i> ' : '')
-                    + (p.k === 'custom' && _sxRange.period === 'custom'
-                        ? sxRangeLabel('custom', _sxRange.from, _sxRange.to) : p.t)
-                    + '</button>').join('') + '</div>';
-
-            // ---- پاڵاوتنی ناوەوە ----
-            html += '<div class="sx-chips sx-groups">'
-                + SX_GROUPS.map(g => '<button type="button" class="notif-chip'
-                    + (g.k === _sxGroup ? ' is-on' : '') + '" onclick="setStatsGroup(\'' + g.k + '\')">'
-                    + g.t + '</button>').join('') + '</div>';
+            // ---- کۆنترۆڵەکان: ماوە + چی پیشان بدرێت ----
+            // ⚠️ پێشتر ٧ چیپی ماوە + ٣ چیپی پاڵاوتن بوون. ئێستا دوو
+            //    دوگمە — هەمان شێوازی تابی پلەکان.
+            html += '<div class="sxctl">'
+                + '<button type="button" class="sxctl-b" onclick="openStatsRangePick()">'
+                + '<i class="bx bx-calendar"></i><span>'
+                + histEsc(sxRangeLabel(_sxRange.period, _sxRange.from, _sxRange.to))
+                + '</span><i class="bx bx-chevron-down"></i></button>'
+                + '<button type="button" class="sxctl-b" onclick="openStatsGroupPick()">'
+                + '<i class="bx bx-filter-alt"></i><span>'
+                + histEsc((SX_GROUPS.find(g => g.k === _sxGroup) || {}).t || 'هەمووی')
+                + '</span><i class="bx bx-chevron-down"></i></button>'
+                + '</div>';
 
             // ---- بەنتۆ گرید — بەشی گۆڕاو ----
             html += '<div class="sx-bento" id="sx-bento">' + statsBentoHtml(d) + '</div>';
@@ -11510,6 +11527,82 @@
         // ⚠️ `_sxdOn` دیاری دەکات کام تاب داوای کردووە — بەبێ ئەو،
         //    مەودای پلەکان لەسەر ئامارەکان جێبەجێ دەبێت.
         // ============================================================
+        // ============================================================
+        // هەڵبژێری گشتی — یەک لیست لە شیتێکدا
+        // ------------------------------------------------------------
+        // ⚠️ پێشتر هەموو بژاردەیەک چیپێک بوو: ٧ ماوە + ٤ پێوەر +
+        //    ٢ مەودا = ١٣ چیپ لە سێ ڕیزی خشاودا. خاوەنەکە وتی
+        //    «قەڕەباڵغ و ناڕێک». ئێستا هەر دەستەیەک دەبێتە **یەک
+        //    دوگمە** کە بژاردەی ئێستا پیشان دەدات و بە دەستلێدان
+        //    لیستەکە دەکاتەوە. هیچ ڕیزێک ناخشێت.
+        // ============================================================
+        let _sxPickCb = null;
+
+        function openSxPick(title, opts, cur, cb) {
+            _sxPickCb = cb;
+            const t = document.getElementById('sxpick-title');
+            const box = document.getElementById('sxpick-list');
+            if (!t || !box) return;
+            t.textContent = title;
+            box.innerHTML = opts.map(o =>
+                `<button type="button" class="sxpick-o${o.k === cur ? ' is-on' : ''}"
+                    onclick="sxPickDone('${o.k}')">
+                    ${o.ico ? `<i class='bx ${o.ico}'></i>` : ''}
+                    <span>${histEsc(o.t)}</span>
+                    ${o.sub ? `<small>${histEsc(o.sub)}</small>` : ''}
+                    <i class='bx bx-check sxpick-tick'></i>
+                </button>`).join('');
+            document.getElementById('sx-pick-sheet').classList.add('show');
+        }
+
+        function closeSxPick() {
+            document.getElementById('sx-pick-sheet').classList.remove('show');
+            _sxPickCb = null;
+        }
+
+        function sxPickDone(k) {
+            const cb = _sxPickCb;
+            _sxPickCb = null;
+            document.getElementById('sx-pick-sheet').classList.remove('show');
+            if (cb) cb(k);
+        }
+
+        // دوو دوگمەی کۆنترۆڵ — ماوە و پێوەر — لە یەک ڕیزدا
+        function sxCtlHtml(rangeLabel, rangeFn, metricLabel, metricFn) {
+            return `<div class="sxctl">
+                <button type="button" class="sxctl-b" onclick="${rangeFn}">
+                    <i class='bx bx-calendar'></i>
+                    <span>${histEsc(rangeLabel)}</span>
+                    <i class='bx bx-chevron-down'></i>
+                </button>
+                <button type="button" class="sxctl-b" onclick="${metricFn}">
+                    <i class='bx bx-trophy'></i>
+                    <span>${histEsc(metricLabel)}</span>
+                    <i class='bx bx-chevron-down'></i>
+                </button>
+            </div>`;
+        }
+
+        // ---- هەڵبژێرەکانی تابی پلەکان ----
+        function openRankRangePick() {
+            openSxPick('ماوەی کات', SX_RANGES, _rank.period, setRankPeriod);
+        }
+
+        function openRankMetricPick() {
+            const ms = RANK_METRICS.filter(m => !m.gated || canSeeProfitMetric());
+            openSxPick('پێوەری ڕیزبەندی', ms, _rank.metric, setRankMetric);
+        }
+
+        // ---- هەڵبژێرەکانی تابی ئامارەکان ----
+        function openStatsRangePick() {
+            openSxPick('ماوەی کات', SX_RANGES, _sxRange.period, setSxRange);
+        }
+
+        function openStatsGroupPick() {
+            openSxPick('چی پیشان بدرێت',
+                SX_GROUPS.map(g => ({ k: g.k, t: g.t })), _sxGroup, setStatsGroup);
+        }
+
         let _sxdOn = 'rank';                                  // 'rank' | 'stats'
         let _sxdDraft = { preset: 'custom', from: null, to: null };
 
@@ -11741,6 +11834,32 @@
                 + '</div>';
         }
 
+        // ============================================================
+        // بەرزی ڕیزی «تۆ» — بە پێوانە، نەک بە ژمارەیەکی ڕەق
+        // ------------------------------------------------------------
+        // ⚠️ باری نەڤیگەیشن لە دۆخی ئاسایی `bottom: 25px`ـە بەڵام لە
+        //    فوڵ‌سکریندا `8px + var(--safe-bottom)`، و `--safe-bottom`
+        //    لە تلیگرامەوە دێت نەک لە `env()`ـەوە. بۆیە هەر
+        //    ژمارەیەکی ڕەق لە یەکێک لە دوو دۆخەکەدا هەڵەیە —
+        //    خاوەنەکە بینی کە لە فوڵ‌سکریندا دەچووە ژێر نەڤەکەوە.
+        //    ئێستا شوێنی ڕاستەقینەی نەڤەکە دەپێورێت.
+        // ============================================================
+        function syncRkmeOffset() {
+            const bc = document.querySelector('#bottom-nav .button-container');
+            if (!bc) return;
+            const top = bc.getBoundingClientRect().top;
+            if (!top) return;                       // هێشتا نەخشێنراوە
+            const px = Math.round(window.innerHeight - top) + 12;
+            document.documentElement.style.setProperty('--rkme-bottom', px + 'px');
+        }
+
+        // گۆڕانی قەبارە (کردنەوەی تەختەکلیل، سووڕان، فوڵ‌سکرین) شوێنی
+        // نەڤەکە دەگۆڕێت — بۆیە دووبارە دەپێورێتەوە
+        window.addEventListener('resize', () => {
+            clearTimeout(window.__rkmeT);
+            window.__rkmeT = setTimeout(syncRkmeOffset, 120);
+        });
+
         // ڕیزی «تۆ» — لە خوارەوەی پەیکەرەکە دەلکێت.
         // ⚠️ هەمیشە دەردەکەوێت، تەنانەت ئەگەر لە لیستی بارکراودا بیت —
         //    مەبەست ئەوەیە شوێنی خۆت هەرگیز لەبەرچاو ون نەبێت.
@@ -11848,17 +11967,12 @@
                 + '<button type="button" class="notif-chip' + (_rank.scope === 'team' ? ' is-on' : '')
                 + '" onclick="setRankScope(\'team\')"><i class="bx bx-group"></i> تیمەکەم</button>'
                 + '</div>' : '')
-                + '<div class="sx-chips">'
-                + SX_RANGES.map(p => '<button type="button" class="notif-chip'
-                    + (p.k === _rank.period ? ' is-on' : '') + '" onclick="setRankPeriod(\'' + p.k + '\')">'
-                    + (p.ico ? '<i class="bx ' + p.ico + '"></i> ' : '')
-                    + (p.k === 'custom' && _rank.period === 'custom'
-                        ? sxRangeLabel('custom', _rank.from, _rank.to) : p.t)
-                    + '</button>').join('') + '</div>'
-                + '<div class="sx-chips">'
-                + metrics.map(mt => '<button type="button" class="notif-chip'
-                    + (mt.k === _rank.metric ? ' is-on' : '') + '" onclick="setRankMetric(\'' + mt.k + '\')">'
-                    + mt.t + '</button>').join('') + '</div>';
+                // ⚠️ ماوە و پێوەر بوونە دوو دوگمە. پێشتر ١١ چیپ لە
+                //    دوو ڕیزی خشاودا بوون و تێکەڵ دەبوون.
+                + sxCtlHtml(
+                    sxRangeLabel(_rank.period, _rank.from, _rank.to), 'openRankRangePick()',
+                    (RANK_METRICS.find(m => m.k === _rank.metric) || {}).t || 'خاڵ',
+                    'openRankMetricPick()');
 
             if (loadingOnly || (_rank.busy && !_rank.rows.length)) {
                 box.innerHTML = html + '<div class="sx-loading"><i class="bx bx-loader-alt bx-spin"></i> هێنانی پلەکان...</div>';
@@ -11935,6 +12049,9 @@
 
             // ---- ڕیزی «تۆ»ی لکاو ----
             html += rankMeBarHtml();
+            // ⚠️ دوای نەخشاندن دەپێورێت — پێش ئەوە نەڤەکە لەوانەیە
+            //    هێشتا شوێنی کۆتایی خۆی نەگرتبێت
+            requestAnimationFrame(syncRkmeOffset);
 
             box.innerHTML = html;
         }
@@ -19344,7 +19461,7 @@
                 if (!fcalDraft().from || !fcalDraft().to) return;
                 let c = cellOf(e.target); if (!c) return;
                 if (c.dataset.k === fcalDraft().from) fcalDragEdge = 'from';
-                else if (c.dataset.k === fsDraft.to) fcalDragEdge = 'to';
+                else if (c.dataset.k === fcalDraft().to) fcalDragEdge = 'to';
                 if (fcalDragEdge) { fcalDragMoved = false; h.classList.add('is-dragging'); }
             });
 

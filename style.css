@@ -15505,17 +15505,25 @@ body.sx-wide {
   line-height: 0;
 }
 
-.rkpod-av img,
-.rkpod-av .avatar-fallback,
-.rkpod-av .sx-anon {
-  border: 3px solid rgba(255, 255, 255, .9);
-  box-shadow: 0 4px 14px rgba(15, 23, 42, .22);
+/* ⚠️ `avatarHtml` بازنەکە لەسەر **دیوی دەرەوە** دادەنێت
+   (`border-radius:50%; overflow:hidden`) و وێنەکەی ناوەوە
+   ١٠٠٪×١٠٠٪ـە. بۆیە:
+     · بۆردەر لەسەر `img` = چوارگۆشەیەک کە دیوەکە دەیبڕێت →
+       وێنەکە بازنە دەرناکەوێت (ئەمە بەگەکە بوو)
+     · `.avatar-fallback` بوونی **نییە** — پاشەکشەکە دیوێکی
+       ستایلی ناوەوەیە، بۆیە ئەو هەڵبژێرە هەرگیز نەگونجا
+   چارە: `box-shadow`ی بڵاوکراوە لەسەر خودی دیوەکە — بازنە
+   دەمێنێتەوە، شوێن ناگۆڕێت، و هیچ نابڕدرێت. */
+.rkpod-av > div,
+.rkpod-av > .sx-anon {
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, .9),
+              0 4px 14px rgba(15, 23, 42, .22);
 }
 
-.rkpod-c.is-p1 .rkpod-av img,
-.rkpod-c.is-p1 .rkpod-av .avatar-fallback,
-.rkpod-c.is-p1 .rkpod-av .sx-anon {
-  border-color: #ffd76a;
+.rkpod-c.is-p1 .rkpod-av > div,
+.rkpod-c.is-p1 .rkpod-av > .sx-anon {
+  box-shadow: 0 0 0 3px #ffd76a,
+              0 4px 16px rgba(15, 23, 42, .28);
 }
 
 /* ژمارەی پلە لەسەر ئەڤاتارەکە */
@@ -15653,9 +15661,17 @@ body.sx-wide {
 }
 
 /* ---------- ڕیزی «تۆ»ی لکاو ---------- */
+/* ⚠️ بەرزییەکە **بە دەست دانانرێت** — `syncRkmeOffset()` شوێنی
+   ڕاستەقینەی باری نەڤیگەیشن دەپێوێت و `--rkme-bottom` دادەنێت.
+   هۆکار: نەڤەکە لە دۆخی ئاسایی `bottom: 25px`ـە بەڵام لە
+   فوڵ‌سکریندا `8px + var(--safe-bottom)` — و `--safe-bottom` لە
+   تلیگرامەوە دێت، نەک لە `env()`ـەوە (کە لەوێدا سفرە). ژمارەیەکی
+   ڕەق لە یەکێکیاندا هەڵەیە. پێوانەی کاتی-کارکردن هەردووکیان
+   دەگرێتەوە، لەگەڵ هەر گۆڕانێکی داهاتووی نەڤەکەش.
+   نرخی پاشەکشە = ٢٥ + ٦٠ + ١٢ (دۆخی ئاسایی). */
 .rkme {
   position: sticky;
-  bottom: calc(4.6rem + env(safe-area-inset-bottom, 0px));
+  bottom: var(--rkme-bottom, 97px);
   z-index: 5;
   display: flex;
   align-items: center;
@@ -15681,9 +15697,11 @@ body.sx-wide {
   font-weight: 900;
 }
 
-.rkme img,
-.rkme .avatar-fallback {
-  border: 2px solid rgba(255, 255, 255, .6);
+/* هەمان کێشە — بۆردەر دەبێت لەسەر دیوی دەرەوە بێت، نەک وێنەکە.
+   ⚠️ `:not(.rkme-mid)` مەرجە — `.rkme-mid`ـیش دیوێکی ڕاستەوخۆیە،
+   و بەبێی بازنەیەکی سپی بەدەوری بلۆکی نووسینەکەشدا دەکێشرا. */
+.rkme > div:not(.rkme-mid) {
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, .55);
 }
 
 .rkme-mid {
@@ -15725,4 +15743,129 @@ body.sx-wide {
 @media (prefers-reduced-motion: reduce) {
   .rkpod-crown { animation: none; }
   .rkcall-bar > div { transition: none; }
+}
+
+/* ═══ کۆنترۆڵی وردی ئامار و پلە ═══
+   ⚠️ پێشتر ١٣ چیپ لە سێ ڕیزی خشاودا بوون و تێکەڵ دەبوون.
+      ئێستا هەر دەستەیەک یەک دوگمەیە کە بژاردەی ئێستا پیشان دەدات. */
+.sxctl {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.sxctl-b {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 13px;
+  background: #fff;
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-main);
+  cursor: pointer;
+  transition: border-color .15s, background .15s;
+}
+
+.sxctl-b:active {
+  background: #f8fafc;
+  border-color: var(--primary);
+}
+
+.sxctl-b > i:first-child {
+  flex-shrink: 0;
+  font-size: 16px;
+  color: var(--primary);
+}
+
+/* ناونیشانەکە شوێنی ماوە دەبڕێت ئەگەر درێژ بێت — دوگمەکە
+   هەرگیز نابێت فراوان بێت یان بشکێتەوە */
+.sxctl-b > span {
+  flex: 1;
+  min-width: 0;
+  text-align: start;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sxctl-b > i:last-child {
+  flex-shrink: 0;
+  font-size: 17px;
+  color: #94a3b8;
+}
+
+/* ---------- شیتی هەڵبژاردن ---------- */
+.modal-content.is-sxpick {
+  max-width: 360px;
+}
+
+.sxpick-list {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  max-height: 62vh;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+
+.sxpick-list::-webkit-scrollbar {
+  display: none;
+}
+
+.sxpick-o {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  padding: 12px 13px;
+  border: 1px solid #eef2f7;
+  border-radius: 13px;
+  background: #fff;
+  font-family: inherit;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text-main);
+  cursor: pointer;
+  transition: background .15s, border-color .15s;
+}
+
+.sxpick-o > i:first-child {
+  font-size: 17px;
+  color: var(--primary);
+}
+
+.sxpick-o span {
+  flex: 1;
+  text-align: start;
+}
+
+.sxpick-o small {
+  font-size: 11px;
+  color: #94a3b8;
+  font-weight: 600;
+}
+
+.sxpick-tick {
+  font-size: 19px;
+  color: var(--primary);
+  opacity: 0;
+}
+
+.sxpick-o.is-on {
+  background: rgba(36, 129, 204, .07);
+  border-color: rgba(36, 129, 204, .35);
+}
+
+.sxpick-o.is-on .sxpick-tick {
+  opacity: 1;
+}
+
+.sxpick-o:active {
+  background: #f1f5f9;
 }
