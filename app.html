@@ -10532,7 +10532,7 @@
         let _statsSeries = 'sales';
         const RANK_PAGE = 30;
         // `scope` ئێستا هەڵبژاردەی بەکارهێنەرە، نەک دەرئەنجامی ڕۆڵ
-        let _rank = { metric: 'points', period: 'month', scope: 'team', rows: [], me: null,
+        let _rank = { metric: 'points', period: 'month', scope: 'all', rows: [], me: null,
                       total: 0, busy: false, hasTeam: true,
                       ahead: null, chaser: null, leader: null,
                       from: null, to: null };
@@ -10576,11 +10576,15 @@
         // ============================================================
         // دۆخە بنەڕەتییەکانی شاشەی ئامار — یەک جار، لە یەکەم کردنەوەدا
         // ------------------------------------------------------------
-        //  پلەکان    · ئەندام → «هەمووی» (تابلۆی گشتی، نەک تەنها تیمەکەی)
-        //              ئەوانی تر → «تیمەکەم»
+        //  پلەکان    · **هەمووکەس** → «هەمووی» (تابلۆی گشتی).
+        //              پلە تابلۆیەکی پێشبڕکێیە — کێبڕکێی گشتی
+        //              مانای هەیە، نەک تەنها تیمی خۆت.
         //  ئامارەکان · هەرکەسێک سوێچی تیمی هەبێت → دۆخی تیم
         //              (پاشا «هەمووی» دەبینێت، بەڕێوەبەر «تیمەکەم»)
         //              ئەندام → «هی خۆم»، چونکە سوێچەکەی نییە
+        //
+        // ⚠️ هەردوو تابەکە دۆخی **جیاوازیان** هەیە بە ئەنقەست:
+        //    پلەکان گشتی، ئامارەکان تیمی. یەکیان مەکە.
         //
         // ⚠️ لێرەدا `userRole` بەکاردێت نەک `canTeamMode()` — ئەوی
         //    دووەم `_statsCacheT['me']`ـی دەوێت، کە لەم ساتەدا هێشتا
@@ -10594,7 +10598,7 @@
         function sxApplyDefaults() {
             if (_sxDefaultsDone || !currentUser) return;
             _sxDefaultsDone = true;
-            _rank.scope = (userRole === 'ئەندام') ? 'all' : 'team';
+            _rank.scope = 'all';
             _statsMode = (SX_TEAM_ROLES.indexOf(userRole) !== -1) ? 'team' : 'me';
         }
 
@@ -11005,8 +11009,9 @@
                 const teamLabel = (userRole === 'پاشا') ? 'هەمووی' : 'تیمەکەم';
                 // ⚠️ ڕیزبەندی: مەودای فراوانتر **یەکەم** — لە RTLـدا
                 //    ئەوە لای ڕاستە، لای دەستپێکی خوێندنەوە. ئەمە
-                //    دۆخی بنەڕەتیشە بۆ زۆربەی پلەکان (`sxApplyDefaults`)،
+                //    دۆخی بنەڕەتیی ئەم تابەیە (`sxApplyDefaults`)،
                 //    بۆیە بژاردەی چالاک لە شوێنی سەرەکیدایە.
+                // ⚠️ تابی پلەکان بنەڕەتەکەی **پێچەوانەیە** — «هەمووی».
                 html += '<div class="sx-chips sx-modes">'
                     + '<button type="button" class="notif-chip' + (_statsMode === 'team' ? ' is-on' : '')
                     + '" onclick="setStatsMode(\'team\')"><i class="bx bx-group"></i> ' + teamLabel + '</button>'
