@@ -15235,17 +15235,6 @@ body.sx-wide {
   color: var(--c, #64748b);
 }
 
-/* پاشماوەکە دێڕێکی تەواوە لە خوارەوە */
-.opts-rest {
-  flex-basis: 100%;
-  margin-top: 2px;
-  padding-top: 7px;
-  border-top: 1px dashed color-mix(in srgb, var(--c, #64748b) 25%, #fff);
-  font-size: 10.5px;
-  line-height: 1.5;
-  color: #64748b;
-}
-
 /* ═══ ڕێنماییەکانی خاڵ ═══
    ⚠️ `.rkhow-f` / `.rkhow-plus` / `.rkhow-note` مانەوە — ئێستا
       لەناو شیتەکەدا بەکاردێن، نەک لە پانێڵێکی داخراودا. */
@@ -15400,13 +15389,36 @@ body.sx-wide {
       بۆیە پاشبنەماکە دەبێت `padding-bottom`ی زیادەی هەبێت —
       ئەگەرنا شریتی هان دەچێتە ژێر پەڕەکەوە.
    ═══════════════════════════════════════════════════════════ */
+/* ⚠️ **لکاو.** لە کاتی سکڕۆڵدا لە شوێنی خۆی دەمێنێتەوە لە ژێر
+   سەردێڕەکەوە، و `.rksheet`ی سپی بەسەریدا هەڵدەکشێت — بۆیە
+   پۆدیۆمەکە «هەڵدەلوشرێت» لەبری ئەوەی بە سادەیی بڕوات.
+   `--sxhead-h` لە `syncSxStickTop()`ـەوە دەپێورێت. */
 .rkboard {
-  position: relative;
+  position: sticky;
+  top: calc(var(--safe-top, 0px) + var(--sxhead-h, 0px));
+  z-index: 1;
   margin: 0 -4px;
   padding: 16px 14px 42px;
   border-radius: 20px 20px 0 0;
   background: linear-gradient(160deg, #2f8fdb 0%, var(--primary) 45%, #1d6fb0 100%);
   overflow: hidden;
+  opacity: var(--rkb-o, 1);
+}
+
+/* ناوەڕۆکی تابلۆکە — بچووک دەبێتەوە بەرەو سەرەوە.
+   ⚠️ `top center` نەک `center` — ئەگەرنا ناوەڕۆکەکە بەرەو
+      ناوەڕاست ڕادەکێشرێت و لە سەردێڕەکە دوور دەکەوێتەوە. */
+.rkboard-in {
+  transform: scale(var(--rkb-k, 1));
+  transform-origin: top center;
+  opacity: var(--rkb-io, 1);
+  will-change: transform, opacity;
+}
+
+/* ⚠️ بێ هیچ ئەنیمەیشنێک بۆ ئەوانەی داوای کەمکردنەوەی جووڵە
+   دەکەن — لکاندن و داپۆشین دەمێننەوە، تەنها بچووکبوونەوەکە نا. */
+@media (prefers-reduced-motion: reduce) {
+  .rkboard-in { transform: none; }
 }
 
 /* تیشکی نەرم لە پشت پۆدیۆمەکەوە */
@@ -15599,8 +15611,11 @@ body.sx-wide {
 }
 
 /* ---------- پەڕەی سپی ---------- */
+/* ⚠️ `z-index: 2` — دەبێت **بەسەر** تابلۆی لکاودا هەڵبکشێت.
+   بێ ئەمە لە ژێریەوە دەڕوات و هیچ نادیارە. */
 .rksheet {
   position: relative;
+  z-index: 2;
   margin: -26px -4px 0;
   padding: 14px 12px 10px;
   border-radius: 20px 20px 0 0;
@@ -15821,8 +15836,12 @@ body.sx-wide {
 /* ئایکۆنی «؟» لە گۆشەی تابلۆکە.
    ⚠️ RTL: `inset-inline-end` لای چەپە — ڕێک ئەو گۆشەیەی
    خاوەنەکە دیاری کرد. */
+/* ⚠️ لەگەڵ ناوەڕۆکەکەدا دەڕەوێتەوە (`--rkb-io`) بەڵام
+   **بچووک نابێتەوە** — دوگمەیەکی کۆنترۆڵە، شوێن و قەبارەی
+   دەبێت جێگیر بێت تاکو دەرناچێت. */
 .rkboard-help {
   position: absolute;
+  opacity: var(--rkb-io, 1);
   top: 12px;
   inset-inline-end: 12px;
   z-index: 2;

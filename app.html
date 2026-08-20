@@ -7957,24 +7957,25 @@
         // ============================================================
         // خاڵی ئەم ئۆردەرە
         // ------------------------------------------------------------
-        //  فۆرمولی سێرڤەر (`stats_points`, db/041):
-        //      ١٠ خاڵ بۆ هەر ئۆردەرێکی گەیشتوو
-        //    + floor(کۆی وەرگیراو ÷ ٦٠٠٠)
-        //    + floor(کۆی قازانج   ÷ ٢٠٠٠)
-        //    + ٥ خاڵ بۆ هەر کاڵایەکی زیادە (لە دوای یەکەم)
+        //  فۆرمولی سێرڤەر (`stats_points`, db/044):
+        //      ٢٠ خاڵ بۆ هەر ئۆردەرێکی گەیشتوو
+        //    + ١٠ خاڵ بۆ هەر کاڵایەکی زیادە (لە دوای یەکەم)
         //
-        //  ⚠️ `floor`ـەکان لەسەر **کۆ** جێبەجێ دەبن، نەک لەسەر هەر
-        //     ئۆردەرێک بە جیا. بۆیە پاشماوەکان ون نابن — لەگەڵ
-        //     ئۆردەری داهاتوودا کۆدەبنەوە، و ئەمەی لێرە پیشان
-        //     دەدرێت **لانیکەم**ە، نەک ژمارەی تەواوی زیادبوو.
+        //  ⚠️ **پارە نامێنێت** (db/044). پێشتر وەرگیراو و قازانج
+        //     دوو خانەی جیاواز بوون و ٤٥٪ی هەموو خاڵەکانیان
+        //     دەدا. لابران چونکە ئەندام ناتوانێت قەبارەی ئۆردەر
+        //     هەڵبژێرێت — کڕیار هەڵیدەبژێرێت.
+        //
+        //  ⚠️ ئیتر هیچ `floor`ێک نییە، بۆیە **هیچ پاشماوەیەک
+        //     نامێنێتەوە**. خاڵی هەر ئۆردەرێک ژمارەیەکی تەواوە و
+        //     پێش گەیاندن بە تەواوی دیارە.
         //
         //  ⚠️ ئۆردەری گەڕاوە هیچ خاڵێک نادات — `stats_points` تەنها
         //     گەیشتووەکان دەژمێرێت، و گەڕانەوە خۆکارانە خاڵەکەی
         //     دەکشێنێتەوە (خاڵ هەڵناگیرێت، لە ئۆردەرەکانەوە
         //     دەردەهێنرێت). بڕوانە [[stats-and-levels]].
         // ============================================================
-        const PTS_PER_ORDER = 10, PTS_RECV_DIV = 6000,
-              PTS_PROFIT_DIV = 2000, PTS_PER_EXTRA_ITEM = 5;
+        const PTS_PER_ORDER = 20, PTS_PER_EXTRA_ITEM = 10;
 
         // ژمارەی کاڵا — دەبێت **تەواو** وەک سێرڤەر بژمێردرێت:
         //   array_length(string_to_array(btrim(item_names), E'\n'), 1)
@@ -7987,23 +7988,13 @@
         }
 
         function orderPointsParts(o) {
-            const recv = Math.max(0, Number(o.amount_received != null
-                ? o.amount_received : (o.grand_total || 0)) || 0);
-            const prof = Math.max(0, Number(o.member_profit || 0));
             const extra = Math.max(0, orderItemLines(o) - 1);
-            return {
-                base: PTS_PER_ORDER,
-                recv: Math.floor(recv / PTS_RECV_DIV),
-                profit: Math.floor(prof / PTS_PROFIT_DIV),
-                items: extra * PTS_PER_EXTRA_ITEM,
-                extra: extra,
-                rest: (recv % PTS_RECV_DIV) + (prof % PTS_PROFIT_DIV)
-            };
+            return { base: PTS_PER_ORDER, items: extra * PTS_PER_EXTRA_ITEM };
         }
 
         function orderPointsOf(o) {
             const q = orderPointsParts(o);
-            return q.base + q.recv + q.profit + q.items;
+            return q.base + q.items;
         }
 
         function orderPointsRowHtml(o) {
@@ -8031,8 +8022,6 @@
             const n = v => '<bdi dir="ltr">' + v + '</bdi>';
             const parts = returned ? '' : [
                 n(q.base) + ' گەیاندن',
-                q.recv ? n(q.recv) + ' وەرگیراو' : '',
-                q.profit ? n(q.profit) + ' قازانج' : '',
                 q.items ? n(q.items) + ' کاڵای زیادە' : ''
             ].filter(Boolean).join(' + ');
 
@@ -8041,9 +8030,6 @@
                 <div class="opts-mid"><b>${label}</b>
                     <span>${returned ? 'خاڵ تەنها بۆ ئۆردەری گەیشتووە' : parts}</span></div>
                 <b class="opts-val">${val}</b>
-                ${(!returned && q.rest > 0) ? `<span class="opts-rest">پاشماوەی
-                    <bdi dir="ltr">${q.rest.toLocaleString('en-US')}</bdi> د.ع ون نابێت —
-                    لەگەڵ ئۆردەری داهاتوودا کۆدەبێتەوە</span>` : ''}
             </div>`;
         }
 
@@ -10604,8 +10590,10 @@
 
         function openStatsScreen() {
             sxApplyDefaults();
-            requestAnimationFrame(() =>
-                syncMagicSlider(document.getElementById('stats-magic-tabs'), false));
+            requestAnimationFrame(() => {
+                syncMagicSlider(document.getElementById('stats-magic-tabs'), false);
+                syncSxStickTop(); rkBoardBind(); syncRkBoard();
+            });
             if (_statsTab === 'stats') loadStats();
             else if (!_rank.rows.length) loadRank(true);
         }
@@ -10625,6 +10613,9 @@
             paintSxCtl();
             if (tab === 'stats') loadStats();
             else if (!_rank.rows.length) loadRank(true);
+            // ⚠️ داتای کاشکراو `renderRank`ی بانگ ناکات، بۆیە
+            //    پۆدیۆمەکە بە بەهای کۆنەوە دەمێنێتەوە
+            else requestAnimationFrame(() => { rkBoardBind(); syncRkBoard(); });
         }
 
         // ---- ژمارە کورتەکان: 1.2M · 544K — بۆ ناو چارت و بارەکان ----
@@ -11816,11 +11807,9 @@
             if (!box) return;
 
             // نموونەیەکی ڕاستەقینە — هەمان فۆرمولی سێرڤەر
-            const exRecv = 30000, exProfit = 9000, exItems = 2;
-            const pRecv = Math.floor(exRecv / PTS_RECV_DIV);
-            const pProf = Math.floor(exProfit / PTS_PROFIT_DIV);
+            const exItems = 3;
             const pItem = (exItems - 1) * PTS_PER_EXTRA_ITEM;
-            const total = PTS_PER_ORDER + pRecv + pProf + pItem;
+            const total = PTS_PER_ORDER + pItem;
             const n = v => '<bdi dir="ltr">' + Number(v).toLocaleString('en-US') + '</bdi>';
 
             box.innerHTML = `
@@ -11830,34 +11819,17 @@
                 </div>
                 <div class="rkhow-plus">+</div>
                 <div class="rkhow-f">
-                    <span class="rkhow-op">١ خاڵ</span>
-                    <small>بۆ هەر <b>${n(PTS_RECV_DIV)} د.ع</b> کە
-                        <b>لە کڕیار وەردەگریت</b></small>
-                </div>
-                <div class="rkhow-plus">+</div>
-                <div class="rkhow-f">
-                    <span class="rkhow-op">١ خاڵ</span>
-                    <small>بۆ هەر <b>${n(PTS_PROFIT_DIV)} د.ع</b> قازانج</small>
-                </div>
-                <div class="rkhow-plus">+</div>
-                <div class="rkhow-f">
                     <span class="rkhow-op">${n(PTS_PER_EXTRA_ITEM)} خاڵ</span>
                     <small>بۆ هەر <b>کاڵایەکی زیادە</b> لە دوای یەکەم</small>
                 </div>
 
                 <div class="rkex">
                     <div class="rkex-h"><i class='bx bx-bulb'></i> نموونە</div>
-                    <div class="rkex-o">ئۆردەرێک بە <b>${n(exRecv)} د.ع</b>،
-                        <b>${n(exItems)} کاڵا</b>، قازانجی <b>${n(exProfit)} د.ع</b></div>
+                    <div class="rkex-o">ئۆردەرێکی گەیشتوو بە
+                        <b>${n(exItems)} کاڵا</b></div>
                     <div class="rkex-rows">
                         <div><span>گەیاندن</span><small>ئۆردەری گەیشتوو</small>
                             <b>+${n(PTS_PER_ORDER)}</b></div>
-                        <div><span>وەرگیراو</span>
-                            <small>${n(exRecv)} ÷ ${n(PTS_RECV_DIV)}</small>
-                            <b>+${n(pRecv)}</b></div>
-                        <div><span>قازانج</span>
-                            <small>${n(exProfit)} ÷ ${n(PTS_PROFIT_DIV)}</small>
-                            <b>+${n(pProf)}</b></div>
                         <div><span>کاڵای زیادە</span>
                             <small>${n(exItems - 1)} × ${n(PTS_PER_EXTRA_ITEM)}</small>
                             <b>+${n(pItem)}</b></div>
@@ -11867,10 +11839,10 @@
                 </div>
 
                 <ul class="rkhow-note">
-                    <li><i class='bx bx-trending-up'></i> ئۆردەری گەورەتر و کاڵای
+                    <li><i class='bx bx-trending-up'></i> ئۆردەری زیاتر و کاڵای
                         زیاتر = خاڵی زیاتر.</li>
-                    <li><i class='bx bx-check'></i> پاشماوەکان ون نابن — لەگەڵ
-                        ئۆردەری داهاتوودا کۆدەبنەوە.</li>
+                    <li><i class='bx bx-wallet'></i> <b>بڕی پارە هیچ کاریگەرییەکی
+                        نییە</b> — ئۆردەری بچووک و گەورە یەکسانن.</li>
                     <li><i class='bx bx-x'></i> ئۆردەری <b>گەڕاوە</b> هیچ خاڵێک
                         نادات — خاڵەکەی خۆکارانە دەکشێتەوە.</li>
                     <li><i class='bx bx-info-circle'></i> خاڵ هەڵناگیرێت — هەر
@@ -11927,6 +11899,14 @@
             if (!t) return;
             const h = t.offsetHeight;
             if (h) document.documentElement.style.setProperty('--sxtabs-h', h + 'px');
+            // بەرزی تەواوی سەردێڕە لکاوەکە — پۆدیۆمەکە ڕێک لە
+            // ژێریەوە دەلکێت. ⚠️ بە دەست دامەنێ: ناونیشانەکە لە
+            // فوڵ‌سکریندا لە ڕەوتەکە دەردەچێت، بۆیە بەرزییەکە لە
+            // نێوان دوو دۆخەکەدا جیاوازە.
+            const hd = document.querySelector('#stats-screen .sx-stickhead');
+            if (hd && hd.offsetHeight) {
+                document.documentElement.style.setProperty('--sxhead-h', hd.offsetHeight + 'px');
+            }
         }
 
         function syncRkmeOffset() {
@@ -11938,9 +11918,80 @@
             document.documentElement.style.setProperty('--rkme-bottom', px + 'px');
         }
 
+        // ============================================================
+        // پۆدیۆمی هەڵلوشێنەر — لە کاتی سکڕۆڵدا بچووک دەبێتەوە
+        // ------------------------------------------------------------
+        //  `.rkboard` دەلکێت لە ژێر سەردێڕەکەوە، `.rksheet`ی سپی
+        //  بەسەریدا هەڵدەکشێت، و ناوەڕۆکەکەی (`.rkboard-in`) بەپێی
+        //  ئەوەی چەند داپۆشراوە بچووک دەبێتەوە.
+        //
+        //  پێشکەوتن:  p = 1 − v / v0
+        //      v  = بۆشایی نێوان سەری تابلۆکە و سەری پەڕەی سپی
+        //      v0 = هەمان بۆشایی لە سەرەتادا = بەرزی − ئۆڤەرلاپ
+        //  ئۆڤەرلاپەکە لە CSSـەوە دەخوێندرێتەوە (`margin-top`ی
+        //  `.rksheet` = −26px)، نەک بە دەست بنووسرێت.
+        //
+        // ⚠️ تەنها `transform` و `opacity` دەنووسرێن — نە بەرزی، نە
+        //    مارجن. ئەگەرنا هەر فرەیمێک `layout`ی تەواو داوا دەکات.
+        // ⚠️ بە `requestAnimationFrame` سنووردارکراوە: چەند
+        //    ڕووداوی سکڕۆڵ = یەک نووسین.
+        // ⚠️ `passive: true` — ئەگەرنا مۆبایل سکڕۆڵەکە ڕادەگرێت تا
+        //    بزانێت `preventDefault` بانگ دەکرێت یان نا.
+        // ============================================================
+        // ⚠️ ئاماژەکان کاش دەکرێن — ڕووداوی سکڕۆڵ لە **هەموو**
+        //    پەڕەکەدا دەگیرێت، بۆیە دوو `querySelector` لە هەر
+        //    فرەیمێکدا بەفیڕۆدانی کاتە.
+        let _rkbRaf = 0, _rkbOn = false, _rkbV0 = 0, _rkbB = null, _rkbS = null;
+
+        function syncRkBoard() {
+            _rkbRaf = 0;
+            const b = _rkbB, sh = _rkbS;
+            if (!b || !sh || !_rkbV0) return;
+            // ⚠️ تابی «ئامارەکان» یان شاشەیەکی تر → `display: none`.
+            //    ئەوکات `getBoundingClientRect()` هەموو سفرە و
+            //    p = 1 دەردەچێت، واتە پۆدیۆمەکە بە هەڵە هەڵلوشراو
+            //    دەمێنێتەوە کاتێک دەگەڕێیتەوە (چونکە داتاکە
+            //    کاشکراوە و `renderRank` دووبارە ناخوێندرێتەوە).
+            if (b.offsetParent === null) return;
+            const v = sh.getBoundingClientRect().top - b.getBoundingClientRect().top;
+            let p = 1 - v / _rkbV0;
+            p = p < 0 ? 0 : (p > 1 ? 1 : p);
+            // ناوەڕۆک بچووک دەبێتەوە و لە سێیەکی کۆتاییدا دەڕەوێتەوە.
+            // ⚠️ ڕەوینەوەکە پێویستە: ٢٦٥px ناوەڕۆک ناچێتە ناو
+            //    پێڕستێکی ٤٤pxەوە، بۆیە بەبێ ئەو تەنها پارچەیەکی
+            //    تاجەکە دەمێنێتەوە — پارچەیەکی بڕاو، نەک پۆدیۆمێکی
+            //    بچووککراوە.
+            // پاشبنەماکە دواتر دەڕەوێتەوە (١٨٪ی کۆتایی) — ئەگەرنا
+            // لە ناوەڕاستی ڕێگادا شین بە ڕەنگی پەڕەکەوە تێکەڵ
+            // دەبێت و پیس دەردەکەوێت
+            b.style.setProperty('--rkb-k', (1 - .32 * p).toFixed(3));
+            b.style.setProperty('--rkb-io', Math.min(1, (1 - p) / .45).toFixed(3));
+            b.style.setProperty('--rkb-o', Math.min(1, (1 - p) / .18).toFixed(3));
+        }
+
+        function rkBoardTick() {
+            if (!_rkbRaf) _rkbRaf = requestAnimationFrame(syncRkBoard);
+        }
+
+        // بەستنەوە — یەک جار. `_rkbV0` دوای هەر نەخشاندنێک
+        // دەپێورێتەوە، چونکە بەرزی تابلۆکە بە مێتر و ژمارەی
+        // ڕیزەکان دەگۆڕێت.
+        function rkBoardBind() {
+            _rkbB = document.querySelector('#rank-pane .rkboard');
+            _rkbS = document.querySelector('#rank-pane .rksheet');
+            if (!_rkbB || !_rkbS) { _rkbV0 = 0; return; }
+            const ov = -parseFloat(getComputedStyle(_rkbS).marginTop) || 0;
+            _rkbV0 = Math.max(1, _rkbB.offsetHeight - ov);
+            if (_rkbOn) return;
+            _rkbOn = true;
+            window.addEventListener('scroll', rkBoardTick, { passive: true });
+        }
+
         window.addEventListener('resize', () => {
             clearTimeout(window.__rkmeT);
-            window.__rkmeT = setTimeout(() => { syncSxStickTop(); syncRkmeOffset(); }, 120);
+            window.__rkmeT = setTimeout(() => {
+                syncSxStickTop(); syncRkmeOffset(); rkBoardBind(); syncRkBoard();
+            }, 120);
         });
 
         // ڕیزی «تۆ» — لە خوارەوەی پەیکەرەکە دەلکێت.
@@ -12103,7 +12154,11 @@
                 // ⚠️ تەنها لە مێتری «خاڵ»دا واتای هەیە
                 + (_rank.metric === 'points'
                     ? '<button type="button" class="rkboard-help" title="خاڵ چۆن کۆدەکەیتەوە؟"'
-                    + ' onclick="openRankHow()"><i class="bx bx-question-mark"></i></button>' : '');
+                    + ' onclick="openRankHow()"><i class="bx bx-question-mark"></i></button>' : '')
+                // ⚠️ ئەم پێچەرەوەیە **بچووک دەبێتەوە** لە کاتی سکڕۆڵدا
+                //    (`syncRkBoard`). پۆدیۆم و شریتی هان پێکەوە دەبن،
+                //    بۆیە بە یەک `transform` دەگۆڕێن نەک دوو.
+                + '<div class="rkboard-in">';
 
             if (podium) {
                 // ڕیزبەندیی بینین: دووەم — یەکەم — سێیەم
@@ -12129,6 +12184,7 @@
 
             // ---- شریتی هان — لەسەر پاشبنەماکە ----
             html += rankCallHtml();
+            html += '</div>';   // rkboard-in
             html += '</div>';   // rkboard
 
             // ---- لیست — پەڕەی سپی کە بەسەر پاشبنەماکەدا هەڵدەکشێت ----
@@ -12154,7 +12210,10 @@
             html += rankMeBarHtml();
             // ⚠️ دوای نەخشاندن دەپێورێت — پێش ئەوە نەڤەکە لەوانەیە
             //    هێشتا شوێنی کۆتایی خۆی نەگرتبێت
-            requestAnimationFrame(() => { syncSxStickTop(); syncRkmeOffset(); });
+            requestAnimationFrame(() => {
+                syncSxStickTop(); syncRkmeOffset();
+                rkBoardBind(); syncRkBoard();
+            });
 
             box.innerHTML = html;
         }
