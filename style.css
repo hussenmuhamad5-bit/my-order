@@ -412,6 +412,67 @@ select,
   min-height: 80vh;
 }
 
+/* ============================================================
+   پەردەی «خەریکە ئەکاونتەکەت دەکرێتەوە» — تەنها لە index.html
+   ------------------------------------------------------------
+   بەکارهێنەرێکی پێشتر چووەژوورەوە هەرگیز نابێت فۆڕمی کۆد و
+   پاسوۆرد ببینێت. ⚠️ بە بنەڕەت **شاراوەیە** — ئەگەر بە بنەڕەت
+   دەربکەوایە، ئەوانەی دەبێت بچنە ژوورەوە پەردەیەکی هەڵەیان
+   دەبینی تاکو JS دەگەیشت.
+   ============================================================ */
+#boot-cover {
+  display: none;
+}
+
+html.is-booting #boot-cover {
+  display: flex;
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: var(--bg, #f4f4f5);
+  color: var(--text-main, #0f172a);
+  font-family: inherit;
+  text-align: center;
+  padding: 0 24px;
+}
+
+/* فۆڕمەکە بە تەواوی لادەبرێت، نەک تەنها دادەپۆشرێت — بەمە
+   هیچ پرشەیەکی خانەکان لە ژێر پەردەکەوە دەرناکەوێت */
+html.is-booting .login-container {
+  visibility: hidden;
+}
+
+html.is-booting #boot-cover b {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+html.is-booting #boot-cover span {
+  font-size: 12px;
+  color: var(--text-soft, #64748b);
+}
+
+.boot-spin {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 3px solid rgba(36, 129, 204, .18);
+  border-top-color: var(--primary, #2481cc);
+  animation: boot-spin .8s linear infinite;
+}
+
+@keyframes boot-spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .boot-spin { animation-duration: 2.4s; }
+}
+
 .modern-form {
   --primary-dark: #1d6fa5;
   --primary-light: rgba(36, 129, 204, 0.1);
@@ -16968,15 +17029,35 @@ body.sx-wide {
    کاتێک جێگا هەیە ناوەڕاست دەکات، کاتێک نییە دەبێتە سفر. */
 .magic-tabs-wrapper.is-mid > .magic-tabs {
   margin-inline: auto;
+  /* ٣px لەبری ٤ — لەگەڵ پەدینگی تابەکاندا ٥px جێگا دەگەڕێنێتەوە */
+  gap: 3px;
+}
+
+/* ⚠️ **هەموو تابەکان هەمان پەدینگیان هەیە** — چالاک و ناچالاک.
+   پەدینگ ترانزیشن ناکات، بۆیە ئەگەر تابی چالاک پەدینگێکی
+   جیاوازی هەبووایە، لە کاتی گۆڕیندا **دەبازی** و ئەوە بەشێک
+   بوو لەو لەرزەی دەبینرا.
+
+   ٩px لەبری ١٦px: شەش تابی پەڕەی ئەدمین لە شاشەی ٣٦٠pxدا
+   دەگونجێن بەبێ خزاندن.
+       پێشتر:  ڕیز ٣٨٣px لەناو ٣٢٠px  →  ٩٥px لە دەرەوەی دیمەن
+       ئێستا:  ڕیز ٢٩٧px لەناو ٣٢٠px  →  هەمووی دیارە */
+.magic-tabs-wrapper.is-mid .magic-tab {
+  gap: 0;
+  padding-inline: 7px;
+}
+
+/* پەدینگی ئاسۆیی پێچەرەوەکە ١٦px → ١٠px تەنها بۆ ئەم ڕیزانە.
+   ١٢px زیاتری بۆ ڕیزی تابەکان دەگەڕێنێتەوە، کە بۆ شەش تاب
+   جیاوازی دەکات. ڕیزەکانی تر (ئامار، ئاگاداری) وەک خۆیان. */
+.magic-tabs-wrapper.is-mid {
+  padding-inline: 10px;
 }
 
 /* ⚠️ ڕیزی گشتیی `button` گەپی ٨px دادەنێت. کاتێک ناونیشانەکە
    پانیی سفرە، ئەو گەپە بۆشاییەکی مردوو دەهێڵێتەوە لای ئایکۆنەکە.
-   بۆیە گەپەکە لێرە سفر دەکرێت و مارجنی خودی ناونیشانەکە
+   بۆیە گەپەکە سەرەوە سفر کراوە و مارجنی خودی ناونیشانەکە
    ئەنیمەیت دەکرێت. */
-.magic-tabs-wrapper.is-mid .magic-tab {
-  gap: 0;
-}
 
 /* ⚠️ ڕیزی گشتیی `button i` ئایکۆنەکە دەکاتە `--icon-md` = ٢٠px،
    لەتەنیشت دەقی ١٣pxـدا. قەبارەی دەقەکە ڕێک هەمان قەبارەی
@@ -17012,14 +17093,21 @@ body.sx-wide {
   margin-block: -6px;
   white-space: nowrap;
   vertical-align: middle;
+  margin-inline-end: 0;
   transition: max-width .34s cubic-bezier(.22, 1, .36, 1),
               margin-inline-start .34s cubic-bezier(.22, 1, .36, 1),
+              margin-inline-end .34s cubic-bezier(.22, 1, .36, 1),
               opacity .22s ease;
 }
 
+/* پەدینگی تابەکان ٧pxە (بۆ گونجاندنی شەش تاب). ئەوە بۆ
+   ئایکۆنێکی تەنیا باشە، بەڵام بۆ دەق تۆزێک تەنگە — بۆیە تابی
+   چالاک ٤pxی زیاتری هەیە لە لای دەقەکەوە. ⚠️ بە **مارجن**
+   دەکرێت نەک پەدینگ: مارجن ئەنیمەیت دەکات، پەدینگ نا. */
 .magic-tabs-wrapper.is-mid .magic-tab.active .mt-lbl {
   max-width: 190px;
   margin-inline-start: 7px;
+  margin-inline-end: 4px;
   opacity: 1;
 }
 

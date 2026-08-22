@@ -49,8 +49,56 @@
                 });
         })();
     </script>
+
+    <!-- ============================================================
+         چوونەژوورەوەی خێرا — پێش هەر داواکارییەکی تۆڕ
+         ------------------------------------------------------------
+         پێشتر بۆکەکە بەم شێوەیە بوو: چاوەڕوانی بارکردنی Supabase →
+         گەڕان بە `telegram_id`دا لە سێرڤەر → پاشان ڕیدایرێکت. واتا
+         بەکارهێنەرێکی پێشتر چووەژوورەوە چەند چرکەیەک لە پەڕەی
+         چوونەژوورەوەدا دەمایەوە و وای دەزانی دەبێت کۆد و پاسوۆرد
+         بنووسێتەوە.
+
+         ئەمە هەموو ئەوە پەڕاندووە: `localStorage` هاوکاتە (sync)،
+         بۆیە بڕیارەکە **پێش نەخشاندنی فۆڕمەکە** دەدرێت — سفر
+         داواکاری، سفر چاوەڕوانی.
+
+         ⚠️ پارێزەری ناسنامە: ئەگەر تلیگرامێکی **جیاواز** ئەپەکەی
+            کردبێتەوە، ئەکاونتە پاشەکەوتکراوەکە هی ئەو نییە. لەو
+            حاڵەتەدا ڕێگای خێرا **ناگیردرێت** و دەگەڕێتەوە سەر
+            گەڕانی ئاسایی بە `telegram_id` — ئەگەرنا `syncTelegramIdentity`
+            لە app.htmlدا ئەکاونتی کەسی یەکەم دەبەستێتەوە بە
+            تلیگرامی کەسی دووەم.
+         ============================================================ -->
+    <script>
+        (function fastAuthRedirect() {
+            try {
+                if (new URLSearchParams(location.search).get('add') === '1') return;
+                var raw = localStorage.getItem('myAppUser');
+                if (!raw) return;
+                var u = JSON.parse(raw);
+                if (!u || !u.code) return;
+
+                var tg = window.Telegram && window.Telegram.WebApp;
+                var tgu = tg && tg.initDataUnsafe && tg.initDataUnsafe.user;
+                if (tgu && tgu.id && String(u.telegram_id || '') !== String(tgu.id)) return;
+
+                document.documentElement.classList.add('is-booting');
+                location.replace('app.html');
+            } catch (e) { }
+        })();
+    </script>
 </head>
 <body>
+    <!-- پەردەی «خەریکە دەکرێتەوە» — بە `html.is-booting` دەردەکەوێت.
+         مەبەست: بەکارهێنەر هەرگیز فۆڕمی کۆد و پاسوۆرد نەبینێت کاتێک
+         ئەپەکە خەریکە ئەکاونتەکەی دەکاتەوە. -->
+    <div id="boot-cover">
+        <div class="boot-spin"></div>
+        <b>خەریکە ئەکاونتەکەت دەکرێتەوە…</b>
+        <span>چاوەڕێ بکە</span>
+    </div>
+
     <div class="login-container">
         <div class="modern-form">
             <div class="form-title">چوونە ژوورەوە</div>
@@ -152,12 +200,18 @@
         }
         
         document.addEventListener('DOMContentLoaded', async () => {
-            await ensureSupabaseLoaded();
-
             let params = new URLSearchParams(location.search);
             let addMode = params.get('add') === '1'; // زیادکردنی ئەکاونتی نوێ (بێ ئۆتۆ-ڕیدایرێکت)
-
             let tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
+
+            // ⭐ ئەگەر خەریکین چوونەژوورەوەیەکی خۆکاری تاقی بکەینەوە،
+            //    پەردەکە دەردەکەوێت **پێش** چاوەڕوانی تۆڕ — ئەگەرنا
+            //    فۆڕمی کۆد و پاسوۆرد دەبینرێت و بەکارهێنەر وا
+            //    دەزانێت دەبێت خۆی بنووسێتەوە.
+            const autoTry = !addMode && (tgUser?.id || localStorage.getItem('myAppUser'));
+            if (autoTry) document.documentElement.classList.add('is-booting');
+
+            await ensureSupabaseLoaded();
 
             if (tgUser && tgUser.id && !addMode) {
                 try {
@@ -179,6 +233,9 @@
                 return;
             }
 
+            // هیچ چوونەژوورەوەیەکی خۆکاری ڕووینەدا → پەردەکە لادەبرێت
+            // و فۆڕمەکە دەردەکەوێت
+            document.documentElement.classList.remove('is-booting');
             renderSavedAccounts();
         });
 

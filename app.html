@@ -5997,9 +5997,14 @@
             // تابی نوێ بە فلتەرە دەرکەوتووەکان دەست پێدەکات
             if (typeof resetAllScrollHide === 'function') resetAllScrollHide();
 
-            // کاش هەبێت → دەستبەجێیە؛ نەبێت → لە سێرڤەرەوە دێت
-            reloadMgmt();
-            mgmtWarmSiblings();   // تابەکەی تر بۆ گەڕانەوەی داهاتوو ئامادە دەکرێت
+            // ⚠️ نەخشاندنی لیستەکە یەک فرەیم دوادەخرێت — هەمان
+            //    هۆکاری `switchAdminTab`: کارێکی قورس لە هەمان تاسکی
+            //    دەستپێکردنی ئەنیمەیشندا یەکەم فرەیم دەبڕێت.
+            requestAnimationFrame(() => requestAnimationFrame(() => {
+                // کاش هەبێت → دەستبەجێیە؛ نەبێت → لە سێرڤەرەوە دێت
+                reloadMgmt();
+                mgmtWarmSiblings();   // تابەکەی تر بۆ گەڕانەوەی داهاتوو ئامادە دەکرێت
+            }));
         }
 
         // کارتی ئۆردەری پەڕەی سەرەکی (داشبۆرد). پێشتر لەناو `fetchOrders`
@@ -12203,14 +12208,37 @@
         // ⚠️ بە `animate=false` بانگ دەکرێت — ئەگەرنا ترانزیشنی
         //    خودی پیلەکە لەگەڵ نوێکردنەوەی هەر فرەیمێکدا شەڕ دەکات
         //    و جوڵەکە دەلەرزێت.
+        // ⚠️ پێشتر ئەم لووپە `syncMagicSlider(wrap, false)`ی بانگ دەکرد،
+        //    و ئەویش لە **هەر فرەیمێکدا** `transition: none` دادەنا،
+        //    `void slider.offsetWidth`ی دەخوێندەوە (ناچارکردنی
+        //    لەیئاوتێکی هاوکات) و پاشان ترانزیشنەکەی دەگەڕاندەوە.
+        //    ٣٨٠ms × ~٦٠ فرەیم = ~٢٣ ڕیفلۆی زیادە → ئەوە بوو ئەو
+        //    لەرزەی لە کاتی گۆڕینی تابدا دەبینرا.
+        //
+        //    ئێستا: ترانزیشنەکە **یەک جار** دەکوژێنرێتەوە، هەر
+        //    فرەیمێک تەنها ئەگەر ژمارەکە گۆڕابێت دەنووسرێت، و لە
+        //    کۆتاییدا ترانزیشنی CSS دەگەڕێتەوە.
         function mtTrackSlider(wrap, ms) {
             if (!wrap) return;
-            const t0 = (performance && performance.now) ? performance.now() : Date.now();
+            const slider = wrap.querySelector('.magic-slider');
+            if (!slider) return;
+            const prev = slider.style.transition;
+            slider.style.transition = 'none';
+            let lw = -1, ll = -1;
+            const now = () => (performance && performance.now) ? performance.now() : Date.now();
+            const t0 = now();
             (function step() {
-                syncMagicSlider(wrap, false);
-                const now = (performance && performance.now) ? performance.now() : Date.now();
-                if (now - t0 < ms) requestAnimationFrame(step);
-                else mtScrollActiveIntoView(wrap);
+                const a = wrap.querySelector('.magic-tab.active');
+                if (a) {
+                    const w = a.offsetWidth, l = a.offsetLeft;
+                    if (w !== lw) { slider.style.width = w + 'px'; lw = w; }
+                    if (l !== ll) { slider.style.left = l + 'px'; ll = l; }
+                }
+                if (now() - t0 < ms) requestAnimationFrame(step);
+                else {
+                    slider.style.transition = prev;
+                    mtScrollActiveIntoView(wrap);
+                }
             })();
         }
 
@@ -12250,7 +12278,12 @@
             if (mainP) mainP.style.display = (tab === 'main') ? '' : 'none';
             if (rankP) rankP.style.display = (tab === 'rank') ? '' : 'none';
 
-            if (tab === 'rank' && !_rpRendered) { _rpRendered = true; renderRankPrefs(); }
+            // ⚠️ ~٩٥٨px پێشبینینی پڕۆفایل — یەک فرەیم دوادەخرێت تاکو
+            //    ئەنیمەیشنی تابەکە یەکەم فرەیمی خۆی بنەخشێنێت.
+            if (tab === 'rank' && !_rpRendered) {
+                _rpRendered = true;
+                requestAnimationFrame(() => requestAnimationFrame(renderRankPrefs));
+            }
             // ⚠️ گەڕانەوە بۆ سەرەوە — ئەگەرنا دوای گۆڕینی تابێکی
             //    درێژ بۆ تابێکی کورت، بەکارهێنەر لە بۆشاییەکدا
             //    دەمێنێتەوە و وا دەزانێت پەڕەکە بەتاڵە
@@ -19217,29 +19250,38 @@
             document.getElementById('section-cities').style.display = 'none';
             document.getElementById('section-trash').style.display = 'none';
 
+            // ⚠️ **گۆڕینی بەشەکە یەکسەرە، نەخشاندنی لیستەکە یەک فرەیم
+            //    دوادەخرێت.** پێشتر هەردووکیان لە هەمان تاسکدا بوون کە
+            //    ئەنیمەیشنی تابەکەی تێدا دەست پێدەکرد، بۆیە یەکەم
+            //    فرەیم دەبڕدرا و پیلە سپییەکە دەبازی.
+            //    پێوانەی تێچووی هاوکات (بێ داتای ڕاستەقینە):
+            //    شارەکان ١٩.٥ms · ئەوانی تر ١.٤–٣.٦ms. لەسەر ئامێری
+            //    ڕاستەقینە و بە داتاوە زۆر زیاترە.
+            const paint = fn => requestAnimationFrame(() => requestAnimationFrame(fn));
+
             if (tabName === 'create') {
                 document.getElementById('section-create-code').style.display = 'block';
             } else if (tabName === 'edit') {
                 document.getElementById('section-edit-code').style.display = 'flex';
                 document.getElementById('edit-section').style.display = 'none';
                 document.getElementById('edit-list-view').style.display = 'flex';
-                filterEditUsers();
+                paint(filterEditUsers);
             } else if (tabName === 'profits') {
                 document.getElementById('section-profits').style.display = 'flex';
                 // ئەم دێڕە وا دەکات هەرکە چوویتە قازانجەکان، لیستەکە لۆد ببێت
-                filterProfitUsers();
+                paint(filterProfitUsers);
             } else if (tabName === 'wallets') {
                 document.getElementById('section-wallets').style.display = 'flex';
-                filterWalletUsers();
+                paint(filterWalletUsers);
             } else if (tabName === 'cities') {
                 document.getElementById('section-cities').style.display = 'flex';
                 // وەک تابەکانی تر — لیستەکە لە کاتی کردنەوەی تابەکەدا
                 // دەنەخشێنرێت. پێشتر تەنها لە کاتی بارکردنی یەکەمی
                 // پەڕەی ئەدمین دەنەخشێنرا (تەنها بۆ پاشا)
-                renderAdminCities();
+                paint(renderAdminCities);
             } else if (tabName === 'trash') {
                 document.getElementById('section-trash').style.display = 'flex';
-                loadTrash();
+                paint(loadTrash);
             }
 
             // دوای دەرکەوتنی بەشەکە پێوانە دەکرێت — پێشتر ناتوانرێت،
