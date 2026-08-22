@@ -8489,20 +8489,22 @@
         }
 
         // ============================================================
-        // بەشێکی نوقاو — بۆ ئۆردەری گەیشتوو
+        // بەشێکی نوقاو — بۆ ئۆردەری تەواوبوو (گەیشتوو · گەڕاوە)
         // ------------------------------------------------------------
-        // کاتێک ئۆردەرێک گەیشتووە، هەنگاوەکانی گەیاندن و کاڵاکان و
-        // وێنەکان زانیاریی تەواوکراون — پێویست نییە هەموو جارێک
-        // شاشەکە پڕ بکەن. لێرەدا نوقاو دەکرێن.
-        // ⚠️ **هیچ زانیارییەک لانەبردراوە.** سەردێڕەکە دەڵێت چی
-        //    لەناوییەتی (چەند کاڵا، چەند وێنە)، و یەک دەستلێدان
-        //    هەمووی دەکاتەوە. بڕوانە یاسای «پەڕەکردن، نەک بڕین».
+        // کاتێک ئۆردەرێک تەواو دەبێت، هەنگاوەکانی گەیاندن و کارتی
+        // پرێنت و سکان دەبنە **مێژوو** — ڕوویانداوە و ناگۆڕێن. لێرەدا
+        // نوقاو دەکرێن تاکو شاشەکە پڕ نەکەن.
+        // ⚠️ **کاڵاکان هەرگیز ناینوقێن** — ئەوانە زانیاریی کارن، نەک
+        //    مێژوو. (داواکاریی خاوەنەکە، ٢٠٢٦-٠٨-٢٢: پێشتر بە
+        //    پێچەوانە بوو و کاڵاکان دەشاردرانەوە.)
+        // ⚠️ **هیچ زانیارییەک لانەبردراوە** — یەک دەستلێدان هەمووی
+        //    دەکاتەوە. بڕوانە یاسای «پەڕەکردن، نەک بڕین».
         // ============================================================
         function odetFoldHtml(meta, inner) {
             if (!inner) return '';
             return `<div class="odet-fold">
                 <button type="button" class="odet-fold-btn" onclick="toggleOrderFold(this)">
-                    <span class="odet-fold-t"><i class='bx bx-layer'></i> هەنگاوەکان و کاڵاکان</span>
+                    <span class="odet-fold-t"><i class='bx bx-history'></i> هەنگاوەکان و پرێنت</span>
                     ${meta ? `<small>${histEsc(meta)}</small>` : ''}
                     <i class='bx bx-chevron-down odet-fold-arrow'></i>
                 </button>
@@ -8798,26 +8800,31 @@
             </div>`;
             const goodsHtml = itemsRowHtml + giftHtml + imgHtml;
 
-            // ---- ئۆردەری گەیشتوو: هەنگاوەکان و کاڵاکان نوقاو دەبن ----
-            // داواکاریی خاوەنەکە: ئۆردەرێکی گەیشتوو کارەکەی تەواوە،
-            // بۆیە ئەم بەشانە بە بنەڕەت داخراون. «گەڕاوەتەوە» ناگرێتەوە —
-            // لەوێدا هەنگاوەکان و هۆکاری گەڕانەوە هێشتا پێویستن.
-            const isDeliveredOnly = /گەیشت/.test(String(o.status || ''));
-            const nItems = names.filter(x => String(x || '').trim()).length;
-            const foldMeta = [
-                nItems ? nItems + ' کاڵا' : '',
-                nImgs ? nImgs + ' وێنە' : ''
-            ].filter(Boolean).join(' · ');
+            // ---- ئۆردەری تەواوبوو: هەنگاوەکان و پرێنت نوقاو دەبن ----
+            // داواکاریی خاوەنەکە (٢٠٢٦-٠٨-٢٢): **کاڵاکان هەمیشە بەدیارن**.
+            // ئەوەی دەنوقێت هەنگاوەکانی گەیاندن + کارتی پرێنت و سکانە —
+            // ئەوانە مێژوون، نەک زانیاریی کار. پێشتر بە پێچەوانە بوو و
+            // کاڵاکان دەشاردرانەوە.
+            // «گەڕاوەتەوە»ش وەک «گەیشتووە» مامەڵەی لەگەڵ دەکرێت — هەردووکیان
+            // کۆتایی ژیانی ئۆردەرەکەن.
+            // ⚠️ کارتی **قوفڵ** (پرێنت کراوە بەڵام سکان نەکراوە) هەرگیز
+            //    نانوقێت: ئاگادارییەکی چالاکە، نەک مێژوو.
+            const isDone = /گەیشت|گەڕاوە/.test(String(o.status || ''));
+            const printCard = printBoxHtml(o);
+            const foldPrint = (isDone && !isPrintLocked(o)) ? printCard : '';
+            const topPrint = foldPrint ? '' : printCard;
+            const foldMeta = foldPrint ? 'پرێنت و سکان' : '';
 
             b.innerHTML = `
             ${sellerInfoPlaceholder}
-            ${isDeliveredOnly ? '' : orderStepsHtml(o)}
-            ${printBoxHtml(o)}
+            ${isDone ? '' : orderStepsHtml(o)}
+            ${topPrint}
             ${reasonInfoHtml}
             ${detailRow('bx-user', 'ناوی کڕیار', o.customer_name)}
             ${detailRow('bx-phone', 'مۆبایلەکان', phones.join('<br>'), { raw: true, dir: 'ltr' })}
             ${detailRow('bx-map', 'ناونیشانی تەواو', o.address)}
-            ${isDeliveredOnly ? odetFoldHtml(foldMeta, orderStepsHtml(o) + goodsHtml) : goodsHtml}
+            ${goodsHtml}
+            ${isDone ? odetFoldHtml(foldMeta, orderStepsHtml(o) + foldPrint) : ''}
             ${detailRow('bx-chat', 'سۆشیاڵ میدیا', sNames)}
             ${detailRow('bx-note', 'تێبینی کڕیار', o.notes)}
             ${detailRow('bx-time-five', 'کاتی داواکاری',
@@ -13155,7 +13162,45 @@
                 <div class="anc-text-view">${histEsc(a.body || '')}</div>
                 ${imgs ? `<div class="anc-gallery is-n${(a.images || []).length}">${imgs}</div>` : ''}
                 ${opts.react ? announceReactionsHtml(a) : ''}
+                ${opts.mute ? announceMuteHtml(a) : ''}
                 ${announceSeenChipHtml(a)}`;
+        }
+
+        // چێک‌بۆکسی «چیتر ئەم ئاگاداریەم نیشان مەدە» — تەنها لە
+        // پۆپ‌ئەپی خۆکاریدا (db/046). لە لیستەکەدا نایەت: ئەوێ
+        // بەکارهێنەر خۆی داوای کردووە کە بیبینێت.
+        // ⚠️ دۆخەکە لە `_anpMuted`دا دەمێنێتەوە — `anpRefresh` بە هەر
+        //    ڕیاکشنێک HTMLـەکە دووبارە دەنەخشێنێت و ئەگەرنا نیشانەکە
+        //    ون دەبێت.
+        function announceMuteHtml(a) {
+            const id = Number(a.id);
+            return `<label class="anc-mute" onclick="event.stopPropagation()">
+                <input type="checkbox" ${_anpMuted[String(id)] ? 'checked' : ''}
+                    onchange="setAnnounceMute(${id}, this.checked)">
+                <span class="anc-mute-box"><i class='bx bx-check'></i></span>
+                <span class="anc-mute-txt">چیتر ئەم ئاگاداریەم نیشان مەدە</span>
+            </label>`;
+        }
+
+        // پەنجەدانان یەکسەر دەنێردرێت بۆ سێرڤەر — نەک لە کاتی
+        // داخستندا. ئەگەر ئەپەکە بکوژێنرێتەوە، هەڵبژاردنەکە ماوە.
+        async function setAnnounceMute(id, on) {
+            if (!currentUser || !currentUser.code) return;
+            _anpMuted[String(id)] = !!on;
+            try {
+                const { error } = await supabase.rpc('dismiss_announcement', {
+                    p_announce_id: Number(id),
+                    p_user_code: String(currentUser.code),
+                    p_on: !!on
+                });
+                if (error) throw error;
+                if (on) showToast('چیتر ئەم ئاگادارییەت پیشان نادرێت', 'success');
+            } catch (e) {
+                console.warn('setAnnounceMute:', e);
+                _anpMuted[String(id)] = !on;
+                anpRefresh();
+                showToast('نەتوانرا تۆمار بکرێت', 'error');
+            }
         }
 
         // چیپی «کێ بینیویەتی» — تەنها بۆ نووسەرەکە یان پاشا.
@@ -13204,6 +13249,11 @@
         async function toggleAnnounceReaction(id, emoji) {
             const a = announceCache[String(id)];
             if (!a || !currentUser) return;
+            // ⭐ ڕیاکشن = بینین. لە لیستەکەدا دوگمەکە
+            //    `event.stopPropagation()`ی هەیە، بۆیە دەستلێدانی ڕیزەکە
+            //    (کە نیشانی دەکرد) هەرگیز ڕوونادات — ئەوە بوو ٣٥ ڕیاکشن
+            //    لەگەڵ ٢٨ بینەردا.
+            markAnnounceSeen(id);
             let list = [];
             try { list = Array.isArray(a.reactions) ? a.reactions : JSON.parse(a.reactions || '[]'); }
             catch (e) { list = []; }
@@ -13560,18 +13610,24 @@
         //   ١) کۆمەڵ  — ئەوانەی نەبینراون، لە کاتی چوونەژوورەوە.
         //               دوای «تێگەیشتم» هەموویان بە بینراو نیشان دەکرێن.
         //   ٢) تاک    — یەکێک کە بەکارهێنەر خۆی کردییەوە، لە لیستەکەوە
-        //               یان لە بەستەری تلیگرامەوە. ⚠️ لێرەدا هیچ
-        //               نیشانکردنێک نییە — پێشتر کراوە.
+        //               یان لە بەستەری تلیگرامەوە.
+        // ⚠️ هەردوو دۆخ بە داخستن «بینراو» نیشان دەکرێن (db/046).
+        //    پێشتر تەنها دۆخی کۆمەڵ بوو، و ئەویش بە شێوەیەکی
+        //    شکاو — بڕوانە `markAnnounceSeen`.
         let _anpIds = [];   // ناسنامەی ئاگادارییەکانی ناو پۆپ‌ئەپەکە
+        let _anpMuted = {}; // ناسنامە → «چیتر نیشانم مەدە» پێکراوە؟
+        let _anpAuto = false;  // دۆخی کۆمەڵ؟ (چێک‌بۆکس تەنها لێرەدایە)
 
-        function anpRender(ids) {
+        function anpRender(ids, auto) {
             const box = document.getElementById('anp-list');
             if (!box) return false;
             const rows = ids.map(id => announceCache[String(id)]).filter(Boolean);
             if (!rows.length) return false;
+            if (auto !== undefined) _anpAuto = !!auto;
             _anpIds = rows.map(a => String(a.id));
             box.innerHTML = rows.map(a =>
-                `<div class="anp-item">${announceBodyHtml(a, { manage: true, react: true })}</div>`).join('');
+                `<div class="anp-item">${announceBodyHtml(a,
+                    { manage: true, react: true, mute: _anpAuto })}</div>`).join('');
             document.getElementById('announce-popup-modal').classList.add('show');
             return true;
         }
@@ -13599,8 +13655,8 @@
                 } catch (e) { console.warn('openAnnounceViewer:', e); }
             }
             if (!a || a.deleted_at) { showToast('ئەم ئاگادارییە نەماوە', 'error'); return; }
-            _anpShown = [];             // دۆخی تاک — هیچ نیشان نەکە
-            anpRender([a.id]);
+            _anpShown = [];             // دۆخی تاک — بێ چێک‌بۆکس
+            anpRender([a.id], false);
         }
 
         async function checkUnreadAnnouncements() {
@@ -13615,19 +13671,103 @@
 
                 rows.forEach(a => { announceCache[String(a.id)] = a; });
                 _anpShown = rows.map(a => String(a.notif_id));
-                anpRender(rows.map(a => a.id));
+                _anpMuted = {};
+                anpRender(rows.map(a => a.id), true);
             } catch (e) { console.warn('checkUnreadAnnouncements:', e); }
         }
 
         function closeAnnouncePopup() {
             document.getElementById('announce-popup-modal').classList.remove('show');
-            // ⚠️ یەک بە یەک نیشان دەکرێن — `markOneNotifRead` باجەکان و
-            //    چیپەکانیش نوێ دەکاتەوە، بۆیە دەستکاری زیادە ناوێت.
-            //    لە دۆخی تاکدا `_anpShown` بەتاڵە، بۆیە هیچ ڕوونادات.
-            _anpShown.forEach(nid => { markOneNotifRead(nid, null); });
+            announcePopupClosed();
+        }
+
+        // ============================================================
+        // داخستنی پۆپ‌ئەپ = «بینیم»
+        // ------------------------------------------------------------
+        // ⚠️ **هەموو** ڕێگاکانی داخستن دەبێت بێنە ئێرە: «تێگەیشتم»،
+        //    دوگمەی پاشەوەی تلیگرام (`closeModal`)، و داخستنی ئەپەکە
+        //    (`visibilitychange`). پێشتر تەنها دوگمەکە بوو.
+        // ⚠️ ئایدێمپۆتێنتە — `markAnnounceSeen` خۆی دووبارە نابێتەوە.
+        // ============================================================
+        function announcePopupClosed() {
+            if (!_anpIds.length) return;
+            const ids = _anpIds.slice();
             _anpShown = [];
             _anpIds = [];
+            _anpAuto = false;
+            markAnnouncesSeen(ids);
         }
+
+        // ئەپەکە دادەخرێت/دەشاردرێتەوە بەبێ «تێگەیشتم» — ئەوەش
+        // لادانە، بۆیە بە بینراو دەژمێردرێت (داواکاریی خاوەنەکە).
+        // ⚠️ `_anpIds` بەتاڵ ناکرێتەوە: ئەگەر گەڕایەوە، پۆپ‌ئەپەکە
+        //    هێشتا لەبەرچاوە و ڕیاکشن دەکرێت.
+        document.addEventListener('visibilitychange', function () {
+            if (document.hidden && _anpIds.length) markAnnouncesSeen(_anpIds.slice());
+        });
+        window.addEventListener('pagehide', function () {
+            if (_anpIds.length) markAnnouncesSeen(_anpIds.slice());
+        });
+
+        // ============================================================
+        // «بینراو» بە ناسنامەی **ئاگاداری**، نەک بە ناسنامەی ڕیزەکە
+        // ------------------------------------------------------------
+        // ⚠️ بەگی مێژوویی: `markOneNotifRead` سەرەتا ڕیزەکە لە
+        //    `_notifCache`دا دەگەڕا و ئەگەر نەیدۆزیبایەوە **هیچی**
+        //    نەدەکرد. ئەو کاشە تەنها بە کردنەوەی پەنجەرەی
+        //    ئاگادارییەکان پڕ دەبێت، بۆیە «تێگەیشتم»ی کاتی
+        //    چوونەژوورەوە هەرگیز نەدەگەیشتە سێرڤەر.
+        //    پێوانە (٢٠٢٦-٠٨-٢٢، ئاگاداری #٧): ٢٥٨ وەرگر، ٢٨
+        //    بینراو، ٣٥ ڕیاکشن — ١٩ کەس ڕیاکشنیان کرد بەڵام
+        //    نەژمێردران. دوای چاکسازی: ٤٧ بینراو.
+        // ⚠️ `mark_announce_seen` (db/046) بە `announce_id` کار دەکات،
+        //    بۆیە ناسنامەی ڕیزەکە پێویست نییە — ڕیاکشنی ناو لیستەکەش
+        //    دەتوانێت بانگی بکات.
+        // ============================================================
+        const _annSeenSent = {};
+
+        async function markAnnouncesSeen(ids) {
+            if (!currentUser || !currentUser.code) return;
+            // ⚠️ `.map(String)` بەکارنایەت — `String(null)` دەبێتە 'null'
+            //    و پاڵاوتنەکە تێدەپەڕێنێت. بڕوانە `toIdList`.
+            const list = (ids || [])
+                .filter(id => id !== null && id !== undefined && id !== '')
+                .map(id => String(id))
+                .filter(id => !_annSeenSent[id]);
+            if (!list.length) return;
+            list.forEach(id => { _annSeenSent[id] = true; });
+
+            // ڕووکار یەکسەر — هەموو وێنەکانی ناو کاشەکان
+            let touched = false;
+            const now = new Date().toISOString();
+            Object.keys(_notifCache).forEach(k => {
+                (_notifCache[k] || []).forEach(n => {
+                    if (list.indexOf(String(n.announce_id)) >= 0 && !n.read_at) {
+                        n.read_at = now; touched = true;
+                    }
+                });
+            });
+            if (touched) renderNotifications();
+
+            let ok = false;
+            for (const id of list) {
+                try {
+                    const { error } = await supabase.rpc('mark_announce_seen', {
+                        p_announce_id: Number(id),
+                        p_user_code: String(currentUser.code)
+                    });
+                    if (error) throw error;
+                    ok = true;
+                } catch (e) {
+                    console.warn('markAnnouncesSeen:', e);
+                    _annSeenSent[id] = false;    // دووبارە هەوڵ بدرێتەوە
+                }
+            }
+            // یەک بانگ بۆ هەموویان — ئەمە سەرچاوەی ڕاستیی باج و چیپەکانە
+            if (ok) refreshNotifKindCounts();
+        }
+
+        function markAnnounceSeen(id) { return markAnnouncesSeen([id]); }
 
         // ============================================================
         // ئاگادارکردنەوەکان — بە پەڕە
@@ -16613,6 +16753,10 @@
         function closeModal(event, modalId) {
             if (event && event.target.id !== modalId) return;
             document.getElementById(modalId).classList.remove('show');
+            // پۆپ‌ئەپی ئاگاداری بە دوگمەی پاشەوە داخرا (`navBack`) —
+            // ئەوەش «بینیم»ە، ڕێک وەک «تێگەیشتم». بەبێ ئەمە
+            // گەڕانەوە ئامارەکە بێدەنگانە ون دەکات.
+            if (modalId === 'announce-popup-modal') announcePopupClosed();
             // پەنجەرەی وردەکاری ئۆردەر داخرا → وەک «پشکنراو» نیشان دەکرێت.
             // ئەمە تاکە ڕێگای داخستنە (X، پاشخان، دەستکاری، سڕینەوە…)
             if (modalId === 'order-details-modal') {
