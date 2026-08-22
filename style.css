@@ -16079,3 +16079,823 @@ body.sx-wide {
    باندەدا ڕادەگرێت. پێشتر پەنجەیەک لە نزیک شریتی تلیگرام
    دەکەوتە سەر ڕیزێکی لیستەکە و ئاماری ئەندامێکی هەڕەمەکی
    دەکردەوە. */
+
+
+/* ═══════════════════════════════════════════════════════════════
+   کارتی پڕۆفایلی ئەندام (`#member-card-modal`)
+   ───────────────────────────────────────────────────────────────
+   پەنجەدانان لەسەر هەر وێنەیەکی پڕۆفایل ئەمە دەکاتەوە. بڕوانە
+   `avatarHtml` و `openMemberCard` لە app.html.
+
+   ⚠️ ڕەنگی سەرەوە (`--tone`) لە JSـەوە دادەنرێت: ڕەنگی **ئاست**
+      ئەگەر ئامارەکان هاتبن، ئەگەرنا ڕەنگی **پلە**. بۆیە کارتی
+      ئاستی ١٠ سووری تۆخە و کارتی ئاستی ١ خۆڵەمێشی — هەمان
+      زمانی بینراوی `STATS_LEVELS`.
+   ═══════════════════════════════════════════════════════════════ */
+
+/* هەر وێنەیەکی لێدراو — بازنەکە خۆی، نەک `img`ـەکەی ناوەوە
+   (بڕوانە تێبینیی `.rkpod-av` سەرەوە: بۆردەر لەسەر `img` بازنەکە
+   دەشکێنێت). */
+.av-tap {
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform .14s ease;
+}
+
+.av-tap:active {
+  transform: scale(.9);
+}
+
+.modal-content.is-mcard {
+  width: 92%;
+  max-width: 380px;
+  padding: 0;
+  overflow: hidden auto;
+  border-radius: 22px;
+}
+
+/* دوگمەی داخستن — لەسەر کەڤەرەکە دادەنیشێت.
+   ⚠️ پاشبنەماکە **تاریکە**، نەک سپی. کاتێک کەڤەرەکە گرادیێنتێکی
+      تۆخی ئاست بوو، سپییەکی ٢٢٪ باش دەبینرا — بەڵام ئێستا
+      ئەندام وێنەی خۆی دادەنێت و لەوانەیە ڕووناک بێت (وێنەیەکی
+      زەرد، بەفر، ئاسمان...) و دوگمەکە بە تەواوی ون دەبوو.
+      تاریکی + ئایکۆنی سپی لەسەر هەموو وێنەیەک دەبینرێت. */
+.mcard-x {
+  position: absolute;
+  top: 10px;
+  inset-inline-end: 10px;
+  z-index: 3;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: rgba(15, 23, 42, .5);
+  color: #fff;
+  font-size: 20px;
+  line-height: 0;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  backdrop-filter: blur(4px);
+}
+
+.mcard-x:active {
+  background: rgba(15, 23, 42, .72);
+}
+
+/* ---- پاشبنەما + وێنە ---- */
+/* ⚠️ بەرزی بە **ڕێژە** دادەنرێت، نەک بە پیکسلێکی جێگیر — کرۆپەری
+   کەڤەر ٩٠٠×٣٠٠ (٣:١) دەردەهێنێت، بۆیە پێچەرەوەیەکی ٣:١ وێنەکە
+   بێ بڕین و بێ کێشان دەیگرێتەوە. بە بەرزییەکی جێگیر، هەر
+   پانییەکی جیاوازی شاشە سەر و خواری وێنەکەی دەبڕی.
+   ⚠️ `min-height` پاشەکشەیە بۆ وێبگەڕی کۆن کە `aspect-ratio`
+      ناناسێت — بەبێی پێچەرەوەکە بەرزی سفری دەبوو (منداڵەکانی
+      هەموویان `absolute`ن) و کارتەکە بێ سەر دەردەکەوت.
+   پێوانەکراو لە ٣٦٠px: پانی ٣٣١px → بەرزی ١١٠px. */
+.mcard-top {
+  position: relative;
+  aspect-ratio: 3 / 1;
+  min-height: 104px;
+}
+
+.mcard-bg {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(120% 140% at 78% -30%, rgba(255, 255, 255, .34), transparent 62%),
+    linear-gradient(135deg, var(--tone, #2481cc), color-mix(in srgb, var(--tone, #2481cc) 62%, #0f172a));
+}
+
+/* ⚠️ `left` + `translateX` فیزیکین، نەک `inset-inline-start` —
+   `translateX` ئاراستە نازانێت، بۆیە تێکەڵییان لە RTLدا
+   وێنەکە بە پانیی خۆی لادەدات. */
+.mcard-av {
+  position: absolute;
+  left: 50%;
+  bottom: -46px;
+  transform: translateX(-50%);
+  line-height: 0;
+}
+
+/* ⚠️ بازنەی سپی بە `box-shadow`ـەوە، نەک `border` — `avatarHtml`
+   بازنەکە لەسەر دیوی دەرەوە دادەنێت و وێنەکەی ناوەوە ١٠٠٪ـە،
+   بۆیە بۆردەر وێنەکە دەبڕێت (هەمان داوی `.rkpod-av`). */
+.mcard-av > div {
+  box-shadow: 0 0 0 4px #fff, 0 8px 22px rgba(15, 23, 42, .2);
+}
+
+.mcard-av.is-img {
+  cursor: zoom-in;
+}
+
+/* ژمارەی ئاست لەسەر وێنەکە */
+.mcard-lvn {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: -6px;
+  min-width: 26px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: 11px;
+  background: var(--tone, #2481cc);
+  color: #fff;
+  border: 2px solid #fff;
+  font-size: 11.5px;
+  font-weight: 800;
+  line-height: 18px;
+  text-align: center;
+  box-sizing: border-box;
+}
+
+/* ---- ناسنامە ---- */
+.mcard-id {
+  padding: 52px 16px 0;
+  text-align: center;
+}
+
+.mcard-name {
+  display: block;
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--text-main);
+  line-height: 1.3;
+  word-break: break-word;
+}
+
+.mcard-name small {
+  font-size: 12px;
+  font-weight: 700;
+  color: #94a3b8;
+}
+
+.mcard-chips {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.mcard-role,
+.mcard-code {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 24px;
+  padding: 0 9px;
+  border-radius: 8px;
+  font-size: 11.5px;
+  font-weight: 700;
+}
+
+.mcard-role {
+  color: var(--rc, #059669);
+  background: color-mix(in srgb, var(--rc, #059669) 12%, transparent);
+}
+
+.mcard-code {
+  color: #64748b;
+  background: #f1f5f9;
+  font-family: monospace;
+}
+
+.mcard-role i,
+.mcard-code i {
+  font-size: 14px;
+}
+
+/* ---- ژمارەکان ---- */
+/* ⚠️ `sxTile` بەکاردێت — یەک شێوازی خانە بۆ هەموو ئەپەکە.
+   لێرەدا تەنها پاشبنەماکە دەگۆڕێت، چونکە کارتەکە خۆی سپییە. */
+.mcard-kpis {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 7px;
+  padding: 14px 16px 0;
+}
+
+.mcard-kpis.is-4 {
+  grid-template-columns: 1fr 1fr;
+}
+
+.mcard-kpis .sx-kpi {
+  min-height: 60px;
+  background: #f8fafc;
+}
+
+/* جێگرەوەی ژمارە لەکاتی هێنانەوە */
+.mcard-sk {
+  display: block;
+  width: 46px;
+  height: 15px;
+  border-radius: 5px;
+  background: linear-gradient(90deg, #e9eef5 25%, #f4f7fb 50%, #e9eef5 75%);
+  background-size: 220% 100%;
+  animation: mcard-sk 1.1s ease-in-out infinite;
+}
+
+@keyframes mcard-sk {
+  from { background-position: 140% 0; }
+  to   { background-position: -40% 0; }
+}
+
+/* ---- شریتی ئاست ---- */
+.mcard-lv {
+  margin: 12px 16px 0;
+  padding: 10px 12px;
+  border: 1px solid #e9edf3;
+  border-radius: 14px;
+}
+
+.mcard-lv-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.mcard-lv-top b {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--lc, #2481cc);
+}
+
+.mcard-lv-top small {
+  font-size: 10.5px;
+  color: #94a3b8;
+  font-weight: 600;
+}
+
+.mcard-lv-bar {
+  height: 8px;
+  border-radius: 5px;
+  background: #eef2f7;
+  overflow: hidden;
+}
+
+.mcard-lv-bar > div {
+  height: 100%;
+  border-radius: 5px;
+  background: var(--lc, #2481cc);
+  transition: width .5s cubic-bezier(.22, 1, .36, 1);
+}
+
+/* ---- شریتی «ئەم مانگە» ---- */
+.mcard-mo {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 10px 16px 0;
+  padding: 9px 12px;
+  border-radius: 12px;
+  background: #f8fafc;
+  font-size: 11.5px;
+}
+
+.mcard-mo i {
+  font-size: 15px;
+  color: var(--primary);
+}
+
+.mcard-mo span {
+  color: #94a3b8;
+  font-weight: 600;
+}
+
+.mcard-mo b {
+  margin-inline-start: auto;
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--text-main);
+}
+
+/* ---- تێبینی (شاراوە / هەڵە) ---- */
+.mcard-note {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 14px 16px 0;
+  padding: 11px 12px;
+  border-radius: 12px;
+  background: #f1f5f9;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.mcard-note i {
+  font-size: 17px;
+  flex-shrink: 0;
+}
+
+.mcard-note.is-err {
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+/* ---- ڕیزەکانی زانیاری ---- */
+.mcard-rows {
+  margin: 14px 16px 0;
+  border-top: 1px dashed #e9edf3;
+  padding-top: 4px;
+}
+
+.mcard-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 34px;
+  font-size: 12px;
+}
+
+.mcard-row + .mcard-row {
+  border-top: 1px solid #f4f7fa;
+}
+
+.mcard-row > i {
+  font-size: 16px;
+  color: #94a3b8;
+  flex-shrink: 0;
+}
+
+.mcard-row > span {
+  color: #94a3b8;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.mcard-row > b {
+  margin-inline-start: auto;
+  min-width: 0;
+  font-weight: 700;
+  color: var(--text-main);
+  text-align: end;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mcard-tg {
+  color: var(--primary);
+  cursor: pointer;
+}
+
+/* ---- دوگمەی کردار ---- */
+/* ⚠️ پێچەرەوەیەکی جیاواز پێویستە بۆ `position: sticky` —
+   دوگمەیەکی بە `margin`ەوە بۆشایی لە خوارەوەی
+   دێنێت کە ناوەڕۆکی سکڕۆڵکراو پێیدا دەردەکەوێت. */
+.mcard-foot {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  margin-top: 14px;
+  padding: 8px 16px 12px;
+  background: #fff;
+  /* سێبەرێکی ناسک بۆ سەرەوە — دەڵێت «ناوەڕۆک لە
+     ژێرەوە درێژدەبێتەوە»، نەک وەک ڕیزێکی بڕاو دەربکەوێت */
+  box-shadow: 0 -8px 12px -8px rgba(15, 23, 42, .14);
+}
+
+.mcard-go {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  width: 100%;
+  padding: 12px;
+  border: none;
+  border-radius: 13px;
+  background: var(--primary);
+  color: #fff;
+  font-family: inherit;
+  font-size: 13.5px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.mcard-go i {
+  font-size: 18px;
+}
+
+.mcard-go:active {
+  filter: brightness(.93);
+}
+
+/* ---- ئەکاونتی سڕاو ---- */
+.mcard-gone {
+  display: grid;
+  justify-items: center;
+  gap: 5px;
+  padding: 28px 16px;
+  text-align: center;
+}
+
+.mcard-gone i {
+  font-size: 40px;
+  color: #cbd5e1;
+}
+
+.mcard-gone b {
+  font-size: 14px;
+  color: var(--text-main);
+}
+
+.mcard-gone span {
+  font-size: 11.5px;
+  color: #94a3b8;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .av-tap,
+  .mcard-lv-bar > div { transition: none; }
+  .mcard-sk { animation: none; }
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   پڕۆفایلی پلەکان — ناسنامەی ڕازێنراوە
+   ───────────────────────────────────────────────────────────────
+   ⭐ جیایە لە پڕۆفایلی ئۆردەرنووسین. لێرەدا دوو شت هەن:
+     ١. زیادکراوەکانی کارتەکە — کەڤەری وێنە، ناوی ژێرەوە، بایۆ
+     ٢. دەستکاریی ناو ڕێکخستنەکان (`.rp-*`)
+   بڕوانە [[rank-profile]] و [[member-profile-card]].
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ---- زیادکراوەکانی کارتەکە ---- */
+
+/* کەڤەری وێنە — لەسەر گرادیێنتی `--tone` دادەنرێت، بۆیە
+   ئەگەر وێنەکە بار نەبێت ڕەنگەکە دەمێنێتەوە */
+.mcard-bg.is-img {
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+/* ناوی ڕاستەقینە لە ژێر ناوی نمایش — وەک username لە دیسکۆرد */
+.mcard-sub {
+  display: block;
+  margin-top: 2px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #94a3b8;
+  word-break: break-word;
+}
+
+.mcard-bio {
+  margin: 10px 0 0;
+  padding: 9px 11px;
+  border-radius: 12px;
+  background: #f8fafc;
+  color: #475569;
+  font-size: 12px;
+  line-height: 1.65;
+  text-align: start;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* ---- دەستکاری لە ڕێکخستنەکان ---- */
+
+/* تابی «پڕۆفایلی پلەکان» — هەمان شێوەی کارتەکانی تری
+   ڕێکخستنەکان. پێشتر کارتێکی کۆکراوە بوو (`.npc-card`)
+   کە لە ٧٦٠pxدا دەبڕدرا — ئێستا تابێکی تەواوە، هیچ
+   سنوورێکی بەرزی نییە. */
+#settings-rank-pane {
+  background: #fff;
+  border-radius: 12px;
+  padding: 4px 18px 18px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, .05);
+}
+
+/* ⚠️ پێشبینینەکە خودی کۆمپۆنێنتی کارتەکەیە، بۆیە پێویستی بە
+   پێچەرەوەیەکی بڕاو هەیە — ئەگەرنا کەڤەرەکە لە کارتی
+   ڕێکخستنەکان دەڕوات. */
+.rpf-preview {
+  margin: 14px 0;
+  border: 1px solid #e9edf3;
+  border-radius: 18px;
+  overflow: hidden;
+  background: #fff;
+}
+
+.rpf-preview .mcard-id {
+  padding-bottom: 14px;
+}
+
+.rpf-sec {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 14px 0 8px;
+  font-size: 11.5px;
+  font-weight: 800;
+  color: #64748b;
+}
+
+.rpf-sec i {
+  font-size: 15px;
+  color: var(--primary);
+}
+
+/* «پەنجەی لێبدە بۆ گۆڕین» — لای کۆتایی ڕیزەکە */
+.rpf-sec small {
+  margin-inline-start: auto;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: #b6c2d2;
+}
+
+/* ---- کردار لەناو خودی کارتەکەدا ----
+   ⭐ کەڤەر و وێنە **خۆیان** بارکەرن. هیچ دوگمەیەکی جیاواز لە
+      ژێرەوە نییە — پێشبینینەکە خۆی دەستکارییەکەیە.
+   ⚠️ ئەم پۆلانە تەنها کاتێک دەردەکەون کە `mcardHeadHtml` بە
+      `edit: true` بانگ بکرێت — واتە تەنها لە ڕێکخستنەکاندا.
+      کارتی ڕاستەقینەی ئەندام هەرگیز بارکەری نییە. */
+.mcard-bg.is-edit {
+  cursor: pointer;
+}
+
+.mcard-av.is-edit {
+  cursor: pointer;
+  transition: transform .14s ease;
+}
+
+.mcard-av.is-edit:active {
+  transform: translateX(-50%) scale(.94);
+}
+
+/* نیشانەی کامێرا — یەک شێواز بۆ هەردوو ڕووبەرەکە */
+.mcard-cam {
+  position: absolute;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: rgba(15, 23, 42, .5);
+  color: #fff;
+  line-height: 0;
+  pointer-events: none;
+  backdrop-filter: blur(3px);
+}
+
+.mcard-cam.is-bg {
+  top: 8px;
+  inset-inline-start: 8px;
+  width: 28px;
+  height: 28px;
+  font-size: 16px;
+}
+
+/* لەسەر وێنەکە: بازنەیەکی بچووکی سەرەکی، وەک وێنەی
+   پڕۆفایلی ڕێکخستنەکان. `.mcard-lvn` لە ناوەڕاستە،
+   بۆیە ئەمە لە سووچەوەیە و پێکەوە ناکەون. */
+.mcard-cam.is-av {
+  bottom: 0;
+  inset-inline-start: 0;
+  width: 26px;
+  height: 26px;
+  font-size: 14px;
+  background: var(--primary);
+  border: 2px solid #fff;
+  box-sizing: border-box;
+}
+
+/* ✕ی لابردنی کەڤەر
+   ⚠️ ناوی `.mcard-x` بەکارنەهێنراوە — ئەوە دوگمەی داخستنی
+      مۆداڵەکەیە. بڕوانە داوی ٢٥. */
+/* ⚠️ ✕ لای چەپ (`inset-inline-end` لە RTLدا) — هەمان شوێنی
+   دوگمەی داخستنی هەموو مۆداڵەکانی ئەپەکە. کامێراکە لای
+   بەرامبەرە، بۆیە بە هەڵە یەکێک لەبری ئەوی تر نالێدرێت. */
+.mcard-bgx {
+  position: absolute;
+  top: 8px;
+  inset-inline-end: 8px;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(15, 23, 42, .5);
+  color: #fff;
+  font-size: 18px;
+  line-height: 0;
+  cursor: pointer;
+  backdrop-filter: blur(3px);
+}
+
+.mcard-bgx:active {
+  background: rgba(15, 23, 42, .75);
+}
+
+.mcard-bghint {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  color: rgba(255, 255, 255, .92);
+  font-size: 12px;
+  font-weight: 700;
+  text-shadow: 0 1px 3px rgba(15, 23, 42, .35);
+  pointer-events: none;
+}
+
+.mcard-bghint i {
+  font-size: 18px;
+}
+
+/* ---- دوگمەی گەڕاندنەوەی وێنە — ژێر پێشبینینەکە ---- */
+.rpf-under:empty {
+  display: none;
+}
+
+.rpf-under {
+  display: flex;
+  justify-content: center;
+  margin: -4px 0 4px;
+}
+
+.rpf-reset {
+  display: inline-flex;
+  white-space: nowrap;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #fff;
+  color: #64748b;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.rpf-reset i {
+  font-size: 15px;
+}
+
+.rpf-reset:active {
+  filter: brightness(.95);
+}
+
+/* ---- ڕەنگەکانی کەڤەر ---- */
+.rpf-swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.rpf-sw {
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: 50%;
+  background: var(--sw);
+  cursor: pointer;
+  box-shadow: 0 0 0 1px rgba(15, 23, 42, .08) inset;
+}
+
+.rpf-sw.is-on {
+  border-color: #0f172a;
+  box-shadow: 0 0 0 2px #fff inset;
+}
+
+/* ---- خانەکانی نووسین ---- */
+.rpf-field {
+  position: relative;
+  margin-top: 8px;
+}
+
+.rpf-field input[type="text"],
+.rpf-field textarea {
+  width: 100%;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 10px 12px 22px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #f8fafc;
+  color: var(--text-main);
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.6;
+  resize: none;
+}
+
+.rpf-field input[type="text"]:focus,
+.rpf-field textarea:focus {
+  outline: none;
+  border-color: var(--primary);
+  background: #fff;
+}
+
+/* ⚠️ ژمێرەرەکە لە **سەرەوەی چەپ**ە و `pointer-events` نییە —
+   لە RTLدا لای چەپ کۆتاییە، و بەبێ ئەمە پەنجەدانان لەسەری
+   خانەکە ناکاتەوە. */
+.rpf-count {
+  position: absolute;
+  bottom: 7px;
+  inset-inline-end: 11px;
+  pointer-events: none;
+  font-size: 10px;
+  font-weight: 700;
+  color: #94a3b8;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rpf-reset:active { filter: none; }
+  .mcard-av.is-edit { transition: none; }
+  .mcard-av.is-edit:active { transform: translateX(-50%); }
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   تابەکانی ڕێکخستنەکان — ناوەڕاست، و تەنها ئەوەی چالاکە ناوی هەیە
+   ───────────────────────────────────────────────────────────────
+   تابی ناچالاک دەبێتە ئایکۆنێکی تەنیا؛ کاتێک هەڵدەبژێردرێت
+   ناوەکەی دەکرێتەوە. ئەمە جێگا بۆ ناوە درێژە کوردییەکان
+   دەکاتەوە لە شاشەی ٣٦٠pxدا.
+
+   ⚠️ پیلە سپییەکە (`.magic-slider`) بە JS دەپێورێت. پانیی تابەکە
+      لە ماوەی ئەم ئەنیمەیشنەدا دەگۆڕێت، بۆیە `mtTrackSlider()`
+      فرەیم بە فرەیم دووبارە دەیپێوێت. ئەگەرنا پیلەکە بە
+      قەبارەی تابی پێشوو دەمێنێتەوە.
+   ═══════════════════════════════════════════════════════════════ */
+/* ⚠️ **`justify-content: center` بەکار مەهێنە لێرە.** پێچەرەوەکە
+   `overflow-x: auto`ـە؛ کاتێک ڕیزی تابەکان لە پێچەرەوەکە پانتر
+   بێت (پەڕەی ئەدمین شەش تابی هەیە)، `justify-content: center`
+   سەرەتای ڕیزەکە دەخاتە دەرەوەی ناوچەی خزاندن و **هەرگیز**
+   ناتوانرێت بگەیتێ. `margin-inline: auto` ئەو کێشەیەی نییە:
+   کاتێک جێگا هەیە ناوەڕاست دەکات، کاتێک نییە دەبێتە سفر. */
+.magic-tabs-wrapper.is-mid > .magic-tabs {
+  margin-inline: auto;
+}
+
+/* ⚠️ ڕیزی گشتیی `button` گەپی ٨px دادەنێت. کاتێک ناونیشانەکە
+   پانیی سفرە، ئەو گەپە بۆشاییەکی مردوو دەهێڵێتەوە لای ئایکۆنەکە.
+   بۆیە گەپەکە لێرە سفر دەکرێت و مارجنی خودی ناونیشانەکە
+   ئەنیمەیت دەکرێت. */
+.magic-tabs-wrapper.is-mid .magic-tab {
+  gap: 0;
+}
+
+/* ⚠️ ڕیزی گشتیی `button i` ئایکۆنەکە دەکاتە `--icon-md` = ٢٠px،
+   لەتەنیشت دەقی ١٣pxـدا. قەبارەی دەقەکە ڕێک هەمان قەبارەی
+   تابەکانی ترە (پێوانەکراو: هەردووکیان ١٣px / ٣٠٠)، بەڵام
+   ئایکۆنێکی ٢٠px بەلایەوە وای دەکات دەقەکە بچووک دەربکەوێت.
+   ١٦px لەگەڵ ١٣px دەگونجێت. */
+.magic-tabs-wrapper.is-mid .magic-tab i {
+  font-size: 16px;
+}
+
+/* ⚠️ `overflow: hidden` پێویستە بۆ کۆکردنەوەی ئاسۆیی، بەڵام
+   **ستوونیش** دەبڕێت. پیتە کوردییەکان (پ، ڕ، ی…) نوقتە و
+   دوگناوی ژێر هێڵی بنەڕەتیان هەیە:
+
+     بەرزیی سروشتیی دەق  = ٢٥.٠px
+     پێچەرەوەی هێڵ (١.٢) = ١٥.٦px
+     → ٥.٠px لە سەرەوە و ٤.٤px لە خوارەوە دەبڕدران
+
+   ⚠️ `overflow-x: hidden` بە تەنها **ناکرێت** — وێبگەڕ خۆکارانە
+      `overflow-y`ـیش دەکاتە `auto`. (هەمان داوی
+      `.magic-tabs-wrapper` لە سەرەوە.)
+
+   چارە: پەدینگی ستوونی پێچەرەوەی بڕین بەرز دەکاتەوە، و مارجنی
+   نەرێنی هەمان بڕ لە نەخشەبەندییەکە دەیبات — بۆیە بەرزیی
+   تابەکە **بە هیچ پیکسلێک ناگۆڕێت**. */
+.magic-tabs-wrapper.is-mid .mt-lbl {
+  display: inline-block;
+  max-width: 0;
+  margin-inline-start: 0;
+  opacity: 0;
+  overflow: hidden;
+  padding-block: 6px;
+  margin-block: -6px;
+  white-space: nowrap;
+  vertical-align: middle;
+  transition: max-width .34s cubic-bezier(.22, 1, .36, 1),
+              margin-inline-start .34s cubic-bezier(.22, 1, .36, 1),
+              opacity .22s ease;
+}
+
+.magic-tabs-wrapper.is-mid .magic-tab.active .mt-lbl {
+  max-width: 190px;
+  margin-inline-start: 7px;
+  opacity: 1;
+}
+
+/* ⚠️ هیچ `font-weight`ێکی زیادە لێرە **دانەنرێت**. `.magic-tab`
+   خۆی ٣٠٠ـە، و هەموو تابەکانی تری ئەپەکە (ئۆردەرەکان، ئامار،
+   ئاگاداری، ئەدمین) هەر ئەوەیان هەیە. ٦٠٠ لێرە وای دەکرد
+   تەنها ئەم دوو تابە قورستر دەربکەون. */
+
+@media (prefers-reduced-motion: reduce) {
+  .magic-tabs-wrapper.is-mid .mt-lbl { transition: none; }
+}
