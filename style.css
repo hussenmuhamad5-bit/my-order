@@ -16243,8 +16243,19 @@ body.sx-wide {
       ناناسێت — بەبێی پێچەرەوەکە بەرزی سفری دەبوو (منداڵەکانی
       هەموویان `absolute`ن) و کارتەکە بێ سەر دەردەکەوت.
    پێوانەکراو لە ٣٦٠px: پانی ٣٣١px → بەرزی ١١٠px. */
+/* ⚠️ **`width: 100%` پێویستە.** بەبێی، `aspect-ratio` + `min-height`
+   **پانییەکە** دیاری دەکەن نەک تەنها بەرزییەکە: کاتێک بەرزیی
+   سرووشتی لە `min-height` کەمتر بێت، وێبگەڕ پانی لە بەرزییەوە
+   دەردەهێنێت (١٠٤ × ٣ = ٣١٢px) و توخمەکە لە باوانەکەی پانتر
+   دەبێت. لە RTLدا زیادەکە بەرەو **چەپ** دەڕوات و لەلایەن
+   `#rp-preview` (`overflow: hidden`)ـەوە دەبڕدرێت.
+   پێوانەکراو لە ٣٦٠px پێش چاکسازی:
+       .mcard-top  L٩ .. R٣٢١   (٣١٢px)
+       #rp-preview L٣٨ .. R٣٢٢  (٢٨٤px)  → ٢٩px بڕدرا
+   ✕ی لابردنی کەڤەر لەو ٢٩pxـەدا بوو، بۆیە بە نیوە دەردەکەوت. */
 .mcard-top {
   position: relative;
+  width: 100%;
   aspect-ratio: 3 / 1;
   min-height: 104px;
 }
@@ -16719,21 +16730,23 @@ body.sx-wide {
 }
 
 /* نیشانەی کامێرا — یەک شێواز بۆ هەردوو ڕووبەرەکە */
+/* هەردوو بازنەکە ڕێک وەک یەک — هەمان قەبارە، هەمان ڕیز، هەمان بلوور */
 .mcard-cam {
   position: absolute;
   display: grid;
   place-items: center;
   border-radius: 50%;
-  background: rgba(15, 23, 42, .5);
+  background: rgba(15, 23, 42, .62);
   color: #fff;
   line-height: 0;
   pointer-events: none;
   backdrop-filter: blur(3px);
 }
 
+/* هەمان ڕیزی ✕ـەکە (١٠px لە سەرەوە، ١٢px لە قەراغەوە) */
 .mcard-cam.is-bg {
-  top: 8px;
-  inset-inline-start: 8px;
+  top: 10px;
+  inset-inline-start: 12px;
   width: 28px;
   height: 28px;
   font-size: 16px;
@@ -16759,16 +16772,21 @@ body.sx-wide {
 /* ⚠️ ✕ لای چەپ (`inset-inline-end` لە RTLدا) — هەمان شوێنی
    دوگمەی داخستنی هەموو مۆداڵەکانی ئەپەکە. کامێراکە لای
    بەرامبەرە، بۆیە بە هەڵە یەکێک لەبری ئەوی تر نالێدرێت. */
+/* ⚠️ ئەمە ئەو دوگمەیە بوو کە بە نیوە دەردەکەوت. هۆکارەکە **لێرە
+   نەبوو** — `.mcard-top` لە باوانەکەی پانتر دەبوو و ئەم کوچکە
+   لە بەشی بڕدراودا دەکەوت. بڕوانە کۆمێنتەکەی `.mcard-top`.
+   ١٢px لە قەراغەوە (نەک ٨) بۆ ژووری زیاتر لەسەر شاشەی بچووک. */
 .mcard-bgx {
   position: absolute;
-  top: 8px;
-  inset-inline-end: 8px;
+  top: 10px;
+  inset-inline-end: 12px;
+  z-index: 3;
   display: grid;
   place-items: center;
   width: 28px;
   height: 28px;
   border-radius: 50%;
-  background: rgba(15, 23, 42, .5);
+  background: rgba(15, 23, 42, .62);
   color: #fff;
   font-size: 18px;
   line-height: 0;
@@ -16780,9 +16798,17 @@ body.sx-wide {
   background: rgba(15, 23, 42, .75);
 }
 
+/* ⚠️ **`inset: 0` نا** — وێنەی پڕۆفایل ٤٦px لە خوارەوەی کەڤەرەکە
+   دەردەچێت، بۆیە سەری وێنەکە لە `100% - 42px`ـە. دەقێکی لە
+   ناوەڕاستی کەڤەرەکە دەکەوێتە پشت بازنەکەوە:
+   پێوانە لە ٣٦٠px (بەرزی کەڤەر ١٠٤px، ناوەڕاست ٥٢px، سەری
+   بازنەکە لەگەڵ بازنەی سپییەکەی ٥٨px) → ٣px تێکەڵبوون.
+   بۆیە دەقەکە لە **ژوورەوەی سەرەوەی** بازنەکەدا ناوەڕاست دەکرێت. */
 .mcard-bghint {
   position: absolute;
-  inset: 0;
+  inset: 0 0 auto;
+  height: calc(100% - 56px);
+  min-height: 38px;
   display: flex;
   align-items: center;
   justify-content: center;
