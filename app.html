@@ -8500,16 +8500,38 @@
         // ⚠️ **هیچ زانیارییەک لانەبردراوە** — یەک دەستلێدان هەمووی
         //    دەکاتەوە. بڕوانە یاسای «پەڕەکردن، نەک بڕین».
         // ============================================================
-        function odetFoldHtml(meta, inner) {
+        // `opts`: { title, icon, id } — دوو بەکارهێنەری هەیە، هەنگاو/پرێنت
+        // و مێژووی کردارەکان. ⚠️ `<small>`ـەکە تەنها کاتێک دەنووسرێت کە
+        // دەقی هەبێت: `gap: 8px`ی دوگمەکە بۆشاییەکی بێهوودە دروست دەکات
+        // بۆ توخمێکی بەتاڵ.
+        function odetFoldHtml(meta, inner, opts) {
             if (!inner) return '';
-            return `<div class="odet-fold">
+            opts = opts || {};
+            const title = opts.title || 'هەنگاوەکان و پرێنت';
+            const icon = opts.icon || 'bx-time-five';
+            return `<div class="odet-fold"${opts.id ? ` id="${opts.id}"` : ''}>
                 <button type="button" class="odet-fold-btn" onclick="toggleOrderFold(this)">
-                    <span class="odet-fold-t"><i class='bx bx-history'></i> هەنگاوەکان و پرێنت</span>
+                    <span class="odet-fold-t"><i class='bx ${icon}'></i> ${histEsc(title)}</span>
                     ${meta ? `<small>${histEsc(meta)}</small>` : ''}
                     <i class='bx bx-chevron-down odet-fold-arrow'></i>
                 </button>
                 <div class="odet-fold-body">${inner}</div>
             </div>`;
+        }
+
+        // ژمارەی تۆمارەکان لە سەردێڕی بەشی مێژوودا — دوای هاتنی داتاکە
+        // نوێ دەکرێتەوە، چونکە لە کاتی نەخشاندندا هێشتا نەزانراوە.
+        function ologSyncFoldMeta(n) {
+            const fold = document.getElementById('odet-fold-log');
+            const btn = fold && fold.querySelector('.odet-fold-btn');
+            if (!btn) return;
+            let s = btn.querySelector('small');
+            if (!n) { if (s) s.remove(); return; }
+            if (!s) {
+                s = document.createElement('small');
+                btn.insertBefore(s, btn.querySelector('.odet-fold-arrow'));
+            }
+            s.textContent = n + ' کردار';
         }
 
         function toggleOrderFold(btn) {
@@ -8834,10 +8856,11 @@
             ${changerInfoHtml}
             ${statusChangerHtml}
             ${reviewPanelHtml(o)}
-            <div class="detail-section" style="margin-top:14px;">
-                <div class="detail-label"><i class='bx bx-history'></i> مێژووی کردارەکان</div>
-                <div id="order-log-box" class="order-log-box">${cachedLogs ? (orderLogsHtml(cachedLogs) + ologMoreHtml(o.id)) : ORDER_LOG_SKELETON}</div>
-            </div>
+            ${odetFoldHtml(cachedLogs ? cachedLogs.length + ' کردار' : '',
+                `<div id="order-log-box" class="order-log-box">${cachedLogs
+                    ? (orderLogsHtml(cachedLogs) + ologMoreHtml(o.id))
+                    : ORDER_LOG_SKELETON}</div>`,
+                { title: 'مێژووی کردارەکان', icon: 'bx-history', id: 'odet-fold-log' })}
             ${actionButtonsHtml}
         `;
             // دوگمەی کۆپی لە سەردێڕی مۆدال — بەم ئۆردەرەوە دەبەسترێت
@@ -9218,6 +9241,76 @@
                 </div>
             </div>`).join('') + `</div>`;
 
+        // ============================================================
+        // کورتکردنەوەی دەقی مێژوو
+        // ------------------------------------------------------------
+        // داواکاریی خاوەنەکە (٢٠٢٦-٠٨-٢٢): «بە چەند وشەیەک پەیامەکە
+        // بگەیەنە». تاگەکە و تیری حاڵەتەکە پێشتر هەموو شتەکەیان
+        // گوتووە — «گەیشتن و دابەشکردن» + «لە ڕێگایە ← گەیشتووە»
+        // هیچ ڕستەیەکی زیادەی ناوێت.
+        //
+        // ⚠️ کورتکردنەوەکە لە **نەخشاندن**دایە، نەک لە نووسیندا:
+        //    ١٣,٢٠٠ ڕیز لەسەر بەرهەم هەن و هەندێکیان لە ئەپی
+        //    پرێنتەوە دێن کە ئێمە ناینووسین. هیچ ڕیزێک نەگۆڕدراوە.
+        // ⚠️ دەقی ڕەسەن **ون نابێت**: ڕێگای ئەنجامدان دەبێتە ئایکۆن
+        //    و دەقەکەی دەچێتە ناو `title`ـەوە.
+        // ============================================================
+
+        // ڕێگای ئەنجامدان → ئایکۆن (سکان، مۆبایل، …)
+        const OLOG_VIA = [
+            { re: /^بە سکانی بەڕێکردن$/, icon: 'bx-qr-scan', t: 'بە سکانی بەڕێکردن' },
+            { re: /^بە سکانی وەرگرتنەوە$/, icon: 'bx-qr-scan', t: 'بە سکانی وەرگرتنەوە' },
+            { re: /^بەدەست لە ئەپی مۆبایل$/, icon: 'bx-mobile-alt', t: 'بەدەست لە ئەپی مۆبایل' },
+            { re: /^بە سکان/, icon: 'bx-qr-scan', t: 'بە سکان' }
+        ];
+
+        // ڕستەکانی کە تاگەکە یان تیرەکە پێشتر گوتوویانە
+        const OLOG_NOISE = [
+            /^حاڵەتی گۆڕی بۆ\s*«[^»]*»$/,
+            /^ئۆردەرەکەی کردە گەیشتوو و قازانجەکانی دابەشکرد\.?$/,
+            /^ئۆردەرەکەی دروستکرد\.?$/,
+            /^ئۆردەرەکەی سڕییەوە\.?$/,
+            /^وەسڵەکەی پرێنت کر/,
+            /^ئۆردەرەکە قوفڵ کرا تا سکان دەکرێت$/,
+            /^بە سکانی بارکۆد قوفڵی پرێنتی لابرد$/,
+            /^قوفڵی پرێنتی شکاند بەبێ سکان/,
+            /^پووچکردنەوەی سکان/
+        ];
+
+        function ologDetailParts(l) {
+            let raw = String(l.detail || '').trim();
+            if (!raw) return { text: '', vias: [] };
+
+            // ڕستەی ناو-پارچە — پێش پارچەکردن لادەبرێت، چونکە بە خاڵ
+            // جیا کراوەتەوە نەک بە «—»
+            raw = raw
+                .replace(/ئۆردەرەکەی کردە گەڕاوە و پارەکان بڕدران\.?/, '')
+                .replace(/^دەستکاری کرد:\s*/, '')
+                .replace(/ئۆردەرەکەی پاشەکەوت کردەوە\s*\(([^)]*)\)/, '$1');
+
+            const vias = [], keep = [];
+            raw.split(/\s*[—·]\s*/).forEach(seg => {
+                const s = seg.trim().replace(/^[-–]\s*/, '');
+                if (!s) return;
+                const via = OLOG_VIA.find(v => v.re.test(s));
+                if (via) {
+                    if (!vias.some(x => x.t === via.t)) vias.push(via);
+                    return;
+                }
+                if (OLOG_NOISE.some(re => re.test(s))) {
+                    // «بە کۆمەڵ» و «لە ئەپی پرێنت» زانیارین، نەک زیادە —
+                    // بۆیە وەک ئایکۆن دەمێننەوە
+                    if (/کۆمەڵ/.test(s) && !vias.some(x => x.t === 'بە کۆمەڵ'))
+                        vias.push({ icon: 'bx-layer', t: 'بە کۆمەڵ' });
+                    if (/ئەپی پرێنت/.test(s) && !vias.some(x => x.t === 'لە ئەپی پرێنت'))
+                        vias.push({ icon: 'bx-printer', t: 'لە ئەپی پرێنت' });
+                    return;
+                }
+                keep.push(s);
+            });
+            return { text: keep.join(' · ').trim(), vias: vias.slice(0, 2) };
+        }
+
         function orderLogsHtml(data) {
             if (!data || data.length === 0) {
                 return `<div class="order-log-empty"><i class='bx bx-info-circle'></i> هێشتا هیچ کردارێک تۆمار نەکراوە</div>`;
@@ -9225,18 +9318,25 @@
             return data.map(l => {
                 const meta = LOG_ACTION_META[l.action] || { icon: 'bx-dots-horizontal-rounded', color: '#64748b', label: l.action };
                 const who = histEsc(l.user_name || l.user_code || 'نەزانراو');
-                const detail = histEsc(l.detail || meta.label);
+                const parts = ologDetailParts(l);
+                const vias = parts.vias.map(v =>
+                    `<span class="olog-via" title="${histEsc(v.t)}"><i class='bx ${v.icon}'></i></span>`).join('');
+                // ⭐ ڕەنگی چیپەکان لە `statusStyleOf`ـەوە دێن — هەمان
+                //    ڕەنگی کارتەکانی ئۆردەر: ئامادە شین، ڕێگا پرتەقاڵی،
+                //    گەیشتوو سەوز، گەڕاوە سوور.
+                const sFrom = statusStyleOf(String(l.from_status || ''));
+                const sTo = statusStyleOf(String(l.to_status || ''));
                 const arrow = (l.from_status && l.to_status && l.from_status !== l.to_status)
                     ? `<div class="olog-status">
-                             <span class="olog-chip old">${histEsc(l.from_status)}</span>
+                             <span class="olog-chip is-st" style="color:${sFrom.col}; background:${sFrom.bg};">${histEsc(l.from_status)}</span>
                              <i class='bx bx-left-arrow-alt'></i>
-                             <span class="olog-chip new">${histEsc(l.to_status)}</span>
+                             <span class="olog-chip is-st" style="color:${sTo.col}; background:${sTo.bg};">${histEsc(l.to_status)}</span>
                            </div>` : '';
                 return `<div class="olog-row">
                         <span class="olog-dot" style="background:${meta.color}1f; color:${meta.color};"><i class='bx ${meta.icon}'></i></span>
                         <div class="olog-body">
-                            <div class="olog-top"><b>${who}</b> <span class="olog-tag" style="color:${meta.color}; background:${meta.color}14;">${histEsc(meta.label)}</span></div>
-                            <div class="olog-detail">${detail}</div>
+                            <div class="olog-top"><b>${who}</b> <span class="olog-tag" style="color:${meta.color}; background:${meta.color}14;">${histEsc(meta.label)}</span>${vias}</div>
+                            ${parts.text ? `<div class="olog-detail">${histEsc(parts.text)}</div>` : ''}
                             ${arrow}
                             <div class="olog-time"><i class='bx bx-time-five'></i> ${histEsc(formatLogTime(l.created_at))}</div>
                         </div>
@@ -9284,6 +9384,7 @@
                 if (order) { try { fillOrderStepTimes(rows, order); } catch (e) { } }
 
                 box.innerHTML = orderLogsHtml(rows) + ologMoreHtml(oid);
+                ologSyncFoldMeta(rows.length);
             } catch (e) {
                 console.warn('loadOrderLogs:', e);
                 box.innerHTML = `<div class="order-log-empty"><i class='bx bx-error-circle'></i> نەتوانرا مێژوو باربکرێت</div>`;
@@ -9322,6 +9423,7 @@
                 // یەکەم گۆڕانی دۆخ لەوانەیە لە پەڕەی دووەمدا بێت
                 if (_ologOrder) { try { fillOrderStepTimes(all, _ologOrder); } catch (e) { } }
                 box.innerHTML = orderLogsHtml(all) + ologMoreHtml(oid);
+                ologSyncFoldMeta(all.length);
             } catch (e) {
                 console.warn('loadOlderLogs:', e);
                 if (btn) btn.innerHTML = `<i class='bx bx-chevron-down'></i> مێژووی کۆنتر پیشان بدە`;
