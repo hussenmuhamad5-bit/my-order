@@ -10796,10 +10796,13 @@
         function canSeeProfitMetric() {
             return userRole === 'پاشا';
         }
-        // ⭐ ئێستا هەموو ئەندامێک دەتوانێت ئاماری کەسێکی تر بکاتەوە
-        //    لە ڕانکەوە. سێرڤەر بڕیاری کۆتایی دەدات: کەسی شاراوە
-        //    ڕەت دەکرێتەوە، و قازانج بۆ بێگانە دەشاردرێتەوە
-        //    (`hide_profit`, db/034).
+        // ⭐ هەموو ئەندامێک دەتوانێت ئاماری کەسێکی تر بکاتەوە.
+        //    سێرڤەر بڕیاری کۆتایی دەدات: کەسی شاراوە ڕەت دەکرێتەوە،
+        //    و قازانج بۆ بێگانە دەشاردرێتەوە (`hide_profit`, db/034).
+        // ⚠️ ٢٠٢٦-٠٨-٢٢: چیتر بانگ ناکرێت — ڕیزەکانی تابلۆی پلەکان
+        //    ئێستا **کارتی پڕۆفایل** دەکەنەوە نەک ئامار، و کارتەکە
+        //    بۆ هەمووانە. ماوەتەوە وەک تاکە شوێنی ئەم بڕیارە،
+        //    ئەگەر ڕۆژێک پێویست بوو دووبارە بەکاربێت.
         function canDrillStats() { return true; }
         // ئایا ئەم بەکارهێنەرە تیمی هەیە کە دۆخی «تیمەکەم»ی هەبێت؟
         function canTeamMode() {
@@ -10856,6 +10859,12 @@
             syncMagicSlider(parent.closest('.magic-tabs-wrapper') || parent, true);
             document.getElementById('stats-pane').style.display = (tab === 'stats') ? '' : 'none';
             document.getElementById('rank-pane').style.display = (tab === 'rank') ? '' : 'none';
+            // گەڕانەوە بۆ تابی پلەکان بە دەست = دەرچوون لە درێل-داون.
+            // ئەگەرنا خانەی نەڤیگەیشن دەمێنێتەوە و دوگمەی پاشەوە
+            // جارێکی زیادە دەبڕێت.
+            if (tab === 'rank' && _statsTarget) {
+                _statsTarget = null; _statsFrom = null; navDrop('sx:drill');
+            }
             // ⚠️ **پێش** بارکردن — ئەگەر داتاکە لە کاشدا بێت،
             //    `loadRank` هیچ نانەخشێنێت و کۆنترۆڵی تابی پێشوو
             //    لە سەردێڕەکەدا دەمێنێتەوە.
@@ -11007,6 +11016,17 @@
                     p_to: rr[1]
                 });
                 if (error) throw error;
+                // ⚠️ ڕیزەکانی تیم **پێش کاشکردن** دەوڵەمەند دەکرێن —
+                //    هەمان یاسای تابلۆی پلەکان. `member_stats`
+                //    `full_name` و وێنەی ئۆردەر دەگەڕێنێتەوە، بۆیە
+                //    بەبێ ئەمە ناوی ڕاستەقینەی کەسانی ڕازێنراو لە
+                //    لیستەکەدا دەردەکەوێت. یەک داواکاری بۆ هەموو
+                //    لیستەکە، و تەنها بۆ کۆدە نوێیەکان.
+                try {
+                    if (data && Array.isArray(data.top_members) && data.top_members.length) {
+                        await rpEnrichRows(data.top_members);
+                    }
+                } catch (e2) { console.warn('loadStats/enrich:', e2); }
                 _statsCacheT[key] = data;
                 // `me` هەمیشە کاش دەکرێت — `canTeamMode` و کارتی
                 // ئاستی پڕۆفایل لێی دەخوێننەوە
@@ -11023,14 +11043,39 @@
             } finally { _statsBusy = false; }
         }
 
-        function openMemberStats(code) {
+        // ============================================================
+        // درێل-داون بۆ ئاماری کەسێکی تر
+        // ------------------------------------------------------------
+        // ⚠️ گەڕانەوە دەبێت بمانگەڕێنێتەوە بۆ ئەو شوێنەی لێوەی
+        //    هاتووین. کاتێک لە **تابلۆی پلەکان**ەوە هاتووین،
+        //    «گەڕانەوە» بۆ ئاماری خۆم بردنەوە هەڵەیە — بەکارهێنەر
+        //    لیستەکەی ون دەکرد و دەبوایە دووبارە بیدۆزێتەوە.
+        // ⚠️ خانەیەکی نەڤیگەیشن دادەنرێت، بۆیە **دوگمەی پاشەوەی
+        //    تلیگرام**یش هەمان کار دەکات نەک داخستنی ئەپەکە.
+        // ============================================================
+        let _statsFrom = null;      // 'rank' | null
+
+        function openMemberStats(code, from) {
             if (!code) return;
             _statsTarget = String(code);
+            _statsFrom = from || null;
+            navPush('sx:drill', () => statsBack());
             if (_statsTab !== 'stats') switchStatsTab('stats',
                 document.getElementById('stats-tab-b-stats'));
             else loadStats();
         }
-        function statsBack() { _statsTarget = null; loadStats(); }
+
+        function statsBack() {
+            const from = _statsFrom;
+            _statsFrom = null;
+            _statsTarget = null;
+            navDrop('sx:drill');
+            if (from === 'rank') {
+                const b = document.getElementById('stats-tab-b-rank');
+                if (b && _statsTab !== 'rank') { switchStatsTab('rank', b); return; }
+            }
+            loadStats();
+        }
 
         // ============================================================
         // کارتی پڕۆفایلی ئەندام — لە هەر شوێنێکەوە
@@ -11063,7 +11108,8 @@
         function mcardTone(role) { return MCARD_TONE[normalizeRole(role)] || '#059669'; }
 
         let _mcard = { code: '', seed: null, emp: null, stats: null,
-                       denied: false, failed: false, busy: false, seq: 0 };
+                       denied: false, failed: false, busy: false, seq: 0,
+                       from: null };   // 'rank' → گەڕانەوە بۆ تابلۆکە
 
         // ناسنامەی سەرەتایی لە بیرگەوە — بۆ ئەوەی کارتەکە بێ چاوەڕوانی
         // دەربکەوێت. هیچ داواکارییەک لێرەدا نییە.
@@ -11104,11 +11150,14 @@
             return null;
         }
 
-        async function openMemberCard(code, hint) {
+        // `from` = ئەو شوێنەی کارتەکەی لێوە کرایەوە ('rank').
+        // دوگمەی «ئاماری تەواو» پێی دەزانێت گەڕانەوە بۆ کوێ بێت.
+        async function openMemberCard(code, hint, from) {
             const c = String(code || '').trim();
             if (!c || !currentUser) return;
             const seq = ++_mcard.seq;
             _mcard.code = c;
+            _mcard.from = from || null;
             _mcard.seed = mcardSeed(c, hint);
             _mcard.emp = getEmployeeByCode(c);
             _mcard.stats = null;
@@ -11239,13 +11288,20 @@
             //       تۆماری کارمەندمان هەبێت ئەو پێشینەیە.
             const rp = rpNorm(e && e.rank_prefs);
             const realName = String((e && e.full_name) || who.name || s.name || '').trim();
-            const name = e ? rpNameOf(e, s.code)
-                           : String(who.name || s.name || '').trim();
+            // ⚠️ چینی ١ (تۆو) لەوانەیە ناو و وێنەی **ڕاستەقینە**ی
+            //    تێدابێت (بۆ نموونە لە ڕیزێکی کۆمێنتەوە). `rpDisplayOf`
+            //    کاشی پلەکانیش دەپشکنێت، بۆیە ناسنامەی ڕاستەقینەی
+            //    کەسێکی ڕازێنراو تەنانەت بۆ ساتێکیش نالەقێتەوە.
+            const disp = rpDisplayOf(s.code, who.name || s.name || '', s.avatar || '');
+            const name = String(disp.name || '').trim();
             const role = normalizeRole((e && e.role) || who.role || s.role || '') || 'ئەندام';
-            const avatar = e ? rpAvatarOf(e, s.avatar) : (s.avatar || '');
+            const avatar = disp.avatar;
+            // ⭐ ناسنامەی ڕاستەقینە شاراوەیە بۆ ئەوانەی مافیان نییە —
+            //    ناوی تەواو، کۆد، و سلسیلە. بڕوانە `canSeeRealIdentity`.
+            const masked = rpMasked(e);
             // ناوی ڕاستەقینە لە ژێرەوە — تەنها ئەگەر ناوی
             // نمایش جیاواز بێت (وەک display name / usernameی دیسکۆرد)
-            const sub = (realName && realName !== name) ? realName : '';
+            const sub = (!masked && realName && realName !== name) ? realName : '';
             const gone = !_mcard.busy && !e && !name;
 
             const hasStats = !!d;
@@ -11276,8 +11332,9 @@
                 chips: '<span class="mcard-role" style="--rc:' + mcardTone(role) + ';">'
                     + '<i class="bx bx-shield-quarter"></i>' + histEsc(role) + '</span>'
                     + (hasStats ? rankLevelChip(pts) : '')
-                    + '<span class="mcard-code"><i class="bx bx-id-card"></i>'
-                    + '<bdi dir="ltr">' + histEsc(s.code || '') + '</bdi></span>'
+                    // کۆد ناسنامەیە — لەگەڵ ناوی ڕاستەقینەدا دەشاردرێتەوە
+                    + (masked ? '' : '<span class="mcard-code"><i class="bx bx-id-card"></i>'
+                        + '<bdi dir="ltr">' + histEsc(s.code || '') + '</bdi></span>')
             });
 
             // ---- ژمارەکان ----
@@ -11329,9 +11386,14 @@
                 '<bdi dir="ltr">#' + (Number(rk.rank) || 0) + '</bdi> لە <bdi dir="ltr">'
                 + (Number(_rank.total) || 0) + '</bdi>');
             if (e) {
-                rows += mcardRow('bx-user-voice', 'بەڕێوەبەر', e.manager ? histEsc(nameOf(e.manager)) : '');
-                rows += mcardRow('bx-diamond', 'سەرپەرشت', e.admin ? histEsc(nameOf(e.admin)) : '');
-                rows += mcardRow('bx-medal', 'ڕاوێژکار', e.consultant ? histEsc(nameOf(e.consultant)) : '');
+                // ⚠️ سلسیلە ناسنامە ئاشکرا دەکات — «بەڕێوەبەرەکەی لارینە»
+                //    بەسە بۆ ناسینەوەی کەسێکی ڕازێنراو. بۆیە لەگەڵ
+                //    ناوی ڕاستەقینەدا دەشاردرێتەوە.
+                if (!masked) {
+                    rows += mcardRow('bx-user-voice', 'بەڕێوەبەر', e.manager ? histEsc(nameOf(e.manager)) : '');
+                    rows += mcardRow('bx-diamond', 'سەرپەرشت', e.admin ? histEsc(nameOf(e.admin)) : '');
+                    rows += mcardRow('bx-medal', 'ڕاوێژکار', e.consultant ? histEsc(nameOf(e.consultant)) : '');
+                }
                 rows += mcardRow('bx-calendar-star', 'بەشدارە لە',
                     e.date ? '<bdi dir="ltr">' + histEsc(String(e.date).slice(0, 10)) + '</bdi>' : '');
                 // ⚠️ تلیگرام زانیاریی کەسییە — تەنها بۆ ئەوانەی
@@ -11380,6 +11442,7 @@
         //    ئامار دوگمەی «گەڕانەوە» پیشان دەدات بۆ ئاماری خۆم
         function mcardOpenStats() {
             const c = _mcard.code;
+            const from = _mcard.from || null;
             closeModal(null, 'member-card-modal');
             switchScreen('stats-screen', document.getElementById('nav-stats'));
             if (currentUser && String(currentUser.code || '').trim().toLowerCase()
@@ -11388,7 +11451,7 @@
                 _statsMode = 'me';
                 if (_statsTab !== 'stats') switchStatsTab('stats', document.getElementById('stats-tab-b-stats'));
                 else loadStats();
-            } else openMemberStats(c);
+            } else openMemberStats(c, from);
         }
 
         // ============================================================
@@ -11677,14 +11740,21 @@
             // ---- سەرەوە: کێ / گەڕانەوە / نوێکردنەوە ----
             html += '<div class="sx-tip" id="sx-tip" style="display:none;"></div>';
 
+            // ⭐ سەرەوەی شاشەکە **ناسنامەی پلەکان** پیشان دەدات، نەک
+            //    ئەوەی سێرڤەر ناردوویەتی. `member_stats` هەمیشە
+            //    `full_name` و وێنەی ئۆردەر دەگەڕێنێتەوە — بەبێ ئەمە
+            //    دوگمەی «ئاماری تەواو» ناوی ڕاستەقینەی کەسێکی
+            //    ڕازێنراوی ئاشکرا دەکرد. بڕوانە [[rank-profile]].
+            const wd = isMember ? rpDisplayOf(who.code, who.name, who.avatar)
+                                : { name: who.name, avatar: who.avatar };
             html += '<div class="sx-head"' + rise() + '>'
                 + (_statsTarget
                     ? '<button type="button" class="sx-back" onclick="statsBack()">'
                     + '<i class="bx bx-right-arrow-alt"></i></button>' : '')
                 + '<div class="sx-who">'
                 + (isMember
-                    ? avatarHtml(who.avatar, who.name || '', 34, who.code)
-                    + '<div><b>' + histEsc(firstNameOf(who.name) || who.code || '') + '</b>'
+                    ? avatarHtml(wd.avatar, wd.name || '', 34, who.code)
+                    + '<div><b>' + histEsc(firstNameOf(wd.name) || who.code || '') + '</b>'
                     + '<span>' + histEsc(who.role || '') + '</span></div>'
                     : '<span class="sx-scope-ico"><i class="bx ' + (who.scope === 'all' ? 'bx-globe' : 'bx-group') + '"></i></span>'
                     + '<div><b>' + (who.scope === 'all' ? 'هەموو سیستەمەکە' : 'تیمەکەم') + '</b>'
@@ -12036,10 +12106,60 @@
         // کاشی `rank_prefs`ی ئەوانی تر — تابلۆی پلەکان لێی دەخوێنێتەوە
         let _rpCache = {};
 
-        // پاشەکەوتی تێکەڵکراو — تەنها ئەو خانانەی گۆڕاون
-        async function rpSave(patch) {
-            const next = rpNorm(Object.assign({}, rankPrefsOf(), patch || {}));
-            currentUser.rank_prefs = next;                          // ڕووکار یەکسەر
+        // ============================================================
+        // نهێنیی پڕۆفایلی ڕازێنراو
+        // ------------------------------------------------------------
+        // داواکاریی خاوەنەکە (٢٠٢٦-٠٨-٢٢): ئەگەر کەسێک ناو یان وێنەی
+        // پلەکانی خۆی گۆڕی، ناسنامە ڕاستەقینەکەی (ناوی تەواو، کۆد،
+        // بەڕێوەبەرەکەی) تەنها بۆ **خۆی، پاشا، و بەڕێوەبەرەکەی**
+        // دەردەکەوێت.
+        // ⚠️ ئەمە **ڕووکارە**. RLS نییە و `service_role` لە
+        //    وێبگەڕدایە، بۆیە ئەمە پارێزەری ڕاستەقینە نییە —
+        //    شاردنەوەیەکی ڕێزلێنانە، نەک ئاسایش.
+        // ⚠️ سەرپەرشت و ڕاوێژکار **نایبینن** — خاوەنەکە بە ڕوونی
+        //    وتی «پاشا یان بەڕێوەبەرەکەی».
+        // ============================================================
+        function canSeeRealIdentity(emp) {
+            if (!currentUser || !emp) return false;
+            const my = String(currentUser.code || '').trim().toLowerCase();
+            if (!my) return false;
+            if (my === String(emp.code || '').trim().toLowerCase()) return true;   // خۆی
+            if (normalizeRole(userRole || '') === 'پاشا') return true;             // پاشا
+            return String(emp.manager || '').trim().toLowerCase() === my;          // بەڕێوەبەرەکەی
+        }
+
+        // ڕازێنراوە؟ — وێنەیەکی تایبەت، یان ناوێکی جیاواز لە ناوی تەواو
+        function rpIsDecorated(emp) {
+            if (!emp) return false;
+            const p = rpNorm(emp.rank_prefs);
+            if (p.avatar) return true;
+            const real = String(emp.full_name || '').trim();
+            const shown = rpNameOf(emp, emp.code);
+            return !!(real && shown && shown !== real);
+        }
+
+        // ناسنامەی ڕاستەقینە بشاردرێتەوە؟
+        function rpMasked(emp) {
+            return rpIsDecorated(emp) && !canSeeRealIdentity(emp);
+        }
+
+        // ناوی نمایش و وێنەی **پلەکان** بۆ کۆدێک — لە تۆمارەکە یان
+        // لە کاشەکەوە. سێرڤەر `dname` نازانێت، بۆیە هەرچی ناوی
+        // ڕاستەقینەی ناردبێت لێرەدا دەگۆڕدرێت.
+        function rpDisplayOf(code, fbName, fbAvatar) {
+            const e = getEmployeeByCode(code);
+            const v = _rpCache[String(code || '').trim().toLowerCase()];
+            return {
+                name: (e ? rpNameOf(e, code) : '') || (v && v.name) || fbName || '',
+                avatar: (e ? rpAvatarOf(e, '') : '') || (v && v.avatar) || fbAvatar || ''
+            };
+        }
+
+        // هەموو شوێنەکانی ناو ئامێرەکە بە یەکجار — بێ تۆڕ.
+        // ⚠️ بۆ پاشگەزبوونەوەش بەکاردێت (`rpCommit`)، بۆیە دەبێت
+        //    **هەموو** ئەو شوێنانە بگرێتەوە کە دۆخەکەی تێدا کۆپی بووە.
+        function rpApplyLocal(next) {
+            currentUser.rank_prefs = next;
             _rpCache[String(currentUser.code).trim().toLowerCase()] = next;
             try { localStorage.setItem('myAppUser', JSON.stringify(currentUser)); } catch (e) { }
             try { saveAccountToList(currentUser); } catch (e) { }
@@ -12047,11 +12167,17 @@
             // یەکسەر گۆڕانەکە ببینێت
             const mine = getEmployeeByCode(currentUser.code);
             if (mine) mine.rank_prefs = next;
+            // ڕیزەکانی بارکراوی تابلۆ نوێ دەکرێنەوە
+            try { rpApplyToRankRows(); } catch (e) { }
+            return next;
+        }
+
+        // پاشەکەوتی تێکەڵکراو — تەنها ئەو خانانەی گۆڕاون
+        async function rpSave(patch) {
+            const next = rpApplyLocal(rpNorm(Object.assign({}, rankPrefsOf(), patch || {})));
             const { error } = await supabase.from('employees')
                 .update({ rank_prefs: next }).eq('code', currentUser.code);
             if (error) throw error;
-            // ڕیزەکانی بارکراوی تابلۆ نوێ دەکرێنەوە
-            rpApplyToRankRows();
             return next;
         }
 
@@ -12263,15 +12389,26 @@
             }
         }
 
+        // ⭐ ڕووکار **یەکسەر**، پاشەکەوت لە پشتەوە.
+        // ⚠️ پێشتر `await rpSave(...)` پێش نەخشاندن بوو، بۆیە
+        //    دەستلێدانی ڕەنگێک هیچی نەدەکرد تاکو داواکارییەکەی
+        //    Supabase دەگەڕایەوە — لەسەر ئینتەرنێتی خاو ئەوە
+        //    چەند چرکەیەک بوو و وا دەردەکەوت کە ئەپەکە ڕاوەستاوە.
+        //    ئێستا دەستبەجێ دەگۆڕێت و لە کاتی هەڵەدا دەگەڕێتەوە.
         async function rpCommit(patch) {
+            const prev = rankPrefsOf();
+            rpApplyLocal(rpNorm(Object.assign({}, prev, patch || {})));
+            rpSyncPreview();
+            rpSyncChrome();
             rpFlash('پاشەکەوت دەکرێت...', 'bx-loader-alt bx-spin');
             try {
                 await rpSave(patch);
-                rpSyncPreview();
-                rpSyncChrome();
                 rpFlash('پاشەکەوت کرا', 'bx-check-circle');
             } catch (e) {
                 console.warn('rpSave:', e);
+                rpApplyLocal(prev);              // پاشگەزبوونەوە
+                rpSyncPreview();
+                rpSyncChrome();
                 rpFlash('نەتوانرا پاشەکەوت بکرێت', 'bx-error-circle');
             }
         }
@@ -12723,10 +12860,20 @@
             return histEsc(firstNameOf(r.name) || r.code || '');
         }
 
+        // ⭐ دەستلێدان لەسەر ڕیزێک **پڕۆفایلەکە** دەکاتەوە، نەک
+        //    ئامارەکە. داواکاریی خاوەنەکە: سەرەتا کارتەکە، پاشان
+        //    ئەگەر ویستی «ئاماری تەواو».
+        // ⚠️ `canDrillStats()` لێرەدا مەرج نییە — کارتەکە بۆ هەمووانە
+        //    (هەر ئەڤاتارێکی ناو ئەپەکە دەیکاتەوە). پارێزەری ئامار
+        //    لە خودی دوگمەکەدایە و لە سێرڤەریشدا.
+        function openRankMember(code, name, avatar) {
+            openMemberCard(code, { name: name || '', avatar: avatar || '' }, 'rank');
+        }
+
         function rankRowHtml(r) {
             const me = r.code && String(r.code) === String(currentUser.code);
-            const drill = canDrillStats() && !me && r.code
-                ? ' onclick="openMemberStats(\'' + histEsc(String(r.code)) + '\')"' : '';
+            const drill = (!me && r.code)
+                ? ' onclick="openRankMember(\'' + histEsc(String(r.code)) + '\')"' : '';
             return '<div class="sx-rrow' + (me ? ' is-me' : '') + (drill ? ' is-tap' : '') + '"' + drill + '>'
                 + '<span class="sx-rn">' + r.rank + '</span>'
                 + (r.name == null ? '<span class="sx-anon"><i class="bx bx-user"></i></span>' : avatarHtml(r.avatar, r.name || '', 30, r.code))
@@ -13142,8 +13289,8 @@
                 html += '<div class="rkpod">' + ord.map((r, i) => {
                     const place = (i === 1) ? 1 : (i === 0 ? 2 : 3);
                     const me = r.code && String(r.code) === String(currentUser.code);
-                    const tap = canDrillStats() && !me && r.code
-                        ? ' onclick="openMemberStats(\'' + histEsc(String(r.code)) + '\')"' : '';
+                    const tap = (!me && r.code)
+                        ? ' onclick="openRankMember(\'' + histEsc(String(r.code)) + '\')"' : '';
                     return '<div class="rkpod-c is-p' + place + (me ? ' is-me' : '') + '"' + tap + '>'
                         + (place === 1 ? '<i class="bx bxs-crown rkpod-crown"></i>' : '')
                         + '<div class="rkpod-av">'
