@@ -11298,7 +11298,11 @@
             const avatar = disp.avatar;
             // ⭐ ناسنامەی ڕاستەقینە شاراوەیە بۆ ئەوانەی مافیان نییە —
             //    ناوی تەواو، کۆد، و سلسیلە. بڕوانە `canSeeRealIdentity`.
-            const masked = rpMasked(e);
+            // ⚠️ ٢٠٢٦-٠٨-٢٢ (ڕوونکردنەوەی خاوەنەکە): ئەمە بۆ **هەموو**
+            //    ئەندامێکە، نەک تەنها ئەوانەی پڕۆفایلیان ڕازاندووەتەوە.
+            //    کۆد و سلسیلە زانیاریی ناوخۆیین — ئەندامێکی ئاسایی
+            //    نابێت بزانێت کۆدی هاوکارەکەی چییە یان بەڕێوەبەری کێیە.
+            const masked = !(me || canSeeRealIdentity(e));
             // ناوی ڕاستەقینە لە ژێرەوە — تەنها ئەگەر ناوی
             // نمایش جیاواز بێت (وەک display name / usernameی دیسکۆرد)
             const sub = (!masked && realName && realName !== name) ? realName : '';
@@ -12128,20 +12132,10 @@
             return String(emp.manager || '').trim().toLowerCase() === my;          // بەڕێوەبەرەکەی
         }
 
-        // ڕازێنراوە؟ — وێنەیەکی تایبەت، یان ناوێکی جیاواز لە ناوی تەواو
-        function rpIsDecorated(emp) {
-            if (!emp) return false;
-            const p = rpNorm(emp.rank_prefs);
-            if (p.avatar) return true;
-            const real = String(emp.full_name || '').trim();
-            const shown = rpNameOf(emp, emp.code);
-            return !!(real && shown && shown !== real);
-        }
-
-        // ناسنامەی ڕاستەقینە بشاردرێتەوە؟
-        function rpMasked(emp) {
-            return rpIsDecorated(emp) && !canSeeRealIdentity(emp);
-        }
+        // ⚠️ پێشتر `rpIsDecorated`/`rpMasked`ـێک هەبوو کە زانیارییەکانی
+        //    تەنها بۆ ئەندامە **ڕازێنراوەکان** دەشاردەوە. خاوەنەکە
+        //    ڕوونی کردەوە: بۆ **هەموو** ئەندامێک. بۆیە لابران —
+        //    ئێستا تەنها `canSeeRealIdentity` بەکاردێت.
 
         // ناوی نمایش و وێنەی **پلەکان** بۆ کۆدێک — لە تۆمارەکە یان
         // لە کاشەکەوە. سێرڤەر `dname` نازانێت، بۆیە هەرچی ناوی
