@@ -9319,8 +9319,30 @@
                 const meta = LOG_ACTION_META[l.action] || { icon: 'bx-dots-horizontal-rounded', color: '#64748b', label: l.action };
                 const who = histEsc(l.user_name || l.user_code || 'نەزانراو');
                 const parts = ologDetailParts(l);
-                const vias = parts.vias.map(v =>
-                    `<span class="olog-via" title="${histEsc(v.t)}"><i class='bx ${v.icon}'></i></span>`).join('');
+                // ⭐ دۆخی قوفڵ لە جیاتی ئایکۆنی ڕێگا (داواکاریی خاوەنەکە):
+                //    پرێنت = قوفڵێکی داخراوی **سوور** — ئۆردەرەکە قوفڵ کرا
+                //    سکان  = قوفڵێکی کراوەی **سەوز** — قوفڵەکە لابرا
+                //    ⚠️ ئایکۆنی سەرچاوە (کۆمەڵ/پرێنت) دەمێنێتەوە، بۆیە
+                //       هیچ زانیارییەک ون نابێت.
+                let vlist = parts.vias;
+                if (l.action === 'print') {
+                    const src = parts.vias.find(v => v.t === 'بە کۆمەڵ')
+                        || parts.vias.find(v => v.t === 'لە ئەپی پرێنت');
+                    // ⚠️ ڕیزی «سکانەکە پووچ کرایەوە»ش `action = 'print'`ـە —
+                    //    قوفڵەکە **گەڕاوەتەوە**، بۆیە دەقی جیاوازی دەوێت
+                    const back = /پووچ/.test(String(l.detail || ''));
+                    vlist = [{
+                        icon: 'bx-lock-alt',
+                        t: back ? 'قوفڵەکە گەڕایەوە' : 'قوفڵ کرا — تا سکان دەکرێت',
+                        color: '#dc2626'
+                    }].concat(src ? [src] : []);
+                } else if (l.action === 'print_scan') {
+                    vlist = [{ icon: 'bx-lock-open-alt', t: 'قوفڵەکە لابرا', color: '#059669' }];
+                }
+                const vias = vlist.map(v =>
+                    `<span class="olog-via"${v.color
+                        ? ` style="color:${v.color}; background:${v.color}1a;"` : ''
+                    } title="${histEsc(v.t)}"><i class='bx ${v.icon}'></i></span>`).join('');
                 // ⭐ ڕەنگی چیپەکان لە `statusStyleOf`ـەوە دێن — هەمان
                 //    ڕەنگی کارتەکانی ئۆردەر: ئامادە شین، ڕێگا پرتەقاڵی،
                 //    گەیشتوو سەوز، گەڕاوە سوور.
