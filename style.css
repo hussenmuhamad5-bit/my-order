@@ -6144,6 +6144,12 @@ i.moc-avatar {
      ماوەی داخستن (0.13s). */
   visibility: hidden;
   transition: visibility 0s linear 0.13s;
+  /* ⚠️ ڕاکێشان لەسەر **پاشخانە تاریکەکە** (دەرەوەی کارتەکە) — بەبێ
+     ئەمە ئەوەش دەچێتە سەر پەڕەکەی ژێرەوە. `overflow: hidden` ئەم
+     توخمە دەکاتە بەرگرێکی سکڕۆڵ (بەبێ ئەوەی هیچ سکڕۆڵ بکات، چونکە
+     ناوەڕۆکەکە `max-height: 85vh`ـە)، و `contain` زنجیرەکە دەبڕێت. */
+  overflow: hidden;
+  overscroll-behavior: contain;
 }
 
 /* پاشخانە تاریکەکە لێرەیە، نەک لەسەر خودی مۆداڵەکە.
@@ -6195,6 +6201,11 @@ i.moc-avatar {
   transform: translate3d(0, 12px, 0);
   transition: transform 0.13s cubic-bezier(0.4, 0, 1, 1);
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+  /* ⚠️ **زنجیرەی سکڕۆڵ دەبڕدرێت.** بەبێ ئەمە، کاتێک مۆداڵێک
+     ناوەڕۆکێکی کورتی هەیە (یان دەگاتە کۆتایی خۆی)، ڕاکێشانی
+     پەنجە دەچێتە سەر ئەو لیستەی لە ژێریدایە و ئەو دەسکڕۆڵ
+     دەبێت — بۆ نموونە تابلۆی پلەکان لە پشت کارتی پڕۆفایلەوە. */
+  overscroll-behavior: contain;
 }
 
 /* مۆدێلی زانیاری داواکاری: هێدەر (دوگمەی داخستن) جێگیر دەمێنێت، تەنها ناوەڕۆک سکرۆڵ دەکات */
@@ -6212,6 +6223,7 @@ i.moc-avatar {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
+  overscroll-behavior: contain;
   overflow-x: hidden;  margin: 0 -4px;
   padding: 0 4px;
   scrollbar-width: none;
@@ -8810,6 +8822,10 @@ body.no-glass .fab-wrapper .btn {
   z-index: 2400;
   visibility: hidden;
   transition: visibility 0s linear .18s;
+  /* هەمان پارێزەری `.modal-overlay` — ڕاکێشان لەسەر شیتەکە یان
+     پەردەکەی نابێت پەڕەکەی ژێرەوە بجوڵێنێت */
+  overflow: hidden;
+  overscroll-behavior: contain;
 }
 
 .fsheet.show {

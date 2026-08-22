@@ -6439,9 +6439,16 @@
                 let mNameShort = String(mName).trim().split(/\s+/).slice(0, 2).join(' ');
                 let mAvatar = mem ? mem.avatar : "";
                 let mRole = mem ? (normalizeRole(mem.role) || "") : "";
+                // ⚠️ **کۆدی ڕەسەن** بۆ کارتی پڕۆفایل، نەک `sellerCodeOf`
+                //    کە بۆ بەراوردکردن بچووکی دەکاتەوە. `member_stats`
+                //    بە `code = p_target` بەراورد دەکات (هەستیارە بۆ
+                //    پیتی گەورە/بچووک)، بۆیە `sioi7` هیچ ڕیزێک نادۆزێتەوە
+                //    و کارتەکە دەڵێت «ئاماری خۆی شاردووەتەوە» — تەنانەت
+                //    بۆ پاشاش.
+                let sCodeReal = (mem && mem.code) || o.seller_code || sCode;
                 topHtml = `
                     <div class="mocc-owner">
-                        ${avatarHtml(mAvatar, mName, 30, sCode)}
+                        ${avatarHtml(mAvatar, mName, 30, sCodeReal)}
                         <div class="mocc-owner-info">
                             <span class="mocc-oname">${mNameShort}</span>
                             ${mRole ? `<span class="mocc-orole">${mRole}</span>` : ''}
@@ -11153,8 +11160,14 @@
         // `from` = ئەو شوێنەی کارتەکەی لێوە کرایەوە ('rank').
         // دوگمەی «ئاماری تەواو» پێی دەزانێت گەڕانەوە بۆ کوێ بێت.
         async function openMemberCard(code, hint, from) {
-            const c = String(code || '').trim();
+            let c = String(code || '').trim();
             if (!c || !currentUser) return;
+            // ⚠️ کۆدەکە لەوانەیە **نۆرماڵایزکراو** هاتبێت (بچووککراوە بۆ
+            //    بەراوردکردن لە لیستەکاندا). بیرگە هەستیار نییە بۆ پیت،
+            //    بەڵام سێرڤەر هەیە: `member_stats` بە `code = p_target`
+            //    بەراورد دەکات. بۆیە یەکەم شت کۆدە ڕەسەنەکە دەدۆزینەوە.
+            const _known = getEmployeeByCode(c) || teamMemberOf(c);
+            if (_known && _known.code) c = String(_known.code).trim();
             const seq = ++_mcard.seq;
             _mcard.code = c;
             _mcard.from = from || null;
