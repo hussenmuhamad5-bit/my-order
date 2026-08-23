@@ -16700,6 +16700,11 @@
                 if (!exData.deliveryOn || !exCalc) {
                     showToast("گەیاندن لەسەر کێیە؟ هەڵبژێرە — ئەندام، پاشا یان کڕیار", "error"); return;
                 }
+                // ئۆردەری خودی پاشا: «لەسەر ئەندام» بوونی نییە —
+                // دوگمەکەشی شاراوەیە، ئەمە پارێزەری دووەمە
+                if (exData.deliveryOn === EXCHANGE_MODE_MEMBER && exKingOwnedParent()) {
+                    showToast("ئۆردەری ڕەسەن هی پاشایە — گەیاندن تەنها لەسەر پاشا یان کڕیار دەبێت", "error"); return;
+                }
                 if (!cart.length && !exData.retCart.length) {
                     showToast("کاڵای گەڕاوە یان کاڵای نوێ بنووسە", "error"); return;
                 }
@@ -24001,6 +24006,7 @@
                 // تەنها یەک ئۆردەری گەیشتوو → خۆکارانە هەڵدەبژێردرێت
                 if (!exForm.parent && exForm.parents.length === 1) {
                     exForm.parent = exForm.parents[0];
+                    exEnforceDeliveryOptions();
                     exApplyParentAutos();
                 }
             } catch (e) {
@@ -24012,6 +24018,29 @@
             updateCartUI();
         }
 
+        // ئۆردەری ڕەسەن هی خودی پاشایە؟ — ئەوکات «گەیاندن لەسەر
+        // ئەندام» واتای نییە: ئەندامێک نییە، و لە دابەشکردنیشدا
+        // قازانج/پاشەکەوتی ئۆردەری پاشا بە زۆر سفرە (isDistKingOrder)
+        // — بڕەکە بێدەنگانە دەکەوتە سەر پاشا. بۆیە بژاردەکە هەر
+        // پیشان نادرێت (داواکاری خاوەن ٢٠٢٦-٠٨-٢٣).
+        function exKingOwnedParent() {
+            const pp = exForm.parent;
+            if (!pp || !pp.seller_code) return false;
+            if (globalKingCode) return String(pp.seller_code) === String(globalKingCode);
+            // پاشەکشە: کۆدی پاشا هێشتا بار نەبووە — خۆی پاشایە و
+            // ئۆردەرەکەش هی خۆیەتی
+            return !!(currentUser && normalizeRole(currentUser.role) === 'پاشا'
+                && String(pp.seller_code) === String(currentUser.code));
+        }
+
+        // دوای هەر گۆڕینێکی ڕەسەن: ئەگەر «لەسەر ئەندام» هەڵبژێردرابوو
+        // و ڕەسەنە نوێیەکە هی پاشایە، هەڵبژاردنەکە دەسڕدرێتەوە
+        function exEnforceDeliveryOptions() {
+            if (exKingOwnedParent() && exForm.deliveryOn === EXCHANGE_MODE_MEMBER) {
+                exForm.deliveryOn = '';
+            }
+        }
+
         function exSelectParent(id) {
             const pp = (exForm.parents || []).find(x => String(x.id) === String(id));
             const changed = String((exForm.parent || {}).id || '') !== String((pp || {}).id || '');
@@ -24019,6 +24048,7 @@
             // ڕەسەنێکی تر هەڵبژێردرا → هەڵبژاردنی گەڕاوەکان هی ئەوەی
             // پێشوو بوون، srcIdx ـەکانیان چیتر ڕاست نین — بەتاڵ دەبنەوە
             if (changed) exForm.retCart = [];
+            exEnforceDeliveryOptions();
             exApplyParentAutos();
             exRenderAll();
             updateCartUI();
@@ -24245,6 +24275,7 @@
             }
             exForm.parent = pp || null;
             exRelinkRetCart();
+            exEnforceDeliveryOptions();
 
             exRenderAll();
             updateCartUI();
@@ -24483,7 +24514,10 @@
             //    نرخی ڕاستەی سیستەم تەنها بۆ خاوەن‌دەسەڵاتی دابەشکردنە.
             //    زیادەی 5,000 − شۆفێر لە «لەسەر ئەندام»دا لە کاتی
             //    دابەشکردندا دەچێتە پاشەکەوتی ئەندام (exchangeMemberFeeSurplus)
-            box.innerHTML = modeBtn(EXCHANGE_MODE_MEMBER, 'bx-user', 'کرێی گەیاندن (5,000) لە قازانجی ئەندام کەم دەکرێتەوە')
+            // ئۆردەری خودی پاشا → تەنها «پاشا» و «کڕیار»
+            const kingOwned = exKingOwnedParent();
+            box.innerHTML = (kingOwned ? ''
+                : modeBtn(EXCHANGE_MODE_MEMBER, 'bx-user', 'کرێی گەیاندن (5,000) لە قازانجی ئەندام کەم دەکرێتەوە'))
                 + modeBtn(EXCHANGE_MODE_KING, 'bx-crown', 'پاشا کرێی گەیاندن دەدات — لەسەر وەسڵ نانووسرێت')
                 + modeBtn(EXCHANGE_MODE_CUSTOMER, 'bx-user-voice', '5,000 کرێی گەیاندن لە کڕیار وەردەگیرێت و لەسەر وەسڵ دەنووسرێت');
         }
