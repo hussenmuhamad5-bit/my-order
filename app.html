@@ -343,6 +343,78 @@
             </label>
         </div>
 
+        <!-- گۆڕینی کاڵا (وەشانی ٢ — db/047) — ئۆردەرێکی نوێ کە کاڵای
+             ئۆردەرێکی گەیشتووی هەمان کڕیار دەگۆڕێت. پێنج هەنگاو:
+                 ١) ئۆردەری ڕەسەن (بە ژمارەی مۆبایل خۆکارانە دێت)
+                 ٢) سەبەتەی کاڵای گەڕاوە (چیپ لە ڕەسەنەوە یان بە دەست)
+                 ٣) سەبەتەی کاڵای نوێ (سەبەتەی سەرەکی دەگوازرێتەوە ئێرە)
+                 ٤) پارەی کڕیار: پێشتر وەرگیراوە / ئێستا وەردەگیرێت
+                 ٥) گەیاندن لەسەر کێیە؟ ئەندام · پاشا · کڕیار
+             فۆرمولا: قازانجی ئەندام = جیاوازی پارە − جیاوازی تێچوو
+             (− کرێ ئەگەر گەیاندن لەسەر ئەندام بێت).
+             ئۆردەری ڕەسەن هەرگیز دەستکاری ناکرێت — قازانجەکەی پێشتر
+             دابەشکراوە؛ بەستنەوە بە exchange_of_order_id. -->
+        <div class="switch-group exchange-switch">
+            <label style="font-size:13px; color:#475569; font-weight:700;"><i class='bx bx-transfer-alt'></i>
+                گۆڕینی کاڵایە؟</label>
+            <label class="switch">
+                <input type="checkbox" id="switch-exchange" onchange="toggleExchangeSection(this.checked)">
+                <div class="slider">
+                    <div class="circle"><svg class="cross" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="4">
+                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                        </svg><svg class="checkmark" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="4">
+                            <polyline points="20 6 9 17 4 12"></polyline>
+                        </svg></div>
+                </div>
+            </label>
+        </div>
+
+        <!-- پەیکەرەکە جێگیرە و بەش بەش نەخشێنراوەتەوە (incremental patch)،
+             چونکە نەخشاندنەوەی هەموو بەشەکە خانە نووسراوەکان و فۆکەس
+             دەسڕێتەوە. هەر بۆکسێکی پەنجەرەیی خۆی patch دەکرێت. -->
+        <div id="exchange-section" style="display:none;">
+            <div class="ex-sec-t">١) کام ئۆردەری ئەم کڕیارە دەگۆڕدرێت؟</div>
+            <div id="ex-parents-box"></div>
+
+            <div id="ex-ret-block" style="display:none;">
+                <div class="ex-sec-t">٢) چ کاڵایەک لە کڕیار وەردەگیرێتەوە؟</div>
+                <div id="ex-chips-box"></div>
+                <ul id="ex-ret-list" class="cart-list ex-ret-list"></ul>
+            </div>
+
+            <div id="ex-new-block" style="display:none;">
+                <div class="ex-sec-t">٣) چ کاڵایەکی نوێ بۆ دەنێردرێت؟</div>
+                <div id="ex-cart-slot"></div>
+            </div>
+
+            <div id="ex-money-block" style="display:none;">
+                <div class="ex-sec-t">٤) پارەی کڕیار</div>
+                <div class="ex-fields">
+                    <label for="ex-prev-received">پێشتر چەند پارە لە کڕیار وەرگیراوە؟</label>
+                    <input type="text" inputmode="numeric" id="ex-prev-received" placeholder="0"
+                        oninput="formatPriceInput(this); exForm.prevTouched = true; updateCartUI()">
+                    <div id="ex-prev-hint" class="ex-hint" style="display:none;"></div>
+                    <label for="ex-now-received">ئێستا چەند پارە لە کڕیار وەردەگیرێت؟ (بێ کرێی گەیاندن)</label>
+                    <input type="text" inputmode="numeric" id="ex-now-received" placeholder="0"
+                        oninput="formatPriceInput(this); updateCartUI()">
+                </div>
+                <div id="ex-cash-badge"></div>
+
+                <div class="ex-sec-t">٥) گەیاندن لەسەر کێیە؟</div>
+                <div class="ex-modes" id="ex-deliv-modes"></div>
+
+                <div class="ex-sec-t">هۆکاری گۆڕین</div>
+                <div class="ex-fields"><input type="text" id="ex-reason" placeholder="بۆچی دەگۆڕدرێت؟"></div>
+
+                <div id="ex-totals" class="ex-totals" style="margin-top:12px;"></div>
+            </div>
+
+            <div id="ex-legacy-box" style="display:none;"></div>
+        </div>
+
         <!-- سەبەتەی سەرەکی لە بلۆکێکی جوڵاودایە: لە کاتی گۆڕینی کاڵادا
              هەموو بلۆکەکە دەگوازرێتەوە ناو بەشی گۆڕین (هەنگاوی ٣) و
              لە کوژانەوەیدا دەگەڕێتەوە بۆ ئێرە — بڕوانە exMountCart -->
@@ -477,77 +549,6 @@
             oninput="this.style.height = ''; this.style.height = this.scrollHeight + 'px'"
             style="width: 100%; min-height: 45px; padding: 12px 16px; margin-bottom: 15px; font-family: inherit; font-size: 15px; border: 1px solid #e2e8f0; border-radius: 10px; background: #f8fafc; color: var(--text-main); resize: none; overflow: hidden; box-sizing: border-box; transition: border-color 0.2s;"></textarea>
 
-        <!-- گۆڕینی کاڵا (وەشانی ٢ — db/047) — ئۆردەرێکی نوێ کە کاڵای
-             ئۆردەرێکی گەیشتووی هەمان کڕیار دەگۆڕێت. پێنج هەنگاو:
-                 ١) ئۆردەری ڕەسەن (بە ژمارەی مۆبایل خۆکارانە دێت)
-                 ٢) سەبەتەی کاڵای گەڕاوە (چیپ لە ڕەسەنەوە یان بە دەست)
-                 ٣) سەبەتەی کاڵای نوێ (سەبەتەی سەرەکی دەگوازرێتەوە ئێرە)
-                 ٤) پارەی کڕیار: پێشتر وەرگیراوە / ئێستا وەردەگیرێت
-                 ٥) گەیاندن لەسەر کێیە؟ ئەندام · پاشا · کڕیار
-             فۆرمولا: قازانجی ئەندام = جیاوازی پارە − جیاوازی تێچوو
-             (− کرێ ئەگەر گەیاندن لەسەر ئەندام بێت).
-             ئۆردەری ڕەسەن هەرگیز دەستکاری ناکرێت — قازانجەکەی پێشتر
-             دابەشکراوە؛ بەستنەوە بە exchange_of_order_id. -->
-        <div class="switch-group exchange-switch">
-            <label style="font-size:13px; color:#475569; font-weight:700;"><i class='bx bx-transfer-alt'></i>
-                گۆڕینی کاڵایە؟</label>
-            <label class="switch">
-                <input type="checkbox" id="switch-exchange" onchange="toggleExchangeSection(this.checked)">
-                <div class="slider">
-                    <div class="circle"><svg class="cross" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="4">
-                            <line x1="18" y1="6" x2="6" y2="18"></line>
-                            <line x1="6" y1="6" x2="18" y2="18"></line>
-                        </svg><svg class="checkmark" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="4">
-                            <polyline points="20 6 9 17 4 12"></polyline>
-                        </svg></div>
-                </div>
-            </label>
-        </div>
-
-        <!-- پەیکەرەکە جێگیرە و بەش بەش نەخشێنراوەتەوە (incremental patch)،
-             چونکە نەخشاندنەوەی هەموو بەشەکە خانە نووسراوەکان و فۆکەس
-             دەسڕێتەوە. هەر بۆکسێکی پەنجەرەیی خۆی patch دەکرێت. -->
-        <div id="exchange-section" style="display:none;">
-            <div class="ex-sec-t">١) کام ئۆردەری ئەم کڕیارە دەگۆڕدرێت؟</div>
-            <div id="ex-parents-box"></div>
-
-            <div id="ex-ret-block" style="display:none;">
-                <div class="ex-sec-t">٢) چ کاڵایەک لە کڕیار وەردەگیرێتەوە؟</div>
-                <div id="ex-chips-box"></div>
-                <ul id="ex-ret-list" class="cart-list ex-ret-list"></ul>
-            </div>
-
-            <div id="ex-new-block" style="display:none;">
-                <div class="ex-sec-t">٣) چ کاڵایەکی نوێ بۆ دەنێردرێت؟</div>
-                <div id="ex-cart-slot"></div>
-            </div>
-
-            <div id="ex-money-block" style="display:none;">
-                <div class="ex-sec-t">٤) پارەی کڕیار</div>
-                <div class="ex-fields">
-                    <label for="ex-prev-received">پێشتر چەند پارە لە کڕیار وەرگیراوە؟</label>
-                    <input type="text" inputmode="numeric" id="ex-prev-received" placeholder="0"
-                        oninput="formatPriceInput(this); exForm.prevTouched = true; updateCartUI()">
-                    <div id="ex-prev-hint" class="ex-hint" style="display:none;"></div>
-                    <label for="ex-now-received">ئێستا چەند پارە لە کڕیار وەردەگیرێت؟ (بێ کرێی گەیاندن)</label>
-                    <input type="text" inputmode="numeric" id="ex-now-received" placeholder="0"
-                        oninput="formatPriceInput(this); updateCartUI()">
-                </div>
-                <div id="ex-cash-badge"></div>
-
-                <div class="ex-sec-t">٥) گەیاندن لەسەر کێیە؟</div>
-                <div class="ex-modes" id="ex-deliv-modes"></div>
-
-                <div class="ex-sec-t">هۆکاری گۆڕین</div>
-                <div class="ex-fields"><input type="text" id="ex-reason" placeholder="بۆچی دەگۆڕدرێت؟"></div>
-
-                <div id="ex-totals" class="ex-totals" style="margin-top:12px;"></div>
-            </div>
-
-            <div id="ex-legacy-box" style="display:none;"></div>
-        </div>
 
         <div
             style="background:#fff; padding:15px; border-radius:10px; margin-bottom:15px; border:1px solid #e2e8f0; box-shadow:0 2px 5px rgba(0,0,0,0.02);">
@@ -23859,7 +23860,9 @@
             deliveryOn: '',       // ئەندام | پاشا | کڕیار
             legacy: false,        // ڕیزێکی وەشانی ١ دەستکاری دەکرێت؟
             prevTouched: false,   // «پێشتر وەرگیراوە» بە دەست نووسراوە؟
-            prevAuto: false       // «پێشتر» خۆکارانە پڕکراوەتەوە؟
+            prevAuto: false,      // «پێشتر» خۆکارانە پڕکراوەتەوە؟
+            custAuto: null,       // دوایین زانیاری کڕیار کە خۆکار پڕکراوە
+            restoring: false      // دەستکاریکردنەوە — پڕکردنەوەی کڕیار ناکرێت
         };
 
         function exchangeFormOn() {
@@ -23881,7 +23884,8 @@
             exForm = {
                 parents: null, parent: null, phone: '', loading: false, err: false,
                 retCart: [], deliveryOn: '', legacy: false,
-                prevTouched: false, prevAuto: false
+                prevTouched: false, prevAuto: false,
+                custAuto: null, restoring: false
             };
         }
 
@@ -23990,7 +23994,7 @@
             exRenderAll();
             try {
                 const { data, error } = await supabase.from('orders')
-                    .select('id, order_code, date, status, customer_name, address, item_names, item_qtys, item_prices, items_total, amount_received, seller_code, seller_name, seller_manager, seller_admin, seller_consultant, postal_code')
+                    .select('id, order_code, date, status, customer_name, address, socials, item_names, item_qtys, item_prices, items_total, amount_received, seller_code, seller_name, seller_manager, seller_admin, seller_consultant, postal_code')
                     .eq('phone1', phone)
                     .ilike('status', '%گەیشت%')
                     .order('id', { ascending: false })
@@ -24008,6 +24012,7 @@
                     exForm.parent = exForm.parents[0];
                     exEnforceDeliveryOptions();
                     exApplyParentAutos();
+                    exApplyCustomerAutos();
                 }
             } catch (e) {
                 console.error('exLoadParents:', e);
@@ -24041,6 +24046,59 @@
             }
         }
 
+        // ------------------------------------------------------------
+        // پڕکردنەوەی زانیاری کڕیار لە ئۆردەری ڕەسەنەوە (خاوەن ٢٠٢٦-٠٨-٢٣):
+        // ناو، شار، ناونیشان، هەژمارە ئینتەرنێتییەکان — دوای هەڵبژاردنی
+        // ئۆردەرەکە خۆکارانە دادەخرێنەوە، بەڵام دەستکاری ئازادە.
+        //   • تەنها خانەی بەتاڵ یان ئەوەی خۆمان پڕمان کردووە دەگۆڕدرێت —
+        //     نووسینی دەستی هەرگیز ناسڕدرێتەوە
+        //   • لە دەستکاریکردنەوەدا (restoring) هیچ ناکرێت — زانیاری
+        //     ئۆردەرە دەستکاریکراوەکە پێشتر لە فۆڕمەکەدایە
+        // ------------------------------------------------------------
+        function exApplyCustomerAutos() {
+            if (exForm.restoring) return;
+            const pp = exForm.parent;
+            if (!pp) return;
+            const auto = exForm.custAuto || {};
+            const canSet = (el, key) => !!el && (!String(el.value || '').trim() || el.value === auto[key]);
+
+            const nameEl = document.getElementById('customerName');
+            if (pp.customer_name && pp.customer_name !== '-' && canSet(nameEl, 'name')) {
+                const swC = document.getElementById('switch-customer');
+                if (swC) swC.checked = true;
+                nameEl.style.display = 'block';
+                nameEl.value = pp.customer_name;
+                auto.name = pp.customer_name;
+            }
+
+            if (pp.address) {
+                const parts = String(pp.address).split(' - ');
+                const city = (parts[0] || '').trim();
+                const rest = parts.slice(1).join(' - ');
+                const cityEl = document.getElementById('city-input');
+                const adrEl = document.getElementById('address-details');
+                if (city && canSet(cityEl, 'city')) { cityEl.value = city; auto.city = city; }
+                if (rest && canSet(adrEl, 'adr')) { adrEl.value = rest; auto.adr = rest; }
+            }
+
+            // هەژمارە ئینتەرنێتییەکان — هەمان نەخشەی openEditOrder:
+            // Viber=1 · WhatsApp=2 · Telegram=3
+            const socials = String(pp.socials || '');
+            if (socials) {
+                const boxes = [...document.querySelectorAll('.social-check')];
+                const anyChecked = boxes.some(cb => cb.checked);
+                if (!anyChecked || auto.soc != null) {
+                    boxes.forEach(cb => {
+                        cb.checked = (cb.value === 'Viber' && socials.includes('1'))
+                            || (cb.value === 'WhatsApp' && socials.includes('2'))
+                            || (cb.value === 'Telegram' && socials.includes('3'));
+                    });
+                    auto.soc = socials;
+                }
+            }
+            exForm.custAuto = auto;
+        }
+
         function exSelectParent(id) {
             const pp = (exForm.parents || []).find(x => String(x.id) === String(id));
             const changed = String((exForm.parent || {}).id || '') !== String((pp || {}).id || '');
@@ -24050,6 +24108,7 @@
             if (changed) exForm.retCart = [];
             exEnforceDeliveryOptions();
             exApplyParentAutos();
+            exApplyCustomerAutos();
             exRenderAll();
             updateCartUI();
         }
@@ -24245,6 +24304,7 @@
             }
 
             exMountCart(true);
+            exForm.restoring = true;
             exForm.deliveryOn = exchangeDeliveryOn(o);
             // بڕە هەڵگیراوەکان — خۆکارەکان نەیانگۆڕن
             exForm.prevTouched = true;
@@ -24268,7 +24328,7 @@
             if (!pp && o.exchange_of_order_id) {
                 try {
                     const { data } = await supabase.from('orders')
-                        .select('id, order_code, date, status, customer_name, item_names, item_qtys, item_prices, items_total, amount_received, seller_code, seller_name, seller_manager, seller_admin, seller_consultant, postal_code')
+                        .select('id, order_code, date, status, customer_name, address, socials, item_names, item_qtys, item_prices, items_total, amount_received, seller_code, seller_name, seller_manager, seller_admin, seller_consultant, postal_code')
                         .eq('id', o.exchange_of_order_id).single();
                     if (data) { pp = data; exForm.parents = [data].concat(exForm.parents || []); }
                 } catch (e) { console.error('applyExchangeState parent:', e); }
@@ -24276,6 +24336,7 @@
             exForm.parent = pp || null;
             exRelinkRetCart();
             exEnforceDeliveryOptions();
+            exForm.restoring = false;
 
             exRenderAll();
             updateCartUI();
