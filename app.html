@@ -3228,6 +3228,32 @@
             return myTeamCodesSet.has(c);
         }
 
+        // ============================================================
+        // ⭐ پارێزەری «خۆ-دەستکاری» — پەڕەکانی ئەدمین
+        // ------------------------------------------------------------
+        // بەڕێوەبەر، سەرپەرشت و ڕاوێژکار نابێت کلیل، پاسوۆرد، جزدان
+        // یان قازانجی **خۆیان** ببینن یان بگۆڕن لە بەشی ئەدمیندا.
+        // تەنها پاشا دەتوانێت خۆی دەستکاری بکات.
+        //
+        // ⚠️ ئەمە **جیایە** لە `isInMyTeam()` و هەرگیز نابێت تێکەڵ
+        //    بکرێن. `isInMyTeam` بە ئەنقەست خۆت لەخۆ دەگرێت — ئۆردەر،
+        //    ئامار، خاڵ و جزدانی خودی خۆت هەموویان پێی دەبینرێن.
+        //    ئەگەر لەوێ لای بدەیت، هەرکەس ئۆردەرەکانی خۆی ون دەکات.
+        //    ئەم پارێزەرە تەنها لەسەر پەڕەکانی ئەدمین کاردەکات.
+        //
+        // بۆچی: ئەگەرنا بەڕێوەبەرێک دەیتوانی پاسوۆردی خۆی بگۆڕێت بەبێ
+        // زانینی پاشا، ڕێژەی قازانجی خۆی بەرز بکاتەوە، یان پارە
+        // بخاتە جزدانی خۆیەوە.
+        // ============================================================
+        function canAdminSelf() { return userRole === 'پاشا'; }
+
+        function isSelfAdminLocked(code) {
+            if (canAdminSelf()) return false;
+            if (!currentUser || !code) return false;
+            return String(code).trim().toLowerCase()
+                === String(currentUser.code || '').trim().toLowerCase();
+        }
+
         // ئایا ئەم کەسە لەسەر لقی ستوونی منە؟ (باوانەکانم، خۆم، یان ژێرەکانم)
         // لقە هاوئاستەکان بەشێک نین: سەرپەرشتێک سەرپەرشتی تر نابینێت،
         // ئەندامێک ئەندامی تر نابینێت — تەنانەت ئەگەر هەمان دروستکەریان هەبێت.
@@ -6732,8 +6758,14 @@
         // دروستکردنی HTMLـی ناوبڕی ڕۆژ بۆ جوڵە داراییەکان (بەروار + کۆی هاتوو/چوو)
         function txDayDividerHtml(dayKey, txsOfDay) {
             let dl = formatDayLabel(dayKey);
+            /* ⚠️ `data-day` تەنها نیشانە نییە — لەیئاوتی کۆمپیوتەر پێی
+               دەزانێت ئەم ڕیزە ناوبڕە و دەبێت بە درێژایی هەموو
+               ستوونەکان بێت. بەبێی، ناوبڕەکە دەبێتە خانەیەکی ئاسایی
+               لەناو گریدەکەدا و تێکەڵی جوڵەکان دەبێت.
+               هەمان شێوەی `dayHeadHtml`. */
+            let dayAttr = String(dayKey).replace(/["\\]/g, '');
             return `
-            <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin:14px 0 10px 0; padding-bottom:8px; border-bottom:1px dashed #e2e8f0;">
+            <div data-day="${dayAttr}" style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin:14px 0 10px 0; padding-bottom:8px; border-bottom:1px dashed #e2e8f0;">
                 <div style="display:flex; align-items:center; gap:6px; font-size:13px; font-weight:800; color:#334155;">
                     <i class='bx bx-calendar-event' style="color:var(--primary); font-size:16px;"></i>
                     <span dir="auto">${dl.label}</span>
@@ -20185,8 +20217,11 @@
                 }
 
                 let matches = allEditableUsers.filter(item =>
-                    item.name.toLowerCase().includes(val) ||
-                    item.code.toLowerCase().includes(val)
+                    // ⭐ بەبێ ئەمە، نووسینی ناوی خۆت فۆڕمی چاکسازیی خۆت
+                    //    دەکاتەوە — لیستەکە تێپەڕدەکات
+                    !isSelfAdminLocked(item.code) &&
+                    (item.name.toLowerCase().includes(val) ||
+                     item.code.toLowerCase().includes(val))
                 );
 
                 if (matches.length === 0) {
@@ -20227,7 +20262,8 @@
 
             input.onchange = function () {
                 let val = this.value.trim().toLowerCase();
-                let matchedItem = allEditableUsers.find(item => item.name.toLowerCase() === val || item.code.toLowerCase() === val);
+                let matchedItem = allEditableUsers.find(item => !isSelfAdminLocked(item.code)
+                    && (item.name.toLowerCase() === val || item.code.toLowerCase() === val));
 
                 if (val !== "" && !matchedItem) {
                     this.value = "";
@@ -20549,6 +20585,12 @@
 
         // ٤. پڕکردنەوەی فۆڕم بە خێرایی
         function loadEditSectionFast(user) {
+            // ⭐ کۆتا پارێزەر: هەردوو دەرگاکە (لیست و بۆکسی گەڕان) لێرەوە
+            //    تێدەپەڕن، بۆیە ئەگەر یەکێکیان لەبیر بچێت هەر ئێرە
+            //    دەیگرێت
+            if (user && isSelfAdminLocked(user.code)) {
+                showToast("ناتوانیت کلیلی خۆت دەستکاری بکەیت!", "error"); return;
+            }
             let editSection = document.getElementById('edit-section');
 
             let headName = document.getElementById('e-head-name');
@@ -20732,6 +20774,11 @@
             let searchInput = document.getElementById('search-code-input');
             let code = searchInput.getAttribute('data-code');
             if (!code) code = searchInput.value.trim();
+            // ⭐ دوایین بەربەست پێش نووسین — ڕووکارەکە دەکرێت تێپەڕێنرێت
+            //    (کۆنسۆڵ، فۆڕمێکی کۆن کە کراوە مابێتەوە)، بەڵام ئەمە نا
+            if (isSelfAdminLocked(code)) {
+                showToast("ناتوانیت کلیل و پاسوۆردی خۆت بگۆڕیت!", "error"); return;
+            }
 
             let name = document.getElementById('e-name').value.trim();
 
@@ -22093,6 +22140,8 @@
             }
 
             let filteredUsers = allEditableUsers.filter(u => {
+                // ⭐ جزدانی خۆم لێرە نییە — لە شاشەی «جزدانەکەم» دەیبینم
+                if (isSelfAdminLocked(u.code)) return false;
                 // مەودا + سنووری پلەی «بینینی جزدان» — ئەوەی نایبینێت، لە لیستەکەدا نییە
                 if (!canViewWallet(u.code)) return false;
                 if (roleFilter !== "all" && u.data.role !== roleFilter) return false;
@@ -22151,6 +22200,9 @@
         function openWalletEdit(code) {
             let u = allEditableUsers.find(x => x.code === code);
             if (!u) return;
+            if (isSelfAdminLocked(code)) {
+                showToast("ناتوانیت جزدانی خۆت لێرە دەستکاری بکەیت!", "error"); return;
+            }
             // پشکنینی بینین — نەک تەنها لە لیستەکەدا، لێرەش (بانگکردنی ڕاستەوخۆ)
             if (!canViewWallet(code)) { showToast("دەسەڵاتت نییە بۆ بینینی جزدانی ئەم بەکارهێنەرە!", "error"); return; }
             // کردارەکانی زیاد/کەم/مووچە تەنها بۆ خاوەنی «بەڕێوەبردنی جزدان»
@@ -22848,6 +22900,9 @@
         function openSalaryModal() {
             const code = window.currentWalletCode;
             if (!code) return;
+            if (isSelfAdminLocked(code)) {
+                showToast("ناتوانیت مووچەی خۆت دەربکەیت!", "error"); return;
+            }
             if (!canManageWallet(code)) {
                 showToast("دەسەڵاتت نییە بۆ بەڕێوەبردنی جزدانی ئەم بەکارهێنەرە!", "error"); return;
             }
@@ -22932,6 +22987,9 @@
             if (!await ensureAccountActive()) return;
             if (!salaryCtx) return;
             const code = salaryCtx.code;
+            if (isSelfAdminLocked(code)) {
+                showToast("ناتوانیت مووچەی خۆت دەربکەیت!", "error"); return;
+            }
             if (!canManageUser(code, 'manage_wallets')) {
                 showToast("دەسەڵاتت نییە بۆ بەڕێوەبردنی جزدانی ئەم بەکارهێنەرە!", "error"); return;
             }
@@ -23043,6 +23101,8 @@
 
             // فلتەرکردنی کارمەندان بەپێی پلە و بۆکسی گەڕان
             let filteredUsers = allEditableUsers.filter(u => {
+                // ⭐ ڕێژەی قازانجی خۆم لێرە نییە
+                if (isSelfAdminLocked(u.code)) return false;
                 if (roleFilter !== "all" && u.data.role !== roleFilter) return false;
                 if (searchVal) {
                     if (!u.name.toLowerCase().includes(searchVal) && !u.code.toLowerCase().includes(searchVal)) {
@@ -23086,6 +23146,9 @@
         function openProfitEdit(code) {
             let u = allEditableUsers.find(x => x.code === code);
             if (!u) return;
+            if (isSelfAdminLocked(code)) {
+                showToast("ناتوانیت ڕێژەی قازانجی خۆت بگۆڕیت!", "error"); return;
+            }
 
             document.getElementById('profit-users-list').style.display = 'none';
             // هەموو ناوچەی سەرەوە (فلتەری پلە + گەڕان) پێکەوە دەشاردرێتەوە
@@ -23143,6 +23206,8 @@
             if (!listContainer) return;
 
             let filtered = allEditableUsers.filter(u => {
+                // ⭐ خۆم لە لیستەکەدا نییە (تەنها پاشا خۆی دەبینێت)
+                if (isSelfAdminLocked(u.code)) return false;
                 let r = normalizeRole(u.data.role);
                 if (roleFilter && roleFilter !== "all" && r !== roleFilter) return false;
                 if (searchVal && !u.name.toLowerCase().includes(searchVal) && !u.code.toLowerCase().includes(searchVal)) return false;
@@ -23213,6 +23278,9 @@
         async function openEditFromList(code) {
             let u = allEditableUsers.find(x => x.code === code);
             if (!u) return;
+            if (isSelfAdminLocked(code)) {
+                showToast("ناتوانیت کلیلی خۆت دەستکاری بکەیت!", "error"); return;
+            }
 
             // ⚠️ دەسەڵاتەکان لە لیستەکەدا نەهێنراون (بڕوانە
             //    `loadHierarchyUsers`) — بۆ ئەم یەک کەسە دەهێنرێن.
@@ -23280,6 +23348,9 @@
             if (!await ensureAccountActive()) return;
             let code = document.getElementById('p-hidden-code').value;
             let rate = document.getElementById('p-rate').value;
+            if (isSelfAdminLocked(code)) {
+                showToast("ناتوانیت ڕێژەی قازانجی خۆت بگۆڕیت!", "error"); return;
+            }
             // مەودای دیاریکردنی قازانج (تیم/هەموان) لەسەر ئەم بەکارهێنەرە
             if (!canManageUser(code, 'set_profit_rates')) { showToast("دەسەڵاتت نییە بۆ دیاریکردنی قازانجی ئەم بەکارهێنەرە!", "error"); return; }
             if (!code || !rate) { showToast("تکایە بڕەکە بنووسە", "error"); return; }
@@ -23302,6 +23373,9 @@
 
         function openWalletAction(actionType) {
             // پشکنین پێش کردنەوەی مۆداڵەکە (submitWalletAction دووبارە دەیپشکنێت)
+            if (isSelfAdminLocked(document.getElementById('wa-user-code').value)) {
+                showToast("ناتوانیت جزدانی خۆت دەستکاری بکەیت!", "error"); return;
+            }
             if (!canManageWallet(document.getElementById('wa-user-code').value)) {
                 showToast("دەسەڵاتت نییە بۆ بەڕێوەبردنی جزدانی ئەم بەکارهێنەرە!", "error"); return;
             }
@@ -23322,6 +23396,9 @@
             if (!await ensureAccountActive()) return;
             let userCode = document.getElementById('wa-user-code').value;
             let action = document.getElementById('wa-action').value;
+            if (isSelfAdminLocked(userCode)) {
+                showToast("ناتوانیت پارە بخەیتە جزدانی خۆتەوە!", "error"); return;
+            }
             // مەودای بەڕێوەبردنی جزدان (تیم/هەموان) لەسەر ئەم بەکارهێنەرە
             if (!canManageUser(userCode, 'manage_wallets')) { showToast("دەسەڵاتت نییە بۆ بەڕێوەبردنی جزدانی ئەم بەکارهێنەرە!", "error"); return; }
             let amount = parseFloat(document.getElementById('wa-amount').value || 0);

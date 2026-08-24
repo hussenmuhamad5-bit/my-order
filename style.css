@@ -17289,3 +17289,142 @@ body.sx-wide {
 @media (prefers-reduced-motion: reduce) {
   .magic-tabs-wrapper.is-mid .mt-lbl { transition: none; }
 }
+
+/* ============================================================
+   لەیئاوتی کۆمپیوتەر — ویندۆی پان (٢٠٢٦-٠٨-٢٥)
+   ------------------------------------------------------------
+   کێشەکە: `body`ـەکە `max-width: 430px`ـە، بەڵام شەش شاشە
+   `position: fixed; left:0; right:0`ن — واتا پێوانەیان بە
+   **ویندۆ**یە نەک بە `body`. لەسەر مۆبایل جیاوازی نییە (ویندۆکە
+   هەر ٤٣٠px ـە)، بەڵام لەسەر کۆمپیوتەر — بەتایبەت لە تلیگرام
+   دێسکتۆپ — ناوەڕۆکەکە تا کەناری شاشە درێژ دەبێتەوە و
+   پێوانەی ٤٣٠px بێ‌واتا دەبێت.
+
+   چارە: لە ٧٢٠px بەرەوسەرەوە ستوونێکی ناوەڕاست، و ئەو لیستانەی
+   دەگونجێن دەبنە گرید. هەمان بڕیکپۆینتەکانی شاشەی ئامار
+   (٧٢٠ / ١١٠٠) بەکاردێن تا ئەپەکە یەک سیستەم بێت.
+
+   ------------------------------------------------------------
+   ⚠️ بۆچی هەموو لیستەکان نابنە گرید — پێوانەی ڕاستەقینە
+   ------------------------------------------------------------
+   لیستی ئۆردەر بە ڕۆژ کۆکراوەتەوە، و سەردێڕی ڕۆژ ڕیزێکی نوێ
+   دەست پێدەکات. واتا ڕۆژێکی تاک-ئۆردەر نیوەی ڕیزەکە بەتاڵ
+   دەهێڵێتەوە. ژماردنی داتای بەرهەم (٢٠٢٦-٠٨-٢٥):
+
+     • داشبۆرد (ئۆردەری خودی کەس) — ناوەند ٣.٣ بۆ هەر ڕۆژێک،
+       بەڵام **٤٦.٥٪**ی ڕۆژەکان تەنها ١ ئۆردەریان هەیە
+       (٤٦٣ لە ٩٩٥) → گرید نیوەی کات بەتاڵ دەردەکەوێت.
+       بۆیە **یەک ستوون** دەمێنێتەوە، بەڵام باریک و ناوەڕاست.
+
+     • بەڕێوەبردن (هەموو فرۆشیارەکان) — ناوەند **١٢٧.٥** بۆ هەر
+       ڕۆژێک، تەنها ٣.٨٪ی ڕۆژەکان تاک-ئۆردەرن → **دوو ستوون**.
+
+     • جزدان و لیستەکانی ئەدمین — بە ڕۆژ کۆنەکراونەتەوە
+       (`dayHeaders = 0`) → گرید بێ هیچ بۆشاییەک.
+
+   ئەگەر ڕۆژێک تاک-ئۆردەر لە لیستێکی گریددا هەبوو، بۆشاییەکە
+   ئاسایییە — نەک شکاوی.
+
+   ⚠️ هەموو ئەمە لەناو `min-width`ـدان — لە ٧١٩px و خوارتر
+      **هیچ** ناگۆڕێت. مۆبایل دەستی لێ نەدراوە.
+   ============================================================ */
+
+@media (min-width: 720px) {
+  :root {
+    /* لیستی فراوان — هەمان پانی `body.sx-wide`ی شاشەی ئامار */
+    --app-wide: 1140px;
+    /* داشبۆرد و فۆڕم — خوێندنەوە گرنگترە لە پڕکردنی شاشە */
+    --app-narrow: 900px;
+    --app-gutter: 24px;
+  }
+
+  /* ستوونی ناوەڕاست: پادینگ دەبێتە نیوەی ئەوەی زیادەیە.
+     `max()` دڵنیایی دەداتەوە کە لە ویندۆی تەسکدا پادینگی
+     ئاسایی دەمێنێتەوە و ناوەڕۆک ناچەمێتەوە. */
+  #orders-management-screen.active,
+  #wallet-screen.active,
+  #admin-screen.active {
+    padding-inline: max(var(--app-gutter), calc((100% - var(--app-wide)) / 2));
+  }
+
+  #dashboard-screen.active,
+  #order-screen.active,
+  #settings-screen.active {
+    padding-inline: max(var(--app-gutter), calc((100% - var(--app-narrow)) / 2));
+  }
+
+  /* --- لیستەکانی کارت → گرید -------------------------------
+     `gap` تەنها ئاسۆییە: کارتەکان `margin-bottom`ی خۆیان هەیە،
+     بۆیە ڕیزبەندیی ستوونی وەک خۆی دەمێنێتەوە و بۆشایی
+     دووقات دروست نابێت.
+     `align-content: start` ڕێگری لە درێژبوونەوەی ڕیزی کۆتایی
+     دەکات بۆ پڕکردنی بەرزایی. */
+  #management-orders-list,
+  #my-transactions-list,
+  #edit-users-list,
+  #profit-users-list,
+  #wallet-users-list,
+  #admin-cities-list,
+  #trash-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0 16px;
+    align-content: start;
+  }
+
+  /* ئەمانە دەبێت بە درێژایی هەموو ستوونەکان بن:
+       [data-day]      سەردێڕی ڕۆژ (`dayHeadHtml`)
+       .win-sentinel   چاودێری «زیاتر بهێنە»ی `winRender`
+                       ⚠️ ئەگەر نەیەتە دوایین ڕیز، سکڕۆڵی
+                          بێکۆتایی پێش وەخت دەوەستێت
+       p               پەیامی «هیچ نییە»
+       h3/h4           سەردێڕی بەشەکان (لیستی جزدان) */
+  #management-orders-list > [data-day],
+  #management-orders-list > .win-sentinel,
+  #management-orders-list > p,
+  #my-transactions-list > [data-day],
+  #my-transactions-list > .win-sentinel,
+  #my-transactions-list > p,
+  #my-transactions-list > h3,
+  #my-transactions-list > h4,
+  #edit-users-list > .win-sentinel,
+  #edit-users-list > p,
+  #profit-users-list > .win-sentinel,
+  #profit-users-list > p,
+  #wallet-users-list > .win-sentinel,
+  #wallet-users-list > p,
+  #admin-cities-list > .win-sentinel,
+  #admin-cities-list > p,
+  #trash-list > .win-sentinel,
+  #trash-list > p {
+    grid-column: 1 / -1;
+  }
+
+  /* چوار خانەی ئامار لە یەک ڕیزدا، نەک ٢×٢ */
+  #dashboard-screen .stats-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  /* دوگمەی «+» بە کەناری ستوونەکەوە دەنووسێت، نەک بە ١٥%ی ویندۆ
+     (لە ویندۆیەکی ١٤٠٠px، ١٥% دەکاتە ٢١٠px — دوور لە ناوەڕۆکەکە) */
+  .fab-wrapper {
+    /* دەچێتە بۆشایی لای ستوونەکە، نەک لەسەر کارتەکان.
+       لە ویندۆی تەسکدا (بۆشایی نییە) دەگەڕێتەوە سەر پادینگ —
+       هەمان ڕەفتاری مۆبایل. */
+    left: max(var(--app-gutter), calc(50% - (var(--app-narrow) / 2) - 62px));
+    transform: none;
+  }
+}
+
+@media (min-width: 1100px) {
+  /* سێ ستوون تەنها بۆ کارتە بچووکەکان. کارتی ئۆردەر زانیاریی
+     زۆری تێدایە و لە ٣٧٠px دا تەسک دەبێت، بۆیە لە دووان دەمێنێتەوە. */
+  #my-transactions-list,
+  #edit-users-list,
+  #profit-users-list,
+  #wallet-users-list,
+  #admin-cities-list,
+  #trash-list {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
