@@ -220,6 +220,14 @@
                         .select('*')
                         .eq('telegram_id', String(tgUser.id));
 
+                    if (data && data.length > 0 && isHeld(data[0])) {
+                        // تلیگرامەکە بەم ئەکاونتەوە بەستراوە بەڵام ڕاگیراوە
+                        document.documentElement.classList.remove('is-booting');
+                        try { localStorage.removeItem('myAppUser'); } catch (e) {}
+                        showMsg(HELD_MSG);
+                        renderSavedAccounts();
+                        return;
+                    }
                     if (data && data.length > 0) {
                         localStorage.setItem('myAppUser', JSON.stringify(data[0]));
                         window.location.replace("app.html");
@@ -237,7 +245,21 @@
             // و فۆڕمەکە دەردەکەوێت
             document.documentElement.classList.remove('is-booting');
             renderSavedAccounts();
+            showLogoutReason();
         });
+
+        // ئەگەر `app.html` دەریکردبێت (ڕاگرتن، گۆڕینی پاسوۆرد، سڕینەوەی
+        // کلیل)، هۆکارەکەی لە `sessionStorage` جێهێشتووە. بەبێ ئەمە
+        // بەکارهێنەر خۆی لە پەڕەی چوونەژوورەوە دەبینێتەوە بێ ئەوەی
+        // بزانێت بۆچی — و دووبارە هەوڵ دەداتەوە.
+        function showLogoutReason() {
+            let why = '';
+            try {
+                why = sessionStorage.getItem('logoutReason') || '';
+                sessionStorage.removeItem('logoutReason');
+            } catch (e) { }
+            if (why) showMsg(why);
+        }
 
         // ============ ئەکاونتە پاشەکەوتکراوەکان (Facebook-style) ============
         function getSavedAccounts() {
@@ -296,6 +318,7 @@
             await ensureSupabaseLoaded();
             try {
                 const { data } = await supabase.from('employees').select('*').eq('code', code).single();
+                if (data && isHeld(data)) { showMsg(HELD_MSG); return; }
                 if (data) {
                     localStorage.setItem('myAppUser', JSON.stringify(data));
                     saveAccountToList(data);
@@ -390,13 +413,37 @@
 
             // پاشەکەوت: ئەگەر RPCەکە بەردەست نەبوو
             const { data } = await supabase.from('employees')
-                .select('full_name, avatar, role, password').eq('code', code).limit(1);
+                .select('full_name, avatar, role, password, suspended').eq('code', code).limit(1);
             if (!data || !data.length) return null;
             const u = data[0];
             return {
                 full_name: u.full_name, avatar: u.avatar, role: u.role,
-                needs_password: String(u.password == null ? '' : u.password).trim() === ''
+                needs_password: String(u.password == null ? '' : u.password).trim() === '',
+                suspended: !!u.suspended
             };
+        }
+
+        // ============================================================
+        // ⛔ ئەکاونتی ڕاگیراو (db/049)
+        // ------------------------------------------------------------
+        // پاشا لە پەڕەی ئەدمین ئەکاونتێک ڕادەگرێت. لەو ساتەوە **هیچ**
+        // دەرگایەک ناکرێتەوە. ئەم پەڕەیە چوار دەرگای هەیە، و هەر
+        // چوارەکیان دەبێت هەمان پشکنین بکەن:
+        //
+        //   ١) فۆڕمی کۆد + پاسوۆرد   (`performLogin`)
+        //   ٢) دانانی پاسوۆردی یەکەم (`submitFirstPassword`)
+        //   ٣) ئەکاونتە پاشەکەوتکراوەکان (`quickLogin`)
+        //   ٤) ناسینەوەی خۆکاری تلیگرام (`DOMContentLoaded`)
+        //
+        //   دەرگای پێنجەم — ڕیدایرێکتی خێرای `localStorage` — پشکنینی
+        //   تۆڕی نییە بە ئەنقەست (بڕوانە `fastAuthRedirect`). ئەو
+        //   ڕێگایە لە `app.html`ـەوە دادەخرێت: `ensureAccountActive`
+        //   پێش هەموو شتێک کاردەکات و یەکسەر دەرت دەکات.
+        // ============================================================
+        const HELD_MSG = "⛔ ئەم ئەکاونتە ڕاگیراوە. پەیوەندی بە بەڕێوەبەرایەتییەوە بکە.";
+
+        function isHeld(rowOrInfo) {
+            return !!(rowOrInfo && rowOrInfo.suspended);
         }
 
         async function checkLoginCode(code) {
@@ -409,6 +456,14 @@
                 if (seq !== codeCheckSeq) return;   // کۆدەکە گۆڕاوە — وەڵامی کۆنە
 
                 if (!info) { setCodeStatus(ICON_ERR + " ئەم کۆدە بوونی نییە", 'err'); return; }
+
+                // ڕاگیراو → یەکسەر بیڵێ. ئەگەرنا بەکارهێنەر پاسوۆردێکی
+                // ڕاست دەنووسێت و ڕەتکردنەوەیەکی بێ‌هۆکار وەردەگرێت.
+                if (isHeld(info)) {
+                    if (typeof exitSetupMode === 'function') exitSetupMode();
+                    setCodeStatus(ICON_ERR + " ئەم ئەکاونتە ڕاگیراوە", 'err');
+                    return;
+                }
 
                 if (info.needs_password) {
                     enterSetupMode(code, info);
@@ -566,6 +621,11 @@
                 const info = await fetchCodeStatus(setupUser.code);
                 if (!info) {
                     if (msg) { msg.className = 'pwc-msg err'; msg.innerHTML = ICON_ERR + " ئەم کۆدە ئیتر بوونی نییە"; }
+                    return;
+                }
+                if (isHeld(info)) {
+                    exitSetupMode();
+                    showMsg(HELD_MSG);
                     return;
                 }
                 if (!info.needs_password) {
@@ -740,6 +800,17 @@
                 }
 
                 let user = users[0];
+
+                // ⛔ ڕاگیراو → نە چوونەژوورەوە، نە دانانی پاسوۆرد.
+                //    پێش بەراوردی پاسوۆرد دەبێت، ئەگەرنا پاسوۆردێکی
+                //    ڕاست تۆمارەکە دەگۆڕێت پێش ڕەتکردنەوە.
+                if (isHeld(user)) {
+                    btn.innerHTML = "<span class='button-text'>چوونە ژوورەوە</span><div class='button-glow'></div>";
+                    btn.disabled = false;
+                    showMsg(HELD_MSG);
+                    return;
+                }
+
                 let tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
                 let tgId = tgUser ? String(tgUser.id) : null;
                 let tgUsername = tgUser ? (tgUser.username || "") : "";
@@ -768,6 +839,15 @@
                     if (!updateError) {
                         user.password = pass;
                         if(tgId) user.telegram_id = tgId;
+                        // ⭐ دانانی پاسوۆرد `session_epoch` بەرز دەکاتەوە
+                        //    (تریگەری db/049). ئەگەر تۆمارە کۆنەکە
+                        //    خەزن بکرێت، `app.html` یەکسەر دەریدەکات
+                        //    وەک «دانیشتنێکی بەسەرچوو».
+                        try {
+                            const { data: fresh } = await supabase.from('employees')
+                                .select('*').eq('code', code).single();
+                            if (fresh) user = fresh;
+                        } catch (e) {}
                         localStorage.setItem('myAppUser', JSON.stringify(user));
                         showMsg("✅ وشەی نهێنیت بۆ دانرا! لەمەودوا بەم وشەیە دەچیتە ژوورەوە.");
                         maybeSaveAccount(user);

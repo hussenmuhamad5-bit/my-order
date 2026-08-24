@@ -976,6 +976,44 @@
                             </div>
                         </div>
 
+                        <!-- ڕاگرتنی ئەکاونت — تەنها پاشا (db/049).
+                             کرتەکردن یەکسەر دەینووسێت، نەک لەگەڵ دوگمەی
+                             پاشەکەوتکردن — کردارێکی ئاسایشە و نابێت
+                             بەهەڵە لەگەڵ گۆڕانکارییەکی تردا بچێت. -->
+                        <div id="wrapper-e-suspend" style="display:none;">
+                            <label>ڕاگرتنی ئەکاونت</label>
+                            <div class="acc-hold" id="e-suspend-box">
+                                <i class='bx bx-shield-quarter acc-hold-ic' id="e-suspend-ic"></i>
+                                <div class="acc-hold-txt">
+                                    <b id="e-suspend-title">ئەکاونتەکە چالاکە</b>
+                                    <span id="e-suspend-sub">دەتوانێت بچێتە ژوورەوە</span>
+                                </div>
+                                <label class="switch sm">
+                                    <input type="checkbox" id="e-suspend" onchange="toggleAccountHold(this)">
+                                    <div class="slider">
+                                        <div class="circle"><svg class="cross" viewBox="0 0 24 24" fill="none"
+                                                stroke="currentColor" stroke-width="4">
+                                                <line x1="18" y1="6" x2="6" y2="18"></line>
+                                                <line x1="6" y1="6" x2="18" y2="18"></line>
+                                            </svg><svg class="checkmark" viewBox="0 0 24 24" fill="none"
+                                                stroke="currentColor" stroke-width="4">
+                                                <polyline points="20 6 9 17 4 12"></polyline>
+                                            </svg></div>
+                                    </div>
+                                </label>
+                            </div>
+                            <div class="hint-tip" id="e-suspend-hint">
+                                <button type="button" class="hint-tip-btn" aria-expanded="false"
+                                    aria-label="زانیاری زیاتر" onclick="toggleHintTip(this)"><i
+                                        class='bx bx-info-circle'></i></button>
+                                <div class="hint-tip-body">
+                                    <p>ئەکاونتی ڕاگیراو لە هەر ئامێرێک کراوە بێت یەکسەر دادەخرێت، و ناتوانێت
+                                        بگەڕێتەوە ژوورەوە — تەنانەت بە کۆد و پاسوۆردی ڕاستیشەوە. داتا و
+                                        ئۆردەرەکانی وەک خۆیان دەمێننەوە.</p>
+                                </div>
+                            </div>
+                        </div>
+
                         <!-- چوونەژوورەوە بەم ئەکاونتە — تەنها بۆ خاوەنی دەسەڵاتی login_as -->
                         <div id="wrapper-e-loginas" style="display:none;">
                             <button type="button" class="btn login-as-btn" onclick="loginAsEditedUser()">
@@ -2801,10 +2839,38 @@
         // ============ پشکنینی چالاکی ئەکاونت و دەسەڵات (ئاسایش) ============
         // دەرچواندنی بەکارهێنەر و گەڕانەوە بۆ پەڕەی چوونەژوورەوە (کاتێک کلیل سڕایەوە)
         let _accountLockedOut = false;
+
+        // ============================================================
+        // ڕاگرتنی ئەکاونت + بەسەرچوونی دانیشتن (db/049)
+        // ------------------------------------------------------------
+        // دوو هۆکار هەیە بۆ ئەوەی ئەکاونتێک لە هەموو ئامێرەکان
+        // دەربکرێت:
+        //
+        //   ١) پاشا ڕایگرتووە (`suspended`) — نە دەکرێتەوە و نە
+        //      دەچێتەوە ژوورەوە، تەنانەت بە کۆد و پاسوۆردی ڕاست.
+        //   ٢) پاسوۆردەکەی گۆڕاوە (`session_epoch` بەرز بووەتەوە) —
+        //      ئەم ئامێرە پاسوۆردی کۆنی پێیە، بۆیە دەربچێت.
+        //
+        // ژمێرەرەکە بە **تریگەر** بەرز دەبێتەوە، بۆیە هەر ڕێگایەک بۆ
+        // گۆڕینی پاسوۆرد هەمان کاریگەری هەیە. ئەو ئامێرەی خۆی
+        // گۆڕیویەتی ژمارە نوێیەکە لە خۆی دەنووسێتەوە و دەمێنێتەوە.
+        // ============================================================
+        const SUSPENDED_MSG = "⛔ ئەم ئەکاونتە ڕاگیراوە. پەیوەندی بە بەڕێوەبەرایەتییەوە بکە.";
+        const STALE_SESSION_MSG = "🔑 پاسوۆردی ئەم ئەکاونتە گۆڕاوە — بە پاسوۆردە نوێیەکە بچۆرەوە ژوورەوە.";
+
+        // هۆکاری دەرچوون دەگوازرێتەوە بۆ `index.html`، ئەگەرنا
+        // بەکارهێنەر لە پەڕەی چوونەژوورەوە دەبێت بێ ئەوەی بزانێت
+        // بۆچی دەرکرا — و دووبارە هەوڵ دەداتەوە.
+        function stashLogoutReason(msg) {
+            if (!msg) return;
+            try { sessionStorage.setItem('logoutReason', msg); } catch (e) { }
+        }
+
         function forceLogout(msg) {
             if (_accountLockedOut) return;
             _accountLockedOut = true;
             try { localStorage.removeItem('myAppUser'); } catch (e) { }
+            stashLogoutReason(msg);
             if (msg) { try { showToast(msg, "error"); } catch (e) { } }
             setTimeout(() => { window.location.replace("index.html"); }, 900);
         }
@@ -2822,10 +2888,26 @@
                     forceLogout("⚠️ ئەم کلیلە سڕاوەتەوە! ناتوانیت بەردەوام بیت.");
                     return false;
                 }
+                let rec = data[0];
+
+                // ⭐ ئەم دوو پشکنینە **پێش** نوێکردنەوەی `currentUser`ن.
+                //    ئەگەر دوایان بکەویت، ژمێرەری کۆنی سەر ئامێرەکە
+                //    لەناودەچێت و بەراوردەکە هەرگیز جیاوازی نادۆزێتەوە.
+                if (rec.suspended) {
+                    forceLogout(SUSPENDED_MSG);
+                    return false;
+                }
+                // ژمێرەرەکە تەنها بەرز دەبێتەوە. `undefined` (تۆماری
+                // پێش db/049) وەک ٠ دەژمێردرێت لە هەردوو لاوە، بۆیە
+                // لە کاتی جێبەجێکردنی کۆچەکەدا هیچ کەس دەرناکرێت.
+                if (Number(rec.session_epoch || 0) > Number((currentUser && currentUser.session_epoch) || 0)) {
+                    forceLogout(STALE_SESSION_MSG);
+                    return false;
+                }
+
                 // نوێکردنەوەی زانیاری ئەکاونت (ڕۆڵ، دەسەڵات، ناو، وێنە) بە نوێترین دۆخی داتابەیس
                 let oldPermsStr = JSON.stringify(currentUser ? currentUser.permissions : null);
                 let oldRole = userRole;
-                let rec = data[0];
                 rec.role = normalizeRole(rec.role);
                 currentUser = rec;
                 userRole = currentUser.role;
@@ -2951,6 +3033,9 @@
         let myTeamCodesSet = new Set(); // کۆدی هەموو ئەندامانی تیمی بەڕێوەبەرەکەم (بێ خۆم)
         let myLineCodesSet = new Set(); // تەنها لقی ستوونی خۆم: باوان + خۆم + ژێرەکانم
         let roleByCode = {};         // کۆد → پلە (بۆ سنووری پلە)
+        // ئایا `allEmployeesLite` تەواوی خشتەکەی تێدایە؟ `loadHierarchyUsers`
+        // پێویستی پێیەتی: بەبێ دارەی تەواو ناتوانێت تیمەکە بپاڵێوێت.
+        let teamScopeLoaded = false;
 
         // «تیم» = تەواوی ژێردەستەکانی بەڕێوەبەری سەرووی من (ڕەگی تیم).
         // بۆیە ڕاوێژکارێک کە بەڕێوەبەر دروستی کردوو، تەواوی تیمی ئەو بەڕێوەبەرە دەبینێت.
@@ -3077,6 +3162,7 @@
                     .select('code,creator,role,manager,admin,consultant,full_name');
                 if (data) {
                     allEmployeesLite = data;
+                    teamScopeLoaded = true;
                     buildEmpIndex();
                     if (!isKing) computeMyTeam();
                 }
@@ -4462,8 +4548,21 @@
                     .update({ password: nw }).eq('code', currentUser.code);
                 if (upErr) throw upErr;
 
+                // ⭐ گۆڕینی پاسوۆرد `session_epoch` بەرز دەکاتەوە (db/049)،
+                //    واتا هەموو ئامێرەکانی تر دەردەکرێن. بەڵام **ئەم**
+                //    ئامێرە نا — بۆیە ژمارە نوێیەکە لێرەوە دەخوێندرێتەوە.
+                //    بەبێ ئەمە، خاوەنی ئەکاونتەکە خۆی لە ئەپەکە دەردەکرد
+                //    ئەو ساتەی پاسوۆردەکەی دەگۆڕی.
+                let newEpoch = null;
+                try {
+                    const { data: fresh } = await supabase.from('employees')
+                        .select('session_epoch').eq('code', currentUser.code).single();
+                    if (fresh) newEpoch = fresh.session_epoch;
+                } catch (e) { console.warn('epoch refresh:', e); }
+
                 // ئەکاونتی ناو ئامێرەکە نوێ دەکرێتەوە تا دەرنەچێت
                 currentUser.password = nw;
+                if (newEpoch != null) currentUser.session_epoch = newEpoch;
                 try { localStorage.setItem('myAppUser', JSON.stringify(currentUser)); } catch (e) { }
                 try { saveAccountToList(currentUser); } catch (e) { }
 
@@ -7293,6 +7392,7 @@
                             full_name: e.full_name,
                             role: e.role
                         }));
+                        teamScopeLoaded = true;
                         buildEmpIndex();
                         // هەمان داتا بۆ بۆکسی فرۆشیار خەزن دەکرێت، بۆ ئەوەی
                         // کردنەوەی ئۆردەرێک هیچ داواکارییەکی نوێی نەوێت
@@ -15688,6 +15788,13 @@
                         }
                         return;
                     }
+                    // ڕووداوی ئەکاونت لە ماوەی دوورکەوتنەوەدا (db/049)
+                    if (e.entity === 'account') {
+                        if (currentUser && String(e.entity_id || '') === String(currentUser.code)) {
+                            try { ensureAccountActive(); } catch (err) { }
+                        }
+                        return;
+                    }
                     const withId = (e.entity === 'orders' || e.entity === 'order_comments');
                     scheduleRealtimeRefresh(e.entity, withId ? e.entity_id : null);
                 });
@@ -15834,6 +15941,15 @@
                             if (e.entity === 'notifications') {
                                 if (!currentUser || String(e.entity_id || '') !== String(currentUser.code)) return;
                                 scheduleRealtimeRefresh('notifications');
+                                return;
+                            }
+                            // ⭐ ڕاگرتنی ئەکاونت / گۆڕینی پاسوۆرد (db/049)
+                            //    ئەمە **هەرگیز** دوا ناخرێت: مەبەست ئەوەیە
+                            //    ئامێرەکە یەکسەر دابخرێت، نەک دوای
+                            //    ٦٠ چرکەی پشکنینی دوورەپەڕ.
+                            if (e.entity === 'account') {
+                                if (!currentUser || String(e.entity_id || '') !== String(currentUser.code)) return;
+                                try { ensureAccountActive(); } catch (err) { }
                                 return;
                             }
                             // کۆمێنتەکانیش ناسنامەی ئۆردەر دەنێرن —
@@ -19824,11 +19940,42 @@
         let allEditableUsers = [];
 
         // ١. هێنانەوەی ناوەکان بە زیرەکی (پاڵاوتنی سێرڤەر)
-        async function loadHierarchyUsers() {
+        //
+        // ⭐ پاڵاوتنەکە بە **دارەی دەسەڵات**ە (`myTeamCodesSet`)، نەک
+        //    بە `creator` و نەک بە باوکی ڕاستەوخۆ.
+        //
+        //    پێشتر دوو پاڵاوتن هەبوون و هەردووکیان تەنها **یەک ئاست**یان
+        //    دەبینی:
+        //        سێرڤەر:  creator = من  یان  manager = ناوم/کۆدم
+        //        کڵاینت:  dbCreator === myCode || dbManager === myName
+        //                 || dbManager === dbCode      ← ⚠️ هەڵە بوو
+        //    ئەو پشکنینە کۆتاییە هەرگیز ڕاست نەدەبووەوە («باوکی خۆی
+        //    خۆیەتی») — بەڵام `myCode`ی مەبەست بوو.
+        //
+        //    ئەنجام: هەر ئەندامێک کە گوازرابێتەوە (`manager` گۆڕدرابێت
+        //    بەڵام `creator` نەگۆڕدرابێت) لە هەر سێ لیستەکەی ئەم شاشەیە
+        //    ون دەبوو بۆ بەڕێوەبەری **نوێ** — جزدانەکان، قازانج و
+        //    چاکسازی — لەکاتێکدا بەڕێوەبەری **کۆن** هێشتا دەیبینی و
+        //    دەیتوانی دەستکاری بکات. پێوانەی ڕاستەقینە (٢٠٢٦-٠٨-٢٤،
+        //    ٢٨١ کارمەند): لارین ٧٣ کەسی تیمی هەبوو بەڵام تەنها ٧١ی
+        //    دەبینی؛ نیان ٢٥ی هەبوو و ٥ی ون بوو؛ بەگشتی ١٢ کەس.
+        //
+        //    ئێستا هەردوو پاڵاوتنەکە هەمان سەرچاوە بەکاردەهێنن کە
+        //    ئۆردەرەکان و دەسەڵاتی جزدان بەکاریدەهێنن — واتا لیستەکان و
+        //    `canViewWallet` هەرگیز لێک جیا نابنەوە.
+        //
+        // refreshTree = دارەکە دووبارە بهێنەوە پێش پاڵاوتن. تەنها لەو
+        // شوێنانەدا پێویستە کە دارەکە دەگۆڕن (دروستکردن/دەستکاری/
+        // سڕینەوەی کلیل) — نەک دوای جووڵەی جزدان و مووچە.
+        async function loadHierarchyUsers(refreshTree) {
             try {
                 let myCode = String(creatorCode).trim();
-                let myName = String(userName).trim();
                 let myRole = String(userRole).trim();
+
+                // پاشا هەموو خشتەکە دەبینێت، بۆیە پێویستی بە دارە نییە
+                if (myRole !== "پاشا" && (refreshTree || !teamScopeLoaded)) {
+                    await loadTeamScope();
+                }
 
                 // ⚠️ `permissions` بە ئەنقەست نەهێنراوە.
                 //
@@ -19844,11 +19991,17 @@
                 let query = supabase.from('employees').select(
                     'code, full_name, role, manager, admin, consultant, creator, date,' +
                     ' telegram_status, telegram_id, telegram_username, telegram_name,' +
-                    ' balance, savings, profit_rate, avatar, receipt_name, postal_code, password'
+                    ' balance, savings, profit_rate, avatar, receipt_name, postal_code, password,' +
+                    // ڕاگرتنی ئەکاونت (db/049) — باجی لیستی کلیلەکان و
+                    // دۆخی سویچەکە لێرەوە دێن، بەبێ داواکارییەکی زیادە
+                    ' suspended, suspended_at, suspended_by'
                 );
 
                 if (myRole !== "پاشا") {
-                    query = query.or(`creator.eq.${myCode},manager.eq.${myName},manager.eq.${myCode}`);
+                    // تەواوی دارەکەم + خۆم. `myTeamCodesSet` خۆم لەخۆ ناگرێت.
+                    // ~٧٤ کۆد ≈ ٦٠٠ پیت لە URLـەکەدا — قەبارەی وەڵامەکە
+                    // وەک جاران دەمێنێتەوە (تەنها تیمەکەم، نەک ٢٨١ ڕیز).
+                    query = query.in('code', [myCode, ...myTeamCodesSet].filter(Boolean));
                 }
 
                 const { data: users, error } = await query;
@@ -19862,15 +20015,14 @@
                 users.forEach(u => {
                     let dbName = String(u.full_name || "").trim();
                     let dbCode = String(u.code || "").trim();
-                    let dbCreator = String(u.creator || "").trim();
-                    let dbManager = String(u.manager || "").trim();
                     // نۆرمالایزکردنی ناوی کۆنی ڕۆڵ → نوێ (تا داتابەیس مایگرەیت نەکراوە کار بکات)
                     let dbRole = normalizeRole(String(u.role || "").trim());
                     u.role = dbRole;
 
                     if (!dbName || !dbCode) return;
 
-                    let isMyUser = (myRole === "پاشا" || dbCreator === myCode || dbManager === myName || dbManager === dbCode);
+                    // هەمان پێوەری ئۆردەر و جزدان — نەک `creator`
+                    let isMyUser = (myRole === "پاشا" || isInMyTeam(dbCode));
 
                     if (dbRole === "بەڕێوەبەر" && myRole === "پاشا") {
                         availableManagers.push({ name: dbName, code: dbCode });
@@ -20237,11 +20389,119 @@
             const codeEl = document.getElementById('e-code');
             if (codeEl) codeEl.value = (user && user.code) ? String(user.code) : '';
 
+            const isSelf = !!(user && currentUser && user.code === currentUser.code);
+
             const laWrap = document.getElementById('wrapper-e-loginas');
             if (laWrap) {
                 // ناتوانیت بچیتە ناو ئەکاونتی خۆت — ئێستا تێیدایت
-                const isSelf = !!(user && currentUser && user.code === currentUser.code);
                 laWrap.style.display = (can('login_as') && user && user.code && !isSelf) ? 'block' : 'none';
+            }
+
+            // ڕاگرتنی ئەکاونت — تەنها پاشا، و هەرگیز لەسەر خۆی
+            // (ئەگەرنا پاشا خۆی لە ئەپەکە دەردەکات و ڕێگای گەڕانەوە
+            //  نامێنێت — هیچ ئەکاونتێکی تر ناتوانێت بیکاتەوە)
+            const susWrap = document.getElementById('wrapper-e-suspend');
+            if (susWrap) {
+                const canHold = (userRole === 'پاشا') && !!(user && user.code) && !isSelf;
+                susWrap.style.display = canHold ? 'block' : 'none';
+                if (canHold) renderAccountHold(user);
+            }
+        }
+
+        // ============================================================
+        // ڕاگرتنی ئەکاونت (db/049) — تەنها پاشا
+        // ------------------------------------------------------------
+        // ئەکاونتی ڕاگیراو:
+        //   • لە هەر ئامێرێک کراوە بێت یەکسەر دادەخرێت (realtime)
+        //   • ناتوانێت بگەڕێتەوە ژوورەوە — نە بە فۆڕم، نە بە
+        //     ئەکاونتی پاشەکەوتکراو، نە بە تلیگرام، نە بە
+        //     «چوونەژوورەوە بەم ئەکاونتە»
+        // داتا و ئۆردەرەکانی هیچیان دەست لێ نادرێت.
+        // ============================================================
+        function renderAccountHold(user) {
+            const on = !!(user && user.suspended);
+            const box = document.getElementById('e-suspend-box');
+            const chk = document.getElementById('e-suspend');
+            const ic = document.getElementById('e-suspend-ic');
+            const ttl = document.getElementById('e-suspend-title');
+            const sub = document.getElementById('e-suspend-sub');
+            if (chk) chk.checked = on;
+            if (box) box.classList.toggle('is-held', on);
+            if (ic) ic.className = 'bx acc-hold-ic ' + (on ? 'bx-shield-x' : 'bx-shield-quarter');
+            if (ttl) ttl.innerText = on ? 'ئەکاونتەکە ڕاگیراوە' : 'ئەکاونتەکە چالاکە';
+            if (!sub) return;
+            if (!on) { sub.innerText = 'دەتوانێت بچێتە ژوورەوە'; return; }
+            // کێ و کەی — لە تریگەرەوە دێت، نەک لە کاتژمێری مۆبایل
+            const byName = user.suspended_by ? (nameOfCode(user.suspended_by) || user.suspended_by) : '';
+            // ⚠️ بەروار و کات ناوەڕۆکێکی LTRن لەناو دەقێکی RTLدا —
+            //    بەبێ ئایسۆلەیت، «٢٠٢٦-٠٨-٢٥ ٠٠:١٧» پێچەوانە دەبێتەوە
+            //    و کات پێش بەروار دەردەکەوێت. بڕوانە داوی ٣ لە landmines.
+            const when = user.suspended_at ? ('⁦' + formatHoldDate(user.suspended_at) + '⁩') : '';
+            sub.innerText = 'ڕاگیراوە' + (when ? ' · ' + when : '') + (byName ? ' · لەلایەن ' + byName : '');
+        }
+
+        function nameOfCode(code) {
+            const e = (typeof empByCode === 'function') ? empByCode(code) : null;
+            if (e && e.full_name) return firstNameOf(e.full_name);
+            const u = (allEditableUsers || []).find(x => x.code === code);
+            return u ? firstNameOf(u.name) : '';
+        }
+
+        function formatHoldDate(iso) {
+            try {
+                const d = new Date(iso);
+                if (isNaN(d)) return '';
+                const p = n => String(n).padStart(2, '0');
+                return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+            } catch (e) { return ''; }
+        }
+
+        async function toggleAccountHold(el) {
+            const want = !!(el && el.checked);
+            const user = _editingUser;
+            // سویچەکە هەمیشە دەگەڕێتەوە سەر دۆخی داتابەیس؛ تەنها
+            // پاشەکەوتکردنێکی سەرکەوتوو دەیگۆڕێت
+            const revert = () => renderAccountHold(user);
+
+            if (userRole !== 'پاشا') { showToast("تەنها پاشا دەتوانێت ئەکاونت ڕابگرێت!", "error"); revert(); return; }
+            if (!user || !user.code) { showToast("هیچ کلیلێک هەڵنەبژێردراوە", "error"); revert(); return; }
+            if (currentUser && user.code === currentUser.code) {
+                showToast("ناتوانیت ئەکاونتی خۆت ڕابگریت!", "error"); revert(); return;
+            }
+            if (!await ensureAccountActive()) return;
+
+            const nm = user.full_name || user.code;
+            const ask = want
+                ? `ئەکاونتی «${nm}» ڕابگیرێت؟\n\n• لە هەر ئامێرێک کراوە بێت یەکسەر دادەخرێت\n• ناتوانێت بگەڕێتەوە ژوورەوە، تەنانەت بە پاسوۆردی ڕاست\n\nداتا و ئۆردەرەکانی دەمێننەوە.`
+                : `ئەکاونتی «${nm}» بکرێتەوە؟\n\nدەتوانێت دووبارە بچێتە ژوورەوە بە هەمان کۆد و پاسوۆرد.`;
+            if (!confirm(ask)) { revert(); return; }
+
+            showToast(want ? "ڕاگرتن..." : "کردنەوە...", "loading");
+            try {
+                // `suspended_at` لە تریگەرەوە دادەنرێت (db/049) — کاتژمێری
+                // ئامێر متمانەی پێ ناکرێت بۆ تۆمارێکی ئاسایش
+                const patch = want
+                    ? { suspended: true, suspended_by: String(currentUser.code) }
+                    : { suspended: false };
+                const { error } = await supabase.from('employees').update(patch).eq('code', user.code);
+                if (error) throw error;
+
+                // تۆمارە نوێیەکە دەهێنرێتەوە — `suspended_at` و
+                // `session_epoch` لە سێرڤەرەوە هاتوون
+                const { data } = await supabase.from('employees')
+                    .select('suspended, suspended_at, suspended_by').eq('code', user.code).single();
+                if (data) Object.assign(user, data);
+
+                // هەمان تۆمار لە لیستەکەدا — تا باجەکە یەکسەر دەربکەوێت
+                const row = (allEditableUsers || []).find(x => x.code === user.code);
+                if (row && row.data) Object.assign(row.data, { suspended: !!user.suspended });
+
+                renderAccountHold(user);
+                showToast(want ? `ئەکاونتی «${nm}» ڕاگیرا` : `ئەکاونتی «${nm}» کرایەوە`, "success");
+            } catch (e) {
+                console.error('toggleAccountHold:', e);
+                showToast("کێشەیەک ڕوویدا — دۆخەکە نەگۆڕا", "error");
+                revert();
             }
         }
 
@@ -20269,6 +20529,9 @@
             try {
                 const { data } = await supabase.from('employees').select('*').eq('code', code).single();
                 if (!data) { showToast("ئەم ئەکاونتە ئیتر بوونی نییە!", "error"); return; }
+                // ⛔ ئەکاونتی ڕاگیراو بە هیچ دەرگایەک ناکرێتەوە — ئەمەش
+                //    دەرگایەکە (db/049)
+                if (data.suspended) { showToast("⛔ ئەم ئەکاونتە ڕاگیراوە — ناکرێتەوە.", "error"); return; }
 
                 // ئەکاونتی ئێستا هەمیشە پاشەکەوت دەکرێت — ئەگەرنا ڕێگەی گەڕانەوە نامێنێت
                 if (currentUser) saveAccountToList(currentUser);
@@ -20455,7 +20718,7 @@
 
                 document.getElementById('admin-screen-content').style.display = 'none';
                 document.getElementById('admin-loading-spinner').style.display = 'flex';
-                await loadHierarchyUsers();
+                await loadHierarchyUsers(true);   // کلیلی نوێ → دارەکە گۆڕا
                 document.getElementById('admin-loading-spinner').style.display = 'none';
                 document.getElementById('admin-screen-content').style.display = 'flex';
             } catch (err) {
@@ -20546,6 +20809,21 @@
                 let { error } = await supabase.from('employees').update(updateData).eq('code', code);
                 if (error) throw error;
 
+                // ⭐ گۆڕینی پاسوۆرد هەموو دانیشتنەکانی ئەو کەسە دەکوژێت
+                //    (db/049) — ئەوەشی خۆم، ئەگەر کلیلی خۆم بێت. بۆیە
+                //    ژمێرەری نوێ لێرەوە دەخوێندرێتەوە، ئەگەرنا پاشا لە
+                //    یەکەم پشکنینی دوورەپەڕدا خۆی دەردەکرد.
+                if (passChanged && currentUser && String(code) === String(currentUser.code)) {
+                    try {
+                        const { data: fresh } = await supabase.from('employees')
+                            .select('session_epoch').eq('code', code).single();
+                        if (fresh) {
+                            currentUser.session_epoch = fresh.session_epoch;
+                            localStorage.setItem('myAppUser', JSON.stringify(currentUser));
+                        }
+                    } catch (e) { console.warn('epoch refresh:', e); }
+                }
+
                 showToast(passChanged ? "نوێکرایەوە — پاسوۆردیش گۆڕدرا!" : "بە سەرکەوتوویی نوێکرایەوە!", "success");
                 _editingUser = null;
                 document.getElementById('edit-section').style.display = "none";
@@ -20555,8 +20833,9 @@
 
                 document.getElementById('admin-screen-content').style.display = 'none';
                 document.getElementById('admin-loading-spinner').style.display = 'flex';
-                await loadHierarchyUsers();
-                filterEditUsers();
+                await loadHierarchyUsers(true);   // ⭐ گواستنەوە لێرەوە دەکرێت — دارەکە دەبێت
+                filterEditUsers();               //    یەکسەر نوێ بێتەوە، ئەگەرنا کەسە
+                                                 //    گوازراوەکە هەر ون دەمێنێتەوە تا ڕیفرێش
                 document.getElementById('admin-loading-spinner').style.display = 'none';
                 document.getElementById('admin-screen-content').style.display = 'flex';
                 // گەڕانەوە بۆ هەمان شوێنی پێشووی لیستی کلیلەکان (دوای دیارکەوتنەوەی ناوەڕۆک)
@@ -20581,8 +20860,14 @@
                 let target = null;
                 try { const { data } = await supabase.from('employees').select('code,creator,password,balance,savings').eq('code', code); target = data && data[0]; } catch (e) { }
                 if (!target) { showToast("کلیلەکە نەدۆزرایەوە", "error"); return; }
-                // تەنها کلیلی خۆی دروستکردوو (یان دەسەڵاتی کلیلی هەموان)
-                let mineOrAll = permOn('manage_all_keys') || target.creator === currentUser.code || myTeamCodesSet.has(code);
+                // تەنها کلیلی ناو تیمی خۆم (یان دەسەڵاتی کلیلی هەموان)
+                // ⚠️ پێشتر `target.creator === currentUser.code`ـیش لێرە بوو.
+                //    ئەوە دەرگایەکی کۆن بوو: دوای گواستنەوەی ئەندامێک،
+                //    بەڕێوەبەری **کۆن** هێشتا دەیتوانی بیسڕێتەوە. ئێستا
+                //    تەنها دارەی دەسەڵات بڕیار دەدات — وەک ئۆردەر و جزدان.
+                //    (کلیلی نوێ دروستکراو یەکسەر دەگاتە دارەکە، چونکە
+                //     `loadHierarchyUsers(true)` دوای دروستکردن دەیهێنێتەوە.)
+                let mineOrAll = permOn('manage_all_keys') || isInMyTeam(code);
                 if (!mineOrAll) { showToast("تەنها کلیلی خۆت دروستکردوو دەسڕێتەوە!", "error"); return; }
                 // ئەگەر دەسەڵاتی سڕینەوەی کلیلی نەبوو → تەنها کلیلی بەکارنەهاتوو (بێ پاسوۆرد، بێ ئۆردەر، بێ پارە)
                 if (!permOn('delete_key') && !permOn('manage_all_keys')) {
@@ -20642,7 +20927,7 @@
 
                     document.getElementById('admin-screen-content').style.display = 'none';
                     document.getElementById('admin-loading-spinner').style.display = 'flex';
-                    await loadHierarchyUsers();
+                    await loadHierarchyUsers(true);   // کلیل سڕایەوە → دارەکە گۆڕا
                     filterEditUsers();
                     document.getElementById('admin-loading-spinner').style.display = 'none';
                     document.getElementById('admin-screen-content').style.display = 'flex';
@@ -22883,12 +23168,15 @@
                 let loginBtn = (showLoginAs && u.code !== myCode)
                     ? `<button title="چوونەژوورەوە بەم ئەکاونتە" onclick="loginAsFromList('${u.code}', event)" style="background:#f1f5f9; border:1px solid #e2e8f0; color:#475569; width:34px; height:34px; border-radius:9px; display:flex; align-items:center; justify-content:center; font-size:19px; cursor:pointer; flex-shrink:0; padding:0;"><i class='bx bx-log-in-circle'></i></button>`
                     : '';
+                // ئەکاونتی ڕاگیراو (db/049) — دەبێت لە لیستەکەوە دیار
+                // بێت، ئەگەرنا پاشا دەبێت هەریەکەیان بکاتەوە تا بزانێت
+                let held = !!(u.data && u.data.suspended);
                 return `
-                    <div style="background:#fff; border:1px solid #e2e8f0; padding:12px; border-radius:10px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; cursor:pointer; transition:0.2s;" onclick="openEditFromList('${u.code}')">
+                    <div class="${held ? 'ekey-held' : ''}" style="background:#fff; border:1px solid #e2e8f0; padding:12px; border-radius:10px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; cursor:pointer; transition:0.2s;" onclick="openEditFromList('${u.code}')">
                         <div style="display:flex; align-items:center; gap:10px; min-width:0;">
                             ${avatarHtml(u.data.avatar, u.name, 40, u.code)}
                             <div style="min-width:0;">
-                                <strong style="color:#1e293b; font-size:14px;">${u.name}</strong><br>
+                                <strong style="color:#1e293b; font-size:14px;">${u.name}</strong>${held ? ` <span class="held-badge"><i class='bx bx-shield-x'></i>ڕاگیراو</span>` : ''}<br>
                                 <span style="font-size:11px; color:#64748b; font-family:monospace;">${u.code}</span>
                             </div>
                         </div>
