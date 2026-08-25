@@ -695,6 +695,26 @@
             </div>
         </div>
 
+        <!-- ============================================================
+             شریتی «ئەم ئۆردەرە کاتداری بۆ دانراوە»
+             ------------------------------------------------------------
+             ⚠️ کاتەکە **دەمێنێتەوە** ئەگەر ناردنەکە شکستی هێنا (خانەیەکی
+                پڕنەکراوە). بەبێ ئەم شریتە بەکارهێنەر نایزانێت کە هێشتا
+                کاتدارە، و بە هەڵە وا دەزانێت ئۆردەرەکەی دەستبەجێ دەچێت.
+                داواکاریی خاوەن، ٢٠٢٦-٠٨-٢٥.
+             ============================================================ -->
+        <div id="sched-bar" class="sched-bar" style="display:none;">
+            <i class='bx bx-time-five sched-bar-ico'></i>
+            <div class="sched-bar-txt">
+                <b>کاتداری بۆ دانراوە</b>
+                <span id="sched-bar-when">—</span>
+            </div>
+            <button type="button" class="sched-bar-btn" onclick="openSchedSheet()"
+                aria-label="گۆڕینی کات"><i class='bx bx-edit'></i></button>
+            <button type="button" class="sched-bar-btn is-x" onclick="clearPendingSchedule()"
+                aria-label="لابردنی کات"><i class='bx bx-x'></i></button>
+        </div>
+
         <button class="btn btn-send-order" onclick="submitOrder()"><span class="bso-txt">ناردنی داواکاری</span> <i
                 class='bx bx-send'></i></button>
     </div>
@@ -1826,6 +1846,7 @@
 
             <!-- دۆخی فلتەر — شیتەکە ئەمانە پڕ دەکاتەوە، `applyOrderFilters` دەیخوێنێتەوە -->
             <input type="hidden" id="filter-status" value="all">
+            <input type="hidden" id="filter-sched" value="all">
             <input type="hidden" id="filter-date-type" value="all">
             <input type="hidden" id="filter-date-from" value="">
             <input type="hidden" id="filter-date-to" value="">
@@ -1903,6 +1924,14 @@
                     <div class="fchips" id="fchips-status"></div>
                 </div>
 
+                <!-- ئۆردەری کاتدارکراو — فلتەرێکی کڵاینتە (وەک مۆدی
+                     پشکنین)، بۆیە `orders_page` هیچ پارامەتەرێکی نوێی
+                     پێ زیاد نەکراوە. بڕوانە db/050 -->
+                <div class="fsec">
+                    <div class="fsec-t">ئۆردەری کاتدارکراو</div>
+                    <div class="fchips" id="fchips-sched"></div>
+                </div>
+
                 <div class="fsec">
                     <div class="fsec-t">بەروار</div>
                     <div class="fchips" id="fchips-date"></div>
@@ -1937,7 +1966,7 @@
                         </div>
                     </div>
 
-                    <div class="fcal" id="fcal" dir="ltr"></div>
+                    <div class="fcal" id="fcal" dir="rtl"></div>
                 </div></div>
             </div>
 
@@ -1945,6 +1974,169 @@
                 <div class="fsheet-sum" id="fsheet-sum">هەموو کاتێک</div>
                 <button type="button" class="btn fsheet-apply" onclick="applyFilterSheet()">
                     <i class='bx bx-check'></i> پیشاندانی ئەنجامەکان
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================================
+         شیتی کاتدارکردنی ئۆردەر — «کەی داخیل بێت؟»
+         ------------------------------------------------------------
+         بە پەنجەدانانی ٣ چرکە لەسەر دوگمەی «ناردنی داواکاری»
+         دەکرێتەوە. کلیکی ئاسایی وەک جاران ئۆردەرەکە دەستبەجێ
+         دەنێرێت — هیچ گۆڕانێک بۆ ئەو ٩٩٪ـەی ئۆردەرە ئاساییەکان.
+
+         ⚠️ هەمان `fsheet`ی فلتەرەکەیە بۆ ڕووکار، بەڵام فەنکشنی
+            داخستنی خۆی هەیە — بڕوانە `SHEET_CLOSERS` لە
+            `navWatchOverlays`ـدا.
+         ============================================================ -->
+    <div id="sched-sheet" class="fsheet" role="dialog" aria-modal="true" aria-label="کاتی داخیلبوونی ئۆردەر">
+        <div class="fsheet-scrim" onclick="closeSchedSheet()"></div>
+        <div class="fsheet-panel">
+            <div class="fsheet-head">
+                <button type="button" class="fsheet-x" onclick="closeSchedSheet()" aria-label="داخستن">
+                    <i class='bx bx-x'></i>
+                </button>
+                <span class="fsheet-title">کەی داخیل بێت؟</span>
+                <button type="button" class="fsheet-reset" id="sched-remove" onclick="schedRemove()">لابردن</button>
+            </div>
+
+            <div class="fsheet-body">
+                <!-- ⚠️ دەقەکە بە ئەنقەست کورتە. وەشانی پێشوو چوار دێڕ
+                     بوو لەسەر مۆبایل و بە وشەی تۆخی ناوەڕاستەوە
+                     دەڕەخسا — خاوەن ڕایگەیاند «زۆر بە ناڕێکی
+                     دەردەکەوێ». گرید (نەک flex) ئایکۆنەکە جێگیر
+                     دەکات و دەقەکە بە ڕێکی دەڕوات. -->
+                <div class="sched-hint">
+                    <i class='bx bx-info-circle'></i>
+                    <span>ئۆردەرەکە ئێستا تۆمار دەکرێت، بەڵام تا ئەو کاتەی دیاری دەکەیت
+                        لە چاوەڕوانیدا دەمێنێتەوە.</span>
+                </div>
+
+                <!-- ٧ ڕۆژ + «ڕۆژێکی تر» = ٨ خانە لە گریدێکی ٢ ستوونیدا
+                     = ٤ ڕیزی تەواو. هیچ ڕیزێکی ناڕێک نییە — ئەمە
+                     هۆکاری ئەوە بوو کە پێشتر لەسەر مۆبایل شێواو
+                     دەردەکەوت (flex-wrap + پانی جیاواز). -->
+                <div class="fsec">
+                    <div class="fsec-t">ڕۆژ</div>
+                    <div class="sched-grid sched-grid-2" id="sched-days"></div>
+                </div>
+
+                <div class="fsec">
+                    <!-- ⚠️ هەمان سویچی «ناوی کڕیار»ی فۆڕمی ئۆردەرە
+                         (`.switch-group` + `.switch`) — نەک سویچێکی
+                         دووەمی جیاواز. `.switch-group` بریتییە لە
+                         `space-between`، بۆیە لە RTLدا سویچەکە
+                         خۆکارانە دەچێتە لای **چەپ**. -->
+                    <div class="switch-group">
+                        <label>کاتژمێری دیاریکراو</label>
+                        <label class="switch">
+                            <input type="checkbox" id="sched-time-toggle"
+                                onchange="schedToggleTime(this.checked)">
+                            <div class="slider">
+                                <div class="circle"><svg class="cross" viewBox="0 0 24 24" fill="none"
+                                        stroke="currentColor" stroke-width="4">
+                                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                                    </svg><svg class="checkmark" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="4">
+                                        <polyline points="20 6 9 17 4 12"></polyline>
+                                    </svg></div>
+                            </div>
+                        </label>
+                    </div>
+                    <div class="sched-note-sm" id="sched-switch-note">
+                        بێ ئەمە: دوازدەی شەو
+                    </div>
+                    <div class="sched-grid sched-grid-3" id="sched-times" style="display:none;"></div>
+                </div>
+            </div>
+
+            <div class="fsheet-foot">
+                <div class="fsheet-sum" id="sched-sum">—</div>
+                <button type="button" class="btn fsheet-apply" id="sched-apply" onclick="applySchedSheet()">
+                    <i class='bx bx-time-five'></i> پاشەکەوتی بکە بۆ ئەو کاتە
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================================
+         ڕۆژی دڵخواز — هەمان ڕۆژژمێری «مەودای دڵخواز»
+         ------------------------------------------------------------
+         ⚠️ ڕۆژژمێرەکە لێرەدا **کۆپی ناکرێتەوە**. هەمان نۆدی
+            `.fcal-wrap` لە `#fcal-home`ـەوە دەگوێزرێتەوە بۆ ئێرە و
+            لە کاتی داخستندا دەگەڕێتەوە — هەمان شێوازی
+            `sx-date-sheet`ی ئامارەکان. یەک نۆد، سێ شوێن، بۆیە
+            هەرگیز لێک دوور ناکەونەوە.
+         ⚠️ لێرەدا **یەک** ڕۆژ هەڵدەبژێردرێت نەک مەودا:
+            `schedCalSync` دوای هەر کلیکێک `to = from` دادەنێت.
+         ============================================================ -->
+    <div id="sched-date-sheet" class="modal-overlay" onclick="if (event.target.id === 'sched-date-sheet') closeSchedDaySheet()">
+        <div class="modal-content is-sxd">
+            <div class="modal-header">
+                <h3 class="modal-title is-sm"><i class='bx bx-calendar-edit'></i> ڕۆژی دڵخواز</h3>
+                <button class="modal-close" onclick="closeSchedDaySheet()"><i class='bx bx-x'></i></button>
+            </div>
+            <div class="sxd-body is-single" id="sched-cal-slot"></div>
+            <div class="sxd-foot">
+                <div class="sxd-info" id="sched-cal-info">ڕۆژێک هەڵبژێرە</div>
+                <button type="button" class="btn sxd-apply" id="sched-cal-apply" onclick="applySchedDaySheet()">
+                    <i class='bx bx-check'></i> ئەم ڕۆژە
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================================
+         کاتی دڵخواز — هەمان زمانی دیزاینی ڕۆژژمێرەکە
+         ------------------------------------------------------------
+         خانەکان هەمان پۆلی `.fcd`ی ڕۆژژمێرەکەن، بۆیە شێوە و ڕەنگ و
+         دۆخی هەڵبژاردن بە تەواوی وەکو یەکن. ڕووداوەکانی ڕۆژژمێر
+         بە `#fcal` سنووردارکراون، بۆیە تێکەڵ نابن.
+         ============================================================ -->
+    <div id="sched-time-sheet" class="modal-overlay" onclick="if (event.target.id === 'sched-time-sheet') closeSchedTimeSheet()">
+        <div class="modal-content is-sxd">
+            <div class="modal-header">
+                <h3 class="modal-title is-sm"><i class='bx bx-time'></i> کاتی دڵخواز</h3>
+                <button class="modal-close" onclick="closeSchedTimeSheet()"><i class='bx bx-x'></i></button>
+            </div>
+            <!-- ============================================================
+                 پێشبینینی زیندوو — کاتە هەڵبژێردراوەکە بە درشتی
+                 ------------------------------------------------------------
+                 بەکارهێنەر پێش ئەوەی پەسەند بکات دەبێت بە یەک نیگا
+                 بزانێت چی هەڵیبژاردووە. ژمارەکان `dir="ltr"`ن، بۆیە
+                 «٢:٤٥» بە پێچەوانە دەرناکەوێت لە ناو ڕووکاری RTLدا.
+                 ============================================================ -->
+            <div class="sct-preview">
+                <div class="sct-clock" dir="ltr">
+                    <span class="sct-num" id="sct-p-h">9</span><span
+                        class="sct-colon">:</span><span class="sct-num" id="sct-p-m">00</span>
+                </div>
+                <div class="sct-mer-txt" id="sct-p-r">پ.ن</div>
+            </div>
+
+            <div class="sxd-body">
+                <!-- بەیانی/ئێوارە لە سەرەوە: یەکەم بڕیارە، و
+                     مانای خانەکانی کاتژمێر دەگۆڕێت -->
+                <div class="sct-block">
+                    <div class="sct-t">بەیانی یان ئێوارە</div>
+                    <div class="sct-seg" id="sct-mer" role="group" aria-label="بەیانی یان ئێوارە"></div>
+                </div>
+
+                <div class="sct-block">
+                    <div class="sct-t">کاتژمێر</div>
+                    <div class="sct-g sct-g-4" id="sct-hours" role="group" aria-label="کاتژمێر"></div>
+                </div>
+
+                <div class="sct-block">
+                    <div class="sct-t">خولەک</div>
+                    <div class="sct-g sct-g-4" id="sct-mins" role="group" aria-label="خولەک"></div>
+                </div>
+            </div>
+            <div class="sxd-foot">
+                <button type="button" class="btn sxd-apply" onclick="applySchedTimeSheet()">
+                    <i class='bx bx-check'></i> ئەم کاتە
                 </button>
             </div>
         </div>
@@ -3338,6 +3530,10 @@
         // ئایا ئەم بەکارهێنەرە دەتوانێت ئەم ئۆردەرە نیشانە بکات وەک پرێنتکراو
         // (یان بە سکان قوفڵەکەی لابدات)؟ مەودای کارکردن هەمان مەودای بینینە.
         function canMarkPrint(o) {
+            // ئۆردەری چاوەڕوان هێشتا نەچووەتە ناو خولی گەیاندنەوە —
+            // بۆ **هیچ کەس** پرێنت ناکرێت، تەنانەت خاوەنەکەی و پاشاش.
+            // (پارێزەری دووەم لە داتابەیس: db/050)
+            if (isSchedPending(o)) return false;
             return permOn('mark_print') && canActOnOrder(o, 'view');
         }
 
@@ -3356,8 +3552,144 @@
             showToast("ئەم ئۆردەرە پرێنت کراوە و قوفڵە — سەرەتا بارکۆدەکەی سکان بکە!", "error");
         }
 
+        // ============ ئۆردەری کاتدارکراو (چاوەڕوان) ============
+        // ئەندام ئۆردەرەکە ئێستا دەنووسێت، بەڵام کاتێک دیاری دەکات
+        // کە کەی «داخیل» بێت (بۆ نموونە ئەمڕۆ دووشەممە، بۆ پێنجشەممە).
+        // تا ئەو کاتە ئۆردەرەکە هەڵواسراوە:
+        //
+        //   • نایەتە لیستی پرێنت (نە تاک نە کۆمەڵ)
+        //   • حاڵەتەکەی ناگۆڕدرێت
+        //   • ئەوانی تر (بەڕێوەبەر/سەرپەرشت/ڕاوێژکار/پاشا) تەنها
+        //     **دەیبینن** — هیچ کردارێکیان بەسەریدا نییە
+        //   • خاوەنەکەی تەواو ئازادە (دەستکاری/سڕینەوە/گۆڕینی کات)
+        //
+        // ⚠️ دۆخەکە بە `released_at` دیاری دەکرێت، **نەک** بە
+        //    بەراوردی `Date.now()`. کردنەوەکە لای سێرڤەرە (جۆبی
+        //    کرۆنی db/050)، بۆیە کاتی هەڵەی مۆبایل ناتوانێت
+        //    ئۆردەرێک زوو بکاتەوە. `Date.now()` تەنها بۆ
+        //    پیشاندانی ژمێرەرەکەیە.
+        function isSchedPending(o) {
+            return !!o && !!o.scheduled_at && !o.released_at;
+        }
+
+        // ئایا ئەم ئۆردەرە کاتداری بۆ دانراوە؟ (کراوەتەوە یان نا)
+        function isScheduledOrder(o) {
+            return !!o && !!o.scheduled_at;
+        }
+
+        function schedIsMine(o) {
+            if (!o || !currentUser) return false;
+            return String(o.seller_code || '') === String(currentUser.code || '');
+        }
+
+        // تاکە دەرگا: «ئایا ئەم بەکارهێنەرە دەتوانێت دەستی لەم
+        // ئۆردەرە بدات؟» — ئۆردەری ئاسایی هەمیشە بەڵێ، ئۆردەری
+        // چاوەڕوان تەنها بۆ خاوەنەکەی.
+        //
+        // ⚠️ پاشاش تێیدا دەگیرێت. ئەمە بە ئەنقەستە — داواکاریی
+        //    خاوەن: «تەنها زانیارییەکانی پیشاندرێ و ناتوانن
+        //    هیچی لێ بکەن».
+        function canActOnPending(o) {
+            return !isSchedPending(o) || schedIsMine(o);
+        }
+
+        function schedLockToast() {
+            showToast("ئەم ئۆردەرە چاوەڕوانە — تا کاتەکەی نەیەت تەنها خاوەنەکەی دەستکاری دەکات.", "error");
+        }
+
+        // ماوەی مانەوە بە میلی‌چرکە (ڕەنگە نێگەتیڤ بێت: کاتەکەی
+        // هاتووە بەڵام جۆبی کرۆن هێشتا نەیکردووەتەوە)
+        function schedRemainMs(o) {
+            if (!o || !o.scheduled_at) return 0;
+            const t = new Date(o.scheduled_at).getTime();
+            return isNaN(t) ? 0 : (t - Date.now());
+        }
+
+        // «ماوە ٢ ڕۆژ» · «ماوە ٥ کاتژمێر» · «خەریکە دەکرێتەوە»
+        function schedRemainText(o) {
+            const ms = schedRemainMs(o);
+            if (ms <= 0) return "خەریکە دەکرێتەوە";
+            const mins = Math.round(ms / 60000);
+            if (mins < 60) return "ماوە " + toArabicDigits(Math.max(1, mins)) + " خولەک";
+            const hrs = Math.round(mins / 60);
+            if (hrs < 24) return "ماوە " + toArabicDigits(hrs) + " کاتژمێر";
+            return "ماوە " + toArabicDigits(Math.round(hrs / 24)) + " ڕۆژ";
+        }
+
+        // ژمێرەری وورد — چرکە بە چرکە دادەبەزێت
+        //
+        // ⚠️ ژمارەکان لەناو `dir="ltr"`دا دەخرێن، ئەگەرنا
+        //    «١٩:٤٥:٣٢» لە دەقی کوردیدا پێچەوانە دەبێتەوە
+        //    (هەمان کێشەی کۆدی ئۆردەر، db/015).
+        function schedClockParts(o) {
+            const ms = Math.max(0, schedRemainMs(o));
+            const t = Math.floor(ms / 1000);
+            return {
+                over: ms <= 0,
+                d: Math.floor(t / 86400),
+                h: Math.floor((t % 86400) / 3600),
+                m: Math.floor((t % 3600) / 60),
+                s: t % 60
+            };
+        }
+
+        // «٢ ڕۆژ» + «٠٥:٣٠:١٢» — دوو پارچە، چونکە یەکەمیان
+        // RTLە و دووەمیان LTR
+        function schedCountdownHtml(o) {
+            const c = schedClockParts(o);
+            if (c.over) return `<b class="sched-count-go">خەریکە دەکرێتەوە</b>`;
+            const pad = n => toArabicDigits(String(n).padStart(2, '0'));
+            const clock = pad(c.h) + ':' + pad(c.m) + ':' + pad(c.s);
+            return (c.d ? `<em>${toArabicDigits(c.d)} ڕۆژ</em>` : '')
+                + `<b dir="ltr">${clock}</b>`;
+        }
+
+        // ڕێژەی تێپەڕیوی چاوەڕوانی (٠–١٠٠).
+        //
+        // ⚠️ دەستپێک لە `updated_at`ەوەیە (db/045) — لە کاتی
+        //    تۆمارکردندا `now()` دەنووسرێت. ئەگەر ئۆردەرەکە
+        //    دەستکاری بکرێت، شریتەکە دەگەڕێتەوە دواوە —
+        //    مانای هەیە: چاوەڕوانییەکە لە نوێوە دەستی پێکرد.
+        //    ئەگەر نەزانراو بوو یان دوای کاتەکەیەتی،
+        //    پەنجەرەیەکی ٢٤ کاتژمێری وەک پاشەکشە دادەنرێت.
+        function schedProgress(o) {
+            const end = new Date(o.scheduled_at).getTime();
+            if (!isFinite(end)) return 0;
+            let start = o.updated_at ? new Date(o.updated_at).getTime() : NaN;
+            if (!isFinite(start) || start >= end) start = end - 86400000;
+            const now = Date.now();
+            if (now <= start) return 0;
+            if (now >= end) return 100;
+            return Math.max(0, Math.min(100, ((now - start) / (end - start)) * 100));
+        }
+
+        // «پێنجشەممە ٢٨ ئاب · ٩:٠٠ پ.ن» — یان تەنها بەروارەکە
+        //
+        // ⚠️ ٠٠:٠٠ واتا سویچی کاتژمێر کوژاوە بووە: ئۆردەرەکە هەرکە
+        //    ڕۆژەکە دەستی پێکرد داخیل دەبێت. «١٢:٠٠ پ.ن» ڕاستە بەڵام
+        //    هیچ کەس بەو شێوەیە نایڵێت — و لەگەڵ ئەوەی لە شیت و
+        //    شریتەکەدا نووسراوە ناتەبا دەبوو.
+        function schedWhenText(o) {
+            if (!o || !o.scheduled_at) return '';
+            const d = new Date(o.scheduled_at);
+            if (isNaN(d.getTime())) return '';
+            // ⚠️ لە ٠٠:٠٠دا **هیچ کاتێک نانووسرێت**. پێشتر
+            //    «دوازدەی شەو» دەنووسرا — دووبارەبووەیەکی بێمانایە:
+            //    سەرەتای ڕۆژێک خۆی ئەو ڕۆژەیە. (داواکاریی خاوەن ٢٠٢٦-٠٨-٢٦)
+            const atMidnight = d.getHours() === 0 && d.getMinutes() === 0;
+            return atMidnight ? schedDateLabel(d) : (schedDateLabel(d) + ' · ' + schedTimeLabel(d));
+        }
+
+        // هەمان شت بۆ `Date`ێکی ڕاستەوخۆ (تۆست و شریتەکە)
+        function schedWhenTextFromDate(d) {
+            return schedWhenText({ scheduled_at: d.toISOString() });
+        }
+
         // پشکنینی گۆڕینی حاڵەت بەپێی ژێردەسەڵاتەکان (بکات بە گەیشتوو/گەڕاوە، گەیشتوو↔گەڕاوە)
         function canStatusTransition(o, newStatus) {
+            // ئۆردەری چاوەڕوان حاڵەتی ناگۆڕدرێت — بۆ هیچ کەس، تەنانەت
+            // پاشا و خاوەنەکەشی. (پارێزەری دووەم لە داتابەیس: db/050)
+            if (isSchedPending(o)) return false;
             if (userRole === 'پاشا') return true;
             let cur = (o && o.status) ? o.status : 'ئامادە دەکرێت';
             let curDelivered = cur.includes('گەیشت');
@@ -3375,6 +3707,9 @@
         // ناکرێن — پارەکە دابەش کراوە. ئەمە جیایە لە `canActOnOrder(o,'edit')`
         // کە مەودا (تیم/هەموان/پلە) دەپشکنێت؛ هەردووکیان پێویستن.
         function canEditInStatus(o) {
+            // ئۆردەری چاوەڕوان لە سەرووی هەموویانەوەیە — پاشاش تێیدا
+            // دەگیرێت. تەنها خاوەنەکەی دەستکاری دەکات، تا کاتەکەی دێت.
+            if (!canActOnPending(o)) return false;
             // قوفڵی پرێنت لە سەرووی هەموو دەسەڵاتەکانەوەیە — پاشاش تێیدا
             // دەگیرێت. پاشا دەبێت بە ئەنقەست قوفڵەکە بشکێنێت.
             if (isPrintLocked(o)) return false;
@@ -5018,7 +5353,7 @@
                     </button>
                 </div>
                 <p class="rvw-panel-note">${flag
-                    ? 'نیشانەکراوە بۆ چاککردنەوە — بە چیپی ⚑ دەیدۆزیتەوە.'
+                    ? 'نیشانەکراوە بۆ چاککردنەوە — لە فلتەردا دەیدۆزیتەوە.'
                     : (done ? 'نیشانەکە خۆکارانە لادەچێت ئەگەر ئەم ئۆردەرە بگۆڕدرێت.'
                         : 'کاتێک دەرچیت خۆکارانە وەک پشکنراو نیشان دەکرێت.')}</p>
             </div>`;
@@ -6216,6 +6551,7 @@
                             <p class="moc-price"><span dir="ltr">${total}</span><em>د.ع</em></p>
                         </div>
                         <div class="moc-meta">
+                            ${schedStampHtml(o)}
                             ${printStampHtml(o)}
                             ${paidStampHtml(o)}
                             ${commentStampHtml(o)}
@@ -6687,6 +7023,7 @@
                 </div>
                 <div class="mocc-bottom">
                     <div class="mocc-meta">
+                        ${schedStampHtml(o)}
                         ${printStampHtml(o)}
                         ${paidStampHtml(o)}
                         ${commentStampHtml(o)}
@@ -6967,6 +7304,7 @@
         // بەروار+گەڕان فلتەری کردووە؛ ئەمە تەنها وردەکاری (پلە/دەسەڵات/تاب).
         function mgmtMakePasses() {
             let statusFilter = document.getElementById('filter-status').value;
+            let schedFilter = document.getElementById('filter-sched').value || 'all';
             let dateFrom = document.getElementById('filter-date-from').value;
             let dateTo = document.getElementById('filter-date-to').value;
             let searchVal = document.getElementById('orders-search-input').value.trim().toLowerCase();
@@ -6984,6 +7322,9 @@
                 // بە تەواوی لابرا، خۆی بەردەوام دەبێت بۆ پەڕەی داهاتوو.
                 if (rvwF === 'todo' && isReviewed(o)) return false;
                 if (rvwF === 'flag' && !isFlagged(o)) return false;
+                // ئۆردەری کاتدارکراو — هەرزانە، بۆیە لە سەرەوەیە
+                if (schedFilter === 'pending' && !isSchedPending(o)) return false;
+                if (schedFilter === 'live' && isSchedPending(o)) return false;
                 let sellerCode = sellerCodeOf(o);
                 let isMyOrder = (sellerCode === myCode);
                 if (!isMyOrder) {
@@ -7634,6 +7975,10 @@
             editingOrderId = null;
             editingOrderWalletPaid = 0;
             walletPayLocked = false;
+            // ⚠️ کاتی داخیلبوون دەبێت لێرە پاک بکرێتەوە — ئەگەرنا
+            //    ئۆردەری دواتریش بێدەنگ کاتدار دەکرێت
+            pendingSchedule = null;
+            syncSchedBar();
             let h2 = document.querySelector('#order-screen h2');
             if (h2) h2.innerHTML = "<i class='bx bx-cart-add'></i> ئۆردەری نوێ";
 
@@ -8597,6 +8942,30 @@
             return `<span class="print-stamp"><i class='bx bx-lock-alt'></i>پرێنتکراو</span>`;
         }
 
+        // ---------- ناونیشانی بەروار و کاتی ئۆردەری کاتدارکراو ----------
+        // ⚠️ `SX_DAYS` بە **شەممە** دەست پێدەکات، بەڵام `getDay()`
+        //    بە یەکشەممە. بۆیە `(getDay() + 1) % 7` — هەمان
+        //    گۆڕانکاریی ناو `stats`ـەکە.
+        function schedDateLabel(d) {
+            const dow = SX_DAYS[(d.getDay() + 1) % 7];
+            return dow + ' ' + toArabicDigits(d.getDate()) + ' ' + FS_MONTHS[d.getMonth()];
+        }
+
+        function schedTimeLabel(d) {
+            let h = d.getHours();
+            const mer = h >= 12 ? 'د.ن' : 'پ.ن';
+            h = h % 12; if (!h) h = 12;
+            return toArabicDigits(h) + ':' + toArabicDigits(String(d.getMinutes()).padStart(2, '0')) + ' ' + mer;
+        }
+
+        // چیپی «چاوەڕوان» لەسەر کارتی ئۆردەر. `data-sched` بۆ ئەوەیە
+        // کە `schedTick` بتوانێت تەنها دەقەکەی نوێ بکاتەوە، بەبێ
+        // نەخشاندنەوەی کارتەکە.
+        function schedStampHtml(o) {
+            if (!isSchedPending(o)) return '';
+            return `<span class="sched-stamp" data-sched="${o.id}"><i class='bx bx-time-five'></i>چاوەڕوان · ${schedRemainText(o)}</span>`;
+        }
+
         // ------------------------------------------------------------
         // دەقی وەسڵی گۆڕین بۆ کۆپیکردن (تلیگرام/واتسئاپ)
         //
@@ -9090,7 +9459,8 @@
             let printLocked = isPrintLocked(o);
             let actionButtonsHtml = "";
             let canEditOrder = canActOnOrder(o, 'edit') && canEditInStatus(o);
-            let canDeleteOrder = canActOnOrder(o, 'delete') && isPreparing && !printLocked;
+            let canDeleteOrder = canActOnOrder(o, 'delete') && isPreparing && !printLocked
+                && canActOnPending(o);
             if (canEditOrder || canDeleteOrder) {
                 let editBtn = canEditOrder ? `<button class="btn" style="background:#ffc107; color:#000; flex:1; font-size:14px; padding:10px;" onclick="editOrder('${o.id}')"><i class='bx bx-edit'></i> دەستکاریکردن</button>` : '';
                 let delBtn = canDeleteOrder ? `<button class="btn" style="background:#dc3545; flex:1; font-size:14px; padding:10px;" onclick="deleteOrder('${o.id}')"><i class='bx bx-trash'></i> سڕینەوە</button>` : '';
@@ -9103,7 +9473,8 @@
 
             // گۆڕینی حاڵەت: بەپێی مەودا (تیم/هەموان) لەسەر ئەم ئۆردەرە.
             // تا قوفڵی پرێنت لانەبردرێت، هیچ گۆڕینێکی حاڵەت نییە.
-            let canChangeStatus = canActOnOrder(o, 'status') && !printLocked;
+            // ئۆردەری چاوەڕوان: هیچ گۆڕینێکی حاڵەت نییە بۆ هیچ کەس
+            let canChangeStatus = canActOnOrder(o, 'status') && !printLocked && !isSchedPending(o);
 
             let statusChangerHtml = "";
             if (canChangeStatus) {
@@ -9276,7 +9647,8 @@
 
             b.innerHTML = `
             ${sellerInfoPlaceholder}
-            ${isDone ? '' : orderStepsHtml(o)}
+            ${schedBoxHtml(o)}
+            ${(isDone || isSchedPending(o)) ? '' : orderStepsHtml(o)}
             ${topPrint}
             ${reasonInfoHtml}
             ${detailRow('bx-user', 'ناوی کڕیار', o.customer_name)}
@@ -13259,15 +13631,26 @@
             requestAnimationFrame(() => fcalScrollToMonth(_sxdDraft.from, 'auto'));
         }
 
-        function closeSxDateSheet() {
-            document.getElementById('sx-date-sheet').classList.remove('show');
-            // ⚠️ **دەبێت** بگەڕێتەوە شوێنی خۆی — ئەگەرنا شیتی
-            //    فلتەری ئۆردەرەکان بێ ڕۆژژمێر دەمێنێتەوە
+        // ⭐ گەڕاندنەوەی ڕۆژژمێرەکە بۆ شوێنی خۆی — **تاکە** شوێن.
+        //
+        // ⚠️ ئەگەر نەگەڕێتەوە، شیتی فلتەری ئۆردەرەکان بێ ڕۆژژمێر
+        //    دەمێنێتەوە — بێ هەڵە، بێ لۆگ، تەنها بۆشاییەک.
+        //
+        // ⚠️ ئەم فەنکشنە دەبێت لە `closeModal`ـیشەوە بانگ بکرێت:
+        //    دوگمەی گەڕانەوەی تلیگرام مۆدالەکان بە `closeModal`
+        //    دادەخات، نەک بە فەنکشنی داخستنی خۆیان. بەبێ ئەوە
+        //    داخستن بە دوگمەی ✕ کار دەکات بەڵام بە گەڕانەوە نا.
+        function fcalReturnHome() {
             const wrap = document.querySelector('.fcal-wrap');
             const home = document.getElementById('fcal-home');
-            if (wrap && home) home.appendChild(wrap);
+            if (wrap && home && wrap.parentElement !== home) home.appendChild(wrap);
             fcalD = null;
             fcalOnChange = null;
+        }
+
+        function closeSxDateSheet() {
+            document.getElementById('sx-date-sheet').classList.remove('show');
+            fcalReturnHome();
         }
 
         // کورتەی مەودا + چالاککردنی دوگمەکە
@@ -16059,6 +16442,12 @@
             if (!await ensureAccountActive()) return;
             let o = allGlobalOrdersData[orderId];
             if (!o) return;
+            // ⚠️ `canMarkPrint` ئۆردەری چاوەڕوانیش ڕەت دەکاتەوە — بەڵام
+            //    پەیامی «دەسەڵاتت نییە» هۆکارەکە ڕوون ناکاتەوە
+            if (isSchedPending(o)) {
+                showToast("ئەم ئۆردەرە چاوەڕوانە — تا داخیل نەبێت پرێنت ناکرێت.", "error");
+                return;
+            }
             if (!canMarkPrint(o)) { showToast("دەسەڵاتت نییە بۆ نیشانەکردنی پرێنت!", "error"); return; }
             if (isPrintLocked(o)) { showToast("ئەم ئۆردەرە پێشتر پرێنت کراوە.", "error"); return; }
             if (!isPrintableStatus(o)) {
@@ -16284,6 +16673,45 @@
             return '';
         }
 
+        // کارتی «ئۆردەری کاتدارکراو» لەناو وردەکاریی ئۆردەر.
+        //   • چاوەڕوان → کەی دەکرێتەوە، ماوەی مانەوە، و ئەوەی کێ
+        //     دەتوانێت دەستی لێبدات
+        //   • کراوەتەوە → تەنها زانیاری (کاتدارکرابوو، کەی کرایەوە)
+        // دوگمەی «بەردەستی بکە ئێستا» تەنها بۆ خاوەنەکەی دەردەکەوێت.
+        function schedBoxHtml(o) {
+            if (!isScheduledOrder(o)) return '';
+            const when = schedWhenText(o);
+
+            if (isSchedPending(o)) {
+                const mine = schedIsMine(o);
+                return `<div class="sched-card is-pending">
+                    <div class="sched-head"><i class='bx bx-time-five'></i> چاوەڕوانە — هێشتا داخیل نەبووە</div>
+                    <div class="sched-when"><b>${histEsc(when)}</b></div>
+                    <div class="sched-count" data-sched-live="${o.id}">
+                        <div class="sched-count-row">
+                            <span class="sched-count-lbl">ماوە</span>
+                            <span class="sched-count-val">${schedCountdownHtml(o)}</span>
+                        </div>
+                        <div class="sched-prog" role="progressbar" aria-label="ماوەی چاوەڕوانی">
+                            <span class="sched-prog-fill" style="width:${schedProgress(o).toFixed(2)}%"></span>
+                        </div>
+                    </div>
+                    <div class="sched-note">${mine
+                        ? 'تا ئەو کاتە نایەتە لیستی پرێنت و حاڵەتەکەی ناگۆڕدرێت. تۆ خاوەنەکەیت — دەتوانیت دەستکاری بکەیت، بیسڕیتەوە، یان کاتەکەی بگۆڕیت.'
+                        : 'تا ئەو کاتە تەنها زانیارییەکانی دەبینرێن — نە دەستکاری، نە سڕینەوە، نە پرێنت و نە گۆڕینی حاڵەت.'}</div>
+                    ${mine ? `<button type="button" class="sched-now" onclick="releaseScheduledNow('${o.id}')">
+                        <i class='bx bx-check-circle'></i> ئێستا بەردەستی بکە
+                    </button>` : ''}
+                </div>`;
+            }
+
+            return `<div class="sched-card is-open">
+                <div class="sched-head"><i class='bx bx-calendar-check'></i> ئۆردەری کاتدارکراو — کرایەوە</div>
+                <div class="sched-meta">کاتی دیاریکراو: <b>${histEsc(when)}</b></div>
+                <div class="sched-meta">کرایەوە: <b>${histEsc(formatLogTime(o.released_at))}</b></div>
+            </div>`;
+        }
+
         // ============================================================
         // مێژووی کردارەکانی ئۆردەر — کێ چی کرد و کەی
         // هەرگیز ڕێگری لە کردارەکە ناکات: ئەگەر تۆمارکردن شکستی هێنا،
@@ -16401,6 +16829,12 @@
                 showToast("دەسەڵاتت نییە بۆ گۆڕینی حاڵەتی ئەم ئۆردەرە!", "error");
                 return;
             }
+            // ئۆردەری چاوەڕوان هێشتا داخیل نەبووە — حاڵەتی ناگۆڕدرێت
+            // بۆ هیچ کەس (پارێزەری دووەم لە داتابەیس: db/050)
+            if (isSchedPending(o)) {
+                showToast("ئەم ئۆردەرە هێشتا چاوەڕوانە — تا داخیل نەبێت حاڵەتی ناگۆڕدرێت.", "error");
+                return;
+            }
             // قوفڵی پرێنت: تا سکان نەکرێت هیچ حاڵەتێک ناگۆڕدرێت — نە بۆ
             // «لە ڕێگایە» و نە بۆ هیچی تر
             if (isPrintLocked(o)) { printLockToast(); return; }
@@ -16511,6 +16945,8 @@
                 showToast("دەسەڵاتت نییە بۆ سڕینەوەی ئەم ئۆردەرە!", "error");
                 return;
             }
+            // ئۆردەری چاوەڕوان تەنها خاوەنەکەی دەیسڕێتەوە
+            if (!canActOnPending(ordDel)) { schedLockToast(); return; }
             // وەسڵەکەی پرێنت کراوە و لە دەستی بەشی گەیاندنە — نابێت بسڕدرێتەوە
             if (isPrintLocked(ordDel)) { printLockToast(); return; }
             // سڕینەوە تەنها لە حاڵەتی «ئامادە دەکرێت»
@@ -16571,6 +17007,7 @@
             }
             // پارێزەری نووسین: هەر حاڵەتێک دەسەڵاتی خۆی هەیە
             if (!canEditInStatus(o)) {
+                if (!canActOnPending(o)) { schedLockToast(); return; }
                 if (isPrintLocked(o)) { printLockToast(); return; }
                 let stEdit = String(o.status || "");
                 showToast(stEdit.includes("ڕێگا")
@@ -16686,15 +17123,25 @@
             clearPendingUploads();
             renderImagePreviews();
 
+            // ئۆردەری چاوەڕوان: کاتەکەی دەگەڕێتەوە ناو فۆڕمەکە، تاکو
+            // پاشەکەوتکردنەوە هەر ئەو کاتە بهێڵێتەوە. پەنجەدانانی
+            // درێژ لێرەدا کاتەکە دەگۆڕێت.
+            pendingSchedule = isSchedPending(o) ? new Date(o.scheduled_at) : null;
+            syncSchedBar();
+
             let submitBtn = document.querySelector('#order-screen .btn[onclick="submitOrder()"]');
             if (submitBtn) {
-                submitBtn.innerHTML = "نوێکردنەوەی داواکاری <i class='bx bx-refresh'></i>";
+                submitBtn.innerHTML = pendingSchedule
+                    ? "<span class='bso-txt'>نوێکردنەوەی ئۆردەری چاوەڕوان</span> <i class='bx bx-time-five'></i>"
+                    : "نوێکردنەوەی داواکاری <i class='bx bx-refresh'></i>";
                 submitBtn.style.background = "#ffc107";
                 submitBtn.style.color = "#000";
             }
 
             let h2 = document.querySelector('#order-screen h2');
-            if (h2) h2.innerHTML = "<i class='bx bx-edit'></i> دەستکاریکردنی ئۆردەر";
+            if (h2) h2.innerHTML = pendingSchedule
+                ? "<i class='bx bx-time-five'></i> ئۆردەری چاوەڕوان"
+                : "<i class='bx bx-edit'></i> دەستکاریکردنی ئۆردەر";
 
             document.getElementById('fab-checkbox').checked = true;
             switchScreen('order-screen');
@@ -16741,9 +17188,619 @@
             }
         }
 
+        // ============================================================
+        // ئۆردەری کاتدارکراو — پەنجەدانان، شیتی کات، و ناردن
+        // ------------------------------------------------------------
+        // داواکاریی خاوەن (٢٠٢٦-٠٨-٢٥): ئەندام پەنجە ٣ چرکە لەسەر
+        // دوگمەی «ناردنی داواکاری» دادەگرێت → شیتێک دەکرێتەوە و
+        // کاتی داخیلبوون دیاری دەکات.
+        //
+        // ⚠️ کلیکی ئاسایی هیچ نەگۆڕاوە — ئۆردەرەکە دەستبەجێ دەچێت.
+        //    ئەمە زۆرینەی بەکارهێنانە، بۆیە نابێت هیچ دواکەوتنێکی
+        //    پێ زیاد بکرێت. تەنها پەنجەدانانی درێژ ڕێگای جیاوازە.
+        //
+        // ⚠️ دوای پەنجەدانانێکی سەرکەوتوو، وێبگەڕ هێشتا `click`ـێک
+        //    دەنێرێت. `_schedSuppressClick` ئەوە دەخوات — بەبێ ئەو،
+        //    ئۆردەرەکە هەم کاتدار دەکرێت هەم دەستبەجێ دەنێردرێت.
+        // ============================================================
+        const SCHED_HOLD_MS = 2000;      // داواکاریی خاوەن ٢٠٢٦-٠٨-٢٦: ۳ چرکە زۆر بوو
+        const SCHED_MOVE_TOL = 14;      // پیکسل — لەمە زیاتر = سکڕۆڵ، نەک پەنجەدانان
+        const SCHED_MIN_LEAD_MS = 60000; // لانیکەم یەک خولەک لە داهاتوودا
+
+        // کاتی داخیلبوونی ئەم فۆڕمە (Date یان null). `resetOrderForm`
+        // پاکی دەکاتەوە، `editOrder` لە ئۆردەرەکەوە پڕی دەکاتەوە.
+        let pendingSchedule = null;
+        let schedDraft = null;          // ئەوەی لە شیتەکەدا هەڵبژێردراوە
+        let _schedSuppressClick = false;
+        let _schedSuppressT = 0;
+
+        function schedSendBtn() {
+            return document.querySelector('#order-screen .btn[onclick="submitOrder()"]');
+        }
+
+        // ---------- پەنجەدانان ----------
+        function schedHoldInit() {
+            const btn = schedSendBtn();
+            if (!btn || btn.__schedHoldOn) return;
+            btn.__schedHoldOn = true;
+
+            let timer = 0, raf = 0, startAt = 0, sx = 0, sy = 0, holding = false;
+
+            const paint = () => {
+                if (!holding) return;
+                const p = Math.min(1, (Date.now() - startAt) / SCHED_HOLD_MS);
+                btn.style.setProperty('--hold', p.toFixed(3));
+                if (p < 1) raf = requestAnimationFrame(paint);
+            };
+
+            const stop = () => {
+                holding = false;
+                clearTimeout(timer);
+                cancelAnimationFrame(raf);
+                btn.classList.remove('is-holding');
+                btn.style.removeProperty('--hold');
+            };
+
+            const fire = () => {
+                stop();
+                // کلیکی دوای بەرزکردنەوەی پەنجە دەخورێت
+                _schedSuppressClick = true;
+                clearTimeout(_schedSuppressT);
+                _schedSuppressT = setTimeout(() => { _schedSuppressClick = false; }, 1200);
+                try { if (navigator.vibrate) navigator.vibrate(35); } catch (e) { }
+                try {
+                    const tg = window.Telegram && window.Telegram.WebApp;
+                    if (tg && tg.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
+                } catch (e) { }
+                openSchedSheet();
+            };
+
+            // ⚠️ پەنجەدانانی درێژ دوو ڕەفتاری بنەڕەتیی وێبگەڕ دەجووڵێنێت
+            //    کە هەردووکیان لێرەدا هەڵەن:
+            //      • مۆبایل: دەقی دوگمەکە هەڵدەبژێردرێت + مێنیوی کۆپی
+            //      • کۆمپیوتەر: هایلایتی دەق — وەک کلیکی ڕاست دەردەکەوێت
+            //    (ڕاپۆرتی خاوەن، ٢٠٢٦-٠٨-٢٦). `user-select: none` لە CSSدا
+            //    هایلایتەکە دەکوژێت، و ئەمە مێنیوەکە.
+            btn.addEventListener('contextmenu', (e) => e.preventDefault());
+
+            btn.addEventListener('pointerdown', (e) => {
+                if (btn.disabled) return;
+                if (e.pointerType === 'mouse' && e.button !== 0) return;
+                // هەڵبژاردنێکی کۆن لادەبرێت — ئەگەرنا وێبگەڕ
+                // دەستەکەی هەڵبژاردن دەردێنێت
+                try { const sel = window.getSelection(); if (sel) sel.removeAllRanges(); } catch (er) { }
+                holding = true;
+                startAt = Date.now();
+                sx = e.clientX; sy = e.clientY;
+                btn.classList.add('is-holding');
+                btn.style.setProperty('--hold', '0');
+                raf = requestAnimationFrame(paint);
+                timer = setTimeout(fire, SCHED_HOLD_MS);
+            });
+
+            btn.addEventListener('pointermove', (e) => {
+                if (!holding) return;
+                if (Math.abs(e.clientX - sx) > SCHED_MOVE_TOL
+                    || Math.abs(e.clientY - sy) > SCHED_MOVE_TOL) stop();
+            });
+
+            ['pointerup', 'pointercancel', 'pointerleave'].forEach(ev =>
+                btn.addEventListener(ev, stop));
+
+            // ⚠️ لێرەدا گوێگری `scroll` **دانانرێت**. ڕاکێشان پێشتر
+            //    بە `pointermove` دەگیرێت (١٤ پیکسل)، بەڵام سکڕۆڵ
+            //    بە هۆکاری تر (ئەنیمەیشن، `scrollIntoView`، یان
+            //    مۆمێنتەمی iOS لە جووڵەیەکی پێشوو) پەنجەدانانێکی
+            //    ڕەوا بێدەنگ دەکوژێت. تاقیکراوەتەوە ٢٠٢٦-٠٨-٢٥:
+            //    بە گوێگرەکەوە پەنجەدانانەکە لە ١٤٠٠ملی‌چرکەدا
+            //    مردبوو و شیتەکە هەرگیز نەدەکرایەوە.
+        }
+
+        // ---------- بژاردەکانی شیتەکە ----------
+        // ⚠️ **حەوت** ڕۆژ: ئەمڕۆ، سبەینێ، و پێنج ڕۆژی دواتر. لەگەڵ
+        //    خانەی «ڕۆژێکی تر» دەکاتە ٨ خانە — ڕێک ٤ ڕیزی تەواو لە
+        //    گریدێکی ٢ ستوونیدا. ئەگەر ئەم ژمارەیە بگۆڕدرێت، گریدەکە
+        //    ڕیزێکی ناڕێکی دەبێت. (داواکاریی خاوەن، ٢٠٢٦-٠٨-٢٥)
+        const SCHED_DAYS_AHEAD = 6;              // ٠..٦ = ٧ ڕۆژ
+        // شەش کات = ٣ ستوون × ٢ ڕیز، هەروەها تەواو
+        const SCHED_TIMES = [6, 9, 12, 15, 18, 21];
+
+        // سویچی کاتژمێر. کوژاوە (بنەڕەت) = دوازدەی شەوی ئەو ڕۆژە،
+        // واتا هەرکە ڕۆژە نوێیەکە دەستی پێکرد ئۆردەرەکە داخیل دەبێت.
+        let schedTimeOn = false;
+        // ڕۆژێکی دەستی لە دەرەوەی ئەو حەوت ڕۆژە ('YYYY-MM-DD')
+        let schedCustomDay = null;
+
+        function schedDayList() {
+            const out = [];
+            const base = new Date(); base.setHours(0, 0, 0, 0);
+            for (let i = 0; i <= SCHED_DAYS_AHEAD; i++) {
+                const d = new Date(base);
+                d.setDate(d.getDate() + i);
+                out.push({
+                    key: fdKey(d),
+                    top: i === 0 ? 'ئەمڕۆ' : (i === 1 ? 'سبەینێ' : SX_DAYS[(d.getDay() + 1) % 7]),
+                    sub: toArabicDigits(d.getDate()) + ' ' + FS_MONTHS[d.getMonth()]
+                });
+            }
+            return out;
+        }
+
+        function schedDraftValid() {
+            return !!schedDraft && (schedDraft.getTime() - Date.now()) >= SCHED_MIN_LEAD_MS;
+        }
+
+        // بۆچی کاتەکە ڕەوا نییە — پەیامی گشتی «کاتێکی داهاتوو هەڵبژێرە»
+        // یارمەتیدەر نییە کاتێک هۆکارەکە دیارە
+        function schedWhyBad() {
+            if (!schedDraft) return 'ڕۆژێک هەڵبژێرە';
+            const isToday = fdKey(schedDraft) === fdKey(new Date());
+            if (!schedTimeOn && isToday)
+                return 'دوازدەی شەوی ئەمڕۆ تێپەڕیوە — کاتژمێر چالاک بکە یان ڕۆژێکی تر';
+            return 'کاتێکی داهاتوو هەڵبژێرە';
+        }
+
+        function schedRenderSheet() {
+            const dayBox = document.getElementById('sched-days');
+            const timeBox = document.getElementById('sched-times');
+            const tg = document.getElementById('sched-time-toggle');
+            const note = document.getElementById('sched-switch-note');
+            const sum = document.getElementById('sched-sum');
+            const apply = document.getElementById('sched-apply');
+            const rm = document.getElementById('sched-remove');
+            if (!dayBox || !schedDraft) return;
+
+            const curDay = fdKey(schedDraft);
+            const days = schedDayList();
+            const inWindow = days.some(d => d.key === curDay);
+
+            dayBox.innerHTML = days.map(d =>
+                `<button type="button" class="fchip sched-day${d.key === curDay ? ' is-on' : ''}"
+                    onclick="schedPickDay('${d.key}')"><b>${d.top}</b><small>${d.sub}</small></button>`
+            ).join('') +
+                // خانەی هەشتەم: ڕۆژێک لە دەرەوەی حەوت ڕۆژەکە
+                `<button type="button" class="fchip sched-day is-other${!inWindow ? ' is-on' : ''}"
+                    onclick="openSchedDaySheet()"><b>ڕۆژێکی تر</b><small>${!inWindow
+                    ? toArabicDigits(schedDraft.getDate()) + ' ' + FS_MONTHS[schedDraft.getMonth()]
+                    : 'هەڵیبژێرە'}</small></button>`;
+
+            // ---- کاتژمێر ----
+            if (tg) tg.checked = schedTimeOn;
+            if (timeBox) timeBox.style.display = schedTimeOn ? '' : 'none';
+            if (note) note.innerText = schedTimeOn
+                ? 'ئۆردەرەکە لەم کاتەدا داخیل دەبێت'
+                : 'بێ ئەمە: دوازدەی شەو';
+
+            if (schedTimeOn && timeBox) {
+                const curH = schedDraft.getHours(), curM = schedDraft.getMinutes();
+                const onPreset = SCHED_TIMES.some(h => h === curH && curM === 0);
+                timeBox.innerHTML = SCHED_TIMES.map(h => {
+                    const probe = new Date(schedDraft); probe.setHours(h, 0, 0, 0);
+                    return `<button type="button" class="fchip${(curH === h && curM === 0) ? ' is-on' : ''}"
+                        onclick="schedPickTime('${String(h).padStart(2, '0')}:00')">${schedTimeLabel(probe)}</button>`;
+                }).join('')
+                    // خانەی حەوتەم: کاتێکی تر — هەمان شێوازی «ڕۆژێکی تر»
+                    + `<button type="button" class="fchip is-other${!onPreset ? ' is-on' : ''}"
+                        onclick="openSchedTimeSheet()">${!onPreset
+                        ? schedTimeLabel(schedDraft) : 'کاتێکی تر'}</button>`;
+            }
+
+            // ---- کورتە و دوگمەکان ----
+            const ok = schedDraftValid();
+            if (sum) {
+                sum.innerHTML = ok
+                    ? `<i class='bx bx-time-five'></i> ${schedDateLabel(schedDraft)}${schedTimeOn
+                        ? ' · ' + schedTimeLabel(schedDraft)
+                        : ' · <b>دوازدەی شەو</b>'}`
+                    : `<i class='bx bx-error-circle'></i> <em>${schedWhyBad()}</em>`;
+                sum.classList.toggle('is-bad', !ok);
+            }
+            if (apply) apply.disabled = !ok;
+            // «لابردن» تەنها کاتێک مانای هەیە کە ئۆردەرەکە پێشتر
+            // کاتداری بۆ دانرابێت — ئەوسا دەیکات بە ئۆردەرێکی ئاسایی
+            if (rm) rm.style.display = pendingSchedule ? '' : 'none';
+        }
+
+        // ⚠️ ڕۆژ و کاتژمێر هەمیشە پێکەوە دەنووسرێنەوە. کاتێک سویچەکە
+        //    کوژاوەیە کاتەکە بە زۆر دەبێتە ٠٠:٠٠ — ئەگەرنا کاتی
+        //    پێشووی مابێتەوە و «دوازدەی شەو» درۆ بێت.
+        function schedSetDay(d) {
+            const h = schedTimeOn ? schedDraft.getHours() : 0;
+            const mi = schedTimeOn ? schedDraft.getMinutes() : 0;
+            schedDraft = new Date(d.getFullYear(), d.getMonth(), d.getDate(), h, mi, 0, 0);
+        }
+
+        function schedPickDay(key) {
+            const d = fdFromKey(key);
+            if (!d || !schedDraft) return;
+            schedCustomDay = null;
+            schedSetDay(d);
+            schedRenderSheet();
+        }
+
+        // ============================================================
+        // ڕۆژی دڵخواز — ڕۆژژمێری «مەودای دڵخواز» بە قەرز
+        // ------------------------------------------------------------
+        // ⭐ هەمان شێوازی `openSxDateSheet`: نۆدی `.fcal-wrap` خۆی
+        //    دەگوێزرێتەوە، نەک کۆپی بکرێتەوە. `fcalD` دراوی خۆمان
+        //    دەکاتە ئامانج و `fcalOnChange` دوای هەر کلیکێک بانگ
+        //    دەکرێت.
+        // ============================================================
+        let _schedCalDraft = { preset: 'custom', from: null, to: null };
+
+        function openSchedDaySheet() {
+            const cur = schedDraft ? fdKey(schedDraft) : fdKey(fdToday());
+            _schedCalDraft = { preset: 'custom', from: cur, to: cur };
+
+            const wrap = document.querySelector('#fcal-home .fcal-wrap')
+                || document.querySelector('.fcal-wrap');
+            const slot = document.getElementById('sched-cal-slot');
+            if (wrap && slot) slot.appendChild(wrap);
+
+            fcalD = _schedCalDraft;
+            fcalOnChange = schedCalSync;
+            fcalHover = null;
+            fcalDragEdge = null;
+            fcalFocus = cur;
+            fcalAlign(cur);
+            fcalBackMonths = 0;     // ڕۆژی ڕابردوو مانای نییە بۆ کاتدارکردن
+
+            document.getElementById('sched-date-sheet').classList.add('show');
+            fcalRender();
+            schedCalSync();
+            requestAnimationFrame(() => fcalScrollToMonth(cur, 'auto'));
+        }
+
+        // ⚠️ ڕۆژژمێرەکە **مەودا**یە بەڕەسەن: کلیکی یەکەم `from`،
+        //    دووەم `to`. لێرەدا تەنها یەک ڕۆژ دەوێت، بۆیە دوای هەر
+        //    کلیکێک `to = from` دادەنرێت — ئەوسا خانەکە وەک
+        //    `is-only` دەردەکەوێت و کلیکی داهاتوو لە نوێوە
+        //    دەستی پێدەکات.
+        function schedCalSync() {
+            const D = _schedCalDraft;
+            if (D.from) D.to = D.from;
+            fcalPaint();
+            const info = document.getElementById('sched-cal-info');
+            const btn = document.getElementById('sched-cal-apply');
+            const d = D.from ? fdFromKey(D.from) : null;
+            const past = d && fdKey(d) < fdKey(fdToday());
+            if (info) {
+                info.innerHTML = !d
+                    ? 'ڕۆژێک هەڵبژێرە'
+                    : (past
+                        ? '<i class="bx bx-error-circle"></i> ڕۆژێکی ڕابردووە'
+                        : '<i class="bx bx-calendar"></i> ' + schedDateLabel(d));
+                info.classList.toggle('is-bad', !!past);
+            }
+            if (btn) btn.disabled = !d || past;
+        }
+
+        function closeSchedDaySheet() {
+            document.getElementById('sched-date-sheet').classList.remove('show');
+            fcalReturnHome();
+        }
+
+        function applySchedDaySheet() {
+            const d = _schedCalDraft.from ? fdFromKey(_schedCalDraft.from) : null;
+            if (!d || fdKey(d) < fdKey(fdToday())) return;
+            schedCustomDay = _schedCalDraft.from;
+            schedSetDay(d);
+            closeSchedDaySheet();
+            schedRenderSheet();
+        }
+
+        // ============================================================
+        // کاتی دڵخواز — هەمان خانەکانی ڕۆژژمێر (`.fcd`)
+        // ============================================================
+        const SCT_MINS = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55];
+        let _sctH = 9, _sctM = 0, _sctPm = false;   // ٩:٠٠ پ.ن
+
+        function openSchedTimeSheet() {
+            const h24 = schedDraft ? schedDraft.getHours() : 9;
+            _sctPm = h24 >= 12;
+            _sctH = h24 % 12; if (!_sctH) _sctH = 12;
+            _sctM = schedDraft ? schedDraft.getMinutes() : 0;
+            sctRender();
+            document.getElementById('sched-time-sheet').classList.add('show');
+        }
+
+        function closeSchedTimeSheet() {
+            document.getElementById('sched-time-sheet').classList.remove('show');
+        }
+
+        // ⚠️ پۆلی هەڵبژاردن **سێ** پۆلە، نەک یەک. لە ڕۆژژمێردا
+        //    ڕۆژێکی تاک `is-start` و `is-end` و `is-only` پێکەوە
+        //    وەردەگرێت. ڕەنگی شین لە `.fcd.is-start > span`ەوە دێت —
+        //    `is-only` تەنها شێوەی `::before`ەکە دەگۆڕێت. بە `is-only`ی
+        //    تەنها، خانەکە هەڵبژێردراو دەبێت بەڵام **هیچ رەنگێکی
+        //    ناگۆڕێت** — دۆزرایەوە لە سکرینشۆتدا ٢٠٢٦-٠٨-٢٦.
+        const SCT_ON = ' is-start is-end is-only';
+
+        function sctRender() {
+            const hb = document.getElementById('sct-hours');
+            const mb = document.getElementById('sct-mins');
+            const rb = document.getElementById('sct-mer');
+            if (!hb) return;
+
+            // کاتژمێر ١–١٢ — ٤ ستوون × ٣ ڕیز، ڕیزێکی ناتەواو نامێنێتەوە
+            let hh = '';
+            for (let h = 1; h <= 12; h++) {
+                const on = h === _sctH;
+                hh += `<button type="button" class="sct-cell${on ? ' is-on' : ''}"
+                    aria-pressed="${on}" onclick="sctPick('h',${h})">${toArabicDigits(h)}</button>`;
+            }
+            hb.innerHTML = hh;
+
+            // خولەک بە پلەی پێنج — ١٢ خانە، هەمان ٤ × ٣
+            mb.innerHTML = SCT_MINS.map(m => {
+                const on = m === _sctM;
+                return `<button type="button" class="sct-cell${on ? ' is-on' : ''}"
+                    aria-pressed="${on}" onclick="sctPick('m',${m})">${toArabicDigits(String(m).padStart(2, '0'))}</button>`;
+            }).join('');
+
+            // پ.ن/د.ن — کۆنترۆڵێکی پەقی دوو‌پارچەی، نەک دوو خانەی جیا.
+            // دوو بژاردەی لێکدژمین = کۆنترۆڵی پارچەکراو، نەک گرید
+            rb.innerHTML = [[0, 'پ.ن', 'بەیانی'], [1, 'د.ن', 'ئێوارە']].map(([v, t, sub]) => {
+                const on = (!!v === _sctPm);
+                return `<button type="button" class="sct-seg-btn${on ? ' is-on' : ''}"
+                    aria-pressed="${on}" onclick="sctPick('r',${v})"><b>${t}</b><small>${sub}</small></button>`;
+            }).join('');
+
+            // پێشبینینی درشت
+            const ph = document.getElementById('sct-p-h');
+            const pm = document.getElementById('sct-p-m');
+            const pr = document.getElementById('sct-p-r');
+            if (ph) ph.innerText = toArabicDigits(_sctH);
+            if (pm) pm.innerText = toArabicDigits(String(_sctM).padStart(2, '0'));
+            if (pr) pr.innerText = _sctPm ? 'د.ن' : 'پ.ن';
+        }
+
+        function sctPick(kind, v) {
+            if (kind === 'h') _sctH = v;
+            else if (kind === 'm') _sctM = v;
+            else _sctPm = !!v;
+            // لەرزێنیکی وورد — دووبارەکردنەوەی پێشبینینەکە
+            const box = document.querySelector('.sct-clock');
+            if (box) { box.classList.remove('is-bump'); void box.offsetWidth; box.classList.add('is-bump'); }
+            try {
+                const tg = window.Telegram && window.Telegram.WebApp;
+                if (tg && tg.HapticFeedback) tg.HapticFeedback.selectionChanged();
+            } catch (e) { }
+            sctRender();
+        }
+
+        function applySchedTimeSheet() {
+            // ١٢ی بەیانی = ٠، ١٢ی ئێوارە = ١٢
+            let h24 = _sctH % 12;
+            if (_sctPm) h24 += 12;
+            closeSchedTimeSheet();
+            schedPickTime(String(h24).padStart(2, '0') + ':' + String(_sctM).padStart(2, '0'));
+        }
+
+        function schedToggleTime(on) {
+            schedTimeOn = !!on;
+            // کوژاندنەوە → دوازدەی شەو. داگیرساندن → کاتێکی گونجاو،
+            // نەک ٠٠:٠٠ کە ڕێک ئەوەیە سویچەکە بۆی هەیە
+            if (!schedTimeOn) schedDraft.setHours(0, 0, 0, 0);
+            else if (schedDraft.getHours() === 0 && schedDraft.getMinutes() === 0)
+                schedDraft.setHours(9, 0, 0, 0);
+            schedRenderSheet();
+        }
+
+        function schedPickTime(hhmm) {
+            const m = /^(\d{1,2}):(\d{2})$/.exec(String(hhmm || ''));
+            if (!m || !schedDraft) return;
+            schedDraft = new Date(schedDraft.getFullYear(), schedDraft.getMonth(), schedDraft.getDate(),
+                +m[1], +m[2], 0, 0);
+            schedRenderSheet();
+        }
+
+        // ---------- کردنەوە و داخستن ----------
+        function openSchedSheet() {
+            // دەستکاریکردنی ئۆردەرێکی **بەردەست** ناکرێتەوە بە کاتدار —
+            // ئەوە پێشتر چووەتە ناو خولی کارەوە
+            if (editingOrderId) {
+                const eo = allGlobalOrdersData[editingOrderId];
+                if (eo && !isSchedPending(eo)) {
+                    showToast("ئەم ئۆردەرە پێشتر بەردەست بووە — ناتوانرێت بۆ داهاتوو بخرێت.", "error");
+                    return;
+                }
+            }
+
+            // ئەوەی هەیە دەمێنێتەوە؛ ئەگەرنا سبەینێ دوازدەی شەو
+            // (واتا سویچی کاتژمێر کوژاوە — بنەڕەتی سادەتر)
+            if (pendingSchedule) {
+                schedDraft = new Date(pendingSchedule.getTime());
+                // کاتی ٠٠:٠٠ واتا سویچەکە کوژاوە بووە
+                schedTimeOn = !(schedDraft.getHours() === 0 && schedDraft.getMinutes() === 0);
+            } else {
+                const d = new Date();
+                d.setDate(d.getDate() + 1);
+                d.setHours(0, 0, 0, 0);
+                schedDraft = d;
+                schedTimeOn = false;
+            }
+            schedCustomDay = null;
+            schedRenderSheet();
+            const sheet = document.getElementById('sched-sheet');
+            sheet.classList.add('show');
+            document.body.classList.add('fsheet-open');
+        }
+
+        function closeSchedSheet() {
+            document.getElementById('sched-sheet').classList.remove('show');
+            document.body.classList.remove('fsheet-open');
+        }
+
+        // ---------- جێبەجێکردن ----------
+        // یەک جووڵە = کات دیاری بکە + ئۆردەرەکە بنێرە. هەمان
+        // ڕەفتاری دوگمەکەی خۆی، تەنها کاتێکی جیاوازی پێیە.
+        function applySchedSheet() {
+            if (!schedDraftValid()) return;
+            pendingSchedule = new Date(schedDraft.getTime());
+            closeSchedSheet();
+            schedClearSuppress();
+            syncSchedBar();
+            submitOrder();
+        }
+
+        // ---------- شریتی مانەوە لەسەر فۆڕمەکە ----------
+        // ⚠️ ئەگەر ناردنەکە شکستی هێنا (خانەیەکی پڕنەکراوە)،
+        //    `pendingSchedule` دەمێنێتەوە — بەڵام بەبێ ئەم شریتە
+        //    بەکارهێنەر نایزانێت. داواکاریی خاوەن: کاتەکە بمێنێت،
+        //    ئاماژەی پێ بکرێت، و بکرێت بگۆڕدرێت یان لابدرێت.
+        function syncSchedBar() {
+            const bar = document.getElementById('sched-bar');
+            if (!bar) return;
+            if (!pendingSchedule) { bar.style.display = 'none'; return; }
+            const when = document.getElementById('sched-bar-when');
+            if (when) when.innerText = schedWhenTextFromDate(pendingSchedule);
+            bar.style.display = 'flex';
+        }
+
+        function clearPendingSchedule() {
+            if (!pendingSchedule) return;
+            // لە دەستکاریکردنی ئۆردەرێکی چاوەڕواندا، لابردنی کاتەکە
+            // واتا ئۆردەرەکە دەستبەجێ بەردەست دەبێت — نەک هیچ
+            const editingPending = editingOrderId
+                && isSchedPending(allGlobalOrdersData[editingOrderId]);
+            if (editingPending && !confirm("لابردنی کات\n\nئۆردەرەکە دەستبەجێ داخیل دەبێت و بەڕێوەبەر ئاگادار دەکرێتەوە.\n\nدڵنیایت؟")) return;
+            pendingSchedule = null;
+            syncSchedBar();
+            showToast(editingPending
+                ? "کاتەکە لابرا — «نوێکردنەوە» لێبدە تا داخیل بێت"
+                : "کاتەکە لابرا — ئۆردەرەکە دەستبەجێ دەچێت", "success");
+        }
+
+        // کلیکی هەڵواسراوی پەنجەدانانەکە دەسڕدرێتەوە — ئەگەرنا ئەم
+        // ناردنە خۆی وەک «کلیکی دوای پەنجەدانان» لێکدەدرێتەوە و
+        // بێدەنگ پشتگوێ دەخرێت
+        function schedClearSuppress() {
+            _schedSuppressClick = false;
+            clearTimeout(_schedSuppressT);
+        }
+
+        // «لابردن»ی ناو شیتەکە — هەمان کاری Xـی شریتەکە.
+        // ⚠️ خۆی ناردن **ناکات**: بەکارهێنەر ڕەنگە تەنها بیەوێت کاتەکە
+        //    لابدات و دواتر فۆڕمەکە تەواو بکات. ناردنێکی چاوەڕواننەکراو
+        //    ئۆردەرێکی ناتەواو تۆمار دەکات.
+        function schedRemove() {
+            closeSchedSheet();
+            schedClearSuppress();
+            clearPendingSchedule();
+        }
+
+        // ---------- کردنەوەی دەستی لە مۆداڵی زانیاریدا ----------
+        // تەنها خاوەنەکەی دەیبینێت. `released_at` دادەنرێت و
+        // `date`ـیش دەکرێتە ئێستا — چونکە ئێستا داخیل بوو.
+        async function releaseScheduledNow(orderId) {
+            if (!await ensureAccountActive()) return;
+            const o = allGlobalOrdersData[orderId];
+            if (!o || !isSchedPending(o)) return;
+            if (!schedIsMine(o)) { schedLockToast(); return; }
+            if (!confirm("ئێستا بەردەستی بکە\n\nئۆردەرەکە دەستبەجێ داخیل دەبێت و بەڕێوەبەر ئاگادار دەکرێتەوە.\n\nدڵنیایت؟")) return;
+
+            showToast("خەریکی کردنەوە...", "loading");
+            try {
+                const now = new Date();
+                const { error } = await supabase.from('orders').update({
+                    released_at: now.toISOString(),
+                    date: schedDbDate(now)
+                }).eq('id', orderId);
+                if (error) throw error;
+
+                // هەمان تۆماری جۆبی کرۆن — ئاگادارکردنەوەی «ئۆردەرێکی نوێ»
+                // لێرەوە دەجووڵێت، نەک لە کاتی نووسیندا
+                await logOrderAction(o, 'create', {
+                    to: o.status || 'ئامادە دەکرێت',
+                    detail: 'ئۆردەری کاتدارکراو بە دەست بەردەست کرا'
+                });
+                showToast("بەردەست بوو!", "success");
+                closeModal(null, 'order-details-modal');
+                rtPatchOrders([orderId]);
+            } catch (e) {
+                console.error('releaseScheduledNow:', e);
+                showToast("کێشەیەک ڕوویدا — دووبارە هەوڵ بدە", "error");
+            }
+        }
+
+        // ---------- فۆرماتی `orders.date` ----------
+        // ⚠️ دەقە، نەک timestamp: `YYYY-MM-DD hh:mm:ss AM/PM`. فلتەری
+        //    ڕۆژ و ئامار بە `substring(date,1,10)` کاردەکەن، بۆیە
+        //    فۆرماتەکە دەبێت **بە تەواوی** وەک ئەوەی `submitOrderImpl`
+        //    دەینووسێت بێت. یەک شوێن بۆ هەردووکیان.
+        function schedDbDate(d) {
+            const year = d.getFullYear();
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            let hours = d.getHours();
+            const minutes = String(d.getMinutes()).padStart(2, '0');
+            const seconds = String(d.getSeconds()).padStart(2, '0');
+            const ampm = hours >= 12 ? 'PM' : 'AM';
+            hours = hours % 12;
+            hours = hours ? hours : 12;
+            hours = String(hours).padStart(2, '0');
+            return `${year}-${month}-${day} ${hours}:${minutes}:${seconds} ${ampm}`;
+        }
+
+        // ---------- ژمێرەری زیندوو ----------
+        // هەموو ٦٠ چرکە تەنها **دەقی** چیپەکان نوێ دەکاتەوە — نەک
+        // نەخشاندنەوەی کارتەکان. ئەوانەی کاتیان تێپەڕیوە و هێشتا
+        // چاوەڕوانن (جۆبی کرۆن هێشتا نەیکردووەتەوە) یەکجار لە
+        // سێرڤەرەوە دەپشکنرێنەوە.
+        let _schedAsked = new Set();
+        function schedTick() {
+            const chips = document.querySelectorAll('.sched-stamp[data-sched]');
+            if (!chips.length) { _schedAsked.clear(); return; }
+            const stale = [];
+            chips.forEach(el => {
+                const o = allGlobalOrdersData[el.dataset.sched];
+                if (!o) return;
+                const txt = schedRemainText(o);
+                if (el.lastChild && el.lastChild.nodeType === 3) el.lastChild.nodeValue = 'چاوەڕوان · ' + txt;
+                // ٩٠ چرکە پاش کاتەکەی و هێشتا کراوە نەبووە → بپرسە
+                if (schedRemainMs(o) < -90000 && !_schedAsked.has(String(o.id))) {
+                    _schedAsked.add(String(o.id));
+                    stale.push(o.id);
+                }
+            });
+            if (stale.length) { try { rtPatchOrders(stale); } catch (e) { } }
+        }
+
+        // ژمێرەری زیندووی کارتی مۆداڵ — هەر چرکەیەک.
+        //
+        // ⚠️ تەنها کاتێک کار دەکات کە کارتێکی زیندوو لە
+        //    پەڕەکەدا بێت (`[data-sched-live]`). کاتێک مۆداڵەکە
+        //    دادەخرێت نۆدەکە نامێنێت و تیکەکە یەکسەر
+        //    دەگەڕێتەوە — بۆیە لیستی دەیان ئۆردەر هەرگیز
+        //    هەر چرکەیەک نەخشێندراوە ناکرێتەوە.
+        function schedLiveTick() {
+            const box = document.querySelector('[data-sched-live]');
+            if (!box) return;
+            const o = allGlobalOrdersData[box.dataset.schedLive];
+            if (!o) return;
+            const val = box.querySelector('.sched-count-val');
+            const fill = box.querySelector('.sched-prog-fill');
+            if (val) val.innerHTML = schedCountdownHtml(o);
+            if (fill) fill.style.width = schedProgress(o).toFixed(2) + '%';
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            schedHoldInit();
+            setInterval(schedTick, 60000);
+            setInterval(schedLiveTick, 1000);
+        });
+
         // دوگمەی ناردن/نوێکردنەوەی ئۆردەر — بە ڕێگری لە دووبارە کلیک.
         // خودی لۆجیکەکە لە submitOrderImpl ـدایە.
         async function submitOrder() {
+            // کلیکی دوای پەنجەدانانی درێژ — شیتی کات کرایەوە، بۆیە
+            // ئۆردەرەکە نابێت لێرەوە بنێردرێت
+            if (_schedSuppressClick) {
+                _schedSuppressClick = false;
+                clearTimeout(_schedSuppressT);
+                return;
+            }
             const btn = document.querySelector('#order-screen .btn[onclick="submitOrder()"]');
             return guardSubmit('submit-order', btn, submitOrderImpl);
         }
@@ -17025,7 +18082,31 @@
 
             try {
                 if (editingOrderId) {
+                    // ---- کاتی داخیلبوون لە دەستکاریکردندا ----
+                    // تەنها ئۆردەری **چاوەڕوان** لێرەدا کاری تێدا دەکرێت.
+                    // دوو ڕێگا هەن: کاتەکە بگۆڕدرێت، یان لابدرێت
+                    // (ئەوسا دەستبەجێ داخیل دەبێت).
+                    const wasPending = isSchedPending(allGlobalOrdersData[editingOrderId]);
+                    let schedFields = {};
+                    let releasedByEdit = false;
+                    if (wasPending) {
+                        if (pendingSchedule) {
+                            schedFields = {
+                                scheduled_at: pendingSchedule.toISOString(),
+                                date: schedDbDate(pendingSchedule)
+                            };
+                        } else {
+                            const relNow = new Date();
+                            schedFields = {
+                                released_at: relNow.toISOString(),
+                                date: schedDbDate(relNow)
+                            };
+                            releasedByEdit = true;
+                        }
+                    }
+
                     const updatedFields = {
+                        ...schedFields,
                         address: address,
                         city: city,
                         customer_name: customerName,
@@ -17080,31 +18161,41 @@
                     }
 
                     const changed = diffOrderFields(beforeEdit, updatedFields);
+                    // ⚠️ ئەگەر ئۆردەری چاوەڕوان بە دەستکاری بەردەست کرابێت،
+                    //    تۆمارەکە دەبێت `create` بێت نەک `edit` — ئەگەرنا
+                    //    بەڕێوەبەر «دەستکاری ئۆردەر»ێک وەردەگرێت بۆ
+                    //    ئۆردەرێک کە هەرگیز نەیبیستووە. بڕوانە db/015.
+                    let editAction = 'edit';
+                    let editDetail = changed.length
+                        ? 'دەستکاری کرد: ' + changed.join('، ')
+                        : 'ئۆردەرەکەی پاشەکەوت کردەوە (هیچ گۆڕانکارییەک نەبوو)';
+                    if (releasedByEdit) {
+                        editAction = 'create';
+                        editDetail = 'ئۆردەری کاتدارکراو بەردەست کرا'
+                            + (changed.length ? ' — دەستکاری کرا: ' + changed.join('، ') : '');
+                    } else if (wasPending && pendingSchedule) {
+                        editDetail += (changed.length ? ' · ' : '')
+                            + 'کاتی داخیلبوون: ' + schedWhenText({ scheduled_at: pendingSchedule.toISOString() });
+                    }
                     await logOrderAction(
                         beforeEdit || { id: editingOrderId },
-                        'edit',
-                        {
-                            detail: changed.length
-                                ? 'دەستکاری کرد: ' + changed.join('، ')
-                                : 'ئۆردەرەکەی پاشەکەوت کردەوە (هیچ گۆڕانکارییەک نەبوو)'
-                        }
+                        editAction,
+                        { to: releasedByEdit ? (beforeEdit && beforeEdit.status) || 'ئامادە دەکرێت' : null, detail: editDetail }
                     );
-                    showToast("بە سەرکەوتوویی نوێکرایەوە!", "success");
+                    showToast(releasedByEdit
+                        ? "نوێکرایەوە و بەردەست بوو!"
+                        : (wasPending && pendingSchedule
+                            ? `نوێکرایەوە — ${schedWhenTextFromDate(pendingSchedule)} داخیل دەبێت`
+                            : "بە سەرکەوتوویی نوێکرایەوە!"), "success");
 
                 } else {
                     let orderCode = currentUser.code + "-" + getSecureCode();
-                    let now = new Date();
-                    let year = now.getFullYear();
-                    let month = String(now.getMonth() + 1).padStart(2, '0');
-                    let day = String(now.getDate()).padStart(2, '0');
-                    let hours = now.getHours();
-                    let minutes = String(now.getMinutes()).padStart(2, '0');
-                    let seconds = String(now.getSeconds()).padStart(2, '0');
-                    let ampm = hours >= 12 ? 'PM' : 'AM';
-                    hours = hours % 12;
-                    hours = hours ? hours : 12;
-                    hours = String(hours).padStart(2, '0');
-                    let fullDateString = `${year}-${month}-${day} ${hours}:${minutes}:${seconds} ${ampm}`;
+                    // ئۆردەری کاتدارکراو: بەروارەکەی **کاتی داخیلبوونە**،
+                    // نەک کاتی نووسین (بڕیاری خاوەن، ٢٠٢٦-٠٨-٢٥). بۆیە
+                    // فلتەری ڕۆژ، سەردێڕی ڕۆژ، ئامار و خولی ١٠ ڕۆژەی
+                    // جزدان هەموویان خۆکارانە ڕاستن. بڕوانە db/050.
+                    let schedAt = pendingSchedule ? new Date(pendingSchedule.getTime()) : null;
+                    let fullDateString = schedDbDate(schedAt || new Date());
 
                     // کۆدی پۆستەی بەڕێوەبەرەکە — وێنەیەکی لەسەر ئۆردەرەکە دەمێنێتەوە
                     const postalForOrder = await postalCodeForMyOrders();
@@ -17148,6 +18239,12 @@
                         source: exOn ? EXCHANGE_SOURCE : "سایت",
                         tg_info: "",
                         status: "ئامادە دەکرێت",
+                        // چاوەڕوان = scheduled_at پڕە و released_at بەتاڵە.
+                        // ⚠️ `released_at` بە **سێرڤەر** پڕ دەکرێتەوە
+                        //    (جۆبی کرۆنی db/050) — هەرگیز لێرەوە نا.
+                        scheduled_at: schedAt ? schedAt.toISOString() : null,
+                        scheduled_by: schedAt ? currentUser.code : null,
+                        released_at: null,
                         ...exchangeColumns(exOn, exData, exCalc),
                         ...exchangeOwnerColumns(exOn, exData)
                     }]).select('id, order_code');
@@ -17174,12 +18271,27 @@
                         }
                     }
 
-                    await logOrderAction(newRow, 'create', {
-                        to: "ئامادە دەکرێت",
-                        detail: "ئۆردەرەکەی دروستکرد"
-                            + (isWalletPay ? ` — ${prepaidAmount.toLocaleString()} د.ع لە جزدانی خۆی دا` : '')
-                    });
-                    showToast("بە سەرکەوتوویی تۆمار کرا!", "success");
+                    // ⚠️ ئۆردەری کاتدارکراو بە `schedule` تۆمار دەکرێت،
+                    //    نەک `create`. `notify_order_log` (db/015) تەنها
+                    //    بۆ create/edit/status/distribute ئاگادارکردنەوە
+                    //    دەنێرێت، بۆیە لەم ساتەدا هیچ ناچێتە لای
+                    //    بەڕێوەبەر. لە ساتی کردنەوەدا جۆبی کرۆن
+                    //    ڕیزێکی `create` دادەنێت و ئەوسا دەنێردرێت.
+                    const walletNote = isWalletPay
+                        ? ` — ${prepaidAmount.toLocaleString()} د.ع لە جزدانی خۆی دا` : '';
+                    if (schedAt) {
+                        await logOrderAction(newRow, 'schedule', {
+                            to: "ئامادە دەکرێت",
+                            detail: `ئۆردەرەکەی بۆ ${schedWhenText({ scheduled_at: schedAt.toISOString() })} کاتدار کرد` + walletNote
+                        });
+                        showToast(`چاوەڕوان کرا — ${schedWhenTextFromDate(schedAt)} داخیل دەبێت`, "success");
+                    } else {
+                        await logOrderAction(newRow, 'create', {
+                            to: "ئامادە دەکرێت",
+                            detail: "ئۆردەرەکەی دروستکرد" + walletNote
+                        });
+                        showToast("بە سەرکەوتوویی تۆمار کرا!", "success");
+                    }
                 }
 
                 let wasEditing = !!editingOrderId;
@@ -17524,6 +18636,11 @@
             // ئەوەش «بینیم»ە، ڕێک وەک «تێگەیشتم». بەبێ ئەمە
             // گەڕانەوە ئامارەکە بێدەنگانە ون دەکات.
             if (modalId === 'announce-popup-modal') announcePopupClosed();
+            // ⚠️ ڕۆژژمێرەکە قەرز وەرگیراوە — هەر داخستنێک دەبێت
+            //    بیگەڕێنێتەوە، نەک تەنها دوگمەی ✕. دوگمەی گەڕانەوە
+            //    ڕاستەوخۆ ئێرە دەگات و فەنکشنی داخستنی تایبەت
+            //    هەرگیز بانگ ناکرێت. بڕوانە [[landmines]].
+            if (modalId === 'sx-date-sheet' || modalId === 'sched-date-sheet') fcalReturnHome();
             // پەنجەرەی وردەکاری ئۆردەر داخرا → وەک «پشکنراو» نیشان دەکرێت.
             // ئەمە تاکە ڕێگای داخستنە (X، پاشخان، دەستکاری، سڕینەوە…)
             if (modalId === 'order-details-modal') {
@@ -17630,6 +18747,13 @@
         // ---- چاودێری مۆدالەکان ----
         // بەبێ دەستکاریکردنی دەیان شوێنی بانگکردن: گوێ لە زیادبوون و
         // لابردنی پۆلی `show` دەگیرێت لەسەر هەموو مۆدال و شیتەکان.
+        // هەر شیتێک و فەنکشنی داخستنی خۆی — بۆ دوگمەی گەڕانەوەی
+        // تلیگرام/وێبگەڕ. شیتێکی نوێ زیاد کرا؟ لێرەش تۆماری بکە.
+        const SHEET_CLOSERS = {
+            'filter-sheet': () => closeFilterSheet(),
+            'sched-sheet': () => closeSchedSheet()
+        };
+
         function navWatchOverlays() {
             const obs = new MutationObserver(muts => {
                 muts.forEach(m => {
@@ -17642,8 +18766,17 @@
                     const shown = el.classList.contains('show');
                     if (shown && !el.__navOn) {
                         el.__navOn = true;
+                        // ⚠️ هەر شیتێک فەنکشنی داخستنی خۆی هەیە. پێشتر
+                        //    هەموو `.fsheet`ـەکان `closeFilterSheet`یان
+                        //    بانگ دەکرد — شیتی دووەم بە دوگمەی گەڕانەوە
+                        //    دانەدەخرا و لەسەر شاشە دەمایەوە.
                         navPush('m:' + el.id, isSheet
-                            ? () => { try { closeFilterSheet(); } catch (e) { el.classList.remove('show'); } }
+                            ? () => {
+                                try {
+                                    const fn = SHEET_CLOSERS[el.id];
+                                    if (fn) fn(); else el.classList.remove('show');
+                                } catch (e) { el.classList.remove('show'); }
+                            }
                             : () => closeModal(null, el.id));
                     } else if (!shown && el.__navOn) {
                         el.__navOn = false;
@@ -21164,7 +22297,18 @@
 
         const FS_MONTHS = ['کانوونی دووەم', 'شوبات', 'ئازار', 'نیسان', 'ئایار', 'حوزەیران',
             'تەمووز', 'ئاب', 'ئەیلوول', 'تشرینی یەکەم', 'تشرینی دووەم', 'کانوونی یەکەم'];
-        const FS_WD = ['ی', 'د', 'س', 'چ', 'پ', 'ه', 'ش'];   // یەکشەممە … شەممە
+        // ⚠️ هەفتە بە **شەممە** دەست پێدەکات و بە **هەینی** کۆتایی
+        //    دێت (ڕۆژژمێری عێراقی) — هەمان ڕیزی `SX_DAYS`ی
+        //    خشتەی گەرمیی ئامارەکان.
+        //    پێشتر بە یەکشەممە دەستی پێدەکرد و گریدەکە `dir="ltr"`
+        //    بوو، بۆیە لە ڕاستەوە بۆ چەپ دەخوێندرایەوە:
+        //    ش ه پ چ س د ی — پێچەوانە. (راپۆرتی خاوەن ٢٠٢٦-٠٨-٢٦)
+        const FS_WD = ['ش', 'ی', 'د', 'س', 'چ', 'پ', 'ه'];   // شەممە … هەینی
+
+        // ژمارەی ستوونی ڕۆژێک لە هەفتەدا (٠ = شەممە).
+        // `getDay()`: ٠=یەکشەممە … ٦=شەممە — بۆیە `+1 % 7`.
+        // یەک شوێن بۆ هەموو ژمارەکانی ڕۆژی هەفتە.
+        function fdDow(d) { return (d.getDay() + 1) % 7; }
 
         const FS_STATUSES = [
             { v: 'all', t: 'هەموو' },
@@ -21172,6 +22316,15 @@
             { v: 'ڕێگا', t: 'لە ڕێگایە' },
             { v: 'گەیشت', t: 'گەیشتووە' },
             { v: 'گەڕا', t: 'گەڕاوەتەوە' },
+        ];
+        // فلتەری ئۆردەری کاتدارکراو — لای **کڵاینت** جێبەجێ دەبێت
+        // (وەک مۆدی پشکنین)، بۆیە `orders_page` هیچ پارامەتەرێکی
+        // نوێی پێ زیاد نەکراوە و هیچ واژۆیەک `drop` نەکراوە.
+        // بڕوانە [[landmines]] خاڵی ٨ و ١٨.
+        const FS_SCHED = [
+            { v: 'all', t: 'هەموو' },
+            { v: 'pending', t: 'تەنها چاوەڕوانەکان' },
+            { v: 'live', t: 'بەبێ چاوەڕوانەکان' },
         ];
         const FS_PRESETS = [
             { v: 'all', t: 'هەموو کاتێک' },
@@ -21260,6 +22413,7 @@
             // دۆخی جێبەجێکراو کۆپی دەکرێت — پاشگەزبوونەوە هیچ ناگۆڕێت
             fsDraft = {
                 status: document.getElementById('filter-status').value || 'all',
+                sched: document.getElementById('filter-sched').value || 'all',
                 preset: document.getElementById('filter-date-type').value || 'all',
                 from: document.getElementById('filter-date-from').value || null,
                 to: document.getElementById('filter-date-to').value || null,
@@ -21310,7 +22464,7 @@
             // «سڕینەوە» فلتەرەکان دەگەڕێنێتەوە — بەڵام مۆدی پشکنین
             // ناکوژێنێتەوە (نیشانەکان بە `fsClearReviews` دەسڕدرێنەوە)
             fsDraft = {
-                status: 'all', preset: 'all', from: null, to: null,
+                status: 'all', sched: 'all', preset: 'all', from: null, to: null,
                 sort: SORT_DEFS[fsSortId()].def,
                 rvwOn: !!fsDraft.rvwOn, rvwF: 'all'
             };
@@ -21348,8 +22502,8 @@
         // ---------- مۆدی پشکنین لەناو شیتەکە ----------
         const FS_REVIEW_CHIPS = [
             { v: 'all', t: 'هەموو' },
-            { v: 'todo', t: '☑ تەنها ماوەکان' },
-            { v: 'flag', t: '⚑ تەنها نیشانەکراوەکان' }
+            { v: 'todo', t: 'تەنها ماوەکان' },
+            { v: 'flag', t: 'تەنها نیشانەکراوەکان' }
         ];
 
         function fsRenderReview() {
@@ -21399,6 +22553,9 @@
             document.getElementById('fchips-status').innerHTML = FS_STATUSES.map(s =>
                 `<button type="button" class="fchip${fsDraft.status === s.v ? ' is-on' : ''}"
                     onclick="fsPickStatus('${s.v}')">${s.t}</button>`).join('');
+            document.getElementById('fchips-sched').innerHTML = FS_SCHED.map(s =>
+                `<button type="button" class="fchip${(fsDraft.sched || 'all') === s.v ? ' is-on' : ''}"
+                    onclick="fsPickSched('${s.v}')">${s.t}</button>`).join('');
             document.getElementById('fchips-date').innerHTML = FS_PRESETS.map(p =>
                 `<button type="button" class="fchip${fsDraft.preset === p.v ? ' is-on' : ''}"
                     onclick="fsPickPreset('${p.v}')">${p.t}</button>`).join('');
@@ -21406,6 +22563,11 @@
 
         function fsPickStatus(v) {
             fsDraft.status = v;
+            fsRenderChips();
+        }
+
+        function fsPickSched(v) {
+            fsDraft.sched = v;
             fsRenderChips();
         }
 
@@ -21462,7 +22624,7 @@
 
         function fcalMonthHtml(m) {
             const y = m.getFullYear(), mo = m.getMonth();
-            const lead = new Date(y, mo, 1).getDay();
+            const lead = fdDow(new Date(y, mo, 1));
             const days = new Date(y, mo + 1, 0).getDate();
             const todayK = fdKey(fdToday());
             let cells = '';
@@ -21753,12 +22915,15 @@
             let f = fdFromKey(fcalFocus) || fdToday();
             let next = null;
             switch (e.key) {
-                case 'ArrowRight': next = fdAddDays(f, 1); break;
-                case 'ArrowLeft': next = fdAddDays(f, -1); break;
+                // ⚠️ گریدەکە ئێستا RTLە: تیری ڕاست دەچێتە ڕۆژی
+                //    **پێشوو**ەوە، نەک داهاتوو
+                case 'ArrowRight': next = fdAddDays(f, -1); break;
+                case 'ArrowLeft': next = fdAddDays(f, 1); break;
                 case 'ArrowDown': next = fdAddDays(f, 7); break;
                 case 'ArrowUp': next = fdAddDays(f, -7); break;
-                case 'Home': next = fdAddDays(f, -f.getDay()); break;
-                case 'End': next = fdAddDays(f, 6 - f.getDay()); break;
+                // سەرەتا/کۆتایی هەفتە — شەممە تا هەینی، نەک یەکشەممە
+                case 'Home': next = fdAddDays(f, -fdDow(f)); break;
+                case 'End': next = fdAddDays(f, 6 - fdDow(f)); break;
                 case 'PageUp': next = fsShiftKeep(f, e.shiftKey ? -12 : -1); break;
                 case 'PageDown': next = fsShiftKeep(f, e.shiftKey ? 12 : 1); break;
                 case 'Enter':
@@ -21812,6 +22977,7 @@
             let noRange = (fsDraft.preset === 'all') || (!fsDraft.from && !fsDraft.to);
 
             document.getElementById('filter-status').value = fsDraft.status || 'all';
+            document.getElementById('filter-sched').value = fsDraft.sched || 'all';
             document.getElementById('filter-date-type').value = noRange ? 'all' : fsDraft.preset;
             document.getElementById('filter-date-from').value = noRange ? '' : (fsDraft.from || '');
             document.getElementById('filter-date-to').value = noRange ? '' : (fsDraft.to || '');
@@ -21841,6 +23007,11 @@
                 let s = FS_STATUSES.find(x => x.v === st);
                 out.push({ kind: 'status', t: s ? s.t : st });
             }
+            let sc = document.getElementById('filter-sched').value || 'all';
+            if (sc !== 'all') {
+                let s = FS_SCHED.find(x => x.v === sc);
+                out.push({ kind: 'sched', t: s ? s.t : sc });
+            }
             // ڕیزبەندی نا-بنەڕەتیش وەک چیپێکی چالاک دەردەکەوێت — بۆ ئەوەی
             // دوای داخستنی شیتەکە دیار بێت لیستەکە بەپێی چی ڕیزکراوە
             let sid = fsSortId();
@@ -21858,7 +23029,7 @@
             if (reviewModeOn() && reviewFilter() !== 'all') {
                 out.push({
                     kind: 'review',
-                    t: reviewFilter() === 'todo' ? '☑ تەنها ماوەکان' : '⚑ تەنها نیشانەکراوەکان'
+                    t: reviewFilter() === 'todo' ? 'تەنها ماوەکان' : 'تەنها نیشانەکراوەکان'
                 });
             }
             return out;
@@ -21906,7 +23077,7 @@
                     let c = reviewCounts();
                     html += `<span class="afchip rvw-count" title="لە ئۆردەرە بارکراوەکاندا">
                         <i class='bx bx-list-check'></i>
-                        <span>ماوە ${toArabicDigits(c.todo)} لە ${toArabicDigits(c.todo + c.done + c.flag)}${c.flag ? ' · ⚑ ' + toArabicDigits(c.flag) : ''}</span>
+                        <span>ماوە ${toArabicDigits(c.todo)} لە ${toArabicDigits(c.todo + c.done + c.flag)}${c.flag ? ' · نیشانەکراو ' + toArabicDigits(c.flag) : ''}</span>
                     </span>`;
                 }
                 box.innerHTML = html;
@@ -21923,6 +23094,13 @@
             else if (kind === 'review') {
                 // فلتەری پشکنین لای کلاینتە — پێویستی بە سێرڤەر نییە
                 setReviewFilter('all');
+                syncFilterUI();
+                applyOrderFilters();
+                return;
+            }
+            else if (kind === 'sched') {
+                // فلتەری کاتدارکراو لای کڵاینتە — پێویستی بە سێرڤەر نییە
+                document.getElementById('filter-sched').value = 'all';
                 syncFilterUI();
                 applyOrderFilters();
                 return;

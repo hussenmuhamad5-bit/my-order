@@ -8575,6 +8575,13 @@ body.no-glass .fab-wrapper .btn {
 .btn.btn-send-order {
   position: relative;
   overflow: hidden;
+  /* ⚠️ پەنجەدانانی ٢ چرکە لەسەر ئەم دوگمەیە. بێ ئەمانە
+     وێبگەڕ دەقی «ناردنی داواکاری» هەڵدەبژێرێت و مێنیوی
+     کۆپی/ڕاست‌کلیک دەردەخات — راپۆرتی خاوەن ٢٠٢٦-٠٨-٢٦.
+     `-webkit-touch-callout` بۆ iOSە، `user-select` بۆ ئەوانی تر. */
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
   height: 54px;
   margin-top: 6px;
   margin-bottom: 30px;
@@ -8767,6 +8774,677 @@ body.no-glass .fab-wrapper .btn {
   background: transparent;
   color: #e11d48;
   border: 1px solid rgba(225, 29, 72, 0.35);
+}
+
+/* ============================================================
+   ئۆردەری کاتدارکراو (چاوەڕوان) — db/050
+   ------------------------------------------------------------
+   خوشکی قوفڵی پرێنتە: هەمان قاڵب، ڕەنگێکی جیاواز. مۆرەکەی
+   کەھرەباییە (چاوەڕوانی)، نەک مۆری و نەک سەوز — تا لە یەک
+   نیگادا لە «پرێنتکراو» و «پارە دراوە» جیا بکرێتەوە.
+
+   ⚠️ هەموو ئەمانە یاسای ڕووتن (بێ میدیا کوێری) — ئەپەکە
+      مۆبایل-یەکەمە. هیچ گۆڕانکارییەکی دێسکتۆپ لێرەدا نییە.
+   ============================================================ */
+
+/* ---------- چیپی کارت — هەمان قاڵبی .print-stamp ---------- */
+.sched-stamp {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: var(--fs-2xs);
+  font-weight: var(--font-bold);
+  padding: 2px 8px;
+  border-radius: var(--r-full);
+  background: rgba(245, 158, 11, 0.14);
+  color: #b45309;
+  border: 1px solid rgba(245, 158, 11, 0.34);
+  white-space: nowrap;
+}
+
+/* ---------- کارتی دۆخ لەناو وردەکاریی ئۆردەر ---------- */
+.sched-card {
+  margin: 14px 0;
+  padding: 12px 14px;
+  border-radius: var(--r-md);
+  border: 1px solid var(--line, #e6e8ec);
+  background: #fff;
+}
+
+.sched-card.is-pending {
+  background: rgba(245, 158, 11, 0.07);
+  border-color: rgba(245, 158, 11, 0.32);
+}
+
+.sched-card.is-open {
+  background: #f8fafc;
+  border-color: #e2e8f0;
+}
+
+.sched-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--fs-md);
+  font-weight: var(--font-bold);
+}
+
+.sched-card.is-pending .sched-head { color: #b45309; }
+.sched-card.is-open .sched-head    { color: var(--text-secondary); }
+
+.sched-head i { font-size: var(--icon-sm); }
+
+/* کاتەکە و ماوەی مانەوە — دوو کۆتایی یەک ڕیز */
+.sched-when {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2);
+  margin-top: 8px;
+  font-size: var(--fs-md);
+  color: var(--text-main);
+}
+
+/* ---------- ژمێرەری زیندوو + شریتی چاوەڕوانی ---------- */
+/*  خاوەن داوای کرد کاتەکە **وردە وردە** کەم ببێتەوە: چرکەکان
+    دەڕۆن، خولەکەکان کەم دەبنەوە، و کاتژمێرەکان یەک بە یەک
+    دادەبەزن تا دەگاتە سفر. بۆیە `schedLiveTick` هەر چرکەیەک
+    دەقەکە و پانی شریتەکە نوێ دەکاتەوە. */
+.sched-count {
+  margin-top: 10px;
+}
+
+.sched-count-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--sp-2);
+  margin-bottom: 6px;
+}
+
+.sched-count-lbl {
+  font-size: var(--fs-2xs);
+  font-weight: var(--font-bold);
+  color: var(--text-secondary);
+}
+
+.sched-count-val {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  color: #b45309;
+}
+
+.sched-count-val em {
+  font-style: normal;
+  font-size: var(--fs-sm);
+  font-weight: var(--font-bold);
+}
+
+/*  ⚠️ `tabular-nums` مەرجە — بەبێ ئەو پانی ژمارەکان دەگۆڕێت و
+    ژمێرەرەکە هەر چرکەیەک دەلەرزێت. */
+.sched-count-val b {
+  font-size: var(--fs-lg);
+  font-weight: var(--font-bold);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: .5px;
+  line-height: 1.2;
+}
+
+.sched-count-val .sched-count-go {
+  font-size: var(--fs-md);
+  letter-spacing: 0;
+}
+
+.sched-prog {
+  position: relative;
+  height: 6px;
+  border-radius: var(--r-full);
+  background: rgba(245, 158, 11, 0.18);
+  overflow: hidden;
+}
+
+/*  ⚠️ شریتەکە لە لای **دەستپێک** (ڕاست لە RTL) پڕ دەبێتەوە.
+    `inset-inline-start` لۆژیکییە، بۆیە لە هەردوو ئاراستەدا
+    ڕاستە — بەبێ `translateX`، بۆیە داوی ٢٤ ناگرێتەوە. */
+.sched-prog-fill {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 0;
+  border-radius: var(--r-full);
+  background: linear-gradient(90deg, #f59e0b, #b45309);
+  transition: width .9s linear;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sched-prog-fill { transition: none; }
+}
+
+.sched-meta {
+  margin-top: 5px;
+  font-size: var(--fs-xs);
+  color: var(--text-secondary);
+}
+
+.sched-note {
+  margin-top: 6px;
+  font-size: var(--fs-xs);
+  line-height: 1.6;
+  color: var(--text-secondary);
+}
+
+/* «ئێستا بەردەستی بکە» — تەنها خاوەنەکەی دەیبینێت */
+.sched-now {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  min-height: 44px;
+  margin-top: 10px;
+  border: 1px solid rgba(180, 83, 9, 0.35);
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: #b45309;
+  font-family: inherit;
+  font-size: var(--fs-md);
+  font-weight: var(--font-bold);
+  cursor: pointer;
+}
+
+.sched-now:active { transform: scale(0.98); }
+
+/* ---------- شیتی هەڵبژاردنی کات ---------- */
+/* ⚠️ گرید نەک فلێکس: بە فلێکس ئایکۆنەکە پانی خۆی
+   دەگۆڕی و دێڕەکانی دەقەکە لێک جیا دەبوونەوە — لەسەر
+   مۆبایل زۆر ناڕێک دەردەکەوت. */
+.sched-hint {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: start;
+  gap: 8px;
+  margin-bottom: var(--sp-4);
+  padding: 10px 12px;
+  border-radius: var(--r-sm);
+  background: rgba(245, 158, 11, 0.08);
+  border: 1px dashed rgba(245, 158, 11, 0.35);
+  font-size: var(--fs-xs);
+  line-height: 1.7;
+  color: var(--text-secondary);
+}
+
+.sched-hint i {
+  flex: none;
+  margin-top: 2px;
+  font-size: var(--icon-sm);
+  color: #b45309;
+}
+
+.sched-hint b { color: #b45309; }
+
+/* ============================================================
+   گریدی شیتەکە — بۆچی گرید نەک flex-wrap
+   ------------------------------------------------------------
+   ⚠️ `.fchips` (flex-wrap) پانی هەر چیپێک بەپێی دەقەکەی دەدات.
+      ناوی ڕۆژە کوردییەکان زۆر جیاوازن («هەینی» ٥ پیت،
+      «پێنجشەممە» ٩ پیت)، بۆیە هەر ڕیزێک ژمارەیەکی جیاوازی
+      چیپی تێدابوو و لەسەر مۆبایل بە تەواوی شێواو دەردەکەوت.
+      (ڕاپۆرتی خاوەن، ٢٠٢٦-٠٨-٢٥)
+
+      گرید هەموو خانەکان یەکسان دەکات. ژمارەکان بە ئەنقەست
+      هەڵبژێردراون تا **هیچ ڕیزێکی ناتەواو** نەمێنێتەوە:
+        ٧ ڕۆژ + «ڕۆژێکی تر» = ٨  →  ٢ ستوون × ٤ ڕیز
+        ٦ کاتژمێر             = ٦  →  ٣ ستوون × ٢ ڕیز
+      ئەگەر ژمارەکان بگۆڕدرێن، ستوونەکانیش دەبێت بگۆڕدرێن.
+   ============================================================ */
+.sched-grid {
+  display: grid;
+  gap: 8px;
+}
+
+.sched-grid-2 { grid-template-columns: repeat(2, 1fr); }
+.sched-grid-3 { grid-template-columns: repeat(3, 1fr); }
+
+/* لەناو گریددا چیپەکە پانی خۆی نادات — خانەکە دەیدات */
+.sched-grid .fchip {
+  width: 100%;
+  min-width: 0;
+  padding: 0 8px;
+}
+
+/* چیپی ڕۆژ: دوو دێڕ — ناوی ڕۆژ لە سەرەوە، بەروار لە خوارەوە */
+.fchip.sched-day {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  padding: 6px 8px;
+  line-height: 1.25;
+  overflow: hidden;
+}
+
+/* ⚠️ داوی ٢٧: `overflow: hidden` لەسەر دەقی کوردی نوقتەی ژێر
+   «پ ڕ ی» دەبڕێت. بۆیە `line-height` بەرزتر و `padding`ـی
+   خواروو — نەک بڕینی ڕاستەوخۆ. */
+.fchip.sched-day b,
+.fchip.sched-day small {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  line-height: 1.45;
+}
+
+/* «ڕۆژێکی تر» — کوێرتر، چونکە دەرگایەکە نەک هەڵبژاردنێک */
+.fchip.sched-day.is-other:not(.is-on) {
+  border-style: dashed;
+  color: var(--text-secondary);
+}
+
+.fchip.sched-day b {
+  font-size: var(--fs-sm);
+  font-weight: var(--font-bold);
+}
+
+.fchip.sched-day small {
+  font-size: var(--fs-2xs);
+  opacity: .72;
+}
+
+/* ڕیزی «کاتی دڵخواز» */
+.sched-custom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2);
+  margin-top: var(--sp-3);
+  padding: 8px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: var(--r-sm);
+  background: #f8fafc;
+}
+
+/* ⚠️ `min-width: 0` مەرجە: بەبێ ئەو، ناونیشانەکە لە دەرەوەی
+   پانێڵەکە دەبڕدرێت و تەنها «کاتی» دەردەکەوێت */
+.sched-custom span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: var(--fs-sm);
+  font-weight: var(--font-semibold);
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+/* ⚠️ `input, select { width: 100%; margin-bottom: … }` یاسایەکی
+   گشتییە لە دێڕی ~١٩٠. بەبێ `width: auto` و `margin: 0` خانەکە
+   هەموو ڕیزەکە دەخوات و ناونیشانەکە دەبێتە **٠px** — پێوانەکراوە
+   ٢٠٢٦-٠٨-٢٥: ناونیشان 0px، خانە 366px. `flex: 0 0 auto` بەس
+   نییە، چونکە بنەمای فلێکس لە `width`ـەوە دێت. */
+.sched-custom input {
+  flex: 0 0 auto;
+  width: auto;
+  min-width: 118px;
+  margin: 0;
+  min-height: 40px;
+  padding: 0 10px;
+  border: 1px solid #e2e8f0;
+  border-radius: var(--r-sm);
+  background: #fff;
+  color: var(--text-main);
+  font-family: inherit;
+  font-size: var(--fs-md);
+  font-weight: var(--font-semibold);
+}
+
+/* سویچی «کاتژمێری دیاریکراو» — هەمان قاڵبی `.rvw-switch`ی
+   مۆدی پشکنین، تا ڕووکارەکە یەکگرتوو بێت */
+.sched-switch {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  margin-bottom: var(--sp-3);
+  cursor: pointer;
+}
+
+.sched-switch input { display: none; }
+
+.sched-switch-txt {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.sched-switch-txt b {
+  font-size: var(--fs-md);
+  font-weight: var(--font-bold);
+  color: var(--text-main);
+}
+
+.sched-switch-txt small {
+  font-size: var(--fs-2xs);
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+/* خانەی «کاتێکی تر» — هەمان شێوەی «ڕۆژێکی تر» */
+.fchip.is-other:not(.is-on) {
+  border-style: dashed;
+  color: var(--text-secondary);
+}
+
+/* ⚠️ شەش کات بەسەر سێ ستووندا دابەش دەبێت (٢ ڕیز)،
+   بەڵام خانەی «کاتێکی تر» دەیکاتە ٧ — واتا ڕیزێکی
+   ناتەواوی تاک-خانە. پانی تەواوی دەدرێتێ، بۆیە
+   وەک دەرگایەک دەردەکەوێت نەک وەک خانەیەکی ماوە.
+   (داوی ٤٣ — ڕیزی ناتەواو) */
+#sched-times .fchip.is-other {
+  grid-column: 1 / -1;
+}
+
+/* تێبینیی ژێر سویچەکە */
+.sched-note-sm {
+  margin: 0 0 var(--sp-3);
+  font-size: var(--fs-2xs);
+  line-height: 1.55;
+  color: var(--text-secondary);
+}
+
+/* ============================================================
+   شیتی کاتی دڵخواز — دیزاینی مۆبایل-یەکەم
+   ------------------------------------------------------------
+   پەیڕەویی یاساکانی `ui-ux-pro-max`:
+     • ئامانجی دەستلێدان ≥ ٤٤px، بۆشایی ≥ ٨px
+     • دۆخی چالاک بە ڕەنگ **و** قەبارە، نەک تەنها ڕەنگ
+     • ژمارەی خانەکان بەسەر ستوونەکاندا دابەش دەبێت
+       (١٢ ÷ ٤ = ٣ ڕیزی تەواو) — داوی ٤٣
+     • پەنجەلێدان لەیئاوت ناجووڵێنێت (`transform` تەنها)
+     • هیچ ئیمۆجییەک وەک ئایکۆن
+
+   ⚠️ پێشتر خانەکانی `.fcd`ی ڕۆژژمێری بەکاردێنا. ئەوان
+      بۆ ڕۆژی مانگ دانراون (خانەی بچووک، بەندی مەودا)،
+      بۆیە بۆ کاتژمێر بچووک و سارد دەردەکەوتن.
+      ئێستا خانەی تایبەتی خۆیانە.
+   ============================================================ */
+
+/* ---------- پێشبینینی زیندوو ---------- */
+.sct-preview {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: var(--sp-2) 0 var(--sp-3);
+  border-bottom: 1px solid var(--line, #e6e8ec);
+  margin-bottom: var(--sp-3);
+}
+
+.sct-clock {
+  display: flex;
+  align-items: baseline;
+  font-size: 38px;
+  font-weight: var(--font-bold);
+  line-height: 1.1;
+  color: var(--primary);
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.sct-colon {
+  padding: 0 2px;
+  opacity: .45;
+}
+
+.sct-mer-txt {
+  font-size: var(--fs-sm);
+  font-weight: var(--font-semibold);
+  color: var(--text-secondary);
+}
+
+/* لەرزێنیکی وورد لە کاتی گۆڕین — ١٨٠ملیچرکە، لەناو
+   پەنجەرەی ١٥٠–٣٠٠ی مایکرۆ-ئینتەراکشن */
+.sct-clock.is-bump { animation: sctBump .18s ease-out; }
+
+@keyframes sctBump {
+  from { transform: scale(1.06); }
+  to   { transform: scale(1); }
+}
+
+/* ---------- بەشەکان ---------- */
+.sct-block { margin-bottom: var(--sp-3); }
+.sct-block:last-child { margin-bottom: 0; }
+
+.sct-t {
+  margin-bottom: 5px;
+  font-size: var(--fs-2xs);
+  font-weight: var(--font-bold);
+  letter-spacing: .04em;
+  color: var(--text-secondary);
+}
+
+/* ---------- کۆنترۆڵی پ.ن / د.ن ---------- */
+/*  دوو بژاردەی لێکدژمین → کۆنترۆڵی پارچەکراو، نەک
+    دوو خانەی جیا. بڕیارەکە روونتر دەردەکەوێت. */
+.sct-seg {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 4px;
+  padding: 4px;
+  border-radius: var(--r-md);
+  background: #f1f5f9;
+}
+
+.sct-seg-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  min-height: 46px;
+  border: none;
+  border-radius: calc(var(--r-md) - 4px);
+  background: transparent;
+  color: var(--text-secondary);
+  font-family: inherit;
+  cursor: pointer;
+  transition: background .18s ease, color .18s ease, box-shadow .18s ease;
+}
+
+.sct-seg-btn b {
+  font-size: var(--fs-md);
+  font-weight: var(--font-bold);
+  line-height: 1.4;
+}
+
+.sct-seg-btn small {
+  font-size: var(--fs-2xs);
+  opacity: .75;
+  line-height: 1.4;
+}
+
+.sct-seg-btn.is-on {
+  background: #fff;
+  color: var(--primary);
+  box-shadow: 0 1px 3px rgba(15, 23, 42, .12);
+}
+
+/* ---------- گریدی کاتژمێر و خولەک ---------- */
+.sct-g {
+  display: grid;
+  gap: 8px;
+}
+
+.sct-g-4 { grid-template-columns: repeat(4, 1fr); }
+
+/*  ⚠️ `min-height` نەک `aspect-ratio` — خانەی چوارگۆشە لەسەر
+    مۆبایلی باریک زۆر بەرز دەبێت و لیستەکە دەردەچێت
+    لە پەنجەرەکە. (داوی ٢٩) */
+.sct-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 46px;
+  padding: 0 4px;
+  border: 1px solid #e2e8f0;
+  border-radius: var(--r-sm);
+  background: #fff;
+  color: var(--text-main);
+  font-family: inherit;
+  font-size: var(--fs-md);
+  font-weight: var(--font-semibold);
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  transition: background .18s ease, color .18s ease, border-color .18s ease, transform .12s ease;
+}
+
+/*  ⚠️ پەنجەلێدان تەنها `transform`ە — لەیئاوت ناجووڵێت،
+    بۆیە خانەکانی دەوروبەر نالەرزن */
+.sct-cell:active { transform: scale(0.94); }
+
+.sct-cell.is-on {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+  font-weight: var(--font-bold);
+}
+
+/*  رینگی فۆکەس — گەڕان بە تەختەکلیل */
+.sct-cell:focus-visible,
+.sct-seg-btn:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+/*  رێزگرتن لە ئارەزووی کەمکردنەوەی جووڵە */
+@media (prefers-reduced-motion: reduce) {
+  .sct-clock.is-bump { animation: none; }
+  .sct-cell, .sct-seg-btn { transition: none; }
+}
+
+/* کورتەی شیتەکە کاتێک کاتەکە ڕەوا نییە */
+.fsheet-sum.is-bad,
+.fsheet-sum.is-bad i { color: #dc2626; }
+
+.fsheet-sum.is-bad em { color: #dc2626; }
+
+/* ---------- شریتی «کاتداری بۆ دانراوە» لەسەر فۆڕمی ئۆردەر ---------- */
+.sched-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  margin: 14px 0 4px;
+  padding: 10px 12px;
+  border-radius: var(--r-md);
+  background: rgba(245, 158, 11, 0.09);
+  border: 1px solid rgba(245, 158, 11, 0.34);
+}
+
+.sched-bar-ico {
+  order: 0;
+  flex: none;
+  font-size: var(--icon-md);
+  color: #b45309;
+}
+
+.sched-bar-txt {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.sched-bar-txt b {
+  font-size: var(--fs-2xs);
+  font-weight: var(--font-bold);
+  color: #b45309;
+}
+
+/* ⚠️ بە `nowrap` + `ellipsis` کاتەکە دەبڕا — پێوانە
+   ٢٠٢٦-٠٨-٢٥: ١٦٢px بەردەست بەرامبەر ١٩٤px پێویست،
+   بۆیە «دوازدەی شەو» دەبووە «دوازد...». یاسای خاوەن:
+   زانیاری هەرگیز نابڕدرێت — بێ ئەوەی شریتەکە بلند بێت. */
+.sched-bar-txt span {
+  font-size: var(--fs-sm);
+  font-weight: var(--font-semibold);
+  color: var(--text-main);
+  line-height: 1.5;
+}
+
+/* ئامانجی دەستلێدان ≥ ٤٤px — هەردوو دوگمەکە بچووک دەردەکەون
+   بەڵام ناوچەی کرتەکردنیان تەواوە */
+/* ⚠️ دوگمەکان لە لای **دەستپێک** (ڕاست لە RTL)، نەک کۆتایی.
+   FABی داخستنی فۆڕم `position: fixed`ە لە خوارەوە-چەپ، و
+   راستەوخۆ لەسەر ئەم دوگمانە دەنیشت. پێوانە ٢٠٢٦-٠٨-٢٥:
+   FAB x٢١-٦٥ y٦٢٨-٦٧٢ لەگەڵ دوگمەی X x٣٣-٧٧ y٦٦٥ — رووپۆشیی
+   ڕاستەقینە. لای ڕاست هەرگیز FABی تێدا نییە. */
+.sched-bar-btn {
+  order: -1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 44px;
+  height: 44px;
+  border: 1px solid rgba(180, 83, 9, 0.32);
+  border-radius: var(--r-sm);
+  background: #fff;
+  color: #b45309;
+  font-size: var(--icon-sm);
+  cursor: pointer;
+}
+
+.sched-bar-btn:active { transform: scale(0.94); }
+
+.sched-bar-btn.is-x {
+  color: #dc2626;
+  border-color: rgba(220, 38, 38, 0.3);
+}
+
+/* ---------- پەنجەدانانی ٣ چرکە لەسەر دوگمەی ناردن ---------- */
+/*  ⚠️ `::before`ی دوگمەکە خۆی شریتی درەوشانەوەیە — بۆیە ئێرە
+      `::after`ـە. `--hold` (٠ → ١) بە rAF لە جاڤاسکریپتەوە
+      دادەنرێت، نەک بە ئەنیمەیشن، تاکو بەرزکردنەوەی پەنجە
+      یەکسەر بیوەستێنێت لە هەر خاڵێکدا.
+
+   ⚠️ لە **ناوەڕاستەوە** بۆ هەردوو لا پڕ دەبێتەوە (داواکاریی
+      خاوەن، ٢٠٢٦-٠٨-٢٥). بۆیە `left: 50%` + `translateX(-50%)`
+      + `scaleX(var(--hold))`.
+
+      `left`/`translateX` هەردووکیان **فیزیکین** — تێکەڵکردنی
+      `inset-inline-start` (لۆژیکی) لەگەڵ `translateX` (فیزیکی)
+      لە RTLدا توخمەکە بە پانی خۆی لادەدات (داوی ٢٤). لێرەدا
+      ناوەڕاست هەردوولا وەکیەکە، بۆیە هیچ جیاوازییەک نییە. */
+.btn.btn-send-order::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  width: 100%;
+  transform: translateX(-50%) scaleX(var(--hold, 0));
+  transform-origin: center;
+  background: linear-gradient(90deg,
+      rgba(255, 255, 255, .10) 0%,
+      rgba(255, 255, 255, .34) 50%,
+      rgba(255, 255, 255, .10) 100%);
+  box-shadow:
+     2px 0 0 rgba(255, 255, 255, .55) inset,
+    -2px 0 0 rgba(255, 255, 255, .55) inset;
+  pointer-events: none;
+  opacity: 0;
+  z-index: 1;
+}
+
+.btn.btn-send-order.is-holding::after { opacity: 1; }
+
+.btn.btn-send-order.is-holding {
+  transform: scale(.985);
+  filter: saturate(1.1);
 }
 
 /* ---------- باری نیشانەکردنی کۆمەڵ ---------- */
@@ -9438,8 +10116,26 @@ body.fsheet-open {
    ئەو شیتە تەنها بۆ هەمان کارە، پێشدانراوی تری نییە. بەبێ ئەم
    دێڕە نۆدەکە دەگوێزرێتەوە بەڵام `display:none`ی سەرەوە دەیشارێتەوە
    و شیتێکی بەتاڵ دەردەکەوێت. */
-#fsheet-body-sx .fcal-wrap {
+
+/* ⚠️ پێشتر ئەم یاسایانە بە **ID** بەسترابوون (ئەو سلۆتەی ئامار).
+   کاتێک شیتێکی دووەم هەمان ڕۆژژمێری قەرز وەرگرت، هیچ یەکێکیانی
+   وەرنەگرت — شیتێکی بەتاڵی بەرزیی-سفر دەرکەوت، بێ هەڵە
+   و بێ لۆگ. ئێستا پۆڵێکی هاوبەشە — هەر شوێنێک ڕۆژژمێرەکە
+   قەرز دەگرێت دەبێت `.sxd-body` وەربگرێت. */
+.sxd-body .fcal-wrap {
   display: flex;
+}
+
+/* مۆدی یەک-ڕۆژ (کاتدارکردنی ئۆردەر) — ڕۆژژمێرەکە
+   بەرەسەن مەودایە، بۆیە دوو شتی تێدایە کە لێرەدا
+   مانایان نییە:
+     • خانەکانی «لە / بۆ» — یەک ڕۆژ دوو کۆتایی نییە
+     • «مانگی پێشتر» — ڕۆژی ڕابردوو ناکرێت کاتدار بکرێت
+   خودی ڕۆژژمێرەکە وەک خۆی دەمێنێتەوە — هەمان نۆد،
+   هەمان دیزاین. */
+.sxd-body.is-single .fcal-inputs,
+.sxd-body.is-single .fcal-more {
+  display: none;
 }
 
 /* ناوچەی گەڕان دەبێت لەسەروو باری پرێنتەوە بێت.
@@ -10041,16 +10737,24 @@ label.lbl-err {
   transition: transform .2s ease;
 }
 
-.rvw-switch input:checked + .rvw-switch-track {
+/* ⚠️ هەر سویچێکی نوێ کە `.rvw-switch-track` بەکاردێنێت
+   دەبێت لێرەشدا تۆمار بکرێت — ئەگەرنا شریتەکە
+   دەردەکەوێت بەڵام هەرگیز دۆخی ON پیشان نادات:
+   سەلێکتەرەکە بە `.rvw-switch`ەوە بەستراوە، نەک بە
+   خودی شریتەکە. (دۆزرایەوە ٢٠٢٦-٠٨-٢٥) */
+.rvw-switch input:checked + .rvw-switch-track,
+.sched-switch input:checked + .rvw-switch-track {
   background: var(--primary);
 }
 
 /* RTL: پەڕەکە ڕاست-بۆ-چەپە، بۆیە بەرەو چەپ دەجووڵێت */
-.rvw-switch input:checked + .rvw-switch-track::after {
+.rvw-switch input:checked + .rvw-switch-track::after,
+.sched-switch input:checked + .rvw-switch-track::after {
   transform: translateX(-18px);
 }
 
-.rvw-switch input:focus-visible + .rvw-switch-track {
+.rvw-switch input:focus-visible + .rvw-switch-track,
+.sched-switch input:focus-visible + .rvw-switch-track {
   box-shadow: 0 0 0 3.5px rgba(36, 129, 204, .18);
 }
 
@@ -15653,9 +16357,21 @@ body.sx-wide {
   padding-bottom: 0;
 }
 
+/* ⚠️ ئەم دوو مۆدالە لە **ناو** شیتی کاتدارکردنەوە دەکرێنەوە.
+   `.modal-overlay` لە ٢٠٠٠ـە و `.fsheet` لە ٢٤٠٠ — بۆیە بەبێ
+   ئەم یاسایە لە ژێر شیتەکەوە دەردەکەون: کۆدەکە کاردەکات،
+   ڕۆژژمێرەکە دەگوێزرێتەوە، بەڵام بەکارهێنەر هیچ نابینێت.
+   (دۆزرایەوە ٢٠٢٦-٠٨-٢٦ لە سکرینشۆتدا، نەک لە لۆگدا.)
+   `sx-date-sheet` ئەم کێشەیەی نییە — لە شاشەی ئامارەوە
+   دەکرێتەوە، نەک لە ناو شیتێکەوە. */
+#sched-date-sheet,
+#sched-time-sheet {
+  z-index: 2500;
+}
+
 /* پەیکەری سکرۆڵ — ڕۆژژمێرەکە لێرەدا دەژی، و `fcalScrollToMonth`
    ئەم بۆکسە دەبزوێنێت */
-#fsheet-body-sx {
+.sxd-body {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
@@ -15665,7 +16381,7 @@ body.sx-wide {
   padding: 0 4px;
 }
 
-#fsheet-body-sx::-webkit-scrollbar {
+.sxd-body::-webkit-scrollbar {
   display: none;
 }
 
