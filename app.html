@@ -20846,7 +20846,21 @@
             //    پێوانەی تێچووی هاوکات (بێ داتای ڕاستەقینە):
             //    شارەکان ١٩.٥ms · ئەوانی تر ١.٤–٣.٦ms. لەسەر ئامێری
             //    ڕاستەقینە و بە داتاوە زۆر زیاترە.
-            const paint = fn => requestAnimationFrame(() => requestAnimationFrame(fn));
+            // ⚠️ `fn` **بەبێ ئارگیومێنت** بانگ دەکرێت. `requestAnimationFrame`
+            //    کاتی پەڕەکە بە میلی‌چرکە (`DOMHighResTimeStamp`) دەداتە
+            //    فەنکشنەکە — و ئەگەر فەنکشنەکە پارامەتەرێکی هەبێت، ئەو
+            //    ژمارەیە بێدەنگ وەردەگرێت:
+            //
+            //      filterEditUsers(restoreTop)  ← ١٠١٥٥.٤  → scrollTop = ١٠١٥٥px
+            //      loadTrash(force)             ← ١٠١٥٥.٤  → هەمیشە true
+            //
+            //    ئەنجام: هەرکە دەچوویتە «چاکسازی»، لیستەکە خۆی بۆ ناوەڕاست
+            //    سکڕۆڵ دەبوو و سەرەوەکە دەشاردرایەوە. هەرچەندە درێژتر لە
+            //    ئەپەکەدا مابوویتەوە، دوورتر دەیبرد. (ڕاپۆرتی خاوەن ٢٠٢٦-٠٨-٢٦)
+            //
+            //    بە `() => fn()` هەر پێنج بانگەکە پارێزراون، و فەنکشنێکی
+            //    نوێش کە پارامەتەری هەبێت بێمەترسییە.
+            const paint = fn => requestAnimationFrame(() => requestAnimationFrame(() => fn()));
 
             if (tabName === 'create') {
                 document.getElementById('section-create-code').style.display = 'block';
