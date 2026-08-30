@@ -18386,6 +18386,267 @@ body.sx-wide {
 }
 
 /* ============================================================
+   چاڵنج و ئاڕپی — شاشەی خەڵاتەکان (db/053)
+   ------------------------------------------------------------
+   پرێفیکس: .rw-* (شاشە و شیتەکان) + .reward-stamp (چیپی کارتی
+   ئۆردەر). پرێفیکسی sx* پڕە و .sx-level واتای «ئاستی خاڵ»ی
+   هەیە — تێکەڵ ناکرێن.
+   ============================================================ */
+
+#challenge-screen { padding-bottom: 96px; }
+
+/* ⭐ ناونیشان + تابەکان لە یەک بلۆکی **لکاو**دان — هەمان شێوازی
+   `.sx-stickhead`ی شاشەی ئامار. سکڕۆڵکەرەکە `body`ـە، بۆیە
+   `top: var(--safe-top)` دەبێت ڕێک لەژێر ناوچەی سەلامەتدا بێت.
+   ⚠️ پاشبنەمای `var(--bg)` مەرجە — بەبێ ئەو، کارتەکان لە ژێر
+   دەقەکەدا تێدەپەڕن و دەخوێندرێنەوە. */
+.rw-head {
+  position: sticky;
+  top: var(--safe-top, 0px);
+  z-index: 30;
+  background: var(--bg);
+  padding: 6px 16px 8px;
+  border-radius: 0 0 20px 20px;
+}
+
+.rw-head .tg-title { margin: 0 0 12px; }
+.rw-wrap { padding: 0 14px; }
+.rw-head .rw-wrap { padding: 0; }
+
+/* ⭐ ئەنیمەیشنی هاتنە ژوورەوە تەنها **یەک جار**. گۆڕینی تاب
+   `display: none → block`ـە، و ئەوە ئەنیمەیشنی CSS لە
+   سەرەتاوە دەستپێدەکاتەوە — بۆیە دۆخی بەتاڵ هەر جارێک
+   دەڕەخسایەوە. `rwPaintPane` دوای یەکەم جار ئەم پۆلە دادەنێت. */
+.rw-pane.rw-noanim .notif-state,
+.rw-pane.rw-noanim .notif-state * { animation: none !important; }
+
+/* تابەکان لە ناوەڕاستی تەوەری X — هەمان شێوازی تابەکانی ئامار */
+#challenge-screen .magic-tabs-wrapper.rw-tabs {
+  margin-bottom: 12px;
+  justify-content: center;
+}
+
+.rw-tabs .magic-tabs {
+  width: 100%;
+  max-width: 340px;
+}
+
+.rw-tabs .magic-tab {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 9px 12px;
+  font-size: 13.5px;
+  font-weight: 600;
+}
+
+.rw-tabs .magic-tab i { font-size: 16px; }
+
+/* دۆخی بەتاڵ — لە ناوەڕاستی شاشەکە، نەک لە سەرەوە */
+.rw-pane.is-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: calc(100vh - 300px);
+}
+
+.rw-pane.is-empty .notif-state { margin: 0; }
+
+/* ---------- کارتەکان ---------- */
+.rw-card {
+  background: #fff;
+  border: 1px solid var(--line, #e6e8ec);
+  border-radius: var(--r-md, 12px);
+  padding: 14px;
+  margin: 0 0 12px;
+}
+.rw-card.is-earned {
+  border-color: rgba(245, 158, 11, 0.55);
+  box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.12);
+}
+.rw-card-top { display: flex; justify-content: space-between; gap: 10px; align-items: flex-start; }
+.rw-title { margin: 0; font-size: var(--fs-md, 15px); font-weight: var(--font-bold, 700); }
+.rw-desc { margin: 4px 0 0; font-size: var(--fs-sm, 13px); color: #64748b; }
+.rw-img {
+  width: 56px; height: 56px; object-fit: cover; flex: 0 0 auto;
+  border-radius: var(--r-md, 12px); border: 1px solid var(--line, #e6e8ec);
+}
+.rw-img-sm { width: 40px; height: 40px; }
+.rw-img-prev { width: 72px; height: 72px; margin-top: 8px; }
+
+.rw-meta { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.rw-chip {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: var(--fs-2xs, 11px); font-weight: var(--font-bold, 700);
+  padding: 2px 8px; border-radius: var(--r-full, 999px);
+  background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0;
+  white-space: nowrap;
+}
+.rw-chip.is-live { background: rgba(16, 185, 129, 0.12); color: #047857; border-color: rgba(16, 185, 129, 0.3); }
+.rw-chip.is-ok { background: rgba(16, 185, 129, 0.12); color: #047857; border-color: rgba(16, 185, 129, 0.3); }
+.rw-reward {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: var(--fs-2xs, 11px); font-weight: var(--font-bold, 700);
+  padding: 2px 8px; border-radius: var(--r-full, 999px);
+  background: rgba(245, 158, 11, 0.14); color: #b45309;
+  border: 1px solid rgba(245, 158, 11, 0.34); white-space: nowrap;
+}
+.rw-reward.is-money { background: rgba(16, 185, 129, 0.12); color: #047857; border-color: rgba(16, 185, 129, 0.3); }
+
+/* ---------- شریتی پێشکەوتن ---------- */
+.rw-bar { height: 8px; border-radius: var(--r-full, 999px); background: #eef2f7; overflow: hidden; margin-top: 12px; }
+.rw-bar i { display: block; height: 100%; border-radius: var(--r-full, 999px); background: linear-gradient(270deg, #f59e0b, #f97316); transition: width 0.4s ease; }
+.rw-prog-row { display: flex; justify-content: space-between; gap: 8px; font-size: var(--fs-xs, 12px); color: #64748b; margin-top: 6px; }
+.rw-hint { margin: 8px 0 0; font-size: var(--fs-2xs, 11px); color: #94a3b8; }
+
+/* ---------- دوگمەی وەرگرتن ---------- */
+.rw-claim-btn {
+  width: 100%; margin-top: 12px; border: none; cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 11px 14px; border-radius: var(--r-md, 12px);
+  background: linear-gradient(135deg, #f59e0b, #f97316); color: #fff;
+  font-family: inherit; font-size: var(--fs-sm, 14px); font-weight: var(--font-bold, 700);
+}
+.rw-claim-btn:active { transform: scale(0.98); }
+.rw-claim-sm { width: auto; margin-top: 0; padding: 7px 12px; font-size: var(--fs-xs, 12px); }
+.rw-done {
+  margin-top: 12px; display: flex; align-items: center; gap: 6px;
+  font-size: var(--fs-sm, 13px); font-weight: var(--font-bold, 700); color: #047857;
+}
+.rw-sec-t { margin: 18px 2px 10px; font-size: var(--fs-sm, 13px); font-weight: var(--font-bold, 700); color: #64748b; }
+
+/* ---------- ڕیزی بەڕێوەبردنی پاشا ---------- */
+.rw-kingrow { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; align-items: center; }
+.rw-mini {
+  border: 1px solid var(--line, #e6e8ec); background: #f8fafc; color: #334155;
+  border-radius: var(--r-full, 999px); padding: 5px 10px; cursor: pointer;
+  display: inline-flex; align-items: center; gap: 4px;
+  font-family: inherit; font-size: var(--fs-2xs, 11px); font-weight: var(--font-bold, 700);
+}
+.rw-mini.is-danger { color: #dc2626; border-color: rgba(220, 38, 38, 0.3); background: rgba(220, 38, 38, 0.06); }
+
+/* ---------- ئاڕپی: خاڵ و پلیکانەکان ---------- */
+.rw-season .rw-pts { margin-top: 10px; font-size: var(--fs-sm, 13px); color: #475569; }
+.rw-season .rw-pts b { font-size: 22px; color: #b45309; }
+.rw-tier {
+  display: flex; align-items: center; gap: 10px;
+  background: #fff; border: 1px solid var(--line, #e6e8ec);
+  border-radius: var(--r-md, 12px); padding: 10px 12px; margin: 0 0 8px;
+}
+.rw-tier.is-locked { opacity: 0.62; }
+.rw-tier.is-earned { border-color: rgba(245, 158, 11, 0.55); box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.12); }
+.rw-tier.is-done { background: #f8fafc; }
+.rw-tier-pts { flex: 0 0 auto; min-width: 52px; text-align: center; display: flex; flex-direction: column; line-height: 1.2; }
+.rw-tier-pts b { font-size: var(--fs-md, 16px); color: #b45309; }
+.rw-tier-pts span { font-size: var(--fs-2xs, 10px); color: #94a3b8; }
+.rw-tier-mid { flex: 1; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; min-width: 0; }
+.rw-tier-end { flex: 0 0 auto; }
+
+/* ---------- شیتی دروستکردن و وەرگرتن ---------- */
+.rw-input {
+  width: 100%; background: #f8fafc; border: 1px solid #e2e8f0;
+  border-radius: 10px; min-height: 42px; padding: 8px 12px;
+  font-family: inherit; font-size: var(--fs-sm, 14px); color: inherit;
+  margin: 4px 0 10px;
+}
+.rw-textarea { min-height: 64px; resize: vertical; }
+.rw-file { padding: 8px; }
+#rw-create-body label,
+#rw-claim-sheet .fsec label { display: block; font-size: var(--fs-xs, 12px); color: #64748b; margin-top: 2px; }
+.rw-choice { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin: 4px 0 10px; }
+.rw-choice.rw-mode, #rw-ch-rkind { grid-template-columns: repeat(2, 1fr); }
+.rw-choice button {
+  border: 1px solid #e2e8f0; background: #f8fafc; color: #475569;
+  border-radius: 10px; padding: 9px 6px; cursor: pointer;
+  font-family: inherit; font-size: var(--fs-xs, 12px); font-weight: var(--font-bold, 700);
+  display: inline-flex; align-items: center; justify-content: center; gap: 4px;
+}
+.rw-choice button.on { background: rgba(245, 158, 11, 0.14); color: #b45309; border-color: rgba(245, 158, 11, 0.5); }
+/* ---------- ئامانج: هەمان ڕیزی سەبەتەی ئۆردەری نوێ ---------- */
+/* ناوی کاڵا + بۆکسی بڕ لە یەک ڕیزدا. `.qty-input-group` پانی
+   جێگیری ٢٠٠px هەیە، بۆیە لێرەدا کەم دەکرێتەوە تا ناوەکە جێگای بێت. */
+.rw-cartrow { align-items: flex-start; margin-bottom: 10px; }
+.rw-cartrow .rw-input { margin: 0; }
+.rw-flex1 { flex: 1; min-width: 0; }
+.rw-cartrow .qty-input-group { width: 122px; flex: 0 0 auto; height: 42px; margin: 0; }
+#rw-ch-target-wrap > .qty-input-group { width: 100%; max-width: 200px; height: 42px; margin-bottom: 10px; }
+
+/* ---------- دوگمەی ماوە — هەمان شێوازی کۆنترۆڵەکانی ئامار ---------- */
+.rw-daterange {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  min-height: 44px;
+  padding: 8px 12px;
+  margin: 4px 0 6px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: var(--fs-sm, 14px);
+  font-weight: var(--font-bold, 700);
+  color: #334155;
+}
+
+.rw-daterange > span { flex: 1; text-align: start; }
+.rw-daterange > i:first-child { color: var(--primary, #2481cc); font-size: 18px; }
+.rw-daterange > i:last-child { color: #94a3b8; font-size: 18px; }
+.rw-daterange:active { background: #eef2f7; }
+
+/* ---------- بۆکسی وێنەی خەڵات — هەمان بۆکسی ئۆردەر، کورتتر ---------- */
+.rw-imgbox { height: auto; min-height: 150px; margin: 6px 0 4px; }
+.rw-imgbox .img-upload-header { padding: 16px 10px; }
+.rw-img-status { color: #1e293b; font-weight: bold; font-size: 13px; text-align: center; }
+.rw-img-prev-wrap { display: flex; justify-content: center; margin-top: 10px; }
+.rw-imgbox .upload-progress { width: 100%; margin-top: 10px; }
+.rw-tier-row { display: grid; grid-template-columns: 64px 76px 1fr 34px; gap: 6px; align-items: center; margin-bottom: 4px; }
+.rw-tier-row .rw-input { margin: 0; min-height: 38px; padding: 6px 8px; }
+.rw-tr-del {
+  border: none; background: rgba(220, 38, 38, 0.08); color: #dc2626;
+  border-radius: 10px; height: 38px; cursor: pointer; font-size: 16px;
+}
+.rw-add-tier {
+  width: 100%; border: 1px dashed #cbd5e1; background: #f8fafc; color: #64748b;
+  border-radius: 10px; padding: 9px; cursor: pointer; font-family: inherit;
+  font-size: var(--fs-xs, 12px); font-weight: var(--font-bold, 700);
+  display: inline-flex; align-items: center; justify-content: center; gap: 4px;
+}
+.rw-retry { margin-top: 10px; }
+
+/* ---------- لیستی بردنەوەکان (پاشا) ---------- */
+.rw-claims-head { margin: 0 0 10px; display: flex; align-items: center; gap: 6px; font-size: var(--fs-md, 15px); }
+.rw-claims-body { max-height: 60vh; overflow-y: auto; }
+.rw-claim-row { padding: 9px 2px; border-bottom: 1px solid #f1f5f9; }
+.rw-claim-row:last-child { border-bottom: none; }
+.rw-cr-main { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: var(--fs-sm, 13px); }
+.rw-cr-sub { margin-top: 3px; font-size: var(--fs-2xs, 11px); color: #64748b; }
+
+/* دوگمەی + ی چاڵنج — هیچ ستایلێکی تایبەتی نییە بە ئەنقەست:
+   `.fab-wrapper`ی دوگمەی ئۆردەری نوێ هەموو شتێکی بۆ دەکات (شوێن،
+   ناوچەی سەلامەت، ئەنیمەیشنی سووڕانەوە، شوێنی دێسکتۆپ). ⚠️ ئەگەر
+   لێرەدا `position` یان `bottom`ێک دابنرێت، دوو دوگمەکە لێک
+   جیا دەبنەوە و لەسەر مۆبایل ناڕێک دەردەکەون. */
+
+/* ---------- چیپی «خەڵات» لەسەر کارتی ئۆردەر — هەمان قاڵبی .sched-stamp ---------- */
+.reward-stamp {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: var(--fs-2xs);
+  font-weight: var(--font-bold);
+  padding: 2px 8px;
+  border-radius: var(--r-full);
+  background: rgba(236, 72, 153, 0.12);
+  color: #be185d;
+  border: 1px solid rgba(236, 72, 153, 0.32);
+  white-space: nowrap;
+}
+
+/* ============================================================
    لەیئاوتی کۆمپیوتەر — ویندۆی پان (٢٠٢٦-٠٨-٢٥)
    ------------------------------------------------------------
    کێشەکە: `body`ـەکە `max-width: 430px`ـە، بەڵام شەش شاشە
