@@ -111,14 +111,29 @@
                 }
             }
 
+            /* ⭐ ڕێبەرێک تەنها کاتێک دەنووسرێتەوە کە **بەڕاستی**
+               گۆڕابێت. `viewportChanged` لە کاتی سکڕۆڵدا بە
+               بەردەوامی دەتەقێتەوە، و هەر نووسینێکی CSS ڕێبەر —
+               تەنانەت بە هەمان بەها — لێکدانەوەی ستایلی هەموو
+               بەڵگەنامەکە دووبارە دەکاتەوە. سەردێڕە لکاوەکان
+               `top`ـیان بەم ڕێبەرانەوە بەندە، بۆیە ئەو چڕی
+               لێکدانەوەیە بە «لەرزین» دەردەکەوێت لەسەر ئامێر.
+               بڕوانە [[landmines]] ٥٧. */
+            var _sa = {};
+            function setVar(root, name, val) {
+                if (_sa[name] === val) return;
+                _sa[name] = val;
+                root.style.setProperty(name, val);
+            }
+
             function applySafeArea() {
                 var root = document.documentElement;
                 var s = tg.safeAreaInset || {};
                 var c = tg.contentSafeAreaInset || {};
                 var full = !!tg.isFullscreen;
-                root.style.setProperty('--tg-js-safe-top', (s.top || 0) + 'px');
-                root.style.setProperty('--tg-js-content-top', (c.top || 0) + 'px');
-                root.style.setProperty('--tg-js-safe-bottom', (s.bottom || 0) + 'px');
+                setVar(root, '--tg-js-safe-top', (s.top || 0) + 'px');
+                setVar(root, '--tg-js-content-top', (c.top || 0) + 'px');
+                setVar(root, '--tg-js-safe-bottom', (s.bottom || 0) + 'px');
                 /* ئەم پۆلە بڕیاردەرە: بەبێی هەموو بۆشاییەکانی ناوچەی
                    سەلامەت سفر دەبن و ڕووکارەکە وەک دۆخی ئاسایی
                    دەمێنێتەوە. لە دۆخی ئاساییدا تلیگرام هێشتا ڕێبەری
@@ -245,7 +260,7 @@
              ============================================================ -->
         <div class="ofp" id="order-progress">
             <div class="ofp-head">
-                <span class="ofp-step">هەنگاوی <b id="ofp-now">١</b> لە <b>٤</b></span>
+                <span class="ofp-step">هەنگاوی <b id="ofp-now">1</b> لە <b>4</b></span>
                 <span class="ofp-label" id="ofp-label">شار هەڵبژێرە</span>
             </div>
             <div class="ofp-track" role="progressbar" aria-valuemin="0" aria-valuemax="4" aria-valuenow="0"
@@ -376,22 +391,22 @@
              چونکە نەخشاندنەوەی هەموو بەشەکە خانە نووسراوەکان و فۆکەس
              دەسڕێتەوە. هەر بۆکسێکی پەنجەرەیی خۆی patch دەکرێت. -->
         <div id="exchange-section" style="display:none;">
-            <div class="ex-sec-t">١) کام ئۆردەری ئەم کڕیارە دەگۆڕدرێت؟</div>
+            <div class="ex-sec-t">1) کام ئۆردەری ئەم کڕیارە دەگۆڕدرێت؟</div>
             <div id="ex-parents-box"></div>
 
             <div id="ex-ret-block" style="display:none;">
-                <div class="ex-sec-t">٢) چ کاڵایەک لە کڕیار وەردەگیرێتەوە؟</div>
+                <div class="ex-sec-t">2) چ کاڵایەک لە کڕیار وەردەگیرێتەوە؟</div>
                 <div id="ex-chips-box"></div>
                 <ul id="ex-ret-list" class="cart-list ex-ret-list"></ul>
             </div>
 
             <div id="ex-new-block" style="display:none;">
-                <div class="ex-sec-t">٣) چ کاڵایەکی نوێ بۆ دەنێردرێت؟</div>
+                <div class="ex-sec-t">3) چ کاڵایەکی نوێ بۆ دەنێردرێت؟</div>
                 <div id="ex-cart-slot"></div>
             </div>
 
             <div id="ex-money-block" style="display:none;">
-                <div class="ex-sec-t">٤) پارەی کڕیار</div>
+                <div class="ex-sec-t">4) پارەی کڕیار</div>
                 <div class="ex-fields">
                     <label for="ex-prev-received">پێشتر چەند پارە لە کڕیار وەرگیراوە؟</label>
                     <input type="text" inputmode="numeric" id="ex-prev-received" placeholder="0"
@@ -403,7 +418,7 @@
                 </div>
                 <div id="ex-cash-badge"></div>
 
-                <div class="ex-sec-t">٥) گەیاندن لەسەر کێیە؟</div>
+                <div class="ex-sec-t">5) گەیاندن لەسەر کێیە؟</div>
                 <div class="ex-modes" id="ex-deliv-modes"></div>
 
                 <div class="ex-sec-t">هۆکاری گۆڕین</div>
@@ -426,7 +441,7 @@
                 <input type="text" id="item-name" placeholder="ناوی کاڵا (نموونە: قەڵەم)" autocomplete="off">
             </div>
             <div class="cart-row-flex">
-                <input type="text" inputmode="numeric" id="item-price" placeholder="نرخی ١ دانە (دینار)" oninput="formatPriceInput(this)">
+                <input type="text" inputmode="numeric" id="item-price" placeholder="نرخی 1 دانە (دینار)" oninput="formatPriceInput(this)">
                 <div class="qty-input-group">
                     <button type="button" class="qty-btn plus-btn" onclick="updateQty(1)">
                         <svg class="qty-icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none"
@@ -482,7 +497,7 @@
                     <input type="text" id="gift-name" placeholder="ناوی کاڵای دیاری" autocomplete="off">
                 </div>
                 <div class="cart-row-flex">
-                    <input type="text" inputmode="numeric" id="gift-price" placeholder="نرخی ١ دانە (دینار)" oninput="formatPriceInput(this)">
+                    <input type="text" inputmode="numeric" id="gift-price" placeholder="نرخی 1 دانە (دینار)" oninput="formatPriceInput(this)">
                     <div class="qty-input-group">
                         <button type="button" class="qty-btn plus-btn" onclick="updateGiftQty(1)">
                             <svg class="qty-icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none"
@@ -3768,10 +3783,10 @@
             const ms = schedRemainMs(o);
             if (ms <= 0) return "خەریکە دەکرێتەوە";
             const mins = Math.round(ms / 60000);
-            if (mins < 60) return "ماوە " + toArabicDigits(Math.max(1, mins)) + " خولەک";
+            if (mins < 60) return "ماوە " + fmtNum(Math.max(1, mins)) + " خولەک";
             const hrs = Math.round(mins / 60);
-            if (hrs < 24) return "ماوە " + toArabicDigits(hrs) + " کاتژمێر";
-            return "ماوە " + toArabicDigits(Math.round(hrs / 24)) + " ڕۆژ";
+            if (hrs < 24) return "ماوە " + fmtNum(hrs) + " کاتژمێر";
+            return "ماوە " + fmtNum(Math.round(hrs / 24)) + " ڕۆژ";
         }
 
         // ژمێرەری وورد — چرکە بە چرکە دادەبەزێت
@@ -3796,9 +3811,9 @@
         function schedCountdownHtml(o) {
             const c = schedClockParts(o);
             if (c.over) return `<b class="sched-count-go">خەریکە دەکرێتەوە</b>`;
-            const pad = n => toArabicDigits(String(n).padStart(2, '0'));
+            const pad = n => fmtNum(String(n).padStart(2, '0'));
             const clock = pad(c.h) + ':' + pad(c.m) + ':' + pad(c.s);
-            return (c.d ? `<em>${toArabicDigits(c.d)} ڕۆژ</em>` : '')
+            return (c.d ? `<em>${fmtNum(c.d)} ڕۆژ</em>` : '')
                 + `<b dir="ltr">${clock}</b>`;
         }
 
@@ -5605,7 +5620,7 @@
                     { label: 'نرخی قازانج', items: [
                         { v: 'rate_desc', t: 'زۆرترین نرخ' },
                         { v: 'rate_asc', t: 'کەمترین نرخ' },
-                        { v: 'zero_first', t: 'بێ نرخ (٠) لە سەرەوە' }
+                        { v: 'zero_first', t: 'بێ نرخ (0) لە سەرەوە' }
                     ] },
                     { label: 'ناو و پلە', items: [
                         { v: 'alpha_asc', t: 'ناو (أ ← ی)' },
@@ -9113,14 +9128,14 @@
         //    گۆڕانکاریی ناو `stats`ـەکە.
         function schedDateLabel(d) {
             const dow = SX_DAYS[(d.getDay() + 1) % 7];
-            return dow + ' ' + toArabicDigits(d.getDate()) + ' ' + FS_MONTHS[d.getMonth()];
+            return dow + ' ' + fmtNum(d.getDate()) + ' ' + FS_MONTHS[d.getMonth()];
         }
 
         function schedTimeLabel(d) {
             let h = d.getHours();
             const mer = h >= 12 ? 'د.ن' : 'پ.ن';
             h = h % 12; if (!h) h = 12;
-            return toArabicDigits(h) + ':' + toArabicDigits(String(d.getMinutes()).padStart(2, '0')) + ' ' + mer;
+            return fmtNum(h) + ':' + fmtNum(String(d.getMinutes()).padStart(2, '0')) + ' ' + mer;
         }
 
         // چیپی «چاوەڕوان» لەسەر کارتی ئۆردەر. `data-sched` بۆ ئەوەیە
@@ -12000,6 +12015,43 @@
             const ms = end.getTime() - Date.now();
             return Math.ceil(ms / 86400000);
         }
+        // ڕۆژ تا بەرواری دەستپێک. > 0 = هێشتا دەستی پێنەکردووە.
+        function rwDaysUntil(dateFrom) {
+            if (!dateFrom) return null;
+            const st = new Date(dateFrom + 'T00:00:00');
+            if (isNaN(st.getTime())) return null;
+            const t = new Date(); t.setHours(0, 0, 0, 0);
+            return Math.round((st.getTime() - t.getTime()) / 86400000);
+        }
+
+        function rwIsUpcoming(o) {
+            const d = rwDaysUntil(o && o.date_from);
+            return d !== null && d > 0;
+        }
+
+        // ⭐ **هەمان** سویچی فۆڕمی ئۆردەر (`.switch-group` + `.switch`)،
+        //    و هەمان دێڕی تێبینی (`.sched-note-sm`) ی شیتی کاتدارکردن.
+        //    کۆپیکردنەوەیان واتا سویچێکی جیاواز لەسەر مۆبایل.
+        function rwSwitchHtml(id, label, on, note) {
+            return `<div class="switch-group rw-switch">
+                <label for="${id}">${rwEsc(label)}</label>
+                <label class="switch">
+                    <input type="checkbox" id="${id}"${on ? ' checked' : ''}>
+                    <div class="slider">
+                        <div class="circle">
+                            <svg class="cross" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                            <svg class="checkmark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                        </div>
+                    </div>
+                </label>
+            </div>` + (note ? `<div class="sched-note-sm rw-switch-note">${rwEsc(note)}</div>` : '');
+        }
+
+        function rwSwitchOn(id) {
+            const el = document.getElementById(id);
+            return !!(el && el.checked);
+        }
+
         function rwBarHtml(cur, target) {
             const pct = Math.max(0, Math.min(100, target > 0 ? (Number(cur) * 100 / Number(target)) : 0));
             return `<div class="rw-bar"><i style="width:${pct.toFixed(1)}%"></i></div>`;
@@ -12030,13 +12082,26 @@
                 return notifStateHtml('bx-target-lock', 'هێشتا هیچ چاڵنجێک نییە',
                     isKing ? 'بە دوگمەی + یەکەم چاڵنج دابنێ' : 'کاتێک چاڵنج دادەنرێت لێرە دەردەکەوێت');
             }
-            const run = [], fin = [];
+            // سێ کۆمەڵە: بەم زووانە · لە ئارادا · کۆتاییهاتوو.
+            // «بەم زووانە» لە سەرەوەیە — چاوەڕوانی دروست دەکات.
+            const soon = [], run = [], fin = [];
             list.forEach(c => {
                 const left = rwDaysLeft(c.date_to);
-                if (c.active && left !== null && left > 0) run.push(c); else fin.push(c);
+                if (rwIsUpcoming(c)) soon.push(c);
+                else if (c.active && left !== null && left > 0) run.push(c);
+                else fin.push(c);
             });
-            let out = run.map(c => rwChalCardHtml(c, isKing)).join('');
-            if (!run.length) out += notifStateHtml('bx-target-lock', 'ئێستا هیچ چاڵنجێکی چالاک نییە', '');
+            let out = '';
+            if (soon.length) {
+                out += `<div class="rw-sec-t">بەم زووانە</div>`
+                    + soon.map(c => rwChalCardHtml(c, isKing)).join('');
+            }
+            if (run.length) {
+                if (soon.length) out += `<div class="rw-sec-t">لە ئارادان</div>`;
+                out += run.map(c => rwChalCardHtml(c, isKing)).join('');
+            } else if (!soon.length) {
+                out += notifStateHtml('bx-target-lock', 'ئێستا هیچ چاڵنجێکی چالاک نییە', '');
+            }
             if (fin.length) out += `<div class="rw-sec-t">کۆتاییهاتووەکان</div>` + fin.map(c => rwChalCardHtml(c, isKing)).join('');
             return out;
         }
@@ -12047,14 +12112,18 @@
             const target = Number(c.target_value) || 0;
             const prog = Number(c.my_progress) || 0;
             const kindTxt = c.target_kind === 'product_qty'
-                ? `فرۆشتنی ${toArabicDigits(target)} دانە «${rwEsc(c.product_match)}»`
+                ? `فرۆشتنی ${fmtNum(target)} دانە «${rwEsc(c.product_match)}»`
                 : c.target_kind === 'orders'
-                    ? `${toArabicDigits(target)} ئۆردەری گەیشتوو`
+                    ? `${fmtNum(target)} ئۆردەری گەیشتوو`
                     : `فرۆشی ${sxMoney(target)}`;
-            const daysChip = left === null ? ''
-                : (c.active && left > 0
-                    ? `<span class="rw-chip is-live"><i class='bx bx-time-five'></i>${toArabicDigits(left)} ڕۆژی ماوە</span>`
-                    : `<span class="rw-chip"><i class='bx bx-flag'></i>${c.active ? 'تەواو بووە' : 'ڕاگیراوە'}</span>`);
+            const until = rwDaysUntil(c.date_from);
+            const soon = rwIsUpcoming(c);
+            const daysChip = soon
+                ? `<span class="rw-chip is-soon"><i class='bx bx-hourglass'></i>دەست پێدەکات دوای ${fmtNum(until)} ڕۆژ</span>`
+                : (left === null ? ''
+                    : (c.active && left > 0
+                        ? `<span class="rw-chip is-live"><i class='bx bx-time-five'></i>${fmtNum(left)} ڕۆژی ماوە</span>`
+                        : `<span class="rw-chip"><i class='bx bx-flag'></i>${c.active ? 'تەواو بووە' : 'ڕاگیراوە'}</span>`));
 
             let stateHtml = '';
             if (claim && claim.status === 'claimed') {
@@ -12063,17 +12132,25 @@
                     : `<div class="rw-done"><i class='bx bx-check-circle'></i> وەرگیرا — ئۆردەر: <bdi dir="ltr">${rwEsc(claim.order_code || '—')}</bdi> · ${rwEsc(claim.order_status || 'ئامادە دەکرێت')}</div>`;
             } else if (claim && claim.status === 'earned') {
                 stateHtml = `<button type="button" class="rw-claim-btn" onclick="rwClaim('${claim.id}')"><i class='bx bx-gift'></i> وەرگرتنی خەڵاتەکەم</button>`;
+            } else if (soon && !isKing) {
+                // هێشتا دەستی پێنەکردووە — شریتی پێشکەوتن هیچ ناڵێت
+                stateHtml = `<div class="rw-soon-note"><i class='bx bx-calendar-star'></i>
+                    لە <bdi dir="ltr">${rwEsc(c.date_from)}</bdi>ەوە دەست پێدەکات</div>`;
             } else if (!isKing) {
-                const progTxt = c.target_kind === 'sales' ? sxMoney(prog) : toArabicDigits(Math.floor(prog));
-                const targetTxt = c.target_kind === 'sales' ? sxMoney(target) : toArabicDigits(target);
+                const progTxt = c.target_kind === 'sales' ? sxMoney(prog) : fmtNum(Math.floor(prog));
+                const targetTxt = c.target_kind === 'sales' ? sxMoney(target) : fmtNum(target);
                 stateHtml = rwBarHtml(prog, target)
                     + `<div class="rw-prog-row"><span>پێشکەوتنم: ${progTxt}</span><span>ئامانج: ${targetTxt}</span></div>`;
             }
 
             let kingHtml = '';
             if (isKing) {
+                const visBits = [];
+                if (c.show_before === false) visBits.push('پێش دەستپێک شاراوە');
+                if (c.show_after === false) visBits.push('دوای کۆتایی دەشاردرێتەوە');
                 kingHtml = `<div class="rw-kingrow">
-                    <span class="rw-chip"><i class='bx bx-group'></i>${toArabicDigits(c.won_n || 0)} بردوویانەتەوە</span>
+                    <span class="rw-chip"><i class='bx bx-group'></i>${fmtNum(c.won_n || 0)} بردوویانەتەوە</span>
+                    ${visBits.length ? `<span class="rw-chip is-vis"><i class='bx bx-hide'></i>${rwEsc(visBits.join(' · '))}</span>` : ''}
                     <button type="button" class="rw-mini" onclick="rwOpenClaimsList('challenge','${c.id}')"><i class='bx bx-list-ul'></i> بردنەوەکان</button>
                     <button type="button" class="rw-mini" onclick="rwEditChallenge('${c.id}')"><i class='bx bx-edit-alt'></i> دەستکاری</button>
                     <button type="button" class="rw-mini" onclick="rwToggleChallenge('${c.id}')"><i class='bx ${c.active ? 'bx-pause' : 'bx-play'}'></i> ${c.active ? 'ڕاگرتن' : 'چالاککردن'}</button>
@@ -12081,7 +12158,7 @@
                 </div>`;
             }
 
-            return `<div class="rw-card${claim && claim.status === 'earned' ? ' is-earned' : ''}">
+            return `<div class="rw-card${claim && claim.status === 'earned' ? ' is-earned' : ''}${soon ? ' is-soon' : ''}">
                 <div class="rw-card-top">
                     <div>
                         <h3 class="rw-title">${rwEsc(c.title)}</h3>
@@ -12100,6 +12177,26 @@
         }
 
         // ---- پەینی ئاڕپی ----
+        // ============================================================
+        // ئاڕپی — «پاسی وەرز» بە شێوەی ستوونی
+        // ------------------------------------------------------------
+        // بیرۆکەی دیزاین لە Pool Pass ی 8 Ball Poolـەوە (داواکاریی
+        // خاوەن). ئەوان ئاسۆیین چونکە یارییەکە لاندسکەیپە؛ ئێمە
+        // ستوونین چونکە ئەپەکە مۆبایل-پۆرترەیتە.
+        //
+        // پێکهاتە:
+        //   ١) کارتی «هیرۆ» — ناوی وەرز، کاتی ماوە، خاڵی ئێستا، و
+        //      شریتی پێشکەوتن بۆ **پلیکانی داهاتوو** (نەک بۆ کۆتایی —
+        //      ئامانجی نزیک هاندەرترە).
+        //   ٢) ڕیڵێکی ستوونی: هەر پلیکانێک نۆدێکە لەسەر ڕیڵەکە،
+        //      خەڵاتەکەی لە تەنیشتیەوە.
+        //
+        // ⭐ ڕیڵەکە **بە پارچە** ڕەنگ دەکرێت (هەر ڕیزێک سەرەوە و
+        //    خوارەوەی خۆی)، نەک بە یەک شریتی درێژ بە بەرزیی
+        //    ژماردراو. بەرزیی ڕیزەکان جیاوازە (وێنە، ناوی درێژ)،
+        //    بۆیە هەر پێوانەیەکی JS دوای یەکەم نەخشاندن هەڵە
+        //    دەبێتەوە. بەم شێوەیە CSS خۆی ڕیڵەکە تەواو دەکات.
+        // ============================================================
         function rwArpPaneHtml(d) {
             const s = d.season;
             const isKing = !!d.is_king;
@@ -12108,25 +12205,12 @@
                 out += notifStateHtml('bx-medal', 'هیچ وەرزێکی چالاک نییە',
                     isKing ? 'بە دوگمەی + وەرزێکی نوێ بکەرەوە' : 'کاتێک وەرزی نوێ دەست پێدەکات لێرە دەردەکەوێت');
             } else {
-                const left = rwDaysLeft(s.date_to);
-                const tiers = s.tiers || [];
-                let next = null;
-                if (s.my_points != null) {
-                    for (const t of tiers) { if (t.points_required > s.my_points) { next = t; break; } }
-                }
-                out += `<div class="rw-card rw-season">
-                    <div class="rw-card-top">
-                        <h3 class="rw-title"><i class='bx bx-medal'></i> ${rwEsc(s.title)}</h3>
-                        ${left !== null ? `<span class="rw-chip is-live"><i class='bx bx-time-five'></i>${left > 0 ? toArabicDigits(left) + ' ڕۆژی ماوە' : 'تەواو بووە'}</span>` : ''}
-                    </div>
-                    ${!isKing ? `<div class="rw-pts"><b>${toArabicDigits(s.my_points || 0)}</b> خاڵی ئەم وەرزە</div>`
-                        + (next ? rwBarHtml(s.my_points || 0, next.points_required)
-                            + `<div class="rw-prog-row"><span>پلیکانی داهاتوو: ${toArabicDigits(next.points_required)} خاڵ</span><span>${toArabicDigits(Math.max(0, next.points_required - (s.my_points || 0)))} ماوە</span></div>` : '')
-                        + `<p class="rw-hint">٢٠ خاڵ بۆ هەر ئۆردەرێکی گەیشتوو + ١٠ خاڵ بۆ هەر کاڵایەکی زیادە</p>` : ''}
-                    ${isKing ? `<div class="rw-kingrow"><button type="button" class="rw-mini" onclick="rwEditSeason()"><i class='bx bx-edit-alt'></i> دەستکاریی وەرز و پلیکانەکان</button></div>` : ''}
-                </div>`;
+                const tiers = (s.tiers || []).slice();
+                out += rwSeasonHeroHtml(s, tiers, isKing);
                 out += tiers.length
-                    ? tiers.map(t => rwTierHtml(t, s.my_points, isKing)).join('')
+                    ? `<div class="arp-track">`
+                    + tiers.map((t, i) => arpRowHtml(t, s.my_points, isKing, i, tiers.length)).join('')
+                    + `</div>`
                     : notifStateHtml('bx-layer', 'هیچ پلیکانێک دانەنراوە',
                         isKing ? 'لە دەستکاریی وەرزەوە پلیکان زیاد بکە' : '');
             }
@@ -12141,32 +12225,119 @@
             return out;
         }
 
-        function rwTierHtml(t, myPts, isKing) {
-            const claim = t.my_claim;
-            let st = '', cls = '';
-            if (isKing) {
-                st = `<span class="rw-chip"><i class='bx bx-group'></i>${toArabicDigits(t.won_n || 0)}</span>
-                      <button type="button" class="rw-mini" onclick="rwOpenClaimsList('tier','${t.id}')"><i class='bx bx-list-ul'></i></button>`;
-            } else if (claim && claim.status === 'claimed') {
-                cls = ' is-done';
-                st = t.reward_kind === 'money'
-                    ? `<span class="rw-chip is-ok"><i class='bx bx-check'></i> وەرگیراوە</span>`
-                    : `<span class="rw-chip is-ok"><i class='bx bx-check'></i> ${rwEsc((claim.order_status || 'وەرگیراوە'))}</span>`;
-            } else if (claim && claim.status === 'earned') {
-                cls = ' is-earned';
-                st = `<button type="button" class="rw-claim-btn rw-claim-sm" onclick="rwClaim('${claim.id}')"><i class='bx bx-gift'></i> وەرگرتن</button>`;
-            } else {
-                cls = ' is-locked';
-                const need = myPts != null ? Math.max(0, t.points_required - myPts) : t.points_required;
-                st = `<span class="rw-chip"><i class='bx bx-lock-alt'></i>${toArabicDigits(need)} خاڵی ماوە</span>`;
+        // ---- کارتی سەرەوەی وەرز ----
+        function rwSeasonHeroHtml(s, tiers, isKing) {
+            const left = rwDaysLeft(s.date_to);
+            const pts = (s.my_points == null) ? null : Number(s.my_points);
+            let doneN = 0, next = null, prevReq = 0;
+            if (pts != null) {
+                for (const t of tiers) {
+                    if (t.points_required <= pts) { doneN++; prevReq = t.points_required; }
+                    else if (!next) next = t;
+                }
             }
-            return `<div class="rw-tier${cls}">
-                <div class="rw-tier-pts"><b>${toArabicDigits(t.points_required)}</b><span>خاڵ</span></div>
-                <div class="rw-tier-mid">
-                    ${rwRewardChip(t.reward_kind, t.reward_amount, t.reward_product)}
-                    ${t.reward_image ? `<img class="rw-img rw-img-sm" src="${rwEscAttr(t.reward_image)}" alt="" loading="lazy">` : ''}
+            // ⭐ شریتەکە بۆ **پلیکانی داهاتوو**ە، نەک بۆ کۆتایی وەرز:
+            //    ئامانجێکی نزیک هەمیشە هاندەرترە لە ئامانجێکی دوور.
+            let pct = 0, subTxt = '';
+            if (pts != null) {
+                if (next) {
+                    const span = Math.max(1, next.points_required - prevReq);
+                    pct = Math.max(0, Math.min(100, (pts - prevReq) * 100 / span));
+                    subTxt = `<b>${fmtNum(Math.max(0, next.points_required - pts))}</b> خاڵ بۆ پلیکانی داهاتوو`;
+                } else if (tiers.length) {
+                    pct = 100;
+                    subTxt = 'هەموو پلیکانەکانت کردەوە — پیرۆزە!';
+                } else {
+                    subTxt = 'هێشتا پلیکانێک دانەنراوە';
+                }
+            }
+            const claimable = tiers.filter(t => t.my_claim && t.my_claim.status === 'earned').length;
+
+            const until = rwDaysUntil(s.date_from);
+            const soon = rwIsUpcoming(s);
+            const timerChip = soon
+                ? `<span class="arp-timer is-soon"><i class='bx bx-hourglass'></i>دوای ${fmtNum(until)} ڕۆژ</span>`
+                : (left !== null
+                    ? `<span class="arp-timer${left > 0 ? '' : ' is-over'}"><i class='bx bx-time-five'></i>${left > 0 ? fmtNum(left) + ' ڕۆژ' : 'کۆتایی هات'}</span>`
+                    : '');
+
+            return `<div class="arp-hero">
+                <div class="arp-hero-head">
+                    <span class="arp-hero-name"><i class='bx bxs-medal'></i>${rwEsc(s.title)}</span>
+                    ${timerChip}
                 </div>
-                <div class="rw-tier-end">${st}</div>
+                ${isKing ? `<div class="arp-hero-king">
+                        <span class="arp-hero-range"><i class='bx bx-calendar'></i><bdi dir="ltr">${rwEsc(s.date_from)} → ${rwEsc(s.date_to)}</bdi></span>
+                        <button type="button" class="rw-mini is-onhero" onclick="rwEditSeason()"><i class='bx bx-edit-alt'></i> دەستکاری</button>
+                    </div>`
+                    : `<div class="arp-hero-body">
+                        <div class="arp-ptsbox">
+                            <b>${fmtNum(pts || 0)}</b>
+                            <span>خاڵی ئەم وەرزە</span>
+                        </div>
+                        <div class="arp-hero-prog">
+                            <div class="arp-hero-bar"><i style="width:${soon ? 0 : pct.toFixed(1)}%"></i></div>
+                            <div class="arp-hero-sub">${soon
+                                ? `لە <bdi dir="ltr">${rwEsc(s.date_from)}</bdi>ەوە دەست پێدەکات`
+                                : subTxt}</div>
+                        </div>
+                    </div>
+                    <div class="arp-hero-foot">
+                        <span class="arp-mini-stat"><i class='bx bx-layer'></i>${fmtNum(doneN)} لە ${fmtNum(tiers.length)} پلیکان</span>
+                        ${claimable ? `<span class="arp-mini-stat is-hot"><i class='bx bx-gift'></i>${fmtNum(claimable)} خەڵاتی چاوەڕوان</span>` : ''}
+                        <span class="arp-mini-stat is-quiet"><i class='bx bx-info-circle'></i>20 خاڵ بۆ ئۆردەری گەیشتوو · 10 بۆ کاڵای زیادە</span>
+                    </div>`}
+            </div>`;
+        }
+
+        // ---- یەک پلیکان لەسەر ڕیڵەکە ----
+        function arpRowHtml(t, myPts, isKing, i, n) {
+            const claim = t.my_claim;
+            const reached = (myPts != null) && (t.points_required <= myPts);
+            let cls, node, act;
+
+            if (isKing) {
+                cls = 'is-king';
+                node = fmtNum(i + 1);
+                act = `<span class="arp-won"><i class='bx bx-group'></i>${fmtNum(t.won_n || 0)}</span>
+                       <button type="button" class="rw-mini" onclick="rwOpenClaimsList('tier','${t.id}')"><i class='bx bx-list-ul'></i></button>`;
+            } else if (claim && claim.status === 'claimed') {
+                cls = 'is-done';
+                node = `<i class='bx bx-check'></i>`;
+                act = `<span class="arp-state is-ok"><i class='bx bx-check-circle'></i>${rwEsc(t.reward_kind === 'money' ? 'وەرگیرا' : (claim.order_status || 'وەرگیرا'))}</span>`;
+            } else if (claim && claim.status === 'earned') {
+                cls = 'is-open';
+                node = `<i class='bx bx-gift'></i>`;
+                act = `<button type="button" class="arp-collect" onclick="rwClaim('${claim.id}')">وەرگرتن</button>`;
+            } else {
+                cls = 'is-locked';
+                node = fmtNum(i + 1);
+                const need = (myPts != null) ? Math.max(0, t.points_required - myPts) : t.points_required;
+                act = `<span class="arp-state"><i class='bx bx-lock-alt'></i>${fmtNum(need)} خاڵ</span>`;
+            }
+
+            // ⭐ پارچەکانی ڕیڵ: سەرەوە ڕەنگین دەبێت ئەگەر ئەم نۆدە
+            //    گەیشترابێتێ، خوارەوەش هەروەها — بۆیە ڕەنگەکە ڕێک لە
+            //    نیوەی نێوان دوایین گەیشتوو و یەکەم داخراودا دەوەستێت.
+            const lit = reached || cls === 'is-done' || cls === 'is-open';
+            return `<div class="arp-row ${cls}">
+                <div class="arp-line">
+                    <span class="arp-seg is-t${(i > 0 && lit) ? ' is-lit' : ''}${i === 0 ? ' is-hidden' : ''}"></span>
+                    <span class="arp-node">${node}</span>
+                    <span class="arp-seg is-b${lit ? ' is-lit' : ''}${i === n - 1 ? ' is-hidden' : ''}"></span>
+                </div>
+                <div class="arp-card">
+                    <div class="arp-ico">${t.reward_image
+                    ? `<img src="${rwEscAttr(t.reward_image)}" alt="" loading="lazy">`
+                    : `<i class='bx ${t.reward_kind === 'money' ? 'bx-wallet' : 'bx-gift'}'></i>`}</div>
+                    <div class="arp-info">
+                        <b class="arp-reward">${t.reward_kind === 'money'
+                    ? sxMoney(t.reward_amount)
+                    : rwEsc(t.reward_product || 'کاڵا')}</b>
+                        <span class="arp-req">${fmtNum(t.points_required)} خاڵ</span>
+                    </div>
+                    <div class="arp-act">${act}</div>
+                </div>
             </div>`;
         }
 
@@ -12470,6 +12641,15 @@
                 </button>
             </div>
             <div class="fsec">
+                <div class="fsec-t">دەرکەوتن لای ئەندامان</div>
+                ${rwSwitchHtml('rw-ch-showbefore', 'پێش دەستپێک پیشان بدرێت',
+                    c.show_before !== false,
+                    'ئەندامان چاڵنجەکە لە بەشی «بەم زووانە»دا دەبینن پێش ئەوەی دەست پێبکات.')}
+                ${rwSwitchHtml('rw-ch-showafter', 'دوای کۆتایی پیشان بدرێت',
+                    c.show_after !== false,
+                    'دوای بەرواری کۆتایی لە بەشی «کۆتاییهاتووەکان»دا دەمێنێتەوە. ئەوانەی خەڵاتیان بردووە بە هەر حاڵ دەیبینن.')}
+            </div>
+            <div class="fsec">
                 <div class="fsec-t">خەڵات</div>
                 <div class="rw-choice" id="rw-ch-rkind">
                     <button type="button" data-v="money" class="${(c.reward_kind || 'money') === 'money' ? 'on' : ''}" onclick="rwPickChoice(this)">پارە بۆ جزدان</button>
@@ -12631,6 +12811,15 @@
                 <p class="rw-hint">خاڵەکان تەنها لە ماوەی وەرزەکەدا دەژمێردرێن — وەرزی نوێ واتا هەموو کەس لە سفرەوە.</p>
             </div>
             <div class="fsec">
+                <div class="fsec-t">دەرکەوتن لای ئەندامان</div>
+                ${rwSwitchHtml('rw-se-showbefore', 'پێش دەستپێک پیشان بدرێت',
+                    s.show_before !== false,
+                    'ئەندامان وەرزەکە دەبینن پێش ئەوەی دەست پێبکات.')}
+                ${rwSwitchHtml('rw-se-showafter', 'دوای کۆتایی پیشان بدرێت',
+                    s.show_after !== false,
+                    'دوای بەرواری کۆتایی لە شاشەی ئەندامان دەمێنێتەوە. پلیکانە بردراوەکان بە هەر حاڵ دەمێننەوە.')}
+            </div>
+            <div class="fsec">
                 <div class="fsec-t">پلیکانەکان — خاڵ ← خەڵات</div>
                 <div id="rw-tier-rows">${tiers.map(t => rwTierRowHtml(t)).join('')}</div>
                 <button type="button" class="rw-add-tier" onclick="rwAddTierRow()"><i class='bx bx-plus'></i> پلیکانی نوێ</button>
@@ -12719,7 +12908,9 @@
                         reward_amount: rk === 'money' ? ramt : null,
                         reward_product: rk === 'product' ? rprod : null,
                         reward_image: rk === 'product' ? img : null,
-                        active: _rw.editing ? _rw.editing.active : true
+                        active: _rw.editing ? _rw.editing.active : true,
+                        show_before: rwSwitchOn('rw-ch-showbefore'),
+                        show_after: rwSwitchOn('rw-ch-showafter')
                     }
                 });
                 if (error) { console.error('challenge_save:', error); showToast('پاشەکەوت سەرنەکەوت', 'error'); return; }
@@ -12761,7 +12952,12 @@
                 showToast('پاشەکەوتکردن...', 'loading');
                 const { data: sid, error } = await supabase.rpc('season_save', {
                     p_user_code: String(currentUser.code),
-                    p: { id: (_rw.editing && _rw.editing.id) || null, title: title, date_from: from, date_to: to, active: true }
+                    p: {
+                        id: (_rw.editing && _rw.editing.id) || null,
+                        title: title, date_from: from, date_to: to, active: true,
+                        show_before: rwSwitchOn('rw-se-showbefore'),
+                        show_after: rwSwitchOn('rw-se-showafter')
+                    }
                 });
                 if (error) { console.error('season_save:', error); showToast('پاشەکەوتی وەرز سەرنەکەوت', 'error'); return; }
                 let bad = 0;
@@ -12794,7 +12990,8 @@
                     product_match: c.product_match, target_value: c.target_value,
                     date_from: c.date_from, date_to: c.date_to, reward_kind: c.reward_kind,
                     reward_amount: c.reward_amount, reward_product: c.reward_product,
-                    reward_image: c.reward_image, active: !c.active
+                    reward_image: c.reward_image, active: !c.active,
+                    show_before: c.show_before, show_after: c.show_after
                 }
             });
             if (error) { console.error('toggle challenge:', error); showToast('سەرنەکەوت', 'error'); return; }
@@ -18770,7 +18967,7 @@
                 out.push({
                     key: fdKey(d),
                     top: i === 0 ? 'ئەمڕۆ' : (i === 1 ? 'سبەینێ' : SX_DAYS[(d.getDay() + 1) % 7]),
-                    sub: toArabicDigits(d.getDate()) + ' ' + FS_MONTHS[d.getMonth()]
+                    sub: fmtNum(d.getDate()) + ' ' + FS_MONTHS[d.getMonth()]
                 });
             }
             return out;
@@ -18811,7 +19008,7 @@
                 // خانەی هەشتەم: ڕۆژێک لە دەرەوەی حەوت ڕۆژەکە
                 `<button type="button" class="fchip sched-day is-other${!inWindow ? ' is-on' : ''}"
                     onclick="openSchedDaySheet()"><b>ڕۆژێکی تر</b><small>${!inWindow
-                    ? toArabicDigits(schedDraft.getDate()) + ' ' + FS_MONTHS[schedDraft.getMonth()]
+                    ? fmtNum(schedDraft.getDate()) + ' ' + FS_MONTHS[schedDraft.getMonth()]
                     : 'هەڵیبژێرە'}</small></button>`;
 
             // ---- کاتژمێر ----
@@ -18977,7 +19174,7 @@
             for (let h = 1; h <= 12; h++) {
                 const on = h === _sctH;
                 hh += `<button type="button" class="sct-cell${on ? ' is-on' : ''}"
-                    aria-pressed="${on}" onclick="sctPick('h',${h})">${toArabicDigits(h)}</button>`;
+                    aria-pressed="${on}" onclick="sctPick('h',${h})">${fmtNum(h)}</button>`;
             }
             hb.innerHTML = hh;
 
@@ -18985,7 +19182,7 @@
             mb.innerHTML = SCT_MINS.map(m => {
                 const on = m === _sctM;
                 return `<button type="button" class="sct-cell${on ? ' is-on' : ''}"
-                    aria-pressed="${on}" onclick="sctPick('m',${m})">${toArabicDigits(String(m).padStart(2, '0'))}</button>`;
+                    aria-pressed="${on}" onclick="sctPick('m',${m})">${fmtNum(String(m).padStart(2, '0'))}</button>`;
             }).join('');
 
             // پ.ن/د.ن — کۆنترۆڵێکی پەقی دوو‌پارچەی، نەک دوو خانەی جیا.
@@ -19000,8 +19197,8 @@
             const ph = document.getElementById('sct-p-h');
             const pm = document.getElementById('sct-p-m');
             const pr = document.getElementById('sct-p-r');
-            if (ph) ph.innerText = toArabicDigits(_sctH);
-            if (pm) pm.innerText = toArabicDigits(String(_sctM).padStart(2, '0'));
+            if (ph) ph.innerText = fmtNum(_sctH);
+            if (pm) pm.innerText = fmtNum(String(_sctM).padStart(2, '0'));
             if (pr) pr.innerText = _sctPm ? 'د.ن' : 'پ.ن';
         }
 
@@ -19305,7 +19502,7 @@
             if (problems.length) {
                 showOrderErrs(problems);
                 showToast(problems.length === 1
-                    ? "یەک خانە پێویستی بە چاککردن هەیە" : `${toArabicDigits(problems.length)} خانە پێویستیان بە چاککردن هەیە`, "error");
+                    ? "یەک خانە پێویستی بە چاککردن هەیە" : `${fmtNum(problems.length)} خانە پێویستیان بە چاککردن هەیە`, "error");
                 return;
             }
             clearOrderErrs();
@@ -21519,7 +21716,7 @@
             wrap.classList.toggle('is-done', allDone);
 
             const now = document.getElementById('ofp-now');
-            if (now) now.innerText = toArabicDigits(allDone ? ORDER_STEPS.length : curIdx + 1);
+            if (now) now.innerText = fmtNum(allDone ? ORDER_STEPS.length : curIdx + 1);
 
             const lbl = document.getElementById('ofp-label');
             if (lbl) lbl.innerText = allDone ? '✓ ئامادەیە بۆ ناردن' : ORDER_STEPS[curIdx].hint;
@@ -21535,8 +21732,18 @@
         }
 
         // ژمارە بە ئەلفوبێی عەرەبی — وەک ڕووکاری ئەپەکە
-        function toArabicDigits(n) {
-            return String(n).replace(/\d/g, d => '٠١٢٣٤٥٦٧٨٩'[+d]);
+        // ⭐ ژمارەکان بە ئینگلیزی پیشان دەدرێن (داواکاریی خاوەن، ٢٠٢٦-٠٨-٣٠).
+        // پێشتر ژمارەی عەرەبی-هیندی بوون، بەڵام پارە هەمیشە بە
+        // ئینگلیزی بوو (`toLocaleString('en-US')`) — بۆیە ڕووکارەکە
+        // تێکەڵ بوو: «10,000 د.ع» لە تەنیشت «١٤٠ خاڵ».
+        //
+        // ⚠️ تەنها شوێنی فۆرماتکردنی ژمارەی پیشاندانە — ھەر
+        //    گۆڕانێکی داهاتوو (جیاکەرەوەی هەزار، ژمارەی جیاواز)
+        //    لێرە دەکرێت، نەک لە ٣٤ شوێن.
+        // ⚠️ هەندێک بانگ سترینگی پڕکراوە دەدەن ('05' بۆ کاتژمێر)،
+        //    بۆیە هەرگیز بۆ ژمارە مەیگۆڕە — ١٢:٥ دەردەچێت.
+        function fmtNum(n) {
+            return String(n);
         }
 
         // ============================================================
@@ -23554,11 +23761,11 @@
                     warnLines.push('ئەم کلیلە هیچ ئۆردەر و پارەیەکی نییە.');
                 }
                 warnLines.push('');
-                warnLines.push('🗑️ بۆ ٣٠ ڕۆژ لە تەنەکەی خۆڵدا دەمێنێتەوە و دەکرێت بگەڕێتەوە.');
+                warnLines.push('🗑️ بۆ 30 ڕۆژ لە تەنەکەی خۆڵدا دەمێنێتەوە و دەکرێت بگەڕێتەوە.');
                 warnLines.push('');
                 warnLines.push('دڵنیایت؟');
             } catch (e) {
-                warnLines = ["⚠️ دڵنیایت دەتەوێت ئەم کارمەندە بسڕیتەوە؟", "", "بۆ ٣٠ ڕۆژ لە تەنەکەی خۆڵدا دەمێنێتەوە."];
+                warnLines = ["⚠️ دڵنیایت دەتەوێت ئەم کارمەندە بسڕیتەوە؟", "", "بۆ 30 ڕۆژ لە تەنەکەی خۆڵدا دەمێنێتەوە."];
             }
 
             if (confirm(warnLines.join('\n'))) {
@@ -23566,7 +23773,7 @@
                     await deleteWithActor('employees', code);
                     showToast(ordersOfKey > 0
                         ? `🗑️ سڕایەوە — ${ordersOfKey} ئۆردەری وەک «خاوەنی سڕاو» نیشان کران`
-                        : "🗑️ سڕایەوە — بۆ ٣٠ ڕۆژ لە تەنەکەی خۆڵدایە", "success");
+                        : "🗑️ سڕایەوە — بۆ 30 ڕۆژ لە تەنەکەی خۆڵدایە", "success");
                     document.getElementById('edit-section').style.display = "none";
                     document.getElementById('search-code-input').value = "";
                     document.getElementById('search-code-input').removeAttribute('data-code');
@@ -23797,8 +24004,8 @@
             { v: 'all', t: 'هەموو کاتێک' },
             { v: 'today', t: 'ئەمڕۆ' },
             { v: 'yesterday', t: 'دوێنێ' },
-            { v: 'last7', t: '٧ ڕۆژی ڕابردوو' },
-            { v: 'last30', t: '٣٠ ڕۆژی ڕابردوو' },
+            { v: 'last7', t: '7 ڕۆژی ڕابردوو' },
+            { v: 'last30', t: '30 ڕۆژی ڕابردوو' },
             { v: 'quarter', t: 'چارەکی ڕابردوو' },
             { v: 'custom', t: 'مەودای دڵخواز' },
         ];
@@ -24554,7 +24761,7 @@
                     let c = reviewCounts();
                     html += `<span class="afchip rvw-count" title="لە ئۆردەرە بارکراوەکاندا">
                         <i class='bx bx-list-check'></i>
-                        <span>ماوە ${toArabicDigits(c.todo)} لە ${toArabicDigits(c.todo + c.done + c.flag)}${c.flag ? ' · نیشانەکراو ' + toArabicDigits(c.flag) : ''}</span>
+                        <span>ماوە ${fmtNum(c.todo)} لە ${fmtNum(c.todo + c.done + c.flag)}${c.flag ? ' · نیشانەکراو ' + fmtNum(c.flag) : ''}</span>
                     </span>`;
                 }
                 box.innerHTML = html;
@@ -26460,7 +26667,7 @@
                     const n = map[k] || 0;
                     let base = c.getAttribute('data-label');
                     if (!base) { base = c.textContent.trim(); c.setAttribute('data-label', base); }
-                    c.textContent = n ? `${base} ${toArabicDigits(n)}` : base;
+                    c.textContent = n ? `${base} ${fmtNum(n)}` : base;
                 });
             } catch (e) { console.warn('trashCounts:', e); }
         }
@@ -26745,7 +26952,7 @@
             showToast("سڕینەوە...", "loading");
             try {
                 await deleteWithActor('cities', id);
-                showToast("سڕایەوە — بۆ ٣٠ ڕۆژ لە تەنەکەی خۆڵدایە", "success");
+                showToast("سڕایەوە — بۆ 30 ڕۆژ لە تەنەکەی خۆڵدایە", "success");
                 await loadDBCities();
                 renderAdminCities();
             } catch (e) { showToast("هەڵە هەیە", "error"); }
