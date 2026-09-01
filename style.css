@@ -18477,15 +18477,17 @@ body.sx-wide {
      + 14px بۆشایی هەناسە
 
    `env()`ـەکانی هەردوولا لە کەمکردنەوەکەدا یەکتر دەکوژن، بۆیە
-   ئەنجامەکە ڕێک `82px + safe-bottom` (یان ١٦٦) دەبێت.
+   ئەنجامەکە ڕێک `73px + safe-bottom` (ئەندام) یان
+   `157px + safe-bottom` (پاشا) دەبێت — ٥px بۆشایی بۆ هەردووکیان.
+   ⚠️ ١٤٥ کەم بوو: ڕیزی کۆتایی ٧px دەچووە **ژێر** دوگمەی + ەوە.
    ⚠️ پۆلی `rw-king` لە `rwSyncFab()`ـەوە دادەنرێت — هەمان
    شوێنێک کە بڕیار دەدات FABـەکە دەربکەوێت. */
 #challenge-screen {
   padding: 0;
-  margin-bottom: calc(82px + var(--safe-bottom, 0px) - var(--app-pad-bottom));
+  margin-bottom: calc(73px + var(--safe-bottom, 0px) - var(--app-pad-bottom));
 }
 #challenge-screen.rw-king {
-  margin-bottom: calc(166px + var(--safe-bottom, 0px) - var(--app-pad-bottom));
+  margin-bottom: calc(157px + var(--safe-bottom, 0px) - var(--app-pad-bottom));
 }
 
 /* ⭐ ناونیشان + تابەکان لە یەک بلۆکی **لکاو**دان.
@@ -18619,7 +18621,13 @@ body.sx-wide {
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
-.rw-chead:active { opacity: 0.68; }
+/* ⚠️ پەنجەدانان بە `opacity` نیشان مەدە: کارتەکە سپییە، بۆیە
+   کاڵکردنەوەی ناوەڕۆکەکە بۆ سپی دەڕوات و وەک «پرتەیەکی سپی»
+   دەبینرێت ڕێک لەو ساتەی داونـدرۆپەکە دەکرێتەوە. (خاوەن
+   ٢٠٢٦-٠٩-٠١) پاشخانێکی زۆر کاڵ هەمان پەیام دەگەیەنێت بەبێ
+   دەستکاریکردنی ڕەنگی دەق و پیلەکان. */
+.rw-chead { border-radius: 12px; transition: background 0.12s ease; }
+.rw-chead:active { background: rgba(15, 23, 42, 0.04); }
 
 .rw-thumb {
   width: 58px;
@@ -18633,8 +18641,72 @@ body.sx-wide {
   align-items: center;
   justify-content: center;
 }
-.rw-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.rw-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; background: #eef2f7; }
 .rw-thumb i { font-size: 26px; color: #a5b4fc; }
+
+/* ---------- خەڵاتی پارە وەک خانەی سەرەکی ----------
+   خەڵاتێکی پارە وێنەی نییە، بەڵام هاندەرترین شتی کارتەکەیە —
+   بۆیە خۆی دەبێتە وێنەکە: ژمارەیەکی گەورە لەسەر زێڕ.
+   ⚠️ «15,000 د.ع» لە ٥٨pxدا ناخوێندرێتەوە؛ `rwMoneyParts`
+   دەیشکێنێت بۆ «١٥» + «هەزار». */
+.rw-thumb.is-cash {
+  border-color: rgba(180, 83, 9, 0.34);
+  background: linear-gradient(150deg, #fbbf24 0%, #f59e0b 46%, #ea580c 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5),
+              0 4px 10px -6px rgba(180, 83, 9, 0.75);
+  position: relative;
+}
+/* تیشکێکی نەرم لە گۆشەی سەرەوە — قووڵایی دەدات بەبێ وێنە */
+.rw-thumb.is-cash::after {
+  content: '';
+  position: absolute;
+  inset-block-start: -18px;
+  inset-inline-start: -18px;
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.42), transparent 70%);
+  pointer-events: none;
+}
+.rw-cash {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(120, 53, 15, 0.38);
+}
+.rw-cash b {
+  font-size: 21px;
+  font-weight: 800;
+  letter-spacing: -0.4px;
+}
+.rw-cash em {
+  margin-top: 4px;
+  font-size: 9.5px;
+  font-style: normal;
+  font-weight: var(--font-bold, 700);
+  opacity: 0.94;
+}
+
+/* ---------- مەودای بەروار ----------
+   ⚠️ ڕیزبەندی ڕاست-بۆ-چەپە (دەستپێک لە ڕاست)، بەڵام هەر
+   بەروارێک بە تەنها `dir="ltr"`ـە. تیرەکە بۆ چەپ ئاراستە
+   دەکات — ئاراستەی ڕۆیشتنی کات لەسەر شاشەکە. */
+.rw-range {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.rw-range > i {
+  font-size: 16px;
+  color: #94a3b8;
+  flex: 0 0 auto;
+}
 
 .rw-htxt { flex: 1; min-width: 0; display: block; }
 .rw-htxt .rw-title {
@@ -18679,16 +18751,48 @@ body.sx-wide {
    دەبێت لەگەڵیدا بەرز بێتەوە — ئەگەرنا خوارووی کارتەکە بێدەنگ
    دەبڕدرێت. */
 .rw-more {
-  max-height: 0;
-  opacity: 0;
+  /* ⭐ گریدی `0fr → 1fr`، نەک `max-height`.
+     `max-height: 620px` بۆ ناوەڕۆکێکی ٨١px واتا بۆکسەکە لە
+     یەکەم ١٣٪ی ئەنیمەیشنەکەدا تەواو دەکرێتەوە — پێوانەکراو:
+     **دوو** بەرزیی جیاواز لە ٨٥ فرەیمدا. بۆکسەکە یەکسەر
+     دەکرایەوە و ناوەڕۆکەکە بە `opacity` دواتر دەهات → بۆکسێکی
+     بەتاڵی سپی بۆ ~٢٠٠ms = «پرتەی سپی». (خاوەن ٢٠٢٦-٠٩-٠١)
+
+     گرید بەرزیی **ڕاستەقینەی** ناوەڕۆکەکە دەگوازێتەوە، بۆیە:
+       · هیچ ژمارەیەکی جادوویی نییە بۆ ڕێککردنەوە
+       · هیچ ناوەڕۆکێک نابڕدرێت ئەگەر درێژتر بوو
+       · کاڵبوونەوە پێویست نییە — بۆکس و ناوەڕۆک پێکەوە دێن
+     ⚠️ وێبگەڕێک کە `fr` نەگوازێتەوە (سافاریی کۆن) یەکسەر
+     دەیکاتەوە — واتا هەمان ڕەفتاری پێشوو، نەک شکاون. */
+  display: grid;
+  grid-template-rows: 0fr;
   overflow: hidden;
   margin-top: 0;
-  transition: max-height 0.32s cubic-bezier(0.22, 1, 0.36, 1),
-              opacity 0.2s ease,
-              margin-top 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+  transition: grid-template-rows 0.3s cubic-bezier(0.22, 1, 0.36, 1),
+              margin-top 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+  /* بەرزی گۆڕان = لەیئاوتی نوێ لە هەر فرەیمێکدا. `contain`
+     دەیبەستێتەوە بەم بۆکسەوە، بۆیە ویب‌ڤیو لیستی خوارەوەی
+     دووبارە ڕەنگ ناکاتەوە. */
+  contain: layout paint;
 }
-.rw-card.is-open .rw-more { max-height: 620px; opacity: 1; margin-top: 10px; }
-.rw-more-in { border-top: 1px dashed var(--line, #e6e8ec); padding-top: 10px; }
+.rw-card.is-open .rw-more { grid-template-rows: 1fr; margin-top: 10px; }
+/* ⚠️ `min-height: 0` + `overflow: hidden` لەسەر منداڵەکە:
+   بەبێ ئەوان ڕیزی `0fr` هەر بە بەرزیی ناوەڕۆکەکە دەمێنێتەوە.
+
+   ⭐ **و منداڵی ڕاستەوخۆی گرید دەبێت بێ پەدینگ و بێ بۆردەر بێت.**
+   `min-height: 0` تەنها بەشی **ناوەڕۆک** دەکاتە سفر — پەدینگ و
+   بۆردەری خۆی هەر دەژمێردرێن، بۆیە ڕیزی `0fr` بە
+   ١px بۆردەر + ١٠px پەدینگ = **١١px** دەمایەوە: هێڵێکی
+   خەت‌خەتی لە ژێر هەموو کارتێکی داخراودا. (خاوەن ٢٠٢٦-٠٩-٠١)
+   ڕازاندنەوەکە دەچێتە پێچەرێکی سێیەم. [[landmines]] ٦٣ */
+.rw-more-in {
+  min-height: 0;
+  overflow: hidden;
+}
+.rw-more-pad {
+  border-top: 1px dashed var(--line, #e6e8ec);
+  padding-top: 10px;
+}
 
 .rw-body-t { margin: 0 0 10px; font-size: var(--fs-sm, 13px); color: #475569; line-height: 1.6; }
 
@@ -18727,7 +18831,14 @@ body.sx-wide {
   -webkit-tap-highlight-color: transparent;
 }
 .rw-zoom:active { transform: scale(0.94); }
-.rw-zoom .rw-img-sm { border-radius: 8px; display: block; }
+/* وێنە بە `lazy` بار دەبێت و لەناو بۆکسێکی داخراودایە، بۆیە
+   یەکەم کرانەوە = یەکەم داواکاری. پاشخانێکی کاڵ وا دەکات
+   شوێنەکەی وەک بۆکسێکی سپیی بەتاڵ دەرنەکەوێت. */
+.rw-zoom .rw-img-sm {
+  border-radius: 8px;
+  display: block;
+  background: #eef2f7;
+}
 .rw-zoom > i {
   position: absolute;
   inset-block-end: -3px;
@@ -19260,6 +19371,7 @@ body.sx-wide {
   .arp-row.is-open .arp-node { animation: none; }
   .arp-hero-bar > i { transition: none; }
   .rw-more, .rw-caret { transition: none; }
+  .rw-chead { transition: none; }
   .rw-copy { transition: none; }
 }
 

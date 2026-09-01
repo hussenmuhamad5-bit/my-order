@@ -12218,14 +12218,28 @@
                 lvlHtml = `<span class="rw-lvl-pill">${pillNow} <b>لە</b> ${fmtV(target)}${unit ? ' ' + unit : ''}</span>`;
             }
 
-            const barHtml = (!isKing && !soon && target > 0) ? rwBarHtml(prog, target) : '';
+            // ⚠️ لە سفر پێشکەوتندا شریتەکە ریڵێکی بەتاڵە — هیچ
+            //    ناڵێت کە پیلی «٠ لە ٣٠ دانە» نەیڵێت، و وەک پارچەیەکی
+            //    شکاو دەردەکەوێت. (خاوەن ٢٠٢٦-٠٩-٠١)
+            const barHtml = (!isKing && !soon && target > 0 && prog > 0)
+                ? rwBarHtml(prog, target) : '';
 
-            // وێنەی سەرەکی = خەڵاتەکە (ئەوەی دەیبەیتەوە). ئەگەر نەبوو،
-            // وێنەی کاڵای ئامانج. ئەگەر هیچیان نەبوو، خانەیەکی ئایکۆن.
-            const heroImg = c.reward_image || c.target_image || null;
+            // ⭐ ڕیزبەندیی خانەی سەرەکی — «چیم دەست دەکەوێت؟» یەکەمە،
+            //    چونکە ئەوە هاندەرەکەیە:
+            //      ١) وێنەی خەڵات   — خودی دیارییەکە
+            //      ٢) بڕی پارە      — خەڵاتی پارە، بە ژمارەیەکی گەورە
+            //      ٣) وێنەی ئامانج  — ئەوەی دەبێت بیفرۆشیت
+            //      ٤) ئایکۆن
+            //    وێنەی ئامانج بە پلەی دووەم دەکەوێت، بەڵام ون نابێت —
+            //    لە ڕیزی «کاڵاکە»ی وردەکاریدا دەبینرێت.
+            const cash = (!c.reward_image && c.reward_kind === 'money'
+                && Number(c.reward_amount) > 0) ? rwMoneyParts(c.reward_amount) : null;
+            const heroImg = c.reward_image || (cash ? null : c.target_image) || null;
             const thumb = heroImg
                 ? `<img src="${rwEscAttr(heroImg)}" alt="" loading="lazy">`
-                : `<i class='bx ${c.reward_kind === 'money' ? 'bx-wallet' : 'bx-gift'}'></i>`;
+                : cash
+                    ? `<span class="rw-cash"><b>${rwEsc(cash.n)}</b><em>${rwEsc(cash.unit)}</em></span>`
+                    : `<i class='bx bx-gift'></i>`;
 
             // ---- کردارەکان — هەمیشە دیارن ----
             let actHtml = '';
@@ -12289,8 +12303,16 @@
                 </span>`]);
 
             // بەروار — یەک ڕیز، بێ ژماردنی ڕۆژ (چیپەکەی سەرەوە ئەوەی هەیە)
+            // ⚠️ هەر بەروارێک بە تەنها `dir="ltr"`ـە (ئەگەرنا ٢٠٢٦-٠٩-٠١
+            //    پێچەوانە دەخوێندرێتەوە)، بەڵام **ڕیزبەندییان** ڕاست-بۆ-چەپە:
+            //    دەستپێک لە ڕاست، کۆتایی لە چەپ — وەک خوێندنەوەی کوردی.
+            //    بۆیە هەردووکیان نابێت لەناو **یەک** `bdi`دا بن.
             rows.push([`<i class='bx bx-calendar'></i>بەروار`,
-                `<bdi dir="ltr">${rwEsc(c.date_from)} → ${rwEsc(c.date_to)}</bdi>`]);
+                `<span class="rw-range">
+                    <bdi dir="ltr">${rwEsc(c.date_from)}</bdi>
+                    <i class='bx bx-left-arrow-alt'></i>
+                    <bdi dir="ltr">${rwEsc(c.date_to)}</bdi>
+                </span>`]);
 
             // چەندی تر پێویستە — یەکەکەی پێوەیە، بۆیە هەرگیز بە ڕۆژ
             // تێکەڵ نابێت.
@@ -12320,7 +12342,7 @@
 
             return `<div class="rw-card${claim && claim.status === 'earned' ? ' is-earned' : ''}${soon ? ' is-soon' : ''}${isOpen ? ' is-open' : ''}" data-cid="${rwEscAttr(cid)}">
                 <button type="button" class="rw-chead" onclick="rwToggleChal(this,'${rwEscAttr(cid)}')" aria-expanded="${isOpen ? 'true' : 'false'}">
-                    <span class="rw-thumb">${thumb}</span>
+                    <span class="rw-thumb${cash ? ' is-cash' : ''}">${thumb}</span>
                     <span class="rw-htxt">
                         <span class="rw-title">${rwEsc(c.title)}</span>
                         <span class="rw-lvl">${lvlHtml}${timeChip}</span>
@@ -12329,12 +12351,33 @@
                     <i class='bx bx-chevron-down rw-caret'></i>
                 </button>
                 ${actHtml}
-                <div class="rw-more"><div class="rw-more-in">
+                <div class="rw-more"><div class="rw-more-in"><div class="rw-more-pad">
                     ${c.body ? `<p class="rw-body-t">${rwEsc(c.body)}</p>` : ''}
                     <dl class="rw-dl">${rows.map(r => `<dt>${r[0]}</dt><dd>${r[1]}</dd>`).join('')}</dl>
                     ${kingHtml}
-                </div></div>
+                </div></div></div>
             </div>`;
+        }
+
+        // ============================================================
+        // بڕی پارە بۆ خانەیەکی ٥٨px — ژمارەیەکی گەورە + یەکەیەکی بچووک
+        // ------------------------------------------------------------
+        // «15,000 د.ع» لە خانەیەکی ٥٨pxدا ناخوێندرێتەوە. بۆیە
+        // دەشکێندرێت: **١٥** گەورە، **هەزار** بچووک لە ژێریەوە.
+        // خاوەن (٢٠٢٦-٠٩-٠١): «١٥ پازدەیەک بکرێت و لە ژێرەوە بە
+        // بچووکی سفرەکان — یان شێوەیەکی تر کە جوانتر بێت.»
+        // شکاندن بە یەکەی کوردی گشتگیرترە لە «١٥ + ٠٠٠»: ئەوە
+        // بۆ ١٢,٥٠٠ دەشکێت، ئەمە دەیکاتە «١٢.٥ هەزار».
+        // ============================================================
+        function rwMoneyParts(v) {
+            const n = Math.abs(Number(v) || 0);
+            // ⚠️ بڕینەوە، نەک خڕکردنەوە — خەڵاتێک هەرگیز نابێت
+            //    گەورەتر پیشان بدرێت لە ئەوەی هەیە. (١,٢٥٠,٠٠٠ =
+            //    ١.٢ ملیۆن، نەک ١.٣)
+            const cut = (x, d) => String(Math.floor(x * d) / d).replace(/\.0$/, '');
+            if (n >= 1e6) return { n: cut(n / 1e6, 10), unit: 'ملیۆن' };
+            if (n >= 1e3) return { n: cut(n / 1e3, 10), unit: 'هەزار' };
+            return { n: fmtNum(Math.round(n)), unit: 'د.ع' };
         }
 
         // ---- وێنەی بچووکی کرانەوە — `openImageGallery`ی ئامادە ----
