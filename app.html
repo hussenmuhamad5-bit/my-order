@@ -12404,8 +12404,14 @@
                     : `<i class='bx bx-gift'></i>`;
 
             // ---- کردارەکان — هەمیشە دیارن ----
+            // ⭐ دۆخی سێیەم: خەڵاتەکە هەڵوەشێندراوەتەوە چونکە ئۆردەرێک
+            //    گەڕایەوە و پێشکەوتنەکە کەوتە خوارووی ئامانج (db/059).
+            //    بێدەنگ نابێت — ئەندام لەوانەیە پارەکەی لە جزدانەکەیدا
+            //    بینیبێت و پاشان نەیبینێت.
             let actHtml = '';
-            if (claim && claim.status === 'claimed') {
+            if (claim && claim.status === 'revoked') {
+                actHtml = `<div class="rw-done is-revoked"><i class='bx bx-undo'></i> خەڵاتەکە هەڵوەشێندرایەوە — ئۆردەرێک گەڕایەوە${claim.reward_kind === 'money' || c.reward_kind === 'money' ? '، بڕەکە لە جزدانەکەت کەم کرایەوە' : ''}</div>`;
+            } else if (claim && claim.status === 'claimed') {
                 actHtml = c.reward_kind === 'money'
                     ? `<div class="rw-done"><i class='bx bx-check-circle'></i> خەڵاتەکە وەرگیرا — چووە سەر جزدانەکەت</div>`
                     : `<div class="rw-done"><i class='bx bx-check-circle'></i> وەرگیرا — ئۆردەر: <bdi dir="ltr">${rwEsc(claim.order_code || '—')}</bdi> · ${rwEsc(claim.order_status || 'ئامادە دەکرێت')}</div>`;
@@ -12503,7 +12509,7 @@
                 </div>`;
             }
 
-            return `<div class="rw-card${claim && claim.status === 'earned' ? ' is-earned' : ''}${soon ? ' is-soon' : ''}${isOpen ? ' is-open' : ''}" data-cid="${rwEscAttr(cid)}">
+            return `<div class="rw-card${claim && claim.status === 'earned' ? ' is-earned' : ''}${claim && claim.status === 'revoked' ? ' is-revoked' : ''}${soon ? ' is-soon' : ''}${isOpen ? ' is-open' : ''}" data-cid="${rwEscAttr(cid)}">
                 <button type="button" class="rw-chead" onclick="rwToggleChal(this,'${rwEscAttr(cid)}')" aria-expanded="${isOpen ? 'true' : 'false'}">
                     <span class="rw-thumb${cash ? ' is-cash' : ''}">${thumb}</span>
                     <span class="rw-htxt">
@@ -12804,6 +12810,10 @@
                 node = fmtNum(i + 1);
                 act = `<span class="arp-won"><i class='bx bx-group'></i>${fmtNum(t.won_n || 0)}</span>
                        <button type="button" class="rw-mini" onclick="rwOpenClaimsList('tier','${t.id}')"><i class='bx bx-list-ul'></i></button>`;
+            } else if (claim && claim.status === 'revoked') {
+                cls = 'is-locked';
+                node = `<i class='bx bx-undo'></i>`;
+                act = `<span class="arp-state is-revoked"><i class='bx bx-undo'></i>هەڵوەشێندرایەوە</span>`;
             } else if (claim && claim.status === 'claimed') {
                 cls = 'is-done';
                 node = `<i class='bx bx-check'></i>`;
@@ -12851,7 +12861,9 @@
 
         function rwOldClaimHtml(cl) {
             let st;
-            if (cl.status === 'earned') {
+            if (cl.status === 'revoked') {
+                st = `<span class="rw-chip is-revoked"><i class='bx bx-undo'></i> هەڵوەشێندراوە</span>`;
+            } else if (cl.status === 'earned') {
                 st = `<button type="button" class="rw-claim-btn rw-claim-sm" onclick="rwClaim('${cl.id}')"><i class='bx bx-gift'></i> وەرگرتن</button>`;
             } else if (cl.reward_kind === 'money') {
                 st = `<span class="rw-chip is-ok"><i class='bx bx-check'></i> وەرگیراوە</span>`;
@@ -12950,7 +12962,7 @@
             return data.map(r => `
                     <div class="rw-claim-row">
                         <div class="rw-cr-main"><b>${rwEsc(r.user_name || r.user_code)}</b>
-                            <span class="rw-chip${r.status === 'claimed' ? ' is-ok' : ''}">${r.status === 'claimed' ? 'وەرگیراوە' : 'چاوەڕوانی وەرگرتنە'}</span></div>
+                            <span class="rw-chip${r.status === 'claimed' ? ' is-ok' : (r.status === 'revoked' ? ' is-revoked' : '')}">${r.status === 'claimed' ? 'وەرگیراوە' : (r.status === 'revoked' ? 'هەڵوەشێندراوە' : 'چاوەڕوانی وەرگرتنە')}</span></div>
                         ${r.status === 'claimed' && r.order_code ? `<div class="rw-cr-sub">ئۆردەر: <bdi dir="ltr">${rwEsc(r.order_code)}</bdi> — ${rwEsc(r.order_status || '')}</div>` : ''}
                         ${r.status === 'claimed' && r.delivery_city ? `<div class="rw-cr-sub">${rwEsc(r.delivery_city)}${r.delivery_address ? ' — ' + rwEsc(r.delivery_address) : ''} — <bdi dir="ltr">${rwEsc(r.delivery_phone || '')}</bdi></div>` : ''}
                     </div>`).join('');
