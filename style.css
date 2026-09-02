@@ -18718,6 +18718,9 @@ body.sx-wide {
    دەکات — ئاراستەی ڕۆیشتنی کات لەسەر شاشەکە. */
 .rw-range {
   display: inline-flex;
+  /* ⚠️ ڕەق، نەک بە ئاراستەی دەوروبەر — یاسای «هەمیشە دەستپێک لە
+     ڕاست» بە شوێنێکی LTRیشدا دەبێت بمێنێتەوە. (خاوەن ٢٠٢٦-٠٩-٠٢) */
+  direction: rtl;
   align-items: center;
   gap: 6px;
   flex-wrap: wrap;
@@ -18925,6 +18928,333 @@ body.sx-wide {
   border-color: rgba(245, 158, 11, 0.34);
 }
 .arp-state.is-revoked { color: #92400e; }
+
+/* ============================================================
+   شیتی وەرگرتنی خەڵاتی پارە
+   ------------------------------------------------------------
+   سێ دۆخ لە یەک پانێڵدا، بە پۆل دەگۆڕدرێن:
+     (بێ پۆل)  → پرسیار
+     .is-busy  → چاوەڕوان
+     .is-done  → پیرۆزبایی
+   ⚠️ هەر سێکیان لە DOMدان و بە `display` دەگۆڕدرێن — بۆیە
+   دوگمەکە هەرگیز لە ژێر پەنجەدا نانەخشێنرێتەوە.
+   ============================================================ */
+.rwc-panel { padding: 0; overflow: hidden; }
+
+/* ---------- سەری زێڕین ---------- */
+.rwc-hero {
+  position: relative;
+  overflow: hidden;
+  padding: 26px 20px 22px;
+  text-align: center;
+  color: #fff;
+  background: linear-gradient(150deg, #fbbf24 0%, #f59e0b 46%, #ea580c 100%);
+}
+/* تیشکی سووڕاو — هەستی «خەڵات» دەدات بەبێ وێنە */
+.rwc-rays {
+  position: absolute;
+  inset-block-start: 50%;
+  inset-inline-start: 50%;
+  width: 420px;
+  height: 420px;
+  margin: -210px 0 0 -210px;
+  pointer-events: none;
+  opacity: 0.36;
+  background: repeating-conic-gradient(from 0deg,
+    rgba(255, 255, 255, 0.55) 0deg 7deg, transparent 7deg 22deg);
+  animation: rwcSpin 22s linear infinite;
+}
+@keyframes rwcSpin { to { transform: rotate(360deg); } }
+
+.rwc-coin {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  margin-bottom: 10px;
+  font-size: 26px;
+  border-radius: var(--r-full, 999px);
+  background: rgba(255, 255, 255, 0.22);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+.rwc-amt {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 6px;
+  text-shadow: 0 2px 6px rgba(120, 53, 15, 0.35);
+}
+.rwc-amt b { font-size: 40px; font-weight: 800; letter-spacing: -1px; }
+.rwc-amt em { font-size: 15px; font-style: normal; font-weight: var(--font-bold, 700); opacity: 0.95; }
+
+/* ---------- ناوەڕۆک ---------- */
+.rwc-body { padding: 18px 18px 20px; text-align: center; }
+.rwc-title {
+  font-size: var(--fs-md, 15px);
+  font-weight: var(--font-bold, 700);
+  color: var(--text-main);
+}
+.rwc-sub {
+  margin: 6px 0 16px;
+  font-size: var(--fs-sm, 13px);
+  color: #64748b;
+  line-height: 1.6;
+}
+.rwc-sub b { color: #b45309; }
+
+.rwc-go {
+  position: relative;
+  width: 100%;
+  border: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 48px;
+  padding: 13px 16px;
+  border-radius: var(--r-md, 12px);
+  background: linear-gradient(135deg, #f59e0b, #f97316);
+  color: #fff;
+  font-family: inherit;
+  font-size: var(--fs-sm, 14px);
+  font-weight: var(--font-bold, 700);
+  box-shadow: 0 8px 20px -10px rgba(234, 88, 12, 0.9);
+  -webkit-tap-highlight-color: transparent;
+}
+.rwc-go:active { transform: scale(0.985); }
+.rwc-go[disabled] { cursor: default; }
+.rwc-go .rwc-go-w { display: none; }
+
+.rwc-cancel {
+  width: 100%;
+  margin-top: 8px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  padding: 10px;
+  color: #94a3b8;
+  font-family: inherit;
+  font-size: var(--fs-sm, 13px);
+  font-weight: var(--font-bold, 700);
+}
+
+/* ---------- دۆخی چاوەڕوان ---------- */
+/* ⚠️ `pointer-events: none` — قوفڵی چوارەم. تەنانەت ئەگەر
+   `disabled` بە هەر هۆیەک لابچێت، پەنجەدانان ناگاتە دوگمەکە. */
+.fsheet.is-busy .rwc-go { pointer-events: none; opacity: 0.9; }
+.fsheet.is-busy .rwc-go .rwc-go-t { display: none; }
+.fsheet.is-busy .rwc-go .rwc-go-w { display: inline-flex; align-items: center; gap: 6px; }
+.fsheet.is-busy .rwc-cancel { visibility: hidden; }
+
+/* ---------- دۆخی پیرۆزبایی ---------- */
+.rwc-done { display: none; padding: 22px 18px 26px; text-align: center; }
+.fsheet.is-done .rwc-body { display: none; }
+.fsheet.is-done .rwc-done { display: block; }
+.rwc-check {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 62px;
+  height: 62px;
+  margin-bottom: 12px;
+  font-size: 34px;
+  color: #fff;
+  border-radius: var(--r-full, 999px);
+  background: linear-gradient(135deg, #10b981, #059669);
+  box-shadow: 0 10px 24px -12px rgba(5, 150, 105, 0.9);
+  animation: rwcPop 0.42s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+@keyframes rwcPop {
+  from { opacity: 0; transform: scale(0.4); }
+  to   { opacity: 1; transform: none; }
+}
+.rwc-done-t {
+  font-size: var(--fs-lg, 18px);
+  font-weight: 800;
+  color: #047857;
+}
+.rwc-done-s { margin-top: 4px; font-size: var(--fs-sm, 13px); color: #64748b; }
+.rwc-done-s b { color: var(--text-main); font-weight: 800; }
+
+/* ============================================================
+   دابەشکردنی زیرەکی ئاستەکانی ئاڕپی
+   ------------------------------------------------------------
+   ⚠️ ڕیزی پلیکان ئێستا ستوونێکی زیادەی هەیە (ژمارەی ئاست)،
+   بۆیە `grid-template-columns`ـەکەی نوێ کرایەوە لە خوارەوە.
+   ============================================================ */
+.rw-gen {
+  padding: 12px;
+  border-radius: var(--r-md, 12px);
+  background: linear-gradient(160deg, #eef2ff, #faf5ff);
+  border: 1px solid #e0e7ff;
+}
+.rw-gen-in {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+/* خانەی خاڵی کۆتایی بە تەنها لە ڕیزی دووەمدا دەمێنێتەوە */
+.rw-gen-in label:last-child { grid-column: 1 / -1; }
+.rw-gen-in label { display: block; }
+.rw-gen-in label > span {
+  display: block;
+  margin-bottom: 4px;
+  font-size: var(--fs-xs, 12px);
+  font-weight: var(--font-bold, 700);
+  color: #4338ca;
+}
+.rw-gen-in .rw-input { width: 100%; }
+
+.rw-choice.rw-gen-curve {
+  grid-template-columns: repeat(3, 1fr);
+  margin-top: 10px;
+}
+.rw-gen #rw-gen-why { margin: 8px 2px 0; }
+
+.rw-gen-go {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+  margin-top: 10px;
+}
+.rw-gen-btn, .rw-gen-re {
+  border: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 44px;
+  border-radius: var(--r-sm, 10px);
+  font-family: inherit;
+  font-size: var(--fs-sm, 13px);
+  font-weight: var(--font-bold, 700);
+  color: #fff;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  -webkit-tap-highlight-color: transparent;
+}
+.rw-gen-re { width: 44px; font-size: 18px; background: #4f46e5; }
+.rw-gen-re[disabled] { opacity: 0.4; cursor: default; }
+.rw-gen-btn:active, .rw-gen-re:not([disabled]):active { transform: scale(0.985); }
+/* یەکەم پەنجەدانان تەنها ئاگادار دەکاتەوە کە ڕیزەکان دەڕژێن */
+.rw-gen-btn.is-arm {
+  background: linear-gradient(135deg, #f59e0b, #ea580c);
+  font-size: var(--fs-xs, 12px);
+}
+
+/* ---------- کۆی زیندووی ئاستەکان ---------- */
+.rw-tsum { display: none; }
+.rw-tsum.show {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+.rw-tsum span {
+  padding: 5px 9px;
+  border-radius: var(--r-full, 999px);
+  background: #f1f5f9;
+  color: #475569;
+  font-size: var(--fs-xs, 12px);
+  font-weight: var(--font-bold, 700);
+}
+.rw-tsum b { color: var(--text-main); font-weight: 800; }
+/* جیاوازی لەگەڵ ئەوەی داوا کراوە — زەرد، چونکە هەڵە نییە */
+.rw-tsum .rw-tsum-gap { background: #fef3c7; color: #92400e; }
+
+/* ---------- ژمارەی ئاست لەسەر ڕیزەکە ---------- */
+/* ============================================================
+   هەڵبژێری وەرز — تەنها پاشا، تەنها ئەگەر زیاتر لە یەک هەبێت
+   ------------------------------------------------------------
+   ⚠️ ئەمە **لە سەرووی** سەری لکاوی وەرزەوەیە (`.arp-hero-stick`)،
+   بۆیە دەبێت خۆی نەلکێت — ئەگەرنا دوو توخمی لکاو لەسەر یەکتر
+   دەکەون و ئەوەی ژێرەوە بە بۆشاییەکی هەڵە دەچەسپێت.
+   ============================================================ */
+.rw-seasons {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  margin-bottom: 10px;
+  scrollbar-width: none;
+}
+.rw-seasons::-webkit-scrollbar { display: none; }
+
+.rw-season {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  min-width: 116px;
+  padding: 8px 12px;
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: var(--r-md, 12px);
+  background: var(--surface, #fff);
+  cursor: pointer;
+  font-family: inherit;
+  text-align: start;
+  -webkit-tap-highlight-color: transparent;
+}
+.rw-season-t {
+  font-size: var(--fs-sm, 13px);
+  font-weight: 800;
+  color: var(--text-main);
+  white-space: nowrap;
+}
+.rw-season-m {
+  font-size: var(--fs-xs, 11px);
+  font-weight: var(--font-bold, 700);
+  color: #94a3b8;
+  white-space: nowrap;
+}
+/* خاڵێکی سەوز = ئەندامان ئێستا ئەم وەرزە دەبینن */
+.rw-season.is-live .rw-season-m::before {
+  content: '';
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-inline-end: 5px;
+  border-radius: var(--r-full, 999px);
+  background: #10b981;
+  vertical-align: middle;
+}
+.rw-season.on {
+  border-color: #7c3aed;
+  background: linear-gradient(160deg, #f5f3ff, #ede9fe);
+  box-shadow: 0 4px 12px -8px rgba(124, 58, 237, 0.9);
+}
+.rw-season.on .rw-season-m { color: #7c3aed; }
+
+/* دوگمەکانی سەری وەرز — ڕیزێک، نەک یەک دوگمە */
+.arp-hero-acts { display: inline-flex; gap: 6px; align-items: center; }
+.arp-hero-acts .rw-mini.is-del { padding-inline: 8px; }
+/* پەنجەدانانی یەکەم تەنها ئاگادار دەکاتەوە */
+.arp-hero-acts .rw-mini.is-arm {
+  background: rgba(254, 226, 226, 0.95);
+  color: #b91c1c;
+}
+/* نیشانەی وەرزی ڕاگیراو — زەرد، چونکە دۆخێکی ڕەوایە نەک هەڵە */
+.arp-timer.is-off { background: rgba(254, 243, 199, 0.9); color: #92400e; }
+.rw-tr-no {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  height: 24px;
+  padding: 0 5px;
+  border-radius: var(--r-full, 999px);
+  background: #e0e7ff;
+  color: #4338ca;
+  font-size: var(--fs-xs, 11px);
+  font-weight: 800;
+}
 
 .rw-dim { color: #94a3b8; font-weight: var(--font-bold, 700); }
 .rw-ok-t { color: #047857; font-weight: var(--font-bold, 700); }
@@ -19246,15 +19576,22 @@ body.sx-wide {
   padding-inline: 2px;
 }
 
+/* ⚠️ پێشتر یەک دوگمە بوو، بۆیە ڕیزێک بەسی دەکرد. ئێستا سێ دوگمەن
+   (دەستکاری · چالاککردن · سڕینەوە) و لەسەر ٣٦٠px بەروارەکەیان
+   دەشکاند — «2026-08-01» دوو دێڕ دەبووەوە. بۆیە دوو دێڕ. */
 .arp-hero-king {
   position: relative;
   z-index: 1;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
   margin-top: 12px;
 }
+/* بەروارەکە هەرگیز ناشکێت — ڕیزێکی تەواوی خۆی هەیە */
+.arp-hero-king > .arp-hero-range { flex: 1 0 100%; }
+.arp-hero-king > .arp-hero-acts  { flex: 1 0 100%; }
 
 .arp-hero-range {
   display: inline-flex;
@@ -19486,6 +19823,8 @@ body.sx-wide {
   .arp-row.is-open .arp-node { animation: none; }
   .arp-hero-bar > i { transition: none; }
   .rw-more, .rw-caret { transition: none; }
+  .rwc-rays { animation: none; }
+  .rwc-check { animation: none; }
   .rw-pane.rw-fade { animation: none; }
   .rw-chead { transition: none; }
   .rw-copy { transition: none; }
@@ -19503,7 +19842,7 @@ body.sx-wide {
 #rw-create-body label,
 #rw-claim-sheet .fsec label { display: block; font-size: var(--fs-xs, 12px); color: #64748b; margin-top: 2px; }
 .rw-choice { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin: 4px 0 10px; }
-.rw-choice.rw-mode, #rw-ch-rkind { grid-template-columns: repeat(2, 1fr); }
+#rw-ch-rkind { grid-template-columns: repeat(2, 1fr); }
 .rw-choice button {
   border: 1px solid #e2e8f0; background: #f8fafc; color: #475569;
   border-radius: 10px; padding: 9px 6px; cursor: pointer;
@@ -19553,7 +19892,9 @@ body.sx-wide {
 /* ⚠️ ستوونی پێنجەم بۆ وێنەی کاڵا. تەنها بۆ خەڵاتی کاڵا
    دەردەکەوێت، بەڵام ستوونەکە هەمیشە هەیە بۆ ئەوەی ڕیزەکان
    لەسەر یەک هێڵ بمێننەوە. */
-.rw-tier-row { display: grid; grid-template-columns: 60px 72px 1fr 34px 38px; gap: 6px; align-items: center; margin-bottom: 4px; }
+/* ⚠️ ستوونی یەکەم = ژمارەی ئاست. زیادکردنی ستوونی نوێ واتا
+   پانی هەموویان دەگۆردرێت — لە ٣٦٠px تاقی کراوەتەوە. */
+.rw-tier-row { display: grid; grid-template-columns: 22px 52px 64px 1fr 32px 36px; gap: 5px; align-items: center; margin-bottom: 4px; }
 .rw-tr-img {
   position: relative;
   height: 38px;

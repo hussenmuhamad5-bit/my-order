@@ -1820,6 +1820,40 @@
     </div>
 
     <!-- شیتی وەرگرتنی خەڵاتی کاڵا — ناونیشانی ئەندام → دەبێتە ئۆردەر -->
+    <!-- ============================================================
+         وەرگرتنی خەڵاتی پارە — شیتی خۆمان، نەک `confirm()`ی وێبگەڕ
+         ⚠️ سێ دۆخ لە یەک پانێڵدا: پرسیار → چاوەڕوان → پیرۆزبایی.
+            دۆخەکان بە پۆل دەگۆڕدرێن، نەک بە نەخشاندنەوە — بۆیە
+            دوگمەکە هەرگیز لە ژێر پەنجەدا نانەخشێنرێتەوە.
+         ⚠️ لە `SHEET_CLOSERS`دا تۆمارکراوە (یاسای پڕۆژە).
+         ============================================================ -->
+    <div id="rw-confirm-sheet" class="fsheet" role="dialog" aria-modal="true" aria-label="وەرگرتنی خەڵات">
+        <div class="fsheet-scrim" onclick="rwCloseConfirm()"></div>
+        <div class="fsheet-panel rwc-panel">
+            <div class="rwc-hero">
+                <span class="rwc-rays" aria-hidden="true"></span>
+                <span class="rwc-coin"><i class='bx bx-wallet'></i></span>
+                <span class="rwc-amt"><b id="rwc-amt">0</b><em>د.ع</em></span>
+            </div>
+
+            <div class="rwc-body">
+                <div class="rwc-title" id="rwc-title">خەڵات</div>
+                <p class="rwc-sub">ئەم بڕە <b>ڕاستەوخۆ</b> دەچێتە سەر جزدانەکەت — بێ چاوەڕوانی.</p>
+                <button type="button" class="rwc-go" id="rwc-go" onclick="rwConfirmClaim(this)">
+                    <span class="rwc-go-t"><i class='bx bx-gift'></i> وەرگرتنی خەڵاتەکەم</span>
+                    <span class="rwc-go-w"><i class='bx bx-loader-alt bx-spin'></i> خەریکە...</span>
+                </button>
+                <button type="button" class="rwc-cancel" onclick="rwCloseConfirm()">دواتر</button>
+            </div>
+
+            <div class="rwc-done">
+                <span class="rwc-check"><i class='bx bx-check'></i></span>
+                <div class="rwc-done-t">پیرۆزە!</div>
+                <div class="rwc-done-s"><b id="rwc-done-amt">0</b> د.ع چووە سەر جزدانەکەت</div>
+            </div>
+        </div>
+    </div>
+
     <div id="rw-claim-sheet" class="fsheet" role="dialog" aria-modal="true" aria-label="وەرگرتنی خەڵات">
         <div class="fsheet-scrim" onclick="rwCloseClaimSheet()"></div>
         <div class="fsheet-panel">
@@ -3193,7 +3227,13 @@
             if (!currentUser) return false;
             if (userRole === "پاشا") return true;
             switch (perm) {
+                // ⚠️ «بەڕێوەبردنی کلیل» و «دروستکردنی کلیل» دوو شتن.
+                //    `manage_all_keys` مافی **چاکسازی**ی هەموو کلیلەکان
+                //    دەدات، نەک مافی دروستکردن. پێشتر هەردووکیان بە یەک
+                //    پشکنین دەڕۆیشتن، بۆیە کەسێک کە تەنها چاکسازیی
+                //    هەبوو فۆڕمی دروستکردنیشی دەبینی.
                 case 'manage_employees': return permOn('create_key') || permOn('manage_all_keys');
+                case 'create_key': return permOn('create_key');
                 case 'access_admin': return permOn('create_key') || permOn('manage_all_keys') || permOn('manage_cities') || permOn('manage_trash') || permScope('set_profit_rates') !== 'none' || permScope('view_wallets') !== 'none';
                 case 'manage_trash': return permOn('manage_trash');
                 case 'view_passwords': return permOn('view_passwords');
@@ -4464,6 +4504,73 @@
         }
 
 
+        // ============================================================
+        // تابەکانی ئەدمین — یەک سەرچاوەی ڕاستی
+        // ------------------------------------------------------------
+        // خاوەن (٢٠٢٦-٠٩-٠٢): «بەڕێوەبەرێک کە تەنها قازانج و جزدانی
+        // هەیە، کاتێک دەچێتە بەشی ئەدمین، بەشی دروستکردنی کلیلی بۆ
+        // دەکرێتەوە — بێ ئەوەی ئەو دەسەڵاتەی هەبێت.»
+        //
+        // ⚠️ هۆکارەکە: `#tab-create` لە HTMLدا `class="... active"`ـە و
+        //    `#section-create-code` هیچ `display:none`ـێکی نییە. دوگمەکە
+        //    دەشاردرایەوە، بەڵام **بەشەکە** دەمایەوە — بۆیە فۆڕمی
+        //    دروستکردنی کلیل یەکەم شت بوو کە دەیبینی.
+        //
+        // ⭐ ئێستا هەموو شتێک لەم خشتەیەوە دێت: دەرکەوتنی دوگمە،
+        //    دەرکەوتنی بەش، و **تابی بنەڕەت** = یەکەم تابێک کە
+        //    ڕێگەی پێدراوە. هەر تابێکی نوێ تەنها دێڕێکە لێرە.
+        const ADMIN_TABS = [
+            { tab: 'create',  btn: 'tab-create',  sec: 'section-create-code', perm: 'create_key',       show: 'block' },
+            { tab: 'edit',    btn: 'tab-edit',    sec: 'section-edit-code',   perm: 'manage_employees', show: 'flex'  },
+            { tab: 'profits', btn: 'tab-profits', sec: 'section-profits',     perm: 'set_profit_rates', show: 'flex'  },
+            { tab: 'wallets', btn: 'tab-wallets', sec: 'section-wallets',     perm: 'view_wallets',     show: 'flex'  },
+            { tab: 'cities',  btn: 'tab-cities',  sec: 'section-cities',      perm: 'manage_cities',    show: 'flex'  },
+            { tab: 'trash',   btn: 'tab-trash',   sec: 'section-trash',       perm: 'manage_trash',     show: 'flex'  }
+        ];
+
+        function adminTabDef(tab) {
+            return ADMIN_TABS.find(t => t.tab === tab) || null;
+        }
+        function adminTabAllowed(tab) {
+            const d = adminTabDef(tab);
+            return !!d && can(d.perm);
+        }
+        function adminAllowedTabs() {
+            return ADMIN_TABS.filter(t => can(t.perm));
+        }
+
+        // دوگمە و بەشەکان بەپێی دەسەڵات ڕێک دەخات، پاشان دڵنیا دەبێتەوە
+        // کە تابی چالاک شتێکە کە ڕێگەی پێدراوە.
+        function adminTabsSync() {
+            const allowed = adminAllowedTabs();
+            for (const t of ADMIN_TABS) {
+                const btn = document.getElementById(t.btn);
+                const ok = can(t.perm);
+                if (btn) btn.style.display = ok ? 'inline-block' : 'none';
+                // ⚠️ بەشەکەش دەشاردرێتەوە، نەک تەنها دوگمەکە — ئەوە
+                //    خودی کێشەکە بوو.
+                if (!ok) {
+                    const sec = document.getElementById(t.sec);
+                    if (sec) sec.style.display = 'none';
+                    if (btn) btn.classList.remove('active');
+                }
+            }
+            if (!allowed.length) return;
+
+            // تابی چالاکی ئێستا هێشتا ڕێگەی پێدراوە؟ ئەگەرنا، یەکەم
+            // تابێک کە ڕێگەی پێدراوە.
+            const live = ADMIN_TABS.find(t => {
+                const b = document.getElementById(t.btn);
+                return b && b.classList.contains('active') && can(t.perm)
+                    && (document.getElementById(t.sec) || {}).style
+                    && document.getElementById(t.sec).style.display !== 'none';
+            });
+            if (live) return;
+            const first = allowed[0];
+            const btn = document.getElementById(first.btn);
+            if (btn) switchAdminTab(first.tab, btn);
+        }
+
         function applyUserPermissions() {
             if (!currentUser) return;
 
@@ -4491,25 +4598,17 @@
                     adminNavBtn.style.display = "flex";
                     setupAdminRolesUI(isKing);
 
-                    // تابەکانی بەڕێوەبردنی کلیل (دروستکردن/چاکسازی) — بەپێی manage_employees
-                    let showEmp = can('manage_employees');
-                    let tabCreate = document.getElementById('tab-create');
-                    let tabEdit = document.getElementById('tab-edit');
-                    if (tabCreate) tabCreate.style.display = showEmp ? '' : 'none';
-                    if (tabEdit) tabEdit.style.display = showEmp ? '' : 'none';
-
-                    // تابی قازانج — بەپێی set_profit_rates ، تابی جزدان — بەپێی view_wallets
-                    // شارەکان — بەپێی manage_cities
-                    let tabProfits = document.getElementById('tab-profits');
-                    let tabWallets = document.getElementById('tab-wallets');
-                    let tabCities = document.getElementById('tab-cities');
-                    if (tabProfits) tabProfits.style.display = can('set_profit_rates') ? 'inline-block' : 'none';
-                    if (tabWallets) tabWallets.style.display = can('view_wallets') ? 'inline-block' : 'none';
-                    if (tabCities) tabCities.style.display = can('manage_cities') ? 'inline-block' : 'none';
-                    let tabTrash = document.getElementById('tab-trash');
-                    if (tabTrash) tabTrash.style.display = can('manage_trash') ? 'inline-block' : 'none';
+                    // ⭐ هەموو تابەکان لە `ADMIN_TABS`ـەوە — دوگمە، بەش،
+                    //    و تابی بنەڕەت. هەر پشکنینێکی دەستی لێرە واتا
+                    //    شوێنێکی دووەم کە دەتوانێت لە خشتەکە دوور بکەوێتەوە.
+                    adminTabsSync();
                 } else {
                     adminNavBtn.style.display = "none";
+                    // ⚠️ دەسەڵاتەکەی لێسەندرایەوە لە کاتێکدا لەسەر
+                    //    شاشەکە بوو — دەبێت یەکسەر دەربچێت
+                    if (activeScreenId() === 'admin-screen') {
+                        switchScreen('dashboard-screen', document.getElementById('nav-dashboard'));
+                    }
                 }
             }
         }
@@ -6567,6 +6666,9 @@
             }
 
             if (screenId === 'admin-screen') {
+                // ⚠️ پێش هەموو شتێک: تابێک کە ڕێگەی پێدراوە. ئەگەرنا
+                //    فۆڕمی دروستکردنی کلیل دەبینرێت (خاوەن ٢٠٢٦-٠٩-٠٢).
+                adminTabsSync();
                 syncMagicSlider(document.getElementById('admin-magic-tabs'), false);
             }
 
@@ -6627,6 +6729,9 @@
                     // دەبینی بەڵام لیستی شارە تۆمارکراوەکانی بەتاڵ بوو
                     if (can('manage_cities') && typeof renderAdminCities === "function") renderAdminCities();
 
+                    // ⚠️ دووبارە — ناوەڕۆکەکە تازە دەرکەوتووە، بۆیە
+                    //    نەخشاندنی تابەکە ئێستا کار دەکات
+                    adminTabsSync();
                     // ئێستا کە ناوەڕۆکەکە دەرکەوت، شەیپەکە دەپێورێتەوە
                     syncMagicSlider(document.getElementById('admin-magic-tabs'), false);
                 });
@@ -12687,10 +12792,29 @@
         //    بۆیە هەر پێوانەیەکی JS دوای یەکەم نەخشاندن هەڵە
         //    دەبێتەوە. بەم شێوەیە CSS خۆی ڕیڵەکە تەواو دەکات.
         // ============================================================
+        // ⭐ db/061: `rewards_home` **لیستی** وەرز دەگەڕێنێتەوە.
+        //    پاشا هەموویان دەبینێت (بۆ دەستکاری)، ئەندام تەنها ئەوانەی
+        //    چالاکن. پێشتر تەنها یەک وەرز دەهاتەوە، بۆیە دروستکردنی
+        //    وەرزێکی نوێ وا دەردەکەوت کە کۆنەکەی **سڕیوەتەوە** —
+        //    لە ڕاستیدا تەنها ناچالاک ببوو. (خاوەن ٢٠٢٦-٠٩-٠٢)
+        function rwSeasonList(d) {
+            const arr = (d && d.seasons) || (d && d.season ? [d.season] : []);
+            return Array.isArray(arr) ? arr : [];
+        }
+        // ⚠️ وەرزی هەڵبژێردراو بە **ناسنامە** هەڵدەگیرێت، نەک بە پێگە —
+        //    ڕیزبەندی لیستەکە بە چالاککردن دەگۆڕێت.
+        function rwPickedSeason(d) {
+            const all = rwSeasonList(d);
+            if (!all.length) return null;
+            return all.find(x => String(x.id) === String(_rw.season)) || all[0];
+        }
+
         function rwArpPaneHtml(d) {
-            const s = d.season;
+            const all = rwSeasonList(d);
+            const s = rwPickedSeason(d);
             const isKing = !!d.is_king;
             let out = '';
+            if (isKing && all.length > 1) out += rwSeasonTabsHtml(all, s);
             if (!s) {
                 out += notifStateHtml('bx-medal', 'هیچ وەرزێکی چالاک نییە',
                     isKing ? 'بە دوگمەی + وەرزێکی نوێ بکەرەوە' : 'کاتێک وەرزی نوێ دەست پێدەکات لێرە دەردەکەوێت');
@@ -12707,12 +12831,81 @@
             // زەمانەتی تەواوی ⭐: بردنەوەی پلیکانی وەرزە کۆنەکان لێرەوە
             // دەبینرێن و وەردەگیرێن — هیچ خەڵاتێک بە گۆڕینی وەرز وون نابێت
             const cur = new Set();
-            if (s) (s.tiers || []).forEach(t => { if (t.my_claim) cur.add(String(t.my_claim.id)); });
+            // ⚠️ لە هەموو وەرزەکانەوە، نەک تەنها ئەوەی پیشان دەدرێت —
+            //    ئەگەرنا خەڵاتی وەرزێکی تر دوو جار دەردەکەوێت
+            all.forEach(x => (x.tiers || []).forEach(t => {
+                if (t.my_claim) cur.add(String(t.my_claim.id));
+            }));
             const old = (d.my_claims || []).filter(cl => cl.source === 'tier' && !cur.has(String(cl.id)));
             if (old.length) {
                 out += `<div class="rw-sec-t">خەڵاتە پێشووەکانم</div>` + old.map(cl => rwOldClaimHtml(cl)).join('');
             }
             return out;
+        }
+
+        // ---- هەڵبژێری وەرز (تەنها پاشا، تەنها ئەگەر زیاتر لە یەک هەبێت) ----
+        function rwSeasonTabsHtml(all, cur) {
+            return `<div class="rw-seasons">
+                ${all.map(x => `<button type="button"
+                    class="rw-season${String(x.id) === String(cur && cur.id) ? ' on' : ''}${x.active ? ' is-live' : ''}"
+                    onclick="rwPickSeason('${x.id}')">
+                    <span class="rw-season-t">${rwEsc(x.title)}</span>
+                    <span class="rw-season-m">${x.active ? 'چالاک' : 'ڕاگیراو'} · ${fmtNum((x.tiers || []).length)} پلیکان</span>
+                </button>`).join('')}
+            </div>`;
+        }
+
+        function rwPickSeason(id) {
+            _rw.season = String(id);
+            // نەخشاندنەوەی خێرا لە داتای کاشکراوەوە — بێ داواکاریی نوێ
+            const arp = document.getElementById('rw-arp-pane');
+            if (arp && _rw.data) { arp.innerHTML = rwArpPaneHtml(_rw.data); rwFadeIn(arp); }
+        }
+
+        // چالاککردن / ڕاگرتنی وەرزێک
+        async function rwSeasonActive(id, on) {
+            await guardSubmit('rw-season-active', null, async () => {
+                showToast(on ? 'چالاککردن...' : 'ڕاگرتن...', 'loading');
+                const { error } = await supabase.rpc('season_set_active', {
+                    p_user_code: String(currentUser.code), p_id: id, p_on: !!on
+                });
+                if (error) {
+                    console.error('season_set_active:', error);
+                    showToast('نەکرا', 'error'); return;
+                }
+                showToast(on ? 'ئەم وەرزە چالاک کرا' : 'وەرزەکە ڕاگیرا', 'success');
+                loadRewardsHome(true);
+            });
+        }
+
+        // ⚠️ سڕینەوەی وەرز پلیکانەکانیشی دەبات — بۆیە دوو پەنجەدانان
+        function rwSeasonDel(btn, id) {
+            if (!btn.classList.contains('is-arm')) {
+                btn.classList.add('is-arm');
+                btn.innerHTML = "<i class='bx bx-error-circle'></i> دڵنیایت؟";
+                clearTimeout(_rw.delT);
+                _rw.delT = setTimeout(() => {
+                    btn.classList.remove('is-arm');
+                    btn.innerHTML = "<i class='bx bx-trash'></i>";
+                }, 4000);
+                return;
+            }
+            clearTimeout(_rw.delT);
+            guardSubmit('rw-season-del', null, async () => {
+                showToast('سڕینەوە...', 'loading');
+                const { error } = await supabase.rpc('season_delete', {
+                    p_user_code: String(currentUser.code), p_id: id
+                });
+                if (error) {
+                    console.error('season_delete:', error);
+                    showToast(String(error.message || '').indexOf('HAS_CLAIMS') !== -1
+                        ? 'ئەم وەرزە بردنەوەی لەسەرە — ناسڕدرێتەوە' : 'سڕینەوە سەرنەکەوت', 'error');
+                    return;
+                }
+                if (String(_rw.season) === String(id)) _rw.season = null;
+                showToast('وەرزەکە سڕایەوە', 'success');
+                loadRewardsHome(true);
+            });
         }
 
         // ---- کارتی سەرەوەی وەرز ----
@@ -12756,6 +12949,7 @@
             return `<div class="arp-hero-stick"><div class="arp-hero">
                 <div class="arp-hero-head">
                     <span class="arp-hero-name"><i class='bx bxs-medal'></i>${rwEsc(s.title)}</span>
+                    ${(isKing && s.active === false) ? `<span class="arp-timer is-off"><i class='bx bx-pause'></i>ڕاگیراو</span>` : ''}
                     ${timerChip}
                 </div>
                 ${isKing ? `<div class="arp-hero-king">
@@ -12766,7 +12960,13 @@
                                 <bdi dir="ltr">${rwEsc(s.date_to)}</bdi>
                             </span>
                         </span>
-                        <button type="button" class="rw-mini is-onhero" onclick="rwEditSeason()"><i class='bx bx-edit-alt'></i> دەستکاری</button>
+                        <span class="arp-hero-acts">
+                            <button type="button" class="rw-mini is-onhero" onclick="rwEditSeason('${s.id}')"><i class='bx bx-edit-alt'></i> دەستکاری</button>
+                            <button type="button" class="rw-mini is-onhero" onclick="rwSeasonActive('${s.id}', ${s.active ? 'false' : 'true'})">
+                                <i class='bx bx-${s.active ? 'pause' : 'play'}'></i> ${s.active ? 'ڕاگرتن' : 'چالاککردن'}
+                            </button>
+                            <button type="button" class="rw-mini is-onhero is-del" onclick="rwSeasonDel(this, '${s.id}')" aria-label="سڕینەوەی وەرز"><i class='bx bx-trash'></i></button>
+                        </span>
                     </div>
                     ${htp ? `<div class="arp-hero-prog is-solo">
                         <div class="arp-hero-bar is-time"><i style="width:${htp.pct.toFixed(1)}%"></i></div>
@@ -12882,24 +13082,100 @@
             const cl = rwFindClaim(claimId);
             if (!cl || cl.status !== 'earned') { showToast('ئەم خەڵاتە بەردەست نییە', 'error'); return; }
             if (cl.reward_kind === 'money') {
-                const amt = Math.round(Number(cl.reward_amount) || 0).toLocaleString('en-US');
-                if (!confirm(`وەرگرتنی خەڵاتی «${cl.reward_title || ''}»؟\n\n${amt} د.ع ڕاستەوخۆ دەچێتە سەر جزدانەکەت.`)) return;
-                await guardSubmit('rw-claim', null, async () => {
-                    showToast('خەریکی وەرگرتن...', 'loading');
-                    const { error } = await supabase.rpc('claim_reward', {
-                        p_claim_id: claimId, p_user_code: String(currentUser.code), p_customer: null
-                    });
-                    if (error) { rwClaimErrToast(error); return; }
-                    // باڵانسی نوێ دەربکەوێت: کاشی جزدان بەتاڵ دەکرێتەوە
-                    delete walletTxCache[String(currentUser.code)];
-                    delete walletHoldCache[String(currentUser.code)];
-                    walletReadyState.loaded = false;
-                    showToast(`پیرۆزە! ${amt} د.ع چووە سەر جزدانەکەت`, 'success');
-                    loadRewardsHome(true);
-                });
+                rwOpenConfirm(claimId);
             } else if (cl.reward_kind === 'product') {
                 rwOpenClaimSheet(claimId);
             }
+        }
+
+        // ============================================================
+        // شیتی وەرگرتنی خەڵاتی پارە
+        // ------------------------------------------------------------
+        // خاوەن (٢٠٢٦-٠٩-٠٢): «شێوازێکی جوان، نەک دیزاینی براوسەر»، و
+        // «دڵنیابە یەکجار وەردەگیرێت — چەند کلیکیش بکات».
+        //
+        // ⚠️ **سێ قوفڵ لەسەر یەک دوگمە**، هەریەکەیان کاتێکی جیاواز
+        //    دەگرێت:
+        //   ١) `_rw.claimBusy` — یەکسەر، پێش هەر `await`ێک. یەکەم
+        //      شتێکە کە جێبەجێ دەبێت، بۆیە کلیکی دووەم لە هەمان
+        //      تیکدا هیچ ناکات.
+        //   ٢) `guardSubmit('rw-claim')` — قوفڵی گشتیی ئەپەکە.
+        //   ٣) `disabled` + پۆلی `is-busy` (`pointer-events: none`)
+        //      لەسەر خودی دوگمەکە.
+        //   ⭐ داتابەیسیش دەرگای خۆی هەیە: `update … where
+        //      status = 'earned' returning` + `pg_advisory_xact_lock`
+        //      (db/053). بۆیە تەنانەت دوو داواکاریی هاوکاتیش تەنها
+        //      یەکجار پارە دەدەن — ئەمانەی سەرەوە بۆ ڕووکارن.
+        // ⚠️ ئەگەر `ALREADY_CLAIMED` هاتەوە، ئەوا **سەرکەوتوو**
+        //    پیشان دەدرێت نەک هەڵە: خەڵاتەکە بەڕاستی وەرگیراوە،
+        //    و پیشاندانی «هەڵە» ترسێنەرە و ناڕاستە.
+        // ============================================================
+        function rwConfirmAmt(cl) {
+            return Math.round(Number(cl && cl.reward_amount) || 0).toLocaleString('en-US');
+        }
+
+        function rwOpenConfirm(claimId) {
+            const cl = rwFindClaim(claimId);
+            if (!cl) return;
+            _rw.claimId = claimId;
+            _rw.claimBusy = false;
+            const sh = document.getElementById('rw-confirm-sheet');
+            sh.classList.remove('is-busy', 'is-done');
+            const amt = rwConfirmAmt(cl);
+            document.getElementById('rwc-amt').textContent = amt;
+            document.getElementById('rwc-done-amt').textContent = amt;
+            document.getElementById('rwc-title').textContent = cl.reward_title || 'خەڵات';
+            const go = document.getElementById('rwc-go');
+            if (go) go.disabled = false;
+            sh.classList.add('show');
+            document.body.classList.add('fsheet-open');
+        }
+
+        function rwCloseConfirm() {
+            // ⚠️ لە کاتی ناردندا ناخرێتەوە — ئەگەرنا بەکارهێنەر
+            //    دەیبەستێتەوە و نازانێت سەرکەوتوو بوو یان نا
+            if (_rw.claimBusy) return;
+            document.getElementById('rw-confirm-sheet').classList.remove('show');
+            document.body.classList.remove('fsheet-open');
+        }
+
+        async function rwConfirmClaim(btn) {
+            // قوفڵی یەکەم — پێش هەر `await`ێک
+            if (_rw.claimBusy) return;
+            const claimId = _rw.claimId;
+            const cl = rwFindClaim(claimId);
+            if (!cl || cl.status !== 'earned') { rwCloseConfirm(); return; }
+            _rw.claimBusy = true;
+
+            const sh = document.getElementById('rw-confirm-sheet');
+            sh.classList.add('is-busy');
+            if (btn) btn.disabled = true;
+            const amt = rwConfirmAmt(cl);
+
+            await guardSubmit('rw-claim', null, async () => {
+                const { error } = await supabase.rpc('claim_reward', {
+                    p_claim_id: claimId, p_user_code: String(currentUser.code), p_customer: null
+                });
+                const already = error && String(error.message || '').indexOf('ALREADY_CLAIMED') !== -1;
+                if (error && !already) {
+                    sh.classList.remove('is-busy');
+                    if (btn) btn.disabled = false;
+                    _rw.claimBusy = false;
+                    rwClaimErrToast(error);
+                    return;
+                }
+                // باڵانسی نوێ دەربکەوێت: کاشی جزدان بەتاڵ دەکرێتەوە
+                delete walletTxCache[String(currentUser.code)];
+                delete walletHoldCache[String(currentUser.code)];
+                walletReadyState.loaded = false;
+                sh.classList.remove('is-busy');
+                sh.classList.add('is-done');
+                _rw.claimBusy = false;
+                loadRewardsHome(true);
+                setTimeout(() => {
+                    if (sh.classList.contains('is-done')) rwCloseConfirm();
+                }, 2200);
+            });
         }
 
         function rwOpenClaimSheet(claimId) {
@@ -13015,7 +13291,17 @@
         // ---- بەڕێوەبردنی پاشا: دروستکردن/دەستکاری ----
         function rwOpenCreate() {
             if (userRole !== 'پاشا') { rwSetFabChecked(false); return; }
-            _rw.editing = null; _rw.createMode = 'challenge'; _rw.delTiers = [];
+            // ⭐ تابی ئێستا **خۆی** جۆرەکە دیاری دەکات — لە تابی
+            //    چاڵنجدا `+` چاڵنج دروست دەکات، لە ئاڕپیدا وەرز.
+            //    (خاوەن ٢٠٢٦-٠٩-٠٢) بۆیە هەڵبژاردەی سەرەوەی شیتەکە
+            //    لابرا: پرسیارێک بوو کە وەڵامەکەی پێشتر دیار بوو.
+            _rw.editing = null;
+            _rw.createMode = (_rw.tab === 'arp') ? 'season' : 'challenge';
+            // ⚠️ تۆوی دابەشکردن بۆ هەر وەرزێک نوێ بێت — ئەگەرنا دوو
+            //    وەرزی جیاواز کە لە یەک دانیشتندا دروست دەکرێن
+            //    هەمان شێوەی پارەیان دەبێت.
+            _rw.genSeed = 0;
+            _rw.delTiers = [];
             _rw.img = null; _rw.imgBusy = false;
             _rw.timg = null; _rw.timgBusy = false;
             // بنەڕەت: لە ئەمڕۆوە بۆ ٧ ڕۆژی تر — باوترین حاڵەت
@@ -13032,8 +13318,9 @@
             _rw.dates = { from: c.date_from || null, to: c.date_to || null };
             rwOpenCreateSheet();
         }
-        function rwEditSeason() {
-            const s = _rw.data && _rw.data.season;
+        function rwEditSeason(id) {
+            const all = rwSeasonList(_rw.data);
+            const s = id ? all.find(x => String(x.id) === String(id)) : rwPickedSeason(_rw.data);
             if (!s) return;
             _rw.editing = s; _rw.createMode = 'season'; _rw.delTiers = [];
             _rw.img = null; _rw.imgBusy = false;
@@ -13055,27 +13342,25 @@
 
         function rwRenderCreate() {
             const isEdit = !!_rw.editing;
+            const isSeason = _rw.createMode === 'season';
+            // ⭐ ناونیشانەکە جۆرەکە دەڵێت — پێشتر تەنها «دروستکردن» بوو
+            //    و هەڵبژاردەی سەرەوە جۆرەکەی دیار دەکرد. ئێستا تابەکە
+            //    ئەو کارە دەکات، بۆیە ناونیشانەکە دەبێت ڕوون بێت.
             document.getElementById('rw-create-title').textContent = isEdit
-                ? (_rw.createMode === 'season' ? 'دەستکاریی وەرز' : 'دەستکاریی چاڵنج')
-                : 'دروستکردن';
-            const modeChips = isEdit ? '' : `<div class="rw-choice rw-mode" id="rw-create-mode">
-                <button type="button" data-v="challenge" class="${_rw.createMode === 'challenge' ? 'on' : ''}" onclick="rwPickMode(this)"><i class='bx bx-target-lock'></i> چاڵنج</button>
-                <button type="button" data-v="season" class="${_rw.createMode === 'season' ? 'on' : ''}" onclick="rwPickMode(this)"><i class='bx bx-medal'></i> وەرزی ئاڕپی</button>
-            </div>`;
-            const body = _rw.createMode === 'season'
+                ? (isSeason ? 'دەستکاریی وەرز' : 'دەستکاریی چاڵنج')
+                : (isSeason ? 'وەرزی نوێ' : 'چاڵنجی نوێ');
+            const body = isSeason
                 ? rwCreateSeasonHtml(_rw.editing)
                 : rwCreateChalHtml(_rw.editing);
-            document.getElementById('rw-create-body').innerHTML = modeChips + body;
+            document.getElementById('rw-create-body').innerHTML = body;
             document.getElementById('rw-create-sum').textContent = _rw.createMode === 'season'
-                ? 'پاشەکەوت = ئەم وەرزە دەبێتە وەرزی چالاک'
+                ? 'وەرزە کۆنەکان ناسڕدرێنەوە — لە لیستەکەدا دەمێننەوە'
                 : 'چاڵنجەکە دەستبەجێ بۆ هەموان دەردەکەوێت';
             rwSyncChalFields();
+            rwGenReset();
+            rwBindTierSum();
         }
 
-        function rwPickMode(btn) {
-            _rw.createMode = btn.getAttribute('data-v') || 'challenge';
-            rwRenderCreate();
-        }
         function rwPickChoice(btn) {
             const p = btn.parentElement;
             const wasKind = p.id === 'rw-ch-kind'
@@ -13322,7 +13607,7 @@
             const a = _rw.dates.from, b = _rw.dates.to;
             if (!a) return 'ماوەکە دیاری بکە';
             if (!b || b === a) return fdLabel(a);
-            return fdLabel(a) + ' → ' + fdLabel(b) + ' · ' + fdDaysBetween(a, b) + ' ڕۆژ';
+            return fdRange(a, b) + ' · ' + fdDaysBetween(a, b) + ' ڕۆژ';
         }
 
         let _rwCalDraft = { preset: 'custom', from: null, to: null };
@@ -13368,7 +13653,7 @@
             const n = (a && b) ? fdDaysBetween(a, b) : 0;
             if (info) {
                 info.innerHTML = n
-                    ? '<i class="bx bx-calendar"></i> ' + fdLabel(a) + ' → ' + fdLabel(b) + ' · <b>' + n + ' ڕۆژ</b>'
+                    ? '<i class="bx bx-calendar"></i> ' + fdRange(a, b) + ' · <b>' + n + ' ڕۆژ</b>'
                     : 'بەرواری دەستپێک هەڵبژێرە';
             }
             if (btn) btn.disabled = !a;
@@ -13406,18 +13691,62 @@
                 ${rwSwitchHtml('rw-se-showafter', 'دوای کۆتایی پیشان بدرێت',
                     s.show_after !== false,
                     'دوای بەرواری کۆتایی لە شاشەی ئەندامان دەمێنێتەوە. پلیکانە بردراوەکان بە هەر حاڵ دەمێننەوە.')}
+                ${rwSwitchHtml('rw-se-active', 'ئەم وەرزە چالاک بێت',
+                    rwSeasonActiveDefault(s),
+                    rwSeasonActiveHint(s))}
+            </div>
+            <div class="fsec">
+                <div class="fsec-t">دابەشکردنی زیرەک</div>
+                <div class="rw-gen">
+                    <div class="rw-gen-in">
+                        <label><span>کۆی پارە (د.ع)</span><input type="number" id="rw-gen-money" class="rw-input" inputmode="numeric" placeholder="100000"></label>
+                        <label><span>ژمارەی ئاست</span><input type="number" id="rw-gen-n" class="rw-input" inputmode="numeric" placeholder="50"></label>
+                        <label><span>خاڵی ئاستی کۆتایی</span><input type="number" id="rw-gen-pts" class="rw-input" inputmode="numeric" placeholder="1500"></label>
+                    </div>
+                    <div class="rw-choice rw-gen-curve" id="rw-gen-curve">
+                        <button type="button" data-v="flat" onclick="rwPickCurve(this)">هاوسەنگ</button>
+                        <button type="button" data-v="smart" class="on" onclick="rwPickCurve(this)">زیرەک</button>
+                        <button type="button" data-v="steep" onclick="rwPickCurve(this)">توند</button>
+                    </div>
+                    <p class="rw-hint" id="rw-gen-why">${rwEsc(rwCurveWhy('smart'))}</p>
+                    <div class="rw-gen-go">
+                        <button type="button" class="rw-gen-btn" id="rw-gen-btn" onclick="rwGenTiers(this, false)"><i class='bx bx-slider-alt'></i> دابەشی بکە</button>
+                        <button type="button" class="rw-gen-re" id="rw-gen-re" onclick="rwGenTiers(null, true)" disabled aria-label="تێکەڵکردنەوە"><i class='bx bx-shuffle'></i></button>
+                    </div>
+                </div>
             </div>
             <div class="fsec">
                 <div class="fsec-t">پلیکانەکان — خاڵ ← خەڵات</div>
-                <div id="rw-tier-rows">${tiers.map(t => rwTierRowHtml(t)).join('')}</div>
+                <div class="rw-tsum" id="rw-tier-sum"></div>
+                <div id="rw-tier-rows">${tiers.map((t, i) => rwTierRowHtml(t, i + 1)).join('')}</div>
                 <button type="button" class="rw-add-tier" onclick="rwAddTierRow()"><i class='bx bx-plus'></i> پلیکانی نوێ</button>
             </div>`;
         }
 
-        function rwTierRowHtml(t) {
+        // ⚠️ **تەنها یەک وەرز دەکرێت چالاک بێت** — ئەگەرنا ئەندام لە
+        //    دوو پلیکاندا خەڵات وەردەگرێت و پارەکە دوو ئەوەندە دەبێت.
+        //    بۆیە وەرزی نوێ بە بنەڕەت **ڕاگیراو** دروست دەبێت ئەگەر
+        //    وەرزێکی چالاک هەبێت — ئەمە ڕێک ئەو کێشەیە چارە دەکات کە
+        //    خاوەن ڕایگەیاند: وەرزی نوێ کۆنەکەی ون کرد.
+        function rwSeasonOther(cur) {
+            return rwSeasonList(_rw.data)
+                .find(x => x.active && String(x.id) !== String(cur && cur.id)) || null;
+        }
+        function rwSeasonActiveDefault(cur) {
+            if (cur && cur.id) return cur.active !== false;
+            return !rwSeasonOther(null);
+        }
+        function rwSeasonActiveHint(cur) {
+            const other = rwSeasonOther(cur);
+            if (other) return `ئێستا «${other.title}» چالاکە. ئەگەر ئەمە چالاک بکەیت، ئەوی تر ڕادەگیرێت — بەڵام ناسڕدرێتەوە و هەر دەیبینیت.`;
+            return 'ئەندامان تەنها وەرزی چالاک دەبینن. وەرزی ڕاگیراو تەنها لای تۆ دەمێنێتەوە.';
+        }
+
+        function rwTierRowHtml(t, no) {
             t = t || {};
             const money = (t.reward_kind || 'money') === 'money';
             return `<div class="rw-tier-row" data-id="${t.id || ''}">
+                <span class="rw-tr-no">${no ? fmtNum(no) : ''}</span>
                 <input type="number" class="rw-input rw-tr-pts" inputmode="numeric" min="1" placeholder="خاڵ" value="${t.points_required != null ? t.points_required : ''}">
                 <select class="rw-input rw-tr-kind" onchange="rwTierRowKind(this)">
                     <option value="money"${money ? ' selected' : ''}>پارە</option>
@@ -13434,15 +13763,253 @@
         }
         function rwAddTierRow() {
             const w = document.getElementById('rw-tier-rows');
-            if (w) w.insertAdjacentHTML('beforeend', rwTierRowHtml(null));
+            if (!w) return;
+            w.insertAdjacentHTML('beforeend', rwTierRowHtml(null, w.children.length + 1));
+            rwTierSum();
         }
         function rwDelTierRow(btn) {
             const row = btn.closest('.rw-tier-row');
             if (!row) return;
-            const id = row.getAttribute('data-id');
-            if (id) (_rw.delTiers = _rw.delTiers || []).push(id);
+            // ⚠️ سڕینەوە لە `tiers_bulk_save`ـەوە دەکرێت: ئەوەی لە لیستەکەدا
+            //    نەبێت دەسڕدرێتەوە. بۆیە لێرە هیچ RPCـێک ناوێت.
             row.remove();
+            rwNumberTiers();
+            rwTierSum();
         }
+        // ژمارەی ئاستەکان دوای هەر سڕینەوەیەک ڕێک دەخرێنەوە
+        function rwNumberTiers() {
+            const rows = document.querySelectorAll('#rw-tier-rows .rw-tier-row');
+            for (let i = 0; i < rows.length; i++) {
+                const n = rows[i].querySelector('.rw-tr-no');
+                if (n) n.textContent = fmtNum(i + 1);
+            }
+        }
+        // ============================================================
+        // دابەشکردنی زیرەک — خاوەن (٢٠٢٦-٠٩-٠٢)
+        // ------------------------------------------------------------
+        // «١٠٠,٠٠٠ـم هەیە، دەمەوێت بەسەر ٥٠ ئاستدا دابەشی بکەم، بە
+        //  شێوەیەک ئەندام بێزار نەبێت و ڕۆژانە ئاستێک ببڕێت — نەک لە
+        //  چوار پێنج ئاستدا دایبنێم.»
+        //
+        // ⭐ دوو کێشەی جیاواز، دوو چارەسەری جیاواز:
+        //
+        //   خاڵ  → **دەبێت هەڵبکشێت.** پێوانەی بەرهەم (٣٠ ڕۆژ،
+        //          ١٤٧ ئەندام): ناوەڕاست ٨٠ خاڵ، ٪٧٥ ژێر ٣٤٥، ٪٩٠
+        //          ژێر ١,١٢٤. دابەشکردنی هاوسەنگ واتا ئەندامی
+        //          ناوەند سێ ئاست دەبڕێت و بەسە — بۆیە ئاستە
+        //          یەکەمەکان نزیک بن و دواتر دوور بکەونەوە.
+        //
+        //   پارە → **دەبێت بگۆڕێت.** ژمارەی وەکیەک بێزارکەرە. بۆیە:
+        //          هێڵێکی بەرزبووەوە + ئاستی ١٠،٢٠،٣٠… دوو ئەوەندە +
+        //          ئاستی کۆتایی سێ‌ونیو ئەوەندە + تێکەڵییەکی ±٪٢٢.
+        //
+        // ⚠️ **کۆی پارە دەبێت بەتەواوی بگاتە ئەوەی نووسراوە.** خڕکردنەوە
+        //    کۆکە دەشکێنێت، بۆیە پاشماوەکە بە شێوازی «گەورەترین
+        //    پاشماوە» دابەش دەکرێتەوە — نەک بخرێتە سەر ئاستی کۆتایی.
+        // ⚠️ خاڵەکان دەبێت **بەرزبووەوە و یەکتا** بن — ئیندێکسی یەکتای
+        //    (season_id, points_required) لەسەر خشتەکەیە.
+        // ============================================================
+        const RW_GEN = {
+            pstep: 10,     // خاڵ هەمیشە فرەجەندی ١٠ـە (٢٠ بۆ ئۆردەر، ١٠ بۆ کاڵا)
+            munit: 250,    // بڕی پارە بە ٢٥٠ خڕ دەکرێتەوە
+            curve: { flat: 1.0, smart: 1.55, steep: 2.1 }
+        };
+
+        // ⚠️ `fmtNum` تەنها `String(n)`ـە — جیاکەرەوەی هەزاری نییە.
+        //    بۆ ژمارەی گەورە (پارە و خاڵ) هەمان شێوازی ئەپەکە
+        //    بەکاردێت: `toLocaleString('en-US')`.
+        function rwBig(v) { return Math.round(Number(v) || 0).toLocaleString('en-US'); }
+
+        function rwCurveWhy(c) {
+            if (c === 'flat') return 'ماوەی نێوان ئاستەکان یەکسانە — ڕوون، بەڵام کۆتاییەکەی هەمان قورسی سەرەتایە.';
+            if (c === 'steep') return 'ئاستە یەکەمەکان زۆر خێرا دەبڕدرێن، کۆتاییەکان تەنها بۆ باشترینەکان.';
+            return 'ئاستە یەکەمەکان خێرا دەبڕدرێن و کەم‌کەم دوور دەکەونەوە — ئەندام ڕۆژانە جووڵە دەبینێت.';
+        }
+
+        function rwPickCurve(btn) {
+            const box = document.getElementById('rw-gen-curve');
+            if (!box) return;
+            for (const b of box.querySelectorAll('button')) b.classList.remove('on');
+            btn.classList.add('on');
+            const why = document.getElementById('rw-gen-why');
+            if (why) why.textContent = rwCurveWhy(btn.getAttribute('data-v') || 'smart');
+        }
+
+        function rwGenCurve() {
+            const on = document.querySelector('#rw-gen-curve button.on');
+            return (on && on.getAttribute('data-v')) || 'smart';
+        }
+
+        // ژمێرەری هەڕەمەکیی **دووبارەکراوە** — هەمان تۆو، هەمان ئەنجام،
+        // بۆیە «تێکەڵکردنەوە» تەنها کاتێک دەگۆڕێت کە خۆت داوای بکەیت.
+        function rwRnd(seed) {
+            let a = (seed >>> 0) || 1;
+            return function () {
+                a = (a + 0x6D2B79F5) | 0;
+                let t = Math.imul(a ^ (a >>> 15), 1 | a);
+                t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+                return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+            };
+        }
+
+        function rwGenPoints(total, n, curve) {
+            const step = RW_GEN.pstep;
+            const k = RW_GEN.curve[curve] || RW_GEN.curve.smart;
+            const out = [];
+            let prev = 0;
+            for (let i = 1; i <= n; i++) {
+                let v = Math.round(total * Math.pow(i / n, k) / step) * step;
+                if (v <= prev) v = prev + step;   // ⚠️ یەکتا و بەرزبووەوە
+                out.push(v);
+                prev = v;
+            }
+            if (out[n - 1] < total) out[n - 1] = total;
+            return out;
+        }
+
+        function rwGenMoney(total, n, seed) {
+            // ⭐ یەکەی خڕکردنەوە بەپێی قەبارەی ئاستەکان دیاری دەکرێت.
+            //    ٢٥٠ لەسەر ئاستی ٤,٠٠٠ ژمارەی ناخۆش دەردەخات
+            //    (٣,٧٥٠ · ٤,٢٥٠)؛ خاوەن نموونەی «هەزار، دوو هەزار،
+            //    چوار هەزار»ی دا — واتا ژمارەی خڕ.
+            const avg = total / n;
+            const unit = avg >= 4000 ? 1000 : (avg >= 1500 ? 500 : RW_GEN.munit);
+            // ⚠️ ئەگەر کۆکە بە یەکەکە دابەش نەبێت، پاشماوەکە هەرگیز
+            //    ون نابێت — دەخرێتە سەر ئاستی کۆتایی.
+            const rem = total % unit;
+            const body = total - rem;
+
+            const rnd = rwRnd(seed);
+            const w = [];
+            for (let i = 1; i <= n; i++) {
+                let x = 1 + (n > 1 ? (i - 1) / (n - 1) : 0) * 1.10;  // هێڵی بەرزبووەوە
+                // ⚠️ ئاستی کۆتایی و ئاستی خاڵبڕ **بەیەکەوە** کۆ نابنەوە —
+                //    ئاستی ٥٠ هەردووکیانە، و ٢.٠ × ٢.٢ کردبووی بە
+                //    ٪١٦ی هەموو پارەکە.
+                if (i === n) x *= 2.2;                 // کۆتایی وەرز
+                else if (i % 10 === 0) x *= 2.0;       // ئاستی خاڵبڕ
+                x *= 0.60 + rnd() * 0.80;              // تێکەڵیی ±٪٤٠
+                w.push(x);
+            }
+            const sw = w.reduce((a, b) => a + b, 0);
+            const exact = w.map(x => body * x / sw);
+            const out = exact.map(v => Math.max(unit, Math.floor(v / unit) * unit));
+
+            // پاشماوەی خڕکردنەوە بە شێوازی «گەورەترین پاشماوە» دابەش دەکرێتەوە،
+            // بۆیە کۆکە **ڕێک** دەبێت و ڕێژەکانیش وەک خۆیان دەمێننەوە.
+            let rest = Math.round((body - out.reduce((a, b) => a + b, 0)) / unit);
+            const order = exact
+                .map((v, i) => [v - out[i], i])
+                .sort((a, b) => b[0] - a[0])
+                .map(pair => pair[1]);
+            for (let j = 0; rest > 0; j++, rest--) out[order[j % n]] += unit;
+            while (rest < 0) {
+                let k = -1, best = -1;
+                for (let m = 0; m < n; m++) {
+                    if (out[m] - unit >= unit && out[m] > best) { best = out[m]; k = m; }
+                }
+                if (k < 0) break;
+                out[k] -= unit;
+                rest++;
+            }
+            out[n - 1] += rem;
+            return out;
+        }
+
+        function rwGenTiers(btn, reshuffle) {
+            const num = id => {
+                const el = document.getElementById(id);
+                return Number(toEnglishDigits((el && el.value) || '').replace(/,/g, '').trim()) || 0;
+            };
+            const money = num('rw-gen-money'), n = num('rw-gen-n'), pts = num('rw-gen-pts');
+            if (!(n >= 2) || n > 200) { showToast('ژمارەی ئاست لە نێوان ٢ و ٢٠٠ بێت', 'error'); return; }
+            if (!(pts >= n * RW_GEN.pstep)) {
+                showToast(`خاڵی ئاستی کۆتایی دەبێت لانیکەم ${rwBig(n * RW_GEN.pstep)} بێت`, 'error'); return;
+            }
+            if (!(money >= n * RW_GEN.munit)) {
+                showToast(`کۆی پارە دەبێت لانیکەم ${rwBig(n * RW_GEN.munit)} د.ع بێت`, 'error'); return;
+            }
+
+            // ⚠️ ئەمە پلیکانە ئێستاکان دەڕژێنێت — یەکەم پەنجەدانان تەنها ئاگادار دەکاتەوە
+            const have = document.querySelectorAll('#rw-tier-rows .rw-tier-row').length;
+            if (btn && have && !_rw.genArm) {
+                _rw.genArm = true;
+                btn.classList.add('is-arm');
+                btn.innerHTML = "<i class='bx bx-error-circle'></i> " + fmtNum(have) + " پلیکان دەسڕدرێتەوە — دووبارە لێبدە";
+                clearTimeout(_rw.genT);
+                _rw.genT = setTimeout(rwGenReset, 4000);
+                return;
+            }
+            rwGenReset();
+
+            if (reshuffle || !_rw.genSeed) _rw.genSeed = (Date.now() ^ Math.floor(Math.random() * 1e9)) >>> 0;
+            const P = rwGenPoints(pts, n, rwGenCurve());
+            const M = rwGenMoney(money, n, _rw.genSeed);
+
+            const box = document.getElementById('rw-tier-rows');
+            if (!box) return;
+            let html = '';
+            for (let i = 0; i < n; i++) {
+                html += rwTierRowHtml({ points_required: P[i], reward_kind: 'money', reward_amount: M[i] }, i + 1);
+            }
+            box.innerHTML = html;
+            const re = document.getElementById('rw-gen-re');
+            if (re) re.disabled = false;
+            const why = document.getElementById('rw-gen-why');
+            if (why) {
+                const mid = Math.ceil(n / 2);
+                why.textContent = `ئاستی ١ لە ${rwBig(P[0])} خاڵ · ئاستی ${fmtNum(mid)} لە ${rwBig(P[mid - 1])} · ئاستی ${fmtNum(n)} لە ${rwBig(P[n - 1])}`;
+            }
+            rwTierSum();
+            showToast(`${fmtNum(n)} ئاست دابەش کرا`, 'success');
+        }
+
+        function rwGenReset() {
+            _rw.genArm = false;
+            clearTimeout(_rw.genT);
+            const btn = document.getElementById('rw-gen-btn');
+            if (btn) {
+                btn.classList.remove('is-arm');
+                btn.innerHTML = "<i class='bx bx-slider-alt'></i> دابەشی بکە";
+            }
+        }
+
+        // کۆی زیندوو — دوای هەر دەستکارییەکی ڕیزەکان خۆی نوێ دەکاتەوە،
+        // بۆیە پاشا دەزانێت هێشتا کۆکە ڕێکە یان نا.
+        function rwTierSum() {
+            const box = document.getElementById('rw-tier-sum');
+            if (!box) return;
+            const rows = Array.from(document.querySelectorAll('#rw-tier-rows .rw-tier-row'));
+            const val = (r, sel) => Number(toEnglishDigits(((r.querySelector(sel) || {}).value || ''))
+                .replace(/,/g, '').trim()) || 0;
+            let money = 0, prods = 0, last = 0;
+            for (const r of rows) {
+                const kind = (r.querySelector('.rw-tr-kind') || {}).value || 'money';
+                last = Math.max(last, val(r, '.rw-tr-pts'));
+                if (kind === 'money') money += val(r, '.rw-tr-amt'); else prods++;
+            }
+            if (!rows.length) { box.innerHTML = ''; box.classList.remove('show'); return; }
+            box.classList.add('show');
+            const want = Number(toEnglishDigits((document.getElementById('rw-gen-money') || {}).value || '')
+                .replace(/,/g, '').trim()) || 0;
+            const gap = want ? money - want : 0;
+            box.innerHTML =
+                `<span><b>${fmtNum(rows.length)}</b> ئاست</span>` +
+                `<span><b>${rwBig(money)}</b> د.ع</span>` +
+                (prods ? `<span><b>${fmtNum(prods)}</b> کاڵا</span>` : '') +
+                `<span>کۆتا ئاست <b>${rwBig(last)}</b> خاڵ</span>` +
+                (gap ? `<span class="rw-tsum-gap">${gap > 0 ? '+' : '−'}${rwBig(Math.abs(gap))} د.ع لە داواکراو</span>` : '');
+        }
+
+        function rwBindTierSum() {
+            const box = document.getElementById('rw-tier-rows');
+            if (!box || box._sumBound) return;
+            box._sumBound = true;
+            box.addEventListener('input', rwTierSum);
+            box.addEventListener('change', rwTierSum);
+            rwTierSum();
+        }
+
         function rwTierRowKind(sel) {
             const row = sel.closest('.rw-tier-row');
             if (!row) return;
@@ -13604,28 +14171,40 @@
                     p_user_code: String(currentUser.code),
                     p: {
                         id: (_rw.editing && _rw.editing.id) || null,
-                        title: title, date_from: from, date_to: to, active: true,
+                        // ⚠️ پێشتر هەمیشە `true` بوو، بۆیە هەر پاشەکەوتێک
+                        //    وەرزەکانی تری ڕادەگرت — بێ ئەوەی کەس بزانێت
+                        title: title, date_from: from, date_to: to,
+                        active: rwSwitchOn('rw-se-active'),
                         show_before: rwSwitchOn('rw-se-showbefore'),
                         show_after: rwSwitchOn('rw-se-showafter')
                     }
                 });
                 if (error) { console.error('season_save:', error); showToast('پاشەکەوتی وەرز سەرنەکەوت', 'error'); return; }
-                let bad = 0;
-                for (const t of tiers) {
-                    const { error: te } = await supabase.rpc('tier_save', {
-                        p_user_code: String(currentUser.code),
-                        p: { id: t.id, season_id: sid, points_required: t.points_required, reward_kind: t.reward_kind, reward_amount: t.reward_amount, reward_product: t.reward_product, reward_image: t.reward_image }
-                    });
-                    if (te) { bad++; console.error('tier_save:', te); }
-                }
-                for (const tid of (_rw.delTiers || [])) {
-                    const { error: de } = await supabase.rpc('tier_delete', {
-                        p_user_code: String(currentUser.code), p_id: tid
-                    });
-                    if (de) console.error('tier_delete:', de);
+                // ⭐ db/060: هەموو پلیکانەکان بە **یەک** بانگ، بە تەواوی
+                //    یان هیچ. ٥٠ پلیکان پێشتر ٥٠ بانگی بە ڕیزی دەویست، و
+                //    شکانی یەکێکیان وەرزێکی ناتەواوی بەجێدەهێشت.
+                // ⚠️ ئەوەی لە لیستەکەدا نەبێت دەسڕدرێتەوە — بۆیە
+                //    `tier_delete`ی جیا پێویست نییە.
+                const { error: te } = await supabase.rpc('tiers_bulk_save', {
+                    p_user_code: String(currentUser.code),
+                    p_season_id: sid,
+                    p_tiers: tiers.map(t => ({
+                        id: t.id, points_required: t.points_required,
+                        reward_kind: t.reward_kind, reward_amount: t.reward_amount,
+                        reward_product: t.reward_product, reward_image: t.reward_image
+                    }))
+                });
+                if (te) {
+                    console.error('tiers_bulk_save:', te);
+                    const m = String(te.message || '');
+                    showToast(
+                        m.indexOf('HAS_CLAIMS') !== -1 ? 'پلیکانێک بردنەوەی لەسەرە — ناسڕدرێتەوە'
+                        : m.indexOf('DUP_TIER') !== -1 ? 'دوو پلیکان بە یەک خاڵ'
+                        : 'پاشەکەوتی پلیکانەکان سەرنەکەوت', 'error');
+                    return;
                 }
                 rwCloseCreateSheet();
-                showToast(bad ? `وەرز پاشەکەوت کرا، بەڵام ${bad} پلیکان سەرنەکەوت (خاڵی دووبارە؟)` : 'وەرزەکە پاشەکەوت کرا', bad ? 'error' : 'success');
+                showToast('وەرزەکە پاشەکەوت کرا', 'success');
                 loadRewardsHome(true);
             });
         }
@@ -15682,7 +16261,7 @@
                 return r ? r.t : k;
             }
             if (!from) return 'مەودای دڵخواز';
-            return (from === to) ? fdLabel(from) : fdLabel(from) + ' → ' + fdLabel(to);
+            return fdRange(from, to);
         }
 
         const RANK_PERIODS = SX_RANGES;
@@ -15934,7 +16513,7 @@
             const n = (a && b) ? fdDaysBetween(a, b) : 0;
             if (info) {
                 info.innerHTML = n
-                    ? '<i class="bx bx-calendar"></i> ' + fdLabel(a) + ' → ' + fdLabel(b)
+                    ? '<i class="bx bx-calendar"></i> ' + fdRange(a, b)
                     + ' · <b>' + n + ' ڕۆژ</b>'
                     : 'بەرواری دەستپێک هەڵبژێرە';
             }
@@ -21123,6 +21702,7 @@
             'filter-sheet': () => closeFilterSheet(),
             'sched-sheet': () => closeSchedSheet(),
             'rw-claim-sheet': () => rwCloseClaimSheet(),
+            'rw-confirm-sheet': () => rwCloseConfirm(),
             'rw-create-sheet': () => rwCloseCreateSheet()
         };
 
@@ -23208,6 +23788,15 @@
 
 
         function switchAdminTab(tabName, clickedElement) {
+            // ⚠️ **دەرگای دووەم.** شاردنەوەی دوگمەکە پارێزەر نییە:
+            //    ڕێڕەوی کۆن، کۆدی دەرەکی، یان دوگمەیەکی مابەستەوە
+            //    هێشتا دەتوانن ئێرە بانگ بکەن.
+            if (!adminTabAllowed(tabName)) {
+                const alt = adminAllowedTabs()[0];
+                if (!alt || alt.tab === tabName) return;
+                clickedElement = document.getElementById(alt.btn) || clickedElement;
+                tabName = alt.tab;
+            }
             let parent = clickedElement.parentElement;
             parent.querySelectorAll('.magic-tab').forEach(tab => tab.classList.remove('active'));
             clickedElement.classList.add('active');
@@ -24185,7 +24774,9 @@
         // ٥. دروستکردنی کارمەند
         // ٥. فەنکشنی دروستکردنی کارمەند لەگەڵ کات و بەروار
         async function generateCode() {
-            if (!await ensureAuthorized('manage_employees')) return;
+            // ⚠️ `create_key`، نەک `manage_employees` — چاکسازیی کلیلی
+            //    هەموان مافی **دروستکردن** نادات
+            if (!await ensureAuthorized('create_key')) return;
             let name = document.getElementById('u-name').value.trim();
             let telegramRadio = document.querySelector('input[name="u_telegram"]:checked');
             if (!telegramRadio) { showToast("تکایە دیاری بکە ئایا خاوەنی تێلیگرامە یان نا!", "error"); return; }
@@ -24783,6 +25374,41 @@
             let d = fdFromKey(k);
             return d ? `${d.getDate()} ${FS_MONTHS[d.getMonth()]}` : '—';
         }
+        // ============================================================
+        // مەودای بەروار — دەستپێک لە ڕاست، کۆتایی لە چەپ. هەمیشە.
+        // ------------------------------------------------------------
+        // خاوەن (٢٠٢٦-٠٩-٠٢): «ڕێکەوتی دەستپێک بخە دەستە ڕاست و
+        // ڕێکەوتی کۆتایی هاتن بخە دەستە چەپ، هەمیشە با وا بێت. بۆ
+        // هەموو شوێنەکانی تریش دڵنیابەوە.»
+        //
+        // ⚠️ ئەم ڕیزبەندییە بە **دەق** ناکرێت. ئەلگۆریسمی بیدی خۆی
+        //    بڕیار دەدات کە ژمارە و ناوی مانگ و تیرەکە بە چ ڕیزێک
+        //    دەردەکەون، و ئەو بڕیارە **بەپێی ئەوەی لە دەوروبەریدایە
+        //    دەگۆڕێت** — هەمان دەق لە دوو شوێندا دوو ڕیزبەندی
+        //    جیاواز دەدات. (بۆیە لە شوێنێک دروست دەردەکەوت و لە
+        //    شوێنێکی تر پێچەوانە.)
+        //
+        // چارە: نیشانەی جیاکەرەوەی بیدی، کە ڕیزبەندییەکە **ڕەق**
+        // دەکەن و لە `textContent`یشدا کار دەکەن:
+        //   U+2067 RLI … U+2069 PDI → ڕیزی مەودا ڕاست-بۆ-چەپ
+        //   U+2068 FSI … U+2069 PDI → هەر بەروارێک بە ئاراستەی خۆی
+        //
+        // ⚠️ FSI بەکاردێت، **نەک** LRI. بە LRI ژمارەکە دەچێتە چەپی ناوی
+        //    مانگ («ئەیلوول ٢»)، کە بۆ بەرواری کوردی هەڵەیە. FSI
+        //    ئاراستەکە لە یەکەم پیتی بەهێزەوە وەردەگرێت، بۆیە
+        //    «٢ ئەیلوول» بە ڕاستی دەمێنێتەوە. (بەرواری ISO وەک
+        //    2026-09-15 لە `.rw-range`ـەوە دێت، کە `dir="ltr"`ـە.)
+        //
+        // ⚠️ تیری `←` بەکارمەهێنە — لە مەوداری RTLدا وێنەی دەگۆڕدرێت
+        //    (bidi mirroring) و بە پێچەوانەوە دەردەکەوێت. `–` بێلایەنە.
+        const FD_RLI = '\u2067', FD_FSI = '\u2068', FD_PDI = '\u2069';
+        function fdRange(a, b) {
+            if (!a) return '';
+            const one = t => FD_FSI + t + FD_PDI;
+            if (!b || b === a) return one(fdLabel(a));
+            return FD_RLI + one(fdLabel(a)) + ' – ' + one(fdLabel(b)) + FD_PDI;
+        }
+
         function fdDaysBetween(a, b) {
             let x = fdFromKey(a), y = fdFromKey(b);
             if (!x || !y) return 0;
@@ -25405,11 +26031,11 @@
                 return;
             }
             let a = fsDraft.from, b = fsDraft.to;
-            if (a && !b) { el.innerHTML = `<i class='bx bx-calendar'></i> ${fdLabel(a)} → <em>کۆتایی هەڵبژێرە</em>`; return; }
+            if (a && !b) { el.innerHTML = `<i class='bx bx-calendar'></i> ${fdRange(a, a)} – <em>کۆتایی هەڵبژێرە</em>`; return; }
             let n = fdDaysBetween(a, b);
             el.innerHTML = a === b
-                ? `<i class='bx bx-calendar'></i> ${fdLabel(a)}`
-                : `<i class='bx bx-calendar'></i> ${fdLabel(a)} → ${fdLabel(b)} <b>· ${n} ڕۆژ</b>`;
+                ? `<i class='bx bx-calendar'></i> ${fdRange(a, a)}`
+                : `<i class='bx bx-calendar'></i> ${fdRange(a, b)} <b>· ${n} ڕۆژ</b>`;
         }
 
         // ---------- جێبەجێکردن ----------
@@ -25463,7 +26089,7 @@
             if (pr !== 'all') {
                 let p = FS_PRESETS.find(x => x.v === pr);
                 let t = (pr === 'custom' && a)
-                    ? (a === b ? fdLabel(a) : `${fdLabel(a)} → ${fdLabel(b)}`)
+                    ? fdRange(a, b)
                     : (p ? p.t : pr);
                 out.push({ kind: 'date', t: t });
             }
@@ -26152,6 +26778,8 @@
 
         // کردنەوەی مۆدێلی دواین جوڵە داراییەکان
         function openWalletTransactionsModal() {
+            // جوڵەی دارایی کەسێکی تر — هەمان دەسەڵاتی خودی تابەکە
+            if (!can('view_wallets')) { showToast("دەسەڵاتت نییە بۆ ئەم کردارە!", "error"); return; }
             let code = window.currentWalletCode;
             if (!code) return;
             document.getElementById('wallet-transactions-modal').classList.add('show');
