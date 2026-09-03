@@ -6657,13 +6657,17 @@
             // دوگمەی + ی چاڵنج — تەنها لەسەر شاشەکەی خۆی و تەنها بۆ پاشا
             try { rwSyncFab(); } catch (e) { }
 
-            if (navElement) {
-                document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-                navElement.classList.add('active');
-            } else {
-                document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-                if (screenId === 'dashboard-screen') document.getElementById('nav-dashboard').classList.add('active');
-            }
+            // ⭐ نیشانەی ناڤ لە **شاشەکەوە** وەردەگیرێت، نەک لە دوگمە
+            //    کرتەکراوەکە. پێشتر `navElement`ـەکە سەرچاوە بوو، بۆیە
+            //    هەر ڕێڕەوێک کە بەبێ دوگمە دەهات — بە تایبەت **دوگمەی
+            //    گەڕانەوە** (`() => switchScreen(_navPrev)`) — ناڤەکەی
+            //    بە تەواوی بێ نیشانە بەجێدەهێشت یان لەسەر تابی پێشوو.
+            //    (خاوەن ٢٠٢٦-٠٩-٠٢: «تابی ماڵەوە، کەچی خوارەوە ئاماژە
+            //    بە تابێکی تر دەکات».) ئێستا شاشەکە تاکە سەرچاوەیە.
+            const _navId = SCREEN_NAV[screenId] || null;
+            const _navEl = _navId ? document.getElementById(_navId) : null;
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            if (_navEl) _navEl.classList.add('active');
 
             if (screenId === 'admin-screen') {
                 // ⚠️ پێش هەموو شتێک: تابێک کە ڕێگەی پێدراوە. ئەگەرنا
@@ -8145,10 +8149,15 @@
         // ئەدمین. پێشتر داخستن هەمیشە دەگەڕایەوە پەڕەی سەرەکی —
         // بەکارهێنەر شوێنەکەی خۆی لەدەست دەدا.
         // ============================================================
+        // ⚠️ **هەر شاشەیەکی ناڤ دەبێت لێرە بێت.** ئەم خشتەیە ئێستا
+        //    تاکە سەرچاوەی نیشانەی ناڤە (`switchScreen`)، بۆیە
+        //    شاشەیەکی لەبیرکراو واتا ناڤی بێ نیشانە.
+        //    `stats-screen` پێشتر لێرە نەبوو.
         const SCREEN_NAV = {
             'dashboard-screen': 'nav-dashboard',
             'orders-management-screen': 'nav-orders-management',
             'wallet-screen': 'nav-wallet',
+            'stats-screen': 'nav-stats',
             'challenge-screen': 'nav-challenges',
             'admin-screen': 'nav-admin'
             // ڕێکخستنەکان ئیتر لە ناڤی خوارەوەدا نییە — بە وێنەی
@@ -12509,14 +12518,19 @@
                     : `<i class='bx bx-gift'></i>`;
 
             // ---- کردارەکان — هەمیشە دیارن ----
-            // ⭐ دۆخی سێیەم: خەڵاتەکە هەڵوەشێندراوەتەوە چونکە ئۆردەرێک
-            //    گەڕایەوە و پێشکەوتنەکە کەوتە خوارووی ئامانج (db/059).
-            //    بێدەنگ نابێت — ئەندام لەوانەیە پارەکەی لە جزدانەکەیدا
-            //    بینیبێت و پاشان نەیبینێت.
+            // ⭐ خەڵاتی هەڵوەشێندراوەوە (db/059) **هیچ ئاماژەیەکی لێرە
+            //    نییە**. خاوەن (٢٠٦-٠٩-٠٢): «پێویست ناکات ئاماژە بەمە
+            //    بکەیت — تەنها لە جزدان، بەشی جووڵە داراییەکان.»
+            //    ⭐ تاکە تۆمارەکە ڕیزی جزدانە، کە پێشتر هەیە و ڕوونە:
+            //         جۆر     : هەڵوەشاندنەوەی خەڵات
+            //         وردەکاری: <ناوی چاڵنج> — ئۆردەرێک گەڕایەوە
+            //         بڕ      : بڕی نێگەتیڤ
+            //    بۆیە کارتەکە دەگەڕێتەوە دۆخی سروشتیی خۆی: پێشکەوتن
+            //    کەمکراوە و چاڵنجەکە دووبارە کراوەیە. ئەوە ڕاستییەکە،
+            //    و ڕیزێکی زەرد لەسەری تەنها دووبارەکردنەوەی ئەوەیە
+            //    کە جزدان دەیڵێت.
             let actHtml = '';
-            if (claim && claim.status === 'revoked') {
-                actHtml = `<div class="rw-done is-revoked"><i class='bx bx-undo'></i> خەڵاتەکە هەڵوەشێندرایەوە — ئۆردەرێک گەڕایەوە${claim.reward_kind === 'money' || c.reward_kind === 'money' ? '، بڕەکە لە جزدانەکەت کەم کرایەوە' : ''}</div>`;
-            } else if (claim && claim.status === 'claimed') {
+            if (claim && claim.status === 'claimed') {
                 actHtml = c.reward_kind === 'money'
                     ? `<div class="rw-done"><i class='bx bx-check-circle'></i> خەڵاتەکە وەرگیرا — چووە سەر جزدانەکەت</div>`
                     : `<div class="rw-done"><i class='bx bx-check-circle'></i> وەرگیرا — ئۆردەر: <bdi dir="ltr">${rwEsc(claim.order_code || '—')}</bdi> · ${rwEsc(claim.order_status || 'ئامادە دەکرێت')}</div>`;
@@ -12614,7 +12628,7 @@
                 </div>`;
             }
 
-            return `<div class="rw-card${claim && claim.status === 'earned' ? ' is-earned' : ''}${claim && claim.status === 'revoked' ? ' is-revoked' : ''}${soon ? ' is-soon' : ''}${isOpen ? ' is-open' : ''}" data-cid="${rwEscAttr(cid)}">
+            return `<div class="rw-card${claim && claim.status === 'earned' ? ' is-earned' : ''}${soon ? ' is-soon' : ''}${isOpen ? ' is-open' : ''}" data-cid="${rwEscAttr(cid)}">
                 <button type="button" class="rw-chead" onclick="rwToggleChal(this,'${rwEscAttr(cid)}')" aria-expanded="${isOpen ? 'true' : 'false'}">
                     <span class="rw-thumb${cash ? ' is-cash' : ''}">${thumb}</span>
                     <span class="rw-htxt">
@@ -12836,7 +12850,10 @@
             all.forEach(x => (x.tiers || []).forEach(t => {
                 if (t.my_claim) cur.add(String(t.my_claim.id));
             }));
-            const old = (d.my_claims || []).filter(cl => cl.source === 'tier' && !cur.has(String(cl.id)));
+            // ⚠️ خەڵاتی هەڵوەشێندراوەوە لەم لیستەشدا دەرناکەوێت — ئەوە
+            //    خەڵاتێک نییە کە هەیبێت. تاکە تۆمارەکە جزدانە.
+            const old = (d.my_claims || []).filter(cl => cl.source === 'tier'
+                && cl.status !== 'revoked' && !cur.has(String(cl.id)));
             if (old.length) {
                 out += `<div class="rw-sec-t">خەڵاتە پێشووەکانم</div>` + old.map(cl => rwOldClaimHtml(cl)).join('');
             }
@@ -13010,10 +13027,9 @@
                 node = fmtNum(i + 1);
                 act = `<span class="arp-won"><i class='bx bx-group'></i>${fmtNum(t.won_n || 0)}</span>
                        <button type="button" class="rw-mini" onclick="rwOpenClaimsList('tier','${t.id}')"><i class='bx bx-list-ul'></i></button>`;
-            } else if (claim && claim.status === 'revoked') {
-                cls = 'is-locked';
-                node = `<i class='bx bx-undo'></i>`;
-                act = `<span class="arp-state is-revoked"><i class='bx bx-undo'></i>هەڵوەشێندرایەوە</span>`;
+            // ⚠️ خەڵاتی هەڵوەشێندراوەوە لێرەش ئاماژەی نییە — پلیکانەکە
+            //    دەگەڕێتەوە دۆخی سروشتیی خۆی (کراوە/داخراو بەپێی خاڵ).
+            //    تاکە تۆمارەکە جزدانە. (خاوەن ٢٠٢٦-٠٩-٠٢)
             } else if (claim && claim.status === 'claimed') {
                 cls = 'is-done';
                 node = `<i class='bx bx-check'></i>`;
@@ -14344,6 +14360,16 @@
 
         // ---- بارە ئاسۆییەکان — زۆرترین کاڵا / شار ----
         // (ئامۆژگاری بەهرەکە: ڕیزکردنی دابەزیو + نرخی دیار لەسەر هەر بارێک)
+        // ⚠️ دێڕی گەڕاندنەوەی ئۆردەری گۆڕین کاڵا نییە — بە `-1`
+        //    دەردەکەوت لە «زۆرترین کاڵا»دا. db/062 لە سەرچاوەکەوە
+        //    دەریدەکات؛ ئەمە پارێزەری **کاشە**: پەیلۆدی کۆن هێشتا
+        //    لە `localStorage`دایە و دەبێت یەکسەر پاک دەربکەوێت.
+        //    (خاوەن ٢٠٢٦-٠٩-٠٢)
+        function sxSoldItems(rows) {
+            return (rows || []).filter(r =>
+                Number(r && r.qty) > 0 && !String((r && r.name) || '').startsWith('گەڕاندنەوە:'));
+        }
+
         function sxBars(rows, labelOf, valOf, subOf, color) {
             if (!rows || !rows.length) {
                 return '<div class="sx-empty"><i class="bx bx-info-circle"></i> هیچ داتایەک نییە لەم ماوەیەدا</div>';
@@ -15271,7 +15297,7 @@
             // ---- زۆرترین کاڵا / شار ----
             html += '<div class="sx-card is-half"' + rise() + '><div class="sx-card-head">'
                 + '<b><i class="bx bx-package"></i> زۆرترین کاڵا</b><small class="sx-hint">٣٠ ڕۆژ</small></div>'
-                + sxBars(d.top_items, r => r.name,
+                + sxBars(sxSoldItems(d.top_items), r => r.name,
                     r => r.qty, r => sxShort(r.qty) + ' دانە', 'var(--primary)') + '</div>';
 
             if (sxIn('when')) {
@@ -21620,7 +21646,6 @@
         // ============================================================
         const navStack = [];            // [{ key, undo }]
         let _navSentinel = false;       // ئایا خانەی مێژوومان هەیە؟
-        let _navSuppress = false;       // گەڕانەوەیەکی ناوخۆیی — پشتگوێ بخرێت
         let _navRunning = false;        // ڕێگری لە دووبارە زیادکردن لەکاتی گەڕانەوە
 
         function navTg() {
@@ -21644,8 +21669,17 @@
                 } else if (!navStack.length && _navSentinel) {
                     // ستاکەکە بەتاڵ بووەتەوە بەبێ گەڕانەوە (بۆ نموونە
                     // مۆدالەکە بە ✕ داخرا) — خانەی مێژووەکەش لادەبرێت،
-                    // ئەگەرنا یەک پەنجەی زیادە پێویست دەبێت
-                    _navSuppress = true;
+                    // ئەگەرنا یەک پەنجەی زیادە پێویست دەبێت.
+                    // ⚠️ **هیچ ئاڵایەکی «پشتگوێخستن» نییە.** پێشتر
+                    //    `_navSuppress` دادەنرا بۆ ئەوەی ئەم گەڕانەوەیە
+                    //    پشتگوێ بخرێت، بەڵام `history.back()`
+                    //    ناهاوکاتە: ئەگەر بەکارهێنەر لەو ماوەیەدا
+                    //    پەنجەی بخستایە، **پەنجەکەی** پشتگوێ دەخرا و
+                    //    هیچ ڕوونەدەدا — بۆیە پێویستی بە دوو پەنجە
+                    //    دەبوو. (خاوەن ٢٠٢٦-٠٩-٠٢)
+                    //    ئێستا پێویستی پێ نییە: هەر گەڕانەوەیەک بە
+                    //    ستاکێکی بەتاڵ هیچ ناکات، جا هی ئێمە بێت یان
+                    //    هی بەکارهێنەر — بۆیە ئەنجامەکە یەکسانە.
                     _navSentinel = false;
                     history.back();
                 }
@@ -21687,7 +21721,10 @@
         }
 
         window.addEventListener('popstate', function () {
-            if (_navSuppress) { _navSuppress = false; return; }
+            // ⭐ شوێنەکە لە **خودی مێژووەوە** دەخوێندرێتەوە، نەک لە
+            //    ئاڵایەکەوە: ئەگەر هێشتا لەسەر خانەکەی خۆمانین، هیچ
+            //    نەڕۆیشتووین. ئەمە هەرگیز پەنجەی بەکارهێنەر ناخوات.
+            if (history.state && history.state.tgnav) return;
             _navSentinel = false;
             if (navStack.length) navBack();
             // ستاک بەتاڵە → ڕێگە دەدرێت تلیگرام ئەپەکە دابخات
