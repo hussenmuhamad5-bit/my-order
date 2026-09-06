@@ -1900,6 +1900,30 @@
     </div>
 
     <!-- شیتی دروستکردن/دەستکاری — تەنها پاشا (ناوەڕۆکەکەی بە JS دەنووسرێت) -->
+    <!-- 🛠️ بەڕێوەبردنی دەستەواژە خێراکان — تەنها پاشا (db/071).
+         یەک شیت بۆ هەردوو لیستەکە؛ `qpOpen(kind)` ناونیشانەکە
+         دەگۆڕێت. ⚠️ `.fsheet`ـە، بۆیە `navWatchOverlays` خۆکار
+         هەنگاوی گەڕانەوەی بۆ تۆمار دەکات. -->
+    <div id="qp-sheet" class="fsheet" role="dialog" aria-modal="true" aria-label="دەستەواژە خێراکان">
+        <div class="fsheet-scrim" onclick="qpClose()"></div>
+        <div class="fsheet-panel">
+            <div class="fsheet-head">
+                <button type="button" class="fsheet-x" onclick="qpClose()" aria-label="داخستن">
+                    <i class='bx bx-x'></i>
+                </button>
+                <span class="fsheet-title" id="qp-title">دەستەواژە خێراکان</span>
+            </div>
+            <div class="fsheet-body" id="qp-body"></div>
+            <div class="fsheet-foot qp-foot">
+                <input type="text" id="qp-new" class="qp-new" maxlength="200"
+                    placeholder="دەستەواژەیەکی نوێ…" autocomplete="off">
+                <button type="button" class="btn fsheet-apply qp-add" onclick="qpSubmit(this)">
+                    <i class='bx bx-plus'></i> زیادکردن
+                </button>
+            </div>
+        </div>
+    </div>
+
     <div id="rw-create-sheet" class="fsheet" role="dialog" aria-modal="true" aria-label="بەڕێوەبردنی چاڵنج و ئاڕپی">
         <div class="fsheet-scrim" onclick="rwCloseCreateSheet()"></div>
         <div class="fsheet-panel">
@@ -1948,7 +1972,16 @@
     <!-- لیستی بردنەوەکان — تەنها پاشا -->
     <div id="rw-claims-modal" class="modal-overlay" style="z-index: 2060;" onclick="closeModal(event, 'rw-claims-modal')">
         <div class="modal-content" onclick="event.stopPropagation()">
-            <h3 class="rw-claims-head"><i class='bx bx-trophy'></i> <span id="rw-claims-title">بردنەوەکان</span></h3>
+            <!-- ⭐ سەردێڕی ستانداردی مۆداڵ — دوگمەی ✕ لە گۆشەی
+                 چەپەوە (خاوەن ٢٠٢٦-٠٩-٠٦: «دوگمەی داخستن دابنێ
+                 بۆ ئەوەی بتوانیت لیستەکە بە ئاسانی دابخەیت»).
+                 پێشتر تەنها بە پەنجەدانان لەسەر پەردەکە یان
+                 گەڕانەوە دەداخرا. -->
+            <div class="modal-header rw-claims-head">
+                <h3 class="modal-title is-sm"><i class='bx bx-trophy'></i> <span id="rw-claims-title">بردنەوەکان</span></h3>
+                <button type="button" class="modal-close" aria-label="داخستن"
+                    onclick="closeModal(null, 'rw-claims-modal')"><i class='bx bx-x'></i></button>
+            </div>
             <!-- ⚠️ دوو دیمەن، یەک مۆداڵ: «کێ لە ڕێگایە» و «کێ بردوویەتی».
                  بنەڕەت پێشکەوتنە — بردنەوەکان لە شوێنی تریشدا بە
                  ژمارە دیارن، بەڵام پێشکەوتن هیچ شوێنێکی تری نییە. -->
@@ -1956,6 +1989,11 @@
                 <button type="button" data-v="prog" class="on" onclick="rwClaimsView('prog')"><i class='bx bx-run'></i> پێشکەوتن</button>
                 <button type="button" data-v="won" onclick="rwClaimsView('won')"><i class='bx bx-medal'></i> بردنەوەکان</button>
             </div>
+            <!-- ⚠️ خانەکانی کورتە **لە دەرەوەی** سکڕۆڵەکەن.
+                 پێشتر لەناو `rw-claims-body`دا دروست دەکران، بۆیە
+                 لەگەڵ لیستەکەدا دەڕۆیشتن. (خاوەن ٢٠٢٦-٠٩-٠٦:
+                 «لەگەڵ سکڕۆڵ نەجوڵێت») -->
+            <div id="rwp-sum"></div>
             <div id="rw-claims-body" class="rw-claims-body"></div>
         </div>
     </div>
@@ -2636,6 +2674,14 @@
                     <button type="button" class="ocmt-eb-x" onclick="cancelEditComment()"
                         title="هەڵوەشاندنەوە" aria-label="هەڵوەشاندنەوەی دەستکاری"><i class='bx bx-x'></i></button>
                 </div>
+                <!-- ⚡ کۆمێنتی خێرا — یەک پەنجەدان = ناردن.
+                     ڕیزبەندی بەپێی ژماردنی ڕاستەقینەی ٢,٦١٥ کۆمێنت:
+                     گەیشتووە ٧٥٪ · «بیکە بە گەیشتوو» ١٥٪ · گەڕاوەتەوە ٢٪.
+                     دوو پرسیارەکە بە داواکاریی خاوەن زیادکران.
+                     ⚠️ لە کاتی **دەستکاری**دا دەشاردرێتەوە: ئەگەرنا
+                        پەنجەدانێک کۆمێنتە کۆنەکە دەگۆڕێت، نەک یەکێکی
+                        نوێ بنێرێت. -->
+                <div id="ocmt-quick" class="ocmt-quick"></div>
                 <div class="ocmt-composer">
                     <textarea id="ocmt-input" rows="1" placeholder="پەیامێک بنووسە..."
                         oninput="ocmtGrow(this)" onkeydown="ocmtKey(event)" autocomplete="off"></textarea>
@@ -4309,9 +4355,25 @@
         let _permTip = null;
         let _permTipBound = false;
         let _permTipAnchor = null;
+        // ⭐ **یەک ڕوونکردنەوە بۆ هەموو نیشانەکانی «؟».**
+        //    `showPermHelp` تەنها دەقەکەی لە `PERM_HELP`ـەوە
+        //    دەهێنێت؛ هەر شوێنێکی تر دەقی خۆی دەنێرێت. بەبێ ئەمە
+        //    هەر نیشانەیەکی نوێ پێویستی بە کۆپییەکی نوێی
+        //    شوێندانان و داخستن دەبوو.
         function showPermHelp(ev, el, key) {
+            showTip(ev, el, PERM_HELP[key] || '', 'perm:' + key);
+        }
+
+        // ⭐ داخستنی ڕاستەوخۆ. دوگمەی گەڕانەوە هیچ کلیکێک دروست
+        //    ناکات، بۆیە گوێگری کلیک بەس نییە — `closeModal` و
+        //    `switchScreen` ڕاستەوخۆ بانگی دەکەن.
+        function hideTip() {
+            if (_permTip) _permTip.style.display = 'none';
+            _permTipAnchor = null;
+        }
+
+        function showTip(ev, el, text, key) {
             if (ev) { ev.preventDefault(); ev.stopPropagation(); }
-            let text = PERM_HELP[key] || '';
             if (!_permTip) {
                 _permTip = document.createElement('div');
                 _permTip.className = 'perm-tip';
@@ -4319,8 +4381,23 @@
             }
             if (!_permTipBound) {
                 _permTipBound = true;
-                // کلیک لە هەر شوێنێکی تر → داخستنی ڕوونکردنەوەکە (کلیکی ؟ خۆی stopPropagation دەکات)
-                document.addEventListener('click', function () { if (_permTip) _permTip.style.display = 'none'; });
+                // ⚠️ **قۆناغی گرتن (capture)، نەک حەبابی.** هەموو کارتێکی
+                //    مۆداڵ `onclick="event.stopPropagation()"`ی هەیە، بۆیە
+                //    پەنجەدانان لەسەر ✕ — یان هەر شوێنێکی ناو کارتەکە —
+                //    هەرگیز نەدەگەیشتە `document` و ڕوونکردنەوەکە
+                //    لەسەر شاشە دەمایەوە، تەنانەت دوای داخستنی
+                //    مۆداڵەکەش. (خاوەن ٢٠٢٦-٠٩-٠٦: «ئەمە لاناچێت»)
+                // ⚠️ لە قۆناغی گرتندا ئەم گوێگرە **پێش** `onclick`ی
+                //    دوگمەکە دەڕوات، بۆیە دەبێت پەنجەدانانی خودی
+                //    «؟»ـەکە دەرکرابێت — ئەگەرنا سویچی کردنەوە/داخستن
+                //    دەشکێت (دەیشارێتەوە، پاشان `showTip` دووبارە
+                //    دەریدەخات).
+                document.addEventListener('click', function (e) {
+                    if (!_permTip || _permTip.style.display !== 'block') return;
+                    if (_permTipAnchor && (e.target === _permTipAnchor
+                        || (_permTipAnchor.contains && _permTipAnchor.contains(e.target)))) return;
+                    _permTip.style.display = 'none';
+                }, true);
                 window.addEventListener('resize', function () { if (_permTip) _permTip.style.display = 'none'; });
                 // بە گرتنی قۆناغی capture، سکڕۆڵی بەشە ناوەکییەکانیش دەگرێتەوە —
                 // نەک تەنها سکڕۆڵی پەنجەرەکە (کە ئەم ئەپە هەرگیز بەکاری ناهێنێت)
@@ -4479,6 +4556,9 @@
             // 🛍️ خشتەی جوانکارییەکان — بچووکە و کاشکراوە، بەڵام
             //    بەبێی ڕازاندنەوەی وێنەدار هیچ دەرناکەوێت.
             setTimeout(() => { try { cosCatalogLoad(); } catch (e) { } }, 900);
+            // ⚡ دەستەواژە خێراکان (db/071) — کاش یەکسەر، تۆڕ بە درەنگ
+            try { qpCacheLoad(); } catch (e) { }
+            setTimeout(() => { try { qpLoad(); } catch (e) { } }, 1200);
             // کۆدی کلیلە سڕاوەکان — بۆ نیشانەی «خاوەنەکەی سڕاوەتەوە» لەسەر ئۆردەرەکان
             refreshDeletedOwners();
 
@@ -6668,6 +6748,9 @@
         let isWalletDataLoaded = false;
 
         function switchScreen(screenId, navElement = null) {
+            // ⚠️ ڕوونکردنەوەی «؟» لەسەر `body`ە، نەک لەناو شاشەکە —
+            //    گەڕانەوە بە دوگمەی پاشەوە هیچ کلیکێکی نییە.
+            try { hideTip(); } catch (e) { }
             // ---- ستاکی گەڕانەوە ----
             // داشبۆرد ڕەگەکەیە: کاتێک دەگەڕێینەوە بۆی، ستاکەکە پاک
             // دەکرێتەوە و دوگمەی گەڕانەوە دەشاردرێتەوە (دیسان دەبێتە
@@ -7140,18 +7223,92 @@
             return `<div${cls}${tap}${cosA} style="${cosS}width:${size}px; height:${size}px; border-radius:50%; flex-shrink:0; background:var(--primary); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:${Math.round(size * 0.42)}px;">${initial}</div>`;
         }
 
-        // هۆکارە باوەکانی گەڕاندنەوەی ئۆردەر (بۆ هەڵبژاردنی خێرا)
-        const RETURN_REASONS = [
-            "کڕیار پەشیمان بۆتەوە",
-            "کڕیار ووتی هی من نییە",
-            "کڕیار وەڵامی پەیوەندی نادات",
-            "ژمارەی کڕیار هەڵەیە",
-            "ژمارەی کڕیار داخراوە و هیچی لەسەر نییە",
-            "کڕیار دەڵێت داوام نەکردووە",
-            "کاڵاکە هەڵە بووە",
-            "نرخی زیاد بووە",
-            "کڕیار بەهانە بە شۆفێر دەگرێت"
-        ];
+        // ============================================================
+        // ⚡ دەستەواژە خێراکان — کۆمێنت و هۆکاری گەڕانەوە (db/071)
+        // ------------------------------------------------------------
+        // خاوەن (٢٠٢٦-٠٩-٠٦): «پاشا بتوانێت زیاد بکات، دەستکاری
+        // بکات، بسڕێتەوە — بۆ هەردوو لیستەکە.»
+        //
+        // ⭐ پێشتر دوو ئەڕەیی ڕەق بوون لەناو ئەم فایلەدا، بۆیە هەر
+        //    گۆڕانکارییەک بڵاوکردنەوەی دەویست. ئێستا لە داتابەیسن.
+        // ⚠️ **کاشی مانەوە** (`localStorage`): یەکەم کردنەوە دەبێت
+        //    یەکسەر بێت، نەک چاوەڕێی تۆڕ. هەڵەی تۆڕ **کاشەکە
+        //    ناسڕێتەوە** — لیستێکی بەتاڵ خراپترە لە لیستێکی کۆن.
+        // ============================================================
+        const QP_KEY = 'qpCacheV1';
+        const QP_TTL = 6 * 3600 * 1000;          // سنووری تازەیی
+        const QP_KINDS = ['comment', 'return_reason'];
+        let _qp = { comment: [], return_reason: [], at: 0 };
+        let _qpBusy = false;
+
+        function qpCacheLoad() {
+            try {
+                const v = JSON.parse(localStorage.getItem(QP_KEY) || 'null');
+                if (v && Array.isArray(v.comment) && Array.isArray(v.return_reason)) _qp = v;
+            } catch (e) { }
+            return _qp;
+        }
+
+        async function qpLoad(force) {
+            if (!force && _qp.at && (Date.now() - _qp.at) < QP_TTL) return _qp;
+            if (_qpBusy) return _qp;
+            _qpBusy = true;
+            try {
+                const { data, error } = await supabase.rpc('quick_phrases_list', { p_kind: null });
+                if (error) throw error;
+                const next = { comment: [], return_reason: [], at: Date.now() };
+                (data || []).forEach(r => {
+                    if (next[r.kind]) next[r.kind].push({ id: r.id, body: r.body });
+                });
+                _qp = next;
+                try { localStorage.setItem(QP_KEY, JSON.stringify(_qp)); } catch (e) { }
+                qpRepaint();
+            } catch (e) {
+                // ⚠️ کاشەکە وەک خۆی دەمێنێتەوە — بڕوانە سەرەوە
+                console.warn('quick phrases:', e);
+            }
+            _qpBusy = false;
+            return _qp;
+        }
+
+        function qpList(kind) {
+            return (_qp && _qp[kind]) || [];
+        }
+
+        // هەردوو شوێنەکە دووبارە دەنەخشێنرێن، ئەگەر کراوە بن
+        function qpRepaint() {
+            try { ocmtQuickPaint(); } catch (e) { }
+            try { rrChipsPaint(); } catch (e) { }
+        }
+
+        function qpIsKing() {
+            try { return normalizeRole(userRole || '') === 'پاشا'; } catch (e) { return false; }
+        }
+
+        // چیپەکانی هۆکار — لە `_qp`ـەوە، بۆیە پاشا دەتوانێت بیانگۆڕێت
+        // بەبێ بڵاوکردنەوە. «هۆکارێکی تر…» هەمیشە دەمێنێتەوە:
+        // ⚠️ ئەگەر پاشا هەموویانی بسڕێتەوە، هێشتا دەبێت ڕێگایەک
+        //    هەبێت بۆ نووسینی هۆکار — ئەگەرنا گەڕانەوە قوفڵ دەبێت.
+        function rrChipsHtml() {
+            return qpList('return_reason').map(r =>
+                '<button type="button" class="reason-chip" onclick="pickReturnReason(this)">'
+                + histEsc(r.body) + '</button>').join('')
+                + '<button type="button" class="reason-chip" onclick="pickReturnOther()">'
+                + '<i class="bx bx-pencil"></i> هۆکارێکی تر…</button>'
+                + (qpIsKing()
+                    ? '<button type="button" class="reason-chip is-edit" onclick="qpOpen(\'return_reason\')"'
+                      + ' aria-label="بەڕێوەبردنی هۆکارەکان"><i class="bx bx-cog"></i></button>' : '');
+        }
+
+        // ⚠️ تەنها ئەو کاتە دووبارە دەنەخشێنرێت کە هێشتا هیچ
+        //    هۆکارێک هەڵنەبژێردراوە — ئەگەرنا هەڵبژاردنی
+        //    بەکارهێنەر دەفەوتێت.
+        function rrChipsPaint() {
+            const box = document.getElementById('return-reason-chips');
+            if (!box || box.querySelector('.reason-chip.is-on')) return;
+            const html = rrChipsHtml();
+            if (box.innerHTML !== html) box.innerHTML = html;
+        }
 
         let rrNeedReason = false;   // ئایا ئێستا هۆکار پێویستە بۆ پاشەکەوتکردن؟
 
@@ -9982,10 +10139,7 @@
 
                 <div id="return-reason-box" class="rr-anim" style="display:none;">
                     <div class="st-reason-t"><i class='bx bx-help-circle'></i> بۆچی گەڕاوەتەوە؟</div>
-                    <div id="return-reason-chips" class="rr-chips">
-                        ${RETURN_REASONS.map(r => `<button type="button" class="reason-chip" onclick="pickReturnReason(this)">${r}</button>`).join('')}
-                        <button type="button" class="reason-chip" onclick="pickReturnOther()"><i class='bx bx-pencil'></i> هۆکارێکی تر…</button>
-                    </div>
+                    <div id="return-reason-chips" class="rr-chips">${rrChipsHtml()}</div>
                     <input type="text" id="return-reason-input" class="rr-input rr-anim" placeholder="هۆکاری گەڕانەوە بنووسە…" value="" oninput="rrSyncSave()" style="display:none;">
                     <button type="button" id="return-reason-change" class="rr-change rr-anim" onclick="resetReturnReason()" style="display:none;"><i class='bx bx-revision'></i> گۆڕینی هۆکار</button>
                 </div>
@@ -11528,6 +11682,218 @@
             }
         }
 
+        // ============================================================
+        // ⚡ کۆمێنتی خێرا
+        // ------------------------------------------------------------
+        // ⭐ **پارچەی ئامادە دووبارە بەکاردێت، لەبەری ناگیرێتەوە:**
+        //    دەقەکە دەخرێتە ناو هەمان بۆکسی نووسین و هەمان
+        //    `postOrderComment` بانگ دەکرێت — بۆیە قوفڵی دوو-ناردن
+        //    (`guardSubmit`)، پەیامی کاتی، گەڕانەوەی دەق لە کاتی
+        //    هەڵەدا، و نوێکردنەوەی لیستەکە هەموویان بێ کۆدی نوێ
+        //    کاردەکەن.
+        // ⚠️ دەقی بۆکسەکە **پاشەکەوت دەکرێت و دەگەڕێندرێتەوە**:
+        //    ئەگەر ئەندام شتێکی نووسیبوو و پاشان پەنجەی لە چیپێک
+        //    دا، ئەوەی نووسیبووی نابێت بفەوتێت.
+        // چیپەکانی کۆمێنت — لە `_qp`ـەوە (db/071)
+        // ⚠️ ناونیشان و دەقی نێردراو یەکن لێرەدا؛ پاشا خۆی دەقەکە
+        //    دیاری دەکات، بۆیە کورتکردنەوەیەکی خۆکار درۆ دەکات.
+        function ocmtQuickHtml() {
+            return qpList('comment').map(r =>
+                '<button type="button" class="ocmt-q" onclick="ocmtQuick(this, this.dataset.t)"'
+                + ' data-t="' + histEsc(r.body) + '">' + histEsc(r.body) + '</button>').join('')
+                + (qpIsKing()
+                    ? '<button type="button" class="ocmt-q is-edit" onclick="qpOpen(' + "'comment'" + ')"'
+                      + ' aria-label="بەڕێوەبردنی کۆمێنتە خێراکان"><i class="bx bx-cog"></i></button>' : '');
+        }
+
+        function ocmtQuickPaint() {
+            const box = document.getElementById('ocmt-quick');
+            if (!box) return;
+            const html = ocmtQuickHtml();
+            if (box.innerHTML !== html) box.innerHTML = html;
+        }
+
+        function ocmtQuick(el, text) {
+            const input = document.getElementById('ocmt-input');
+            if (!input) return;
+            if (_ocmtEditId) return;          // شریتەکە لە دەستکاریدا شاراوەیە
+            const keep = input.value;
+            input.value = String(text || '');
+            ocmtGrow(input);
+            const p = postOrderComment(el);
+            // ⚠️ `postOrderComment` بۆکسەکە یەکسەر بەتاڵ دەکات، بۆیە
+            //    گەڕاندنەوەی دەقە کۆنەکە دوای ئەوە دەبێت.
+            Promise.resolve(p).then(() => {
+                const i2 = document.getElementById('ocmt-input');
+                if (i2 && !i2.value.trim() && keep.trim()) {
+                    i2.value = keep;
+                    ocmtGrow(i2);
+                }
+            });
+            return p;
+        }
+
+        // ============================================================
+        // 🛠️ بەڕێوەبردنی دەستەواژە خێراکان — تەنها پاشا (db/071)
+        // ------------------------------------------------------------
+        // ⚠️ **شاردنەوەی دوگمە پارێزەر نییە** — هەر بانگێک
+        //    `qpIsKing()` دووبارە دەپشکنێت، و سێرڤەریش
+        //    `reward_assert_king`.
+        // ⭐ ڕیزبەندی بە ↑/↓، نەک ڕاکێشان: لەسەر مۆبایل ڕاکێشان
+        //    لەناو شیتێکی خزۆکدا شەڕ لەگەڵ سکڕۆڵدا دەکات.
+        // ============================================================
+        let _qpAdm = { kind: 'comment', rows: [], busy: false };
+
+        const QP_TITLES = { comment: 'کۆمێنتی خێرا', return_reason: 'هۆکارەکانی گەڕانەوە' };
+
+        async function qpOpen(kind) {
+            if (!qpIsKing()) { showToast('دەسەڵاتت نییە', 'error'); return; }
+            _qpAdm.kind = (kind === 'return_reason') ? 'return_reason' : 'comment';
+            document.getElementById('qp-title').textContent = QP_TITLES[_qpAdm.kind];
+            document.getElementById('qp-sheet').classList.add('show');
+            document.getElementById('qp-new').value = '';
+            await qpAdmLoad();
+        }
+
+        function qpClose() {
+            document.getElementById('qp-sheet').classList.remove('show');
+        }
+
+        async function qpAdmLoad() {
+            const body = document.getElementById('qp-body');
+            if (body && !_qpAdm.rows.length) body.innerHTML = '<div class="qp-load">…</div>';
+            try {
+                const { data, error } = await supabase.rpc('quick_phrases_admin', {
+                    p_viewer: String(currentUser.code)
+                });
+                if (error) throw error;
+                _qpAdm.rows = data || [];
+            } catch (e) {
+                console.error('quick_phrases_admin:', e);
+                if (body) body.innerHTML = notifStateHtml('bx-error-circle', 'هەڵە ڕوویدا', '');
+                return;
+            }
+            qpAdmPaint();
+        }
+
+        function qpAdmRows() {
+            return _qpAdm.rows.filter(r => r.kind === _qpAdm.kind);
+        }
+
+        function qpAdmPaint() {
+            const body = document.getElementById('qp-body');
+            if (!body) return;
+            const rows = qpAdmRows();
+            const html = rows.length
+                ? rows.map((r, i) => '<div class="qp-row" data-id="' + histEsc(r.id) + '">'
+                    + '<span class="qp-txt">' + histEsc(r.body) + '</span>'
+                    + '<span class="qp-acts">'
+                    + '<button type="button" class="qp-b" onclick="qpMove(' + "'" + histEsc(r.id) + "'" + ', -1)"'
+                    + (i === 0 ? ' disabled' : '') + ' aria-label="سەرەوە"><i class="bx bx-chevron-up"></i></button>'
+                    + '<button type="button" class="qp-b" onclick="qpMove(' + "'" + histEsc(r.id) + "'" + ', 1)"'
+                    + (i === rows.length - 1 ? ' disabled' : '') + ' aria-label="خوارەوە"><i class="bx bx-chevron-down"></i></button>'
+                    + '<button type="button" class="qp-b" onclick="qpEdit(' + "'" + histEsc(r.id) + "'" + ')"'
+                    + ' aria-label="دەستکاری"><i class="bx bx-edit-alt"></i></button>'
+                    + '<button type="button" class="qp-b is-del" onclick="qpDelete(' + "'" + histEsc(r.id) + "'" + ', this)"'
+                    + ' aria-label="سڕینەوە"><i class="bx bx-trash"></i></button>'
+                    + '</span></div>').join('')
+                : notifStateHtml('bx-message-square-dots', 'هێشتا هیچ نییە',
+                    'لە خوارەوە دەقێک بنووسە و زیادی بکە');
+            if (body.innerHTML !== html) body.innerHTML = html;
+        }
+
+        async function qpSubmit(btn) {
+            return guardSubmit('qp-save', btn, () => qpSubmitImpl());
+        }
+
+        async function qpSubmitImpl() {
+            if (!qpIsKing()) { showToast('دەسەڵاتت نییە', 'error'); return; }
+            const el = document.getElementById('qp-new');
+            const body = (el ? el.value : '').trim();
+            if (!body) { showToast('دەقێک بنووسە', 'error'); return; }
+            try {
+                const { error } = await supabase.rpc('quick_phrase_save', {
+                    p_viewer: String(currentUser.code),
+                    p: { kind: _qpAdm.kind, body: body }
+                });
+                if (error) throw error;
+                el.value = '';
+                await qpAdmLoad();
+                await qpLoad(true);
+                showToast('زیادکرا', 'success');
+            } catch (e) {
+                console.error('quick_phrase_save:', e);
+                showToast(qpErr(e), 'error');
+            }
+        }
+
+        function qpErr(e) {
+            const m = String((e && e.message) || '');
+            if (m.includes('EMPTY')) return 'دەقەکە بەتاڵە';
+            if (m.includes('TOO_LONG')) return 'دەقەکە زۆر درێژە';
+            if (m.includes('NOT_ALLOWED')) return 'دەسەڵاتت نییە';
+            return 'نەتوانرا پاشەکەوت بکرێت';
+        }
+
+        async function qpEdit(id) {
+            const r = _qpAdm.rows.find(x => String(x.id) === String(id));
+            if (!r) return;
+            const next = prompt('دەقی نوێ:', r.body);
+            if (next === null) return;
+            const body = String(next).trim();
+            if (!body) { showToast('دەقەکە بەتاڵە', 'error'); return; }
+            if (body === r.body) return;
+            try {
+                const { error } = await supabase.rpc('quick_phrase_save', {
+                    p_viewer: String(currentUser.code),
+                    p: { id: String(id), kind: r.kind, body: body }
+                });
+                if (error) throw error;
+                await qpAdmLoad();
+                await qpLoad(true);
+            } catch (e) { showToast(qpErr(e), 'error'); }
+        }
+
+        async function qpDelete(id, btn) {
+            const r = _qpAdm.rows.find(x => String(x.id) === String(id));
+            if (!r) return;
+            // ⚠️ ژمارەکە **پێش** پرسیارەکە: کرداری وێرانکەر
+            if (!confirm('بسڕدرێتەوە؟' + String.fromCharCode(10) + String.fromCharCode(10) + r.body)) return;
+            try {
+                const { error } = await supabase.rpc('quick_phrase_delete', {
+                    p_viewer: String(currentUser.code), p_id: String(id)
+                });
+                if (error) throw error;
+                await qpAdmLoad();
+                await qpLoad(true);
+            } catch (e) { showToast(qpErr(e), 'error'); }
+        }
+
+        // ⚠️ ڕیزبەندی بە **یەک** بانگ بۆ هەموو لیستەکە دەنێردرێت،
+        //    نەک یەک بانگ بۆ هەر ڕیزێک — ڕیزبەندیی نیوەچڵ
+        //    لیستێکی شپرزە بەجێدەهێڵێت.
+        async function qpMove(id, dir) {
+            const rows = qpAdmRows();
+            const i = rows.findIndex(x => String(x.id) === String(id));
+            const j = i + dir;
+            if (i < 0 || j < 0 || j >= rows.length) return;
+            const tmp = rows[i]; rows[i] = rows[j]; rows[j] = tmp;
+            // ڕووکار یەکسەر — سێرڤەر دوای ئەوە
+            _qpAdm.rows = _qpAdm.rows.filter(x => x.kind !== _qpAdm.kind).concat(rows);
+            qpAdmPaint();
+            try {
+                const { error } = await supabase.rpc('quick_phrases_reorder', {
+                    p_viewer: String(currentUser.code),
+                    p_ids: rows.map(x => String(x.id))
+                });
+                if (error) throw error;
+                await qpLoad(true);
+            } catch (e) {
+                console.error('quick_phrases_reorder:', e);
+                await qpAdmLoad();
+            }
+        }
+
         // ---- ناردن / دەستکاری / سڕینەوە ----
         async function postOrderComment(btn) {
             return guardSubmit('order-comment', btn, () => postOrderCommentImpl(btn));
@@ -11625,11 +11991,21 @@
             const prev = document.getElementById('ocmt-eb-preview');
             if (prev) prev.textContent = String(text || '').replace(/\s+/g, ' ').trim();
             if (bar) bar.style.display = 'flex';
+            ocmtQuickShow(false);
         }
 
         function hideEditBar() {
             const bar = document.getElementById('ocmt-editbar');
             if (bar) bar.style.display = 'none';
+            ocmtQuickShow(true);
+        }
+
+        // ⚠️ لە کاتی دەستکاریدا چیپەکان دەشاردرێنەوە — ئەگەرنا
+        //    پەنجەدانێک کۆمێنتە کۆنەکە **دەگۆڕێت** لەبری ئەوەی
+        //    یەکێکی نوێ بنێرێت، و ئەوە هیچ ئاماژەیەکی نییە.
+        function ocmtQuickShow(on) {
+            const q = document.getElementById('ocmt-quick');
+            if (q) q.style.display = on ? '' : 'none';
         }
 
         // `refocus = false` کاتێک بەکاردێت کە مۆداڵەکە دادەخرێت —
@@ -11694,6 +12070,11 @@
             //    ئاگاداریەکان. (خاوەن ٢٠٢٦-٠٩-٠٦)
             // ⚠️ `navPush` خۆی دووبارە ڕەت دەکاتەوە و لە کاتی
             //    `navBack`دا هیچ ناکات، بۆیە بانگکردنی سەلامەتە.
+            // چیپەکان لە کاشەوە یەکسەر، پاشان نوێکردنەوەی بێدەنگ
+            if (tab === 'comments') {
+                try { ocmtQuickPaint(); qpLoad(); } catch (e) { }
+            }
+
             try {
                 if (tab === 'comments') {
                     navPush('t:ocmt', () => switchOrderModalTab('info'));
@@ -12867,14 +13248,19 @@
                     `${fmtV(remain)} ${unit ? unit + 'ی تر' : 'تر'} پێویستە`]);
             }
 
-            let kingHtml = '';
+            // ⭐ **لیستی پێشبڕکێ بۆ هەموان** (خاوەن ٢٠٢٦-٠٩-٠٦).
+            //    پێشتر تەنها لەناو ڕیزی پاشادا بوو، بۆیە ئەندام
+            //    هەرگیز نەیدەزانی کێ لە پێشە. یەک دوگمە، یەک ناو —
+            //    نەک دووانەیەکی جیا بۆ هەر ڕۆڵێک.
+            const listBtn = `<button type="button" class="rw-mini" onclick="rwOpenClaimsList('challenge','${c.id}')"><i class='bx bx-list-ul'></i> بردنەوەکان</button>`;
+            let kingHtml = `<div class="rw-kingrow">${listBtn}</div>`;
             if (isKing) {
                 const visBits = [];
                 if (c.show_before === false) visBits.push('پێش دەستپێک شاراوە');
                 if (c.show_after === false) visBits.push('دوای کۆتایی دەشاردرێتەوە');
                 kingHtml = `<div class="rw-kingrow">
                     ${visBits.length ? `<span class="rw-chip is-vis"><i class='bx bx-hide'></i>${rwEsc(visBits.join(' · '))}</span>` : ''}
-                    <button type="button" class="rw-mini" onclick="rwOpenClaimsList('challenge','${c.id}')"><i class='bx bx-list-ul'></i> بردنەوەکان</button>
+                    ${listBtn}
                     <button type="button" class="rw-mini" onclick="rwEditChallenge('${c.id}')"><i class='bx bx-edit-alt'></i> دەستکاری</button>
                     <button type="button" class="rw-mini" onclick="rwToggleChallenge('${c.id}')"><i class='bx ${c.active ? 'bx-pause' : 'bx-play'}'></i> ${c.active ? 'ڕاگرتن' : 'چالاککردن'}</button>
                     <button type="button" class="rw-mini is-danger" onclick="rwDeleteChallenge('${c.id}')" aria-label="سڕینەوە"><i class='bx bx-trash'></i></button>
@@ -13273,13 +13659,17 @@
             const tCash = (!t.reward_image && t.reward_kind === 'money'
                 && Number(t.reward_amount) > 0) ? rwMoneyParts(t.reward_amount) : null;
             const reached = (myPts != null) && (t.points_required <= myPts);
+            // ⭐ هەمان دوگمەی لیستی پاشا، بۆ هەموان — بەڵام لێرەدا
+            //    تەنها ئایکۆن، چونکە ڕیزی پلیکان تەنگە.
+            const tierList = `<button type="button" class="rw-mini arp-list" aria-label="پێشبڕکێ"
+                        onclick="rwOpenClaimsList('tier','${t.id}')"><i class='bx bx-list-ul'></i></button>`;
             let cls, node, act;
 
             if (isKing) {
                 cls = 'is-king';
                 node = fmtNum(i + 1);
                 act = `<span class="arp-won"><i class='bx bx-group'></i>${fmtNum(t.won_n || 0)}</span>
-                       <button type="button" class="rw-mini" onclick="rwOpenClaimsList('tier','${t.id}')"><i class='bx bx-list-ul'></i></button>`;
+                       ${tierList}`;
             // ⚠️ خەڵاتی هەڵوەشێندراوەوە لێرەش ئاماژەی نییە — پلیکانەکە
             //    دەگەڕێتەوە دۆخی سروشتیی خۆی (کراوە/داخراو بەپێی خاڵ).
             //    تاکە تۆمارەکە جزدانە. (خاوەن ٢٠٢٦-٠٩-٠٢)
@@ -13323,7 +13713,7 @@
                     : rwEsc(t.reward_product || 'کاڵا')}</b>
                         <span class="arp-req">${fmtNum(t.points_required)} خاڵ</span>
                     </div>
-                    <div class="arp-act">${act}</div>
+                    <div class="arp-act">${act}${isKing ? '' : tierList}</div>
                 </div>
             </div>`;
         }
@@ -13506,7 +13896,9 @@
             }
             return data.map(r => `
                     <div class="rw-claim-row">
-                        <div class="rw-cr-main"><b>${rwEsc(r.user_name || r.user_code)}</b>
+                        <div class="rw-cr-main"><b>${r.user_name == null
+                    ? '<span class="sx-hidden-name"><i class="bx bx-hide"></i> ئەندامێک</span>'
+                    : rwEsc(r.user_name || r.user_code)}</b>
                             <span class="rw-chip${r.status === 'claimed' ? ' is-ok' : (r.status === 'revoked' ? ' is-revoked' : '')}">${r.status === 'claimed' ? 'وەرگیراوە' : (r.status === 'revoked' ? 'هەڵوەشێندراوە' : 'چاوەڕوانی وەرگرتنە')}</span></div>
                         ${r.status === 'claimed' && r.order_code ? `<div class="rw-cr-sub">ئۆردەر: <bdi dir="ltr">${rwEsc(r.order_code)}</bdi> — ${rwEsc(r.order_status || '')}</div>` : ''}
                         ${r.status === 'claimed' && r.delivery_city ? `<div class="rw-cr-sub">${rwEsc(r.delivery_city)}${r.delivery_address ? ' — ' + rwEsc(r.delivery_address) : ''} — <bdi dir="ltr">${rwEsc(r.delivery_phone || '')}</bdi></div>` : ''}
@@ -13556,10 +13948,26 @@
             const pair = (a.unit === b.unit)
                 ? '<b>' + a.n + '</b> لە <b>' + b.n + '</b> ' + b.unit
                 : '<b>' + a.n + '</b> ' + a.unit + ' لە <b>' + b.n + '</b> ' + b.unit;
+            // ⭐ ناوی **پڕۆفایل**، نەک ناوی ڕاستەقینە (db/070).
+            //    `user_name === null` واتا ئەو کەسە خۆی لە
+            //    تابلۆکاندا شاردووەتەوە — هەمان نیشانەی تابلۆی
+            //    پلەکان بەکاردێت، بۆیە هەردوو شوێنەکە یەک دەردەکەون.
+            // ⚠️ `noTap` — ڕازاندنەوەی ئاڤاتار دەردەکەوێت بەڵام
+            //    ڕێگای نوێی گەشتوگوزار دروست ناکات.
+            const anon = (r.user_name == null);
+            const who = anon
+                ? '<span class="sx-hidden-name"><i class="bx bx-hide"></i> ئەندامێک</span>'
+                : rwEsc(r.user_name || r.user_code);
+            const face = anon
+                ? '<span class="sx-anon"><i class="bx bx-user"></i></span>'
+                : avatarHtml(r.avatar, r.user_name || r.user_code, 34, r.user_code, { noTap: true });
             return '<div class="rwp-row' + (r.claimed ? ' is-won' : '') + '">'
                 + '<div class="rwp-who">'
-                + avatarHtml(r.avatar, r.user_name || r.user_code, 34)
-                + '<div class="rwp-id"><b>' + rwEsc(r.user_name || r.user_code) + '</b>'
+                + face
+                // ⚠️ **بێ نەیمپاڵێت لێرەدا** (خاوەن ٢٠٢٦-٠٩-٠٦):
+                //    «تەنها لە لیستی پلەکان دەربکەوێت.»
+                //    ڕازاندنەوەی ئاڤاتار دەمێنێتەوە.
+                + '<div class="rwp-id"><b>' + who + '</b>'
                 + '<span>' + fmtNum(Number(r.orders_n) || 0) + ' ئۆردەری گەیشتوو</span></div>'
                 + '<span class="rwp-pct">' + (Math.round(pct * 10) / 10) + '<i>٪</i></span>'
                 + '</div>'
@@ -13587,12 +13995,13 @@
                 const c = ((_rw.data && _rw.data.challenges) || [])
                     .find(x => String(x.id) === String(_rw.claimsRef));
                 const k = c && c.target_kind;
-                if (k === 'sales') return rwProgSummary(rows)
-                    + rows.map(r => rwProgRowHtml(r, rwMoneyParts)).join('');
+                // ⚠️ کورتەکە لێرەدا **نییە** — لە `#rwp-sum`دایە،
+                //    لە دەرەوەی سکڕۆڵەکە.
+                if (k === 'sales') return rows.map(r => rwProgRowHtml(r, rwMoneyParts)).join('');
                 unit = (k === 'orders') ? 'ئۆردەر' : 'دانە';
             }
             const fmt = (v) => ({ n: fmtNum(v), unit: unit });
-            return rwProgSummary(rows) + rows.map(r => rwProgRowHtml(r, fmt)).join('');
+            return rows.map(r => rwProgRowHtml(r, fmt)).join('');
         }
 
         // گۆڕینی دیمەن — بێ داواکاریی نوێ ئەگەر کاشکراو بێت
@@ -13620,6 +14029,14 @@
                 : (v === 'prog') ? rwProgHtml(rows, _rw.claimsSrc)
                     : rwClaimsHtml(rows);
             if (body.innerHTML !== html) body.innerHTML = html;
+            // خانەکانی کورتە — تەنها لە دیمەنی پێشکەوتندا، و
+            // هەمان پارێزەری بەراورد (ئەگەرنا هەر نوێکردنەوەیەک
+            // چوار خانەکە لە نوێوە دروست دەکات).
+            const sum = document.getElementById('rwp-sum');
+            if (sum) {
+                const sHtml = (v === 'prog' && rows && rows.length) ? rwProgSummary(rows) : '';
+                if (sum.innerHTML !== sHtml) sum.innerHTML = sHtml;
+            }
         }
 
         async function rwOpenClaimsList(source, id) {
@@ -13675,6 +14092,13 @@
             try {
                 await Promise.all(jobs);
                 if (still()) rwClaimsPaint();
+                // 🛍️ نەیمپاڵێتی ئەوانی تر — یەک داواکاریی زیادە،
+                //    **دوای** یەکەم نەخشاندن بۆ ئەوەی لیستەکە
+                //    چاوەڕێی نەکات. ئەگەر شتێکی نوێ هاتبێت،
+                //    دووبارە دەنەخشێنرێت (بەراورد پێش نووسین
+                //    وا دەکات نەخشاندنێکی بێهوودە نەبێت).
+                const codes = ((_rw.prog || {})[key] || []).map(x => x.user_code);
+                if (codes.length && await cosEnrich(codes) && still()) rwClaimsPaint();
             } catch (e) {
                 console.error('reward lists:', e);
                 // کاشی هەبوو؟ ئەوا پیشانی بدە — سڕینەوەی کۆن ناڕەوایە
@@ -14096,6 +14520,26 @@
                     sub: 'پێشاندان', cos: cos, cosImg: img
                 })
                 + '</div>';
+
+            // ⭐ **نەیمپاڵێت لە ڕیزی لیستدا دەردەکەوێت، نەک لەسەر
+            //    کارتەکە** — بۆیە پێشاندانەکەش دەبێت ڕیزێکی
+            //    ڕاستەقینە بێت (هەمان پۆلەکانی تابلۆی پلەکان).
+            if (e.kind === 'plate') {
+                h += '<div class="cos-prev-rows">'
+                    + people.map((x, i) => '<div class="sx-rrow">'
+                        + '<span class="sx-rn">' + fmtNum(i + 1) + '</span>'
+                        + avatarHtml(x.avatar, x.name, 30, x.code, { noTap: true })
+                        + '<div class="sx-rmid"><b class="has-plate">'
+                        + '<span class="cos-plate cos-rowplate' + (img ? ' cos-img' : '')
+                        + '" data-cos="' + rwEscAttr(id) + '"'
+                        + (img ? ' style="--cos-img:url(&quot;' + histEsc(img) + '&quot;);"' : '')
+                        + '></span>'
+                        + '<span class="cos-nm">' + rwEsc(String(x.name).split(' ')[0]) + '</span>'
+                        + '</b></div>'
+                        + '<b class="sx-rval" dir="rtl">' + fmtNum((3 - i) * 130) + ' خاڵ</b>'
+                        + '</div>').join('')
+                    + '</div>';
+            }
 
             // ڕیزی ئاڤاتارەکان — تەنها بۆ ڕازاندنەوە مانای هەیە
             if (e.kind === 'deco' && people.length > 1) {
@@ -15678,6 +16122,34 @@
         //    ڕێکخستنەکان. ئەگەر دووبارە بنووسرێتەوە،
         //    پێشبینینەکە بێدەنگ لە ڕاستییەکە جیا دەبێتەوە.
         // ============================================================
+        // 🛍️ چینی ئێفێکت — یەک دروستکەر بۆ هەردوو خانەخوێ
+        //    (سەرەی کارت لە پێشاندانەکاندا، تەواوی کارت لە
+        //    پڕۆفایلدا). ⚠️ `<i>` پارچە جوڵاوەکەیە؛ بەبێ ئەو
+        //    هیچ ناجوڵێت.
+        function cosFxHtml(id, urlOverride) {
+            if (!id) return '';
+            const a = cosAttrs(id, urlOverride || '');
+            return '<span class="cos-fx' + a.cls + '"' + a.attr
+                + (a.style ? ' style="' + a.style + '"' : '') + '><i></i></span>';
+        }
+
+        // ⭐ ئێفێکت لەسەر **تەواوی** کارتی پڕۆفایل، نەک تەنها
+        //    کەڤەرەکە. (خاوەن ٢٠٢٦-٠٩-٠٦)
+        //    ⚠️ چینەکە دەبێت **خوشکی** `#mcard-body` بێت، نەک
+        //       منداڵی — ئەگەرنا لەگەڵ ناوەڕۆکەکەدا دەخزێت و
+        //       لە چوارچێوەکە دەردەچێت.
+        function mcardApplyFx(cos, cosImg) {
+            const card = document.querySelector('#member-card-modal .modal-content.is-mcard');
+            if (!card) return;
+            const old = card.querySelector(':scope > .cos-fx');
+            const html = cosFxHtml(cos && cos.effect, cos && cos.effect ? (cosImg || '') : '');
+            // بەراورد پێش نووسین — ئەگەرنا هەر نوێکردنەوەیەک
+            // ئەنیمەیشنەکە لە سەرەتاوە دەست پێدەکاتەوە
+            if (old && old.outerHTML === html) return;
+            if (old) old.remove();
+            if (html) card.insertAdjacentHTML('afterbegin', html);
+        }
+
         function mcardHeadHtml(c) {
             c = c || {};
             const tone = c.color || c.tone || 'var(--primary)';
@@ -15718,12 +16190,11 @@
             const cosU = c.cosImg || '';
             // ⚠️ لە پێشبینینی ڕێکخستنەکاندا نا — ئەوێ کەڤەر و وێنە
             //    دەگۆڕدرێن و چینێکی زیادە ڕوونی ناکاتەوە.
-            const fxA = cosAttrs(cos.effect, cos.effect ? cosU : '');
-            const fx = (!c.edit && cos.effect)
-                ? '<span class="cos-fx' + fxA.cls + '"' + fxA.attr
-                  + (fxA.style ? ' style="' + fxA.style + '"' : '') + '><i></i></span>'
-                : '';
-            const plA = cosAttrs(cos.plate, cos.plate ? cosU : '');
+            // ⚠️ `c.noFx` — خانەخوێیەک کە خۆی ئێفێکتەکە لەسەر
+            //    **تەواوی کارتەکە** دادەنێت (کارتی پڕۆفایل).
+            //    پێشاندانەکانی کۆگا و ڕێکخستنەکان تەنها ئەم
+            //    سەرەیەن، بۆیە لەوانەدا لێرە دەمێنێتەوە.
+            const fx = (!c.edit && !c.noFx) ? cosFxHtml(cos.effect, cosU) : '';
             return '<div class="mcard-stick">'
                 + '<div class="mcard-top" style="--tone:' + histEsc(tone) + ';">'
                 + bg + fx
@@ -15736,14 +16207,11 @@
                 + '</div></div>'
                 + '<div class="mcard-id">'
                 + '<b class="mcard-name">'
-                // ⚠️ تەنها ناوەکە دەچێتە ناو پاڵێتەکەوە — «(تۆ)» و
-                //    ئەوانی تر لە دەرەوە دەمێننەوە، ئەگەرنا پاڵێتەکە
-                //    بە درێژیی هەموو دێڕەکە دەبێت.
-                + (cos.plate
-                    ? '<span class="cos-plate' + plA.cls + '"' + plA.attr
-                      + (plA.style ? ' style="' + plA.style + '"' : '') + '><span>'
-                      + histEsc(c.name || c.code || '—') + '</span></span>'
-                    : histEsc(c.name || c.code || '—'))
+                // ⭐ **بێ نەیمپاڵێت لێرەدا** (خاوەن ٢٠٢٦-٠٩-٠٦):
+                //    «لە بەشی پڕۆفایل ناوەکە دەستکاری نەکرێت و وەک
+                //    خۆی بمێنێتەوە.» پاڵێت تەنها لە لیستەکاندایە —
+                //    تابلۆی پلەکان و لیستی پێشکەوتنی ئاڕپی/چاڵنج.
+                + histEsc(c.name || c.code || '—')
                 + (c.me ? ' <small>(تۆ)</small>' : '') + '</b>'
                 + (c.sub ? '<span class="mcard-sub">' + histEsc(c.sub) + '</span>' : '')
                 + (c.chips ? '<div class="mcard-chips">' + c.chips + '</div>' : '')
@@ -15772,20 +16240,32 @@
               ok: c => permScope('view_orders') === 'all' || isInMyTeam(c) },
             { k: 'wallet',  i: 'bx-wallet',         t: 'جزدان',
               ok: c => canViewWallet(c) },
+            // ⚠️ **بۆ ئەندام نا.** ڕێژەی قازانجی جێگیر تەنها بۆ
+            //    بەڕێوەبەر/سەرپەرشت/ڕاوێژکارە؛ قازانجی ئەندام بۆ
+            //    هەر ئۆردەرێک حیساب دەکرێت. پێوانەی بەرهەم
+            //    (٢٠٢٦-٠٩-٠٦): ٠ لە ٢٥٤ ئەندام ڕێژەیان هەیە،
+            //    بەرامبەر ١٧ لە ٢١ سەرپەرشت و ١٣ لە ١٩ بەڕێوەبەر.
+            //    بۆیە ئەو دوگمەیە دەرگایەکی بەتاڵی دەکردەوە.
+            //    (خاوەن: «بۆ ئەندام ئەمە لابدا»)
             { k: 'profit',  i: 'bx-trending-up',    t: 'قازانج',
-              ok: c => canManageUser(c, 'set_profit_rates') },
+              ok: (c, role) => role !== 'ئەندام' && canManageUser(c, 'set_profit_rates') },
             { k: 'key',     i: 'bx-id-card',        t: 'کلیل',
               ok: c => can('manage_employees') && !isSelfAdminLocked(c) },
             { k: 'login',   i: 'bx-log-in-circle',  t: 'چوونەژوورەوە',
               ok: c => can('login_as') && !isSelfAdminLocked(c) }
         ];
 
-        function mcardActsHtml(code, name) {
+        // ⚠️ ڕۆڵەکە **بە پارامەتەر** دەنێردرێت، نەک بە
+        //    `getEmployeeByCode` — بینەرێک کە تۆمارەکانی نییە
+        //    ڕۆڵێکی بەتاڵ دەبینێت و پشکنینەکە هەڵە دەکات.
+        //    ([[landmines]] ٨١)
+        function mcardActsHtml(code, name, role) {
             const c = String(code || '').trim();
             if (!c || !currentUser) return '';
             // خودی کەسەکە پێویستی بەم دوگمانە نییە
             if (String(currentUser.code || '').trim().toLowerCase() === c.toLowerCase()) return '';
-            const on = MCARD_ACTS.filter(a => { try { return a.ok(c); } catch (e) { return false; } });
+            const rl = normalizeRole(role || '') || 'ئەندام';
+            const on = MCARD_ACTS.filter(a => { try { return a.ok(c, rl); } catch (e) { return false; } });
             if (!on.length) return '';
             return '<div class="mcard-acts">' + on.map(a =>
                 '<button type="button" class="mcard-act" data-k="' + a.k + '"'
@@ -15816,8 +16296,11 @@
             const code = String((_mcard && _mcard.code) || '').trim();
             if (!code) return;
             const def = MCARD_ACTS.find(a => a.k === kind);
-            // دەرگای دووەم — شاردنەوەی دوگمە پارێزەر نییە
-            if (!def || !def.ok(code)) { showToast('دەسەڵاتت نییە بۆ ئەم بەشە!', 'error'); return; }
+            // دەرگای دووەم — شاردنەوەی دوگمە پارێزەر نییە.
+            // ⚠️ **هەمان ڕۆڵ** بەکاردێت کە دوگمەکەی پێ دروستکرا،
+            //    ئەگەرنا دوو سەرچاوەی جیاواز دەبن.
+            const rl = normalizeRole((_mcard && _mcard.role) || '') || 'ئەندام';
+            if (!def || !def.ok(code, rl)) { showToast('دەسەڵاتت نییە بۆ ئەم بەشە!', 'error'); return; }
 
             const nm = (getEmployeeByCode(code) || {}).full_name || code;
             closeModal(null, 'member-card-modal');
@@ -15854,6 +16337,10 @@
         function renderMemberCard() {
             const box = document.getElementById('mcard-body');
             if (!box) return;
+            // 🛍️ ئێفێکتەکە لەسەر کارتەکەیە، نەک لەناو جەستەکە —
+            //    بۆیە پێش نووسینی جەستەکە دادەنرێت و بە سکڕۆڵ
+            //    ناجوڵێت.
+            try { mcardApplyFx(cosOf((_mcard.seed || {}).code, _mcard.emp), ''); } catch (e) { }
 
             const s = _mcard.seed || {};
             const e = _mcard.emp;
@@ -15878,6 +16365,9 @@
             const disp = rpDisplayOf(s.code, who.name || s.name || '', s.avatar || '');
             const name = String(disp.name || '').trim();
             const role = normalizeRole((e && e.role) || who.role || s.role || '') || 'ئەندام';
+            // دوگمە خێراکان و گۆڕەرەکەیان هەردووکیان ئەم ڕۆڵە
+            // بەکاردەهێنن — یەک سەرچاوە.
+            _mcard.role = role;
             const avatar = disp.avatar;
             // ⭐ ناسنامەی ڕاستەقینە شاراوەیە بۆ ئەوانەی مافیان نییە —
             //    ناوی تەواو، کۆد، و سلسیلە. بڕوانە `canSeeRealIdentity`.
@@ -15911,7 +16401,7 @@
             // ---- سەرەوە + ناسنامە — هەمان کۆمپۆنێنتی
             //      پێشبینینی ڕێکخستنەکان ----
             h += mcardHeadHtml({
-                code: s.code, name: name, sub: sub, me: me,
+                code: s.code, name: name, sub: sub, me: me, noFx: true,
                 avatar: avatar, banner: rp.banner, color: rp.color,
                 tone: tone, bio: rp.bio,
                 lvn: hasStats ? lv.n : 0,
@@ -15922,7 +16412,7 @@
                     // کۆد ناسنامەیە — لەگەڵ ناوی ڕاستەقینەدا دەشاردرێتەوە
                     + (masked ? '' : '<span class="mcard-code"><i class="bx bx-id-card"></i>'
                         + '<bdi dir="ltr">' + histEsc(s.code || '') + '</bdi></span>'),
-                acts: mcardActsHtml(s.code, name)
+                acts: mcardActsHtml(s.code, name, role)
             });
 
             // ---- ژمارەکان ----
@@ -17091,7 +17581,53 @@
                 rp = e && e.rank_prefs;
             }
             const n = rpNorm(rp);
-            return { deco: n.deco, plate: n.plate, effect: n.effect };
+            if (n.deco || n.plate || n.effect) {
+                return { deco: n.deco, plate: n.plate, effect: n.effect };
+            }
+            // ⭐ **پاشەکشە بۆ کاشی پلەکان.** `getEmployeeByCode` تەنها
+            //    ئەو تۆمارانە دەناسێت کە بارکراون؛ پاشا هەموو ٣٠٩ی
+            //    هەیە، ئەندام نا. بەبێ ئەمە جوانکاریی ئەوانی تر
+            //    تەنها لای پاشا دەردەکەوت. ([[landmines]] ٨١)
+            const v = k && _rpCache[k];
+            if (v) return { deco: v.deco || '', plate: v.plate || '', effect: v.effect || '' };
+            return { deco: '', plate: '', effect: '' };
+        }
+
+        // 🛍️ جوانکاریی ئەوانی تر — یەک داواکاری بۆ هەموو ئەو
+        //    کۆدانەی هێشتا لە کاشدا نین. دوای گەڕانەوە، بانگکەر
+        //    خۆی دووبارە دەنەخشێنێت.
+        async function cosEnrich(codes) {
+            const need = [];
+            (codes || []).forEach(c => {
+                const t = String(c || '').trim();
+                if (t && !(t.toLowerCase() in _rpCache) && need.indexOf(t) === -1) need.push(t);
+            });
+            if (!need.length) return false;
+            try {
+                const { data } = await supabase.from('employees')
+                    .select('code, rank_prefs, full_name, receipt_name, avatar')
+                    .in('code', need);
+                (data || []).forEach(rpCacheSet);
+            } catch (e) { console.warn('cosEnrich:', e); return false; }
+            // ئەوانەی نەگەڕانەوە دووبارە داوا ناکرێن
+            need.forEach(c => {
+                const kk = c.toLowerCase();
+                if (!(kk in _rpCache)) _rpCache[kk] = { name: '', avatar: '' };
+            });
+            return true;
+        }
+
+        // 🛍️ نەیمپاڵێت وەک **شریتی پشتی ناو** (شێوازی دیسکۆرد).
+        //    هەمان `.cos-plate`ی کارتی پڕۆفایل، بەڵام وەک چینێکی
+        //    پاشبنەما لە پشتی ناوەکەوە — بۆیە لە ڕیزێکی تەنگدا
+        //    شوێنی زیادە ناگرێت.
+        function cosPlateBgHtml(code, emp) {
+            let cos;
+            try { cos = cosOf(code, emp); } catch (e) { return ''; }
+            if (!cos || !cos.plate) return '';
+            const a = cosAttrs(cos.plate, '');
+            return '<span class="cos-plate cos-rowplate' + a.cls + '"' + a.attr
+                + (a.style ? ' style="' + a.style + '"' : '') + '></span>';
         }
 
         function rankPrefsOf() { return rpNorm(currentUser && currentUser.rank_prefs); }
@@ -17531,7 +18067,11 @@
             const rp = rpNorm(emp && emp.rank_prefs);
             _rpCache[k] = {
                 name: rpNameOf(emp, emp.code), avatar: rpAvatarOf(emp),
-                banner: rp.banner, color: rp.color, bio: rp.bio
+                banner: rp.banner, color: rp.color, bio: rp.bio,
+                // 🛍️ جوانکارییەکان — بەبێ ئەمانە نەیمپاڵێت و
+                //    ڕازاندنەوەی **ئەوانی تر** هەرگیز دەرناکەوێت
+                //    بۆ بینەرێک کە تۆمارەکانی نییە. ([[landmines]] ٨١)
+                deco: rp.deco, plate: rp.plate, effect: rp.effect
             };
         }
 
@@ -17914,8 +18454,14 @@
         function setRankPeriod(k) { setRankPeriodK(k); }
         function setRankScope(k) { if (_rank.scope !== k) { _rank.scope = k; loadRank(true); } }
 
-        function rankLevelChip(pts) {
+        function rankLevelChip(pts, onPlate) {
             const lv = statsLevelOf(pts);
+            // لەسەر نەیمپاڵێتێکی تۆخ ڕەنگی ئاست ناخوێندرێتەوە —
+            // ستایلی ناوخۆیی دەرناچێت و پۆلێکی سپی جێی دەگرێتەوە.
+            if (onPlate) {
+                return '<span class="sx-lvl is-onplate">'
+                    + '<i class="bx bx-star"></i> ' + lv.name + '</span>';
+            }
             return '<span class="sx-lvl" style="color:' + lv.cur.c + '; background:' + lv.cur.c + '14;">'
                 + '<i class="bx bx-star"></i> ' + lv.name + '</span>';
         }
@@ -17944,8 +18490,20 @@
             return '<div class="sx-rrow' + (me ? ' is-me' : '') + (drill ? ' is-tap' : '') + '"' + drill + '>'
                 + '<span class="sx-rn">' + r.rank + '</span>'
                 + (r.name == null ? '<span class="sx-anon"><i class="bx bx-user"></i></span>' : avatarHtml(r.avatar, r.name || '', 30, r.code))
-                + '<div class="sx-rmid"><b>' + rankNameHtml(r)
-                + (me ? ' <small>(تۆ)</small>' : '') + '</b>' + rankLevelChip(r.level_pts) + '</div>'
+                // 🛍️ نەیمپاڵێت — تەنها بۆ ئەوانەی خۆیان نەشاردووەتەوە
+                + (function () {
+                    // ⚠️ پلەی ١·٢·٣ پۆدیۆمی خۆیان هەیە — پاڵێت لەوانەدا
+                    //    دووبارەکارییە. (خاوەن ٢٠٢٦-٠٩-٠٦)
+                    const bg = (r.name == null || Number(r.rank) <= 3)
+                        ? '' : cosPlateBgHtml(r.code);
+                    // ⭐ پاڵێتەکە بەسەر **هەموو** ناوچەی ناوەکەدا
+                    //    (`.sx-rmid` پێشتر `flex: 1`ـە) — شێوازی دیسکۆرد،
+                    //    نەک بازنەیەکی بچووک بە دەوری ناوەکەدا.
+                    return '<div class="sx-rmid' + (bg ? ' has-plate' : '') + '">' + bg
+                        + '<b><span class="cos-nm">' + rankNameHtml(r) + '</span>'
+                        + (me ? ' <small>(تۆ)</small>' : '') + '</b>'
+                        + rankLevelChip(r.level_pts, !!bg) + '</div>';
+                })()
                 + '<b class="sx-rval" dir="rtl">' + rankValueHtml(r.value, _rank.metric) + '</b>'
                 + '</div>';
         }
@@ -22948,6 +23506,9 @@
         function closeModal(event, modalId) {
             if (event && event.target.id !== modalId) return;
             document.getElementById(modalId).classList.remove('show');
+            // ⚠️ ڕوونکردنەوەی «؟» لەسەر `document.body`ـە، نەک لەناو
+            //    مۆداڵەکە — بۆیە داخستنی مۆداڵەکە خۆی نایشارێتەوە.
+            try { hideTip(); } catch (e) { }
             // پۆپ‌ئەپی ئاگاداری بە دوگمەی پاشەوە داخرا (`navBack`) —
             // ئەوەش «بینیم»ە، ڕێک وەک «تێگەیشتم». بەبێ ئەمە
             // گەڕانەوە ئامارەکە بێدەنگانە ون دەکات.
@@ -30872,9 +31433,13 @@
 
                 let distImgs = String(o.image_url || '').split(',').map(u => u.trim()).filter(u => u.startsWith('http'));
                 window.__galleryDistImages = distImgs;
+                // ⚠️ **بێ ناونیشان** (خاوەن ٢٠٢٦-٠٩-٠٦): وێنەکان خۆیان
+                //    دەڵێن چین، بۆیە دێڕی ناونیشانەکە ٣٥px بۆشاییی
+                //    بێهوودە بوو. ژمارەکەش لە ناونیشانی «کاڵاکان»دا
+                //    نییە — تەنها وێنەکان دەژمێردران، و ئەوە بە
+                //    سەیرکردن دیارە.
                 let distImgsHtml = distImgs.length
-                    ? `<div class="dinfo-title"><i class='bx bx-images'></i> وێنەکان (${distImgs.length})</div>
-                       <div class="dinfo-imgs">${distImgs.map((u, i) =>
+                    ? `<div class="dinfo-imgs">${distImgs.map((u, i) =>
                         `<img src="${u}" loading="lazy" onclick="openImageGallery(window.__galleryDistImages, ${i})">`).join('')}</div>`
                     : '';
 
@@ -30946,8 +31511,17 @@
                         : 'کۆی گشتی وەرگیراو لە کڕیار';
                 const distTotalColor = distData.grandTotal < 0 ? '#dc2626' : '#10b981';
 
+                // ⭐ **دەقەکە لە `data-tip`ـەوە دێت، نەک لەناو `onclick`.**
+                //    بەم شێوەیە `histEsc` کارەکەی دەکات و کۆتە و
+                //    نیشانەکان ناتوانن سیفەتەکە بشکێنن.
+                let managerBonusTip = distData.manager.bonus > 0
+                    ? `قازانجی دیاریکراو ${distData.manager.base.toLocaleString()}`
+                    + ` + پاداشتی بەڕێوەبەری تاک ${distData.manager.bonus.toLocaleString()}`
+                    + ` (${MANAGER_SOLO_BONUS.toLocaleString()} × ${distData.manager.itemsCount} دانە)`
+                    : '';
+
                 let b = document.getElementById('profit-modal-body');
-                b.innerHTML = `<div style="background:#f8fafc; padding:15px; border-radius:12px; border:1px dashed #cbd5e1; margin-bottom:15px; text-align:center;"><span style="font-size:12px; color:#64748b;">${distTotalLabel}</span><h2 style="margin:5px 0 0 0; color:${distTotalColor};" dir="ltr">${exMoney(Math.abs(distData.grandTotal))} د.ع</h2>${distPayHtml}</div>
+                b.innerHTML = `<div style="background:#f8fafc; padding:15px; border-radius:12px; border:1px dashed #cbd5e1; margin-bottom:9px; text-align:center;"><span style="font-size:12px; color:#64748b;">${distTotalLabel}</span><h2 style="margin:5px 0 0 0; color:${distTotalColor};" dir="ltr">${exMoney(Math.abs(distData.grandTotal))} د.ع</h2>${distPayHtml}</div>
                 ${exDistHtml}
                 ${distInfoHtml}
                 <div class="dist-input-row">
@@ -30968,11 +31542,7 @@
                 </div>
                 <div class="dist-input-row" style="${showManagerStyle}">
                     <label><i class='bx bx-user'></i> بەڕێوەبەر (${distData.manager.name})${distData.manager.bonus > 0
-                        ? `<span class="dist-bonus" title="ئەم ئەندامە تەنها بەڕێوەبەری هەیە — ${MANAGER_SOLO_BONUS.toLocaleString()} × ${distData.manager.itemsCount} دانە">
-                             <i class='bx bx-gift'></i> +${distData.manager.bonus.toLocaleString()}
-                           </span>` : ''}</label>
-                    ${distData.manager.bonus > 0
-                        ? `<div class="dist-bonus-note">قازانجی دیاریکراو ${distData.manager.base.toLocaleString()} + پاداشتی بەڕێوەبەری تاک ${distData.manager.bonus.toLocaleString()} (${MANAGER_SOLO_BONUS.toLocaleString()} × ${distData.manager.itemsCount} دانە)</div>` : ''}
+                        ? `<button type="button" class="perm-q is-bonus" tabindex="-1" data-tip="${histEsc(managerBonusTip)}" onclick="showTip(event,this,this.dataset.tip,'distbonus')">؟</button>` : ''}</label>
                     <div class="dist-input-group">
                         <button type="button" class="qty-btn plus-btn" onclick="adjustDistValue('dist-manager', 500)" ${!distData.manager.code ? 'disabled' : ''}>
                             <svg class="qty-icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 18 18">
@@ -31051,7 +31621,7 @@
                         </button>
                     </div>
                 </div>
-                <hr style="border:0; border-top:2px dashed #e2e8f0; margin:15px 0;"><div style="display:flex; justify-content:space-between; align-items:center;"><strong style="color:var(--primary); font-size:16px;">ئەوەی دەمێنێتەوە (پاشا):</strong><strong id="dist-king" style="font-size:20px; color:#1e293b; background:#f1f5f9; padding:5px 15px; border-radius:8px;" dir="ltr">0 د.ع</strong></div><button class="btn" style="background:#10b981; margin-top:20px;" onclick="confirmDistribution()"><i class='bx bx-check-circle'></i> تەسدیقکردن و تۆمارکردن</button>`;
+                <hr style="border:0; border-top:2px dashed #e2e8f0; margin:9px 0;"><div style="display:flex; justify-content:space-between; align-items:center;"><strong style="color:var(--primary); font-size:16px;">ئەوەی دەمێنێتەوە (پاشا):</strong><strong id="dist-king" style="font-size:20px; color:#1e293b; background:#f1f5f9; padding:5px 15px; border-radius:8px;" dir="ltr">0 د.ع</strong></div><button class="btn" style="background:#10b981; margin-top:12px;" onclick="confirmDistribution()"><i class='bx bx-check-circle'></i> تەسدیقکردن و تۆمارکردن</button>`;
 
                 document.getElementById('profit-distribution-modal').classList.add('show'); calcKingProfit();
                 applyProfitFieldPerms(); // جێبەجێکردنی یاسای زیاد/کەم/هەردوو بۆ هەر خانەیەک
