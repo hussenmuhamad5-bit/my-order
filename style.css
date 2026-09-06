@@ -18354,9 +18354,20 @@ body.sx-wide {
 }
 
 /* ---- ناسنامە ---- */
+/* ⚠️ پێوانەکراو ٢٠٢٦-٠٩-٠٦: بە ٥٢px، خوارەوەی نیشانەی ئاست
+   ڕێک لەسەر سەری ناوەکە دەکەوت — **بۆشایی سفر** (نیشانە
+   ١٧٨..٢٠٠ · ناو ٢٠٠..٢٢٤)، بۆیە بۆردەری سپی و تیشکەکە
+   ناوەکەیان دەشێواند. */
 .mcard-id {
-  padding: 52px 16px 0;
+  padding: 60px 16px 0;
   text-align: center;
+}
+
+/* ڕازاندنەوەکان لە دەرەوەی وێنەکە دەردەچن — گەورەترینیان
+   «خولگە»یە بە `inset: -22%` = ١٩px لەسەر وێنەی ٨٨px. بۆیە
+   ناوەکە ١٢px زیاتر دادەبەزێت، تەنها کاتێک ڕازاندنەوە هەیە. */
+.mcard-id.has-deco {
+  padding-top: 72px;
 }
 
 .mcard-name {
@@ -21361,6 +21372,86 @@ body.sx-wide {
   background: var(--cos-img) center/cover no-repeat;
   filter: none;
   animation: none;
+}
+
+/* «(ئارەزوومەندانە)» لە تەنیشت ناونیشانی وێنەی وەستاو */
+.cos-opt {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-soft, #94a3b8);
+}
+
+/* ============================================================
+   ⏸️ ئەنیمەیشن تەنها لە کاتی کردنەوەی پڕۆفایلدا — وەک دیسکۆرد
+   ------------------------------------------------------------
+   خاوەن ٢٠٢٦-٠٩-٠٦: «تەنها کاتێک پرۆفایلی کەسەکە دەکرێتەوە،
+   ئەوکات ئەنیمەیشنەکە دەست پێبکات … لە کاتی تر وەستاو بێت …
+   قورسایی زۆر لەسەر ویبسایتەکە دروست نەکات و لاگ نەکات.»
+
+   ⭐ بنەڕەت **وەستاوە**. `animation-play-state: paused` فرەیمی
+   ئێستا دەهێڵێتەوە (شێوەکە وەک خۆی دەبینرێت) بەڵام براوزەر
+   هیچ فرەیمێکی نوێ ناژمێرێت — بۆیە لیستێکی ٥٠ ڕیزی سفر
+   ئەنیمەیشنی چالاکی هەیە.
+
+   ⚠️ **شوێن و توندی هەردووکیان گرنگن.** ڕێسای هەر ڕازاندنەوەیەک
+   کورتەنووسینی `animation:`ـە، و کورتەنووسین
+   `animation-play-state` **ڕیسێت دەکاتەوە بۆ `running`**. بۆیە
+   ئەم بلۆکە:
+     • `[data-cos]`ی تێدایە تا توندییەکەی یەکسان بێت (٠,٢,١)
+     • **دوای هەموو** ڕێساکانی ڕازاندنەوە دێت
+   بەبێ ئەم دووانە، پێوانە دەیوت `states=running` لە کاتێکدا
+   کارتەکە داخرابوو.
+
+   ⚠️ **`animation: none` بەکارمەهێنە** — ئەوە شێوەکە دەگۆڕێت
+   (`cosPulse` بە `opacity: .55` دەست پێدەکات، بۆیە ڕازاندنەوەکە
+   کاڵ دەردەکەوێت لەبری ئەوەی وەستاو بێت).
+   ============================================================ */
+.cos-av[data-cos]::before,
+.cos-av[data-cos]::after,
+.cos-plate[data-cos]::after,
+.cos-fx[data-cos] i {
+  animation-play-state: paused;
+}
+
+/* سێ شوێن دەجوڵێن: کارتی پڕۆفایلی کراوە، کۆگا (دەبێت ئەوەی
+   دەیکڕیت ببینیت)، و پێشاندانی ڕێکخستنەکان (هەڵبژاردن). */
+#member-card-modal.show .cos-av[data-cos]::before,
+#member-card-modal.show .cos-av[data-cos]::after,
+#member-card-modal.show .cos-plate[data-cos]::after,
+#member-card-modal.show .cos-fx[data-cos] i,
+#rw-shop-pane .cos-av[data-cos]::before,
+#rw-shop-pane .cos-av[data-cos]::after,
+#rw-shop-pane .cos-plate[data-cos]::after,
+#rw-shop-pane .cos-fx[data-cos] i,
+#rank-pref-body .cos-av[data-cos]::before,
+#rank-pref-body .cos-av[data-cos]::after,
+#rank-pref-body .cos-plate[data-cos]::after,
+#rank-pref-body .cos-fx[data-cos] i {
+  animation-play-state: running;
+}
+
+/* ⚠️ وێنەی ئەپلۆدکراو (GIF/APNG) بە `animation-play-state`
+   ناوەستێت — ئەوە تەنها ئەنیمەیشنی CSS ڕادەگرێت، نەک فرەیمەکانی
+   خودی وێنەکە. بۆیە دوو فایل (db/074): بنەڕەت وەشانی وەستاو،
+   و لە هەمان سێ شوێنەکەدا وەشانی جوڵاو.
+   ⭐ `var(--cos-img-anim, var(--cos-img))` — ئەگەر دانەیەک تەنها
+   یەک وێنەی هەبێت، هەمان وێنە بەکاردێت (ڕەفتاری پێشوو). */
+#member-card-modal.show .cos-av.cos-img::after,
+#rw-shop-pane .cos-av.cos-img::after,
+#rank-pref-body .cos-av.cos-img::after {
+  background-image: var(--cos-img-anim, var(--cos-img));
+}
+
+#member-card-modal.show .cos-plate.cos-img,
+#rw-shop-pane .cos-plate.cos-img,
+#rank-pref-body .cos-plate.cos-img {
+  background-image: var(--cos-img-anim, var(--cos-img));
+}
+
+#member-card-modal.show .cos-fx.cos-img i,
+#rw-shop-pane .cos-fx.cos-img i,
+#rank-pref-body .cos-fx.cos-img i {
+  background-image: var(--cos-img-anim, var(--cos-img));
 }
 
 /* ============================================================
