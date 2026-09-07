@@ -20946,6 +20946,50 @@ body.sx-wide {
   height: 76px;
 }
 .shop-prev-av { width: 52px; height: 52px; border-radius: 50%; background: #e2e8f0; }
+/* 🛍️ پەنجەدانان → لەسەر پڕۆفایلی خۆت ببینە (خاوەن ٢٠٢٦-٠٩-٠٧).
+   ⚠️ `.shop-prev` پێچەری `.shop-try`ـە، بۆیە `relative`ی دەوێت —
+      بەبێ ئەو، نیشانەکە دەچێتە گۆشەی کارتەکە. */
+.shop-prev.is-try {
+  position: relative;
+  cursor: pointer;
+  border-radius: var(--r-md, 10px);
+  transition: transform .16s ease, background-color .16s ease;
+}
+.shop-prev.is-try:active { transform: scale(.97); }
+
+/* نیشانەیەکی بچووک — دەق نا. کارتەکە پێشتر ناو و پلە و
+   دوگمەی خۆی هەیە؛ دێڕێکی زیادە دەیخنکێنێت. */
+.shop-try {
+  position: absolute;
+  inset-block-start: 2px;
+  inset-inline-end: 2px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: rgba(15, 23, 42, .55);
+  color: #fff;
+  font-size: 12px;
+  pointer-events: none;
+  z-index: 3;
+}
+
+/* چیپی «پێشاندان» لەسەر کارتەکە — بۆ ئەوەی وا نەزانرێت دانراوە */
+.mcard-try {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, .08);
+  color: var(--text-2, #64748b);
+  font-size: var(--fs-xs, 12px);
+  font-weight: var(--font-bold, 700);
+}
+.mcard-try i { font-size: 14px; }
+
 .shop-prev-plate { max-width: 100%; font-size: var(--fs-xs, 12px); font-weight: var(--font-bold, 700); }
 /* ئێفێکت پێویستی بە پێچەرێکی خۆی هەیە — `.cos-fx` ئەبسۆلوتە */
 .shop-prev-fx {
@@ -21374,11 +21418,85 @@ body.sx-wide {
   animation: none;
 }
 
-/* «(ئارەزوومەندانە)» لە تەنیشت ناونیشانی وێنەی وەستاو */
+/* ⭐ ئێفێکتی وێنەیی «یەک جار» — وەک دیسکۆرد: لە کاتی کردنەوەی
+   پڕۆفایلدا لێدەدرێت، پاشان دەڕەوێتەوە. (خاوەن ٢٠٢٦-٠٩-٠٧)
+
+   ⚠️ خودی فایلەکە یەک جار لێیدەدات (`num_plays = 1` لە APNGدا)،
+   بۆیە ئێمە تەنها فرەیمی کۆتایی لادەبەین — ئەگەرنا وێنەیەکی
+   وەستاو بۆ هەمیشە لەسەر کارتەکە دەمێنێتەوە.
+
+   ⚠️ تەنها `opacity` ئەنیمەیت دەکرێت — هەر خاسیەتێکی تر لە هەر
+   فرەیمێکدا لەیئاوتی نوێ دەخوازێت. */
+.cos-fx.is-once {
+  transition: opacity .55s ease-out;
+  opacity: 1;
+}
+
+.cos-fx.is-once.is-gone {
+  opacity: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cos-fx.is-once { transition: none; }
+}
+
+/* «(ئارەزوومەندانە)» و قەبارەی پێشنیارکراو لە تەنیشت ناونیشان */
 .cos-opt {
   font-size: 11px;
   font-weight: 600;
   color: var(--text-soft, #94a3b8);
+}
+
+/* ⭐ ڕێنماییی هەر جۆرێک بە سێ دێڕی جیاوازەوە: کوێ · چی · جووڵە.
+   هەرسێ جۆرەکە دەقی خۆیان هەیە — نەک یەک نۆتەی دووبارە. */
+.cos-spec {
+  margin: 6px 0 14px;
+  padding: 9px 11px;
+  list-style: none;
+  border-radius: 10px;
+  background: #f8fafc;
+  border: 1px solid var(--line, #e6e8ec);
+  font-size: var(--fs-xs, 12px);
+  line-height: 1.6;
+  color: var(--text-soft, #64748b);
+}
+
+.cos-spec li {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.cos-spec li + li {
+  margin-top: 5px;
+}
+
+.cos-spec i {
+  flex-shrink: 0;
+  margin-top: 3px;
+  font-size: 13px;
+  color: var(--primary, #2563eb);
+}
+
+.cos-spec b {
+  color: var(--text-main, #1f2937);
+  font-weight: 800;
+}
+
+/* قەبارەی ڕاستەقینەی وێنەی هەڵبژێردراو — سەوز ئەگەر ڕێژەکەی
+   ڕێک بێت، کەهرەبایی ئەگەر دوور بێت (ئاگادارکردنەوە، نەک ڕێگرتن) */
+.cos-dim {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin: 6px 0 0;
+  font-size: var(--fs-xs, 12px);
+  font-weight: 700;
+  color: #047857;
+}
+
+.cos-dim.is-off {
+  color: #b45309;
 }
 
 /* ============================================================
@@ -21510,18 +21628,36 @@ body.sx-wide {
 }
 /* ڕاگیراو — دەبێت بە یەک سەیرکردن جیا بکرێتەوە */
 .cosadm-row.is-off { opacity: 0.55; border-style: dashed; }
+/* ⚠️ **بێ `overflow: hidden`.** ڕازاندنەوە لە دەرەوەی وێنەکە
+   دەردەچێت (تا ٢٢٪، و تاج ٣٦٪ لە سەرەوە)؛ بۆکسێکی بڕاوە
+   قەراغەکانی دەبڕی و ڕیزەکە شێواو دەردەکەوت.
+   ⭐ قەبارەی وێنەکە بە **پارامەتەر** دادەنرێت (`cosPreviewHtml(it, 34)`)
+   نەک بە CSS — `avatarHtml` بە ستایلی ناوخۆیی دایدەنێت و هیچ
+   ڕێسایەک بەسەریدا زاڵ نابێت. (خاوەن ٢٠٢٦-٠٩-٠٧) */
 .cosadm-prev {
-  flex: 0 0 54px;
-  height: 46px;
+  flex: 0 0 64px;
+  height: 56px;
   display: flex;
   align-items: center;
   justify-content: center;
-  overflow: hidden;
+  overflow: visible;
 }
-/* ⚠️ پێشاندانەکان بۆ کارتی گەورە دروستکراون — لێرەدا بچووک دەکرێنەوە */
-.cosadm-prev .shop-prev-av { width: 36px; height: 36px; }
-.cosadm-prev .shop-prev-plate { font-size: 9px; padding: 2px 7px; max-width: 54px; }
-.cosadm-prev .shop-prev-fx { width: 50px; height: 40px; }
+
+/* نەیمپاڵێت لە ڕیزێکی تەنگدا: شریتێکی بچووک — دەقەکە لەم
+   قەبارەیەدا ناخوێندرێتەوە، بۆیە خودی ڕەنگەکە دەبێتە نیشانەکە */
+.cosadm-prev .shop-prev-plate {
+  width: 56px;
+  height: 22px;
+  max-width: 56px;
+  padding: 0;
+  border-radius: 7px;
+  font-size: 0;
+}
+
+.cosadm-prev .shop-prev-fx {
+  width: 52px;
+  height: 44px;
+}
 .cosadm-id { flex: 1; min-width: 0; }
 .cosadm-id b {
   display: block;
