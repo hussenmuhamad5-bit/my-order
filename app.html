@@ -7278,17 +7278,24 @@
             let tap = (code && !noTap) ? ` data-mprof="${histEsc(String(code))}"`
                 + ` data-mpn="${histEsc(String(name || ''))}"` : "";
             // 🛍️ ڕازاندنەوەی ئاڤاتار (db/066) — لێرەدا، چونکە ئەمە
-            //    **تاکە** دروستکەری وێنەی ئەندامە (٢٢ بانگ). واتا
-            //    ئۆردەر و کۆمێنت و تابلۆی پلەکان و کارتی پڕۆفایل
-            //    هەموویان بە یەک گۆڕانکاری دەیبینن.
-            // ⚠️ تەنها ئەو شوێنانەی `code` دەنێرن — ئەوانەی نایاننێرن
-            //    ناوی کەسەکەیان نییە، بۆیە نازانرێت هی کێیە.
+            //    **تاکە** دروستکەری وێنەی ئەندامە (٢٥ بانگ).
+            // ⭐ **بە داواکاری، نەک بنەڕەت** (خاوەن ٢٠٢٦-٠٩-٠٩):
+            //    «ئیفێکت و ئاڤاتار و فرەیم تەنها لە بەشی پلەکان و
+            //    چاڵنج و ئاڕپی دەربکەوێت… لە بەشەکانی تر بە هیچ
+            //    شێوەیەک دەرنەکەوێ بۆ ئەوەی لۆدێکی زۆر لەسەر
+            //    سایتەکە دروست نەکات.»
+            //    پێشتر هەر بانگێک کە `code`ی دەنارد ڕازاندنەوەی
+            //    وەردەگرت — واتا داشبۆرد و کۆمێنت و کارتی ئۆردەر و
+            //    لیستەکانی بەڕێوەبردنیش. ئێستا `opts.cos`ی دەوێت.
+            // ⚠️ ئەمە تەنها شاردنەوەی ڕووکار نییە: بەبێ
+            //    `--cos-img` هیچ فایلێک **داوا ناکرێت**.
             let cosA = "", cosS = "", cosC = "";
             try {
-                // ⚠️ `opts.deco` سەپاندنە (پێشاندانی پاشا)؛ ئەگەرنا
-                //    لە `rank_prefs`ی کەسەکەوە دێت.
+                // ⚠️ `opts.deco` سەپاندنە (پێشاندانی پاشا) و خۆی
+                //    مۆڵەتە؛ ئەگەرنا `opts.cos` پێویستە.
                 const dc = (opts && opts.deco !== undefined)
-                    ? opts.deco : (code ? cosOf(code).deco : "");
+                    ? opts.deco
+                    : ((opts && opts.cos && code) ? cosOf(code).deco : "");
                 if (dc) {
                     const a = cosAttrs(dc, (opts && opts.decoImg) || '',
                                        opts && opts.decoView, opts && opts.decoPart);
@@ -14287,15 +14294,20 @@
             //    `user_name === null` واتا ئەو کەسە خۆی لە
             //    تابلۆکاندا شاردووەتەوە — هەمان نیشانەی تابلۆی
             //    پلەکان بەکاردێت، بۆیە هەردوو شوێنەکە یەک دەردەکەون.
-            // ⚠️ `noTap` — ڕازاندنەوەی ئاڤاتار دەردەکەوێت بەڵام
-            //    ڕێگای نوێی گەشتوگوزار دروست ناکات.
+            // ⭐ **پەنجەدانان کارتی پڕۆفایل دەکاتەوە** (خاوەن
+            //    ٢٠٢٦-٠٩-٠٩): «کاتێک ئەندامێک سەیری براوەکان دەکات…
+            //    ئەگەر پەنجەی لە ڕەسمەکەدا، پڕۆفایلی بکرێتەوە و بە
+            //    هەمان شێوە ئێفێکت و شتەکان دەرکەون.»
+            // ⚠️ ڕیزە شاراوەکان وێنەیان نییە، بۆیە کۆدیان
+            //    ناچێتە دەرەوە — نهێنیی تابلۆکە هەر وەک خۆی.
             const anon = (r.user_name == null);
             const who = anon
                 ? '<span class="sx-hidden-name"><i class="bx bx-hide"></i> ئەندامێک</span>'
                 : rwEsc(r.user_name || r.user_code);
             const face = anon
                 ? '<span class="sx-anon"><i class="bx bx-user"></i></span>'
-                : avatarHtml(r.avatar, r.user_name || r.user_code, 34, r.user_code, { noTap: true });
+                : avatarHtml(r.avatar, r.user_name || r.user_code, 34, r.user_code,
+                    { cos: true });
             return '<div class="rwp-row' + (r.claimed ? ' is-won' : '') + '">'
                 + '<div class="rwp-who">'
                 + face
@@ -18802,16 +18814,25 @@
                 try { return cosOf(c.code, c.emp); } catch (e) { return {}; }
             })();
             const cosU = c.cosImg || '';
-            // ⚠️ لە پێشبینینی ڕێکخستنەکاندا نا — ئەوێ کەڤەر و وێنە
-            //    دەگۆڕدرێن و چینێکی زیادە ڕوونی ناکاتەوە.
+            // ⭐ **لە دەستکاریی پڕۆفایلی پلەکانیشدا دەردەکەوێت**
+            //    (خاوەن ٢٠٢٦-٠٩-٠٩): «لە شوێنی دەستکاریکردنی
+            //    پڕۆفایلی پلەکان، لەوێش ئێفێکت و شتەکان دەرکەون».
+            //    پێشتر بە ئەنقەست کوژێنرابووەوە («ئەوێ کەڤەر و
+            //    وێنە دەگۆڕدرێن») — خاوەن بڕیارەکەی گۆڕی، چونکە
+            //    ئەوەی دەیکڕیت دەبێت پێش پاشەکەوتکردن ببینرێت.
+            //    پێوانە: پێش ئەمە `fx=0` لە ڕێکخستنەکاندا و
+            //    `fx=1` لە کارتی پڕۆفایلدا، بە هەمان دانە.
+            // ⚠️ چینەکە `pointer-events: none`ـە — ئەگەرنا
+            //    دەیخواردەوە ئەو دوو پەنجەدانانەی کەڤەر و وێنە
+            //    دەگۆڕن، و دەستکاریی پڕۆفایل مردوو دەبوو.
             // ⚠️ `c.noFx` — خانەخوێیەک کە خۆی ئێفێکتەکە لەسەر
             //    **تەواوی کارتەکە** دادەنێت (کارتی پڕۆفایل).
-            //    پێشاندانەکانی کۆگا و ڕێکخستنەکان تەنها ئەم
-            //    سەرەیەن، بۆیە لەوانەدا لێرە دەمێنێتەوە.
+            //    پێشاندانەکانی کۆگا تەنها ئەم سەرەیەن، بۆیە
+            //    لەوانەدا لێرە دەمێنێتەوە.
             // 🔍 `c.cosView` = ڕیزێکی پاشەکەوتنەکراو (پێشاندانی
             //    بەڕێوەبردن). بەبێ ئەم، سلایدەری زووم هیچ ناکات
             //    تاکو پاشەکەوتکردن — و ئەوە «کار ناکات»ە.
-            const fx = (!c.edit && !c.noFx)
+            const fx = (!c.noFx)
                 ? cosFxHtml(cos.effect, cosU,
                     { view: c.cosView, loopUrl: c.cosLoop || '' }) : '';
             return '<div class="mcard-stick">'
@@ -21874,7 +21895,8 @@
                 + ((pb && pb.st) ? ' style="' + pb.st + '"' : '') + drill + '>'
                 + bg
                 + '<span class="sx-rn">' + r.rank + '</span>'
-                + (r.name == null ? '<span class="sx-anon"><i class="bx bx-user"></i></span>' : avatarHtml(r.avatar, r.name || '', 30, r.code))
+                + (r.name == null ? '<span class="sx-anon"><i class="bx bx-user"></i></span>'
+                    : avatarHtml(r.avatar, r.name || '', 30, r.code, { cos: true }))
                 + '<div class="sx-rmid">'
                 + '<b><span class="cos-nm">' + rankNameHtml(r) + '</span>'
                 + (me ? ' <small>(تۆ)</small>' : '') + '</b>'
@@ -22133,7 +22155,8 @@
             const nm = (currentUser && currentUser.full_name) || '';
             return `<div class="rkme">
                 <span class="rkme-n">${Number(me.rank) || 0}</span>
-                ${avatarHtml(currentUser && currentUser.avatar, nm, 32, currentUser && currentUser.code)}
+                ${avatarHtml(currentUser && currentUser.avatar, nm, 32,
+                    currentUser && currentUser.code, { cos: true })}
                 <div class="rkme-mid"><b>تۆ</b>
                     <span>لە <bdi dir="ltr">${Number(_rank.total) || 0}</bdi> کەس</span></div>
                 <b class="rkme-val" dir="rtl">${rankValueHtml(me.value, _rank.metric)}</b>
@@ -22302,7 +22325,8 @@
                         + '<div class="rkpod-av">'
                         + (r.name == null
                             ? '<span class="sx-anon is-big"><i class="bx bx-user"></i></span>'
-                            : avatarHtml(r.avatar, r.name || '', place === 1 ? 66 : 54, r.code))
+                            : avatarHtml(r.avatar, r.name || '', place === 1 ? 66 : 54,
+                                r.code, { cos: true }))
                         + '<span class="rkpod-n">' + r.rank + '</span></div>'
                         + '<b class="rkpod-name">' + rankNameHtml(r) + '</b>'
                         + '<span class="rkpod-val" dir="rtl">' + rankValueHtml(r.value, _rank.metric) + '</span>'
