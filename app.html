@@ -6824,6 +6824,13 @@
             // ⚠️ ڕوونکردنەوەی «؟» لەسەر `body`ە، نەک لەناو شاشەکە —
             //    گەڕانەوە بە دوگمەی پاشەوە هیچ کلیکێکی نییە.
             try { hideTip(); } catch (e) { }
+            // ⭐ شاشەیەکی شاراوە `display:none`ـە، بەڵام ڕیزەکە
+            //    هێشتا لە دۆکیومێنتدایە و پۆلی `is-live`ی پێوەیە —
+            //    بۆیە دوای دەرچوون هەتا ٤ چرکە فایلێکی جوڵاو
+            //    دەمێنێتەوە. پێوانەکراو ٢٠٢٦-٠٩-٠٩: دوای گۆڕینی
+            //    شاشە `is-live=true` و `_cosLiveRow` هێشتا ئاماژەی
+            //    پێدەکرد.
+            try { cosLiveStop(); } catch (e) { }
             // ---- ستاکی گەڕانەوە ----
             // داشبۆرد ڕەگەکەیە: کاتێک دەگەڕێینەوە بۆی، ستاکەکە پاک
             // دەکرێتەوە و دوگمەی گەڕانەوە دەشاردرێتەوە (دیسان دەبێتە
@@ -12743,6 +12750,8 @@
             parent.querySelectorAll('.magic-tab').forEach(t => t.classList.remove('active'));
             el.classList.add('active');
             syncMagicSlider(parent.closest('.magic-tabs-wrapper') || parent, true);
+            // پانێڵێکی شاراوە ئەنیمەیشنەکەی لەگەڵ خۆیدا نابات
+            try { cosLiveStop(); } catch (e) { }
             document.getElementById('stats-pane').style.display = (tab === 'stats') ? '' : 'none';
             document.getElementById('rank-pane').style.display = (tab === 'rank') ? '' : 'none';
             // گەڕانەوە بۆ تابی پلەکان بە دەست = دەرچوون لە درێل-داون.
@@ -20862,7 +20871,15 @@
         //    پەنجەدانانێک «هۆڤەر»ی درۆیین دەنێرێت.
         const COS_LIVE_HOLD_MS = 350;    // چەند دەبێت پەنجە بمێنێتەوە
         const COS_LIVE_KEEP_MS = 4000;   // دوای هەڵگرتنی پەنجە چەند بمێنێتەوە
+        const COS_LIVE_TAP_MS = 900;     // ماوەی خواردنی کلیکی دوای دانانە درێژەکە
         let _cosLiveRow = null, _cosLiveT = null, _cosLiveKeep = null, _cosLiveP = null;
+        // ⭐ **کام ڕیز و تا کەی** — نەک ئاڵایەکی گشتی.
+        //    ئاڵایەکی گشتی کە تەنها بە کلیکی دواتر پاک دەبێتەوە،
+        //    دوای «دانانی درێژ → سکڕۆڵ» هەتا هەتایە دەمێنێتەوە و
+        //    یەکەم پەنجەدانانی دواتر — لە ناڤی خوارەوەش — بێدەنگ
+        //    دەخوات. (خاوەن ٢٠٢٦-٠٩-٠٩: «پەنجە لە تابێکی تر دەدەم
+        //    ناچێت»؛ پێوانەکراو: tap#1 stats → stats، tap#2 کاردەکات)
+        let _cosLiveEat = null, _cosLiveEatT = 0;
 
         function cosLiveSet(row) {
             if (_cosLiveRow === row) return;
@@ -20885,6 +20902,11 @@
         function cosLiveStop() {
             clearTimeout(_cosLiveT); _cosLiveT = null;
             clearTimeout(_cosLiveKeep); _cosLiveKeep = null;
+            // ⚠️ ئەمە گرنگترین دێڕەکەیە: هەر ڕێگایەکی وەستان
+            //    (سکڕۆڵ، گۆڕینی شاشە، شاردنەوەی ئەپەکە) دەبێت
+            //    خواردنی کلیکیش هەڵبوەشێنێتەوە — ئەگەرنا کلیکەکە
+            //    چاوەڕێی پەنجەدانانێکی بێگومان دەکات.
+            _cosLiveEat = null; _cosLiveEatT = 0;
             cosLiveSet(null);
         }
 
@@ -20907,6 +20929,8 @@
             document.addEventListener('pointerdown', e => {
                 if (e.pointerType === 'mouse') return;
                 clearTimeout(_cosLiveT); _cosLiveT = null;
+                // پەنجەیەکی نوێ = ڕەفتاری نوێ؛ خواردنی کۆن هەڵدەوەشێت
+                _cosLiveEat = null; _cosLiveEatT = 0;
                 const row = rowOf(e.target);
                 if (!row) { cosLiveStop(); return; }
                 _cosLiveP = [e.clientX, e.clientY];
@@ -20917,7 +20941,11 @@
                     // ⚠️ دوای دانانی درێژ، هەڵگرتنی پەنجە نابێت کارتی
                     //    پڕۆفایل بکاتەوە — ئەگەرنا هەر تاقیکردنەوەیەک
                     //    دەبێتە کردنەوەیەکی نەویستراو.
-                    window.__cosLiveTap = 1;
+                    // ⚠️ کاتەکە لێرەدا دانانرێت — پەنجە هێشتا
+                    //    لەسەرە و لەوانەیە چەند چرکەیەک بمێنێتەوە.
+                    //    لە `pointerup`دا دادەنرێت، بۆیە درێژیی
+                    //    دانانەکە هیچ کاریگەری نییە.
+                    _cosLiveEat = row; _cosLiveEatT = 0;
                     try { navigator.vibrate && navigator.vibrate(8); } catch (x) { }
                 }, COS_LIVE_HOLD_MS);
             }, true);
@@ -20933,6 +20961,7 @@
             document.addEventListener('pointerup', e => {
                 if (e.pointerType === 'mouse') return;
                 clearTimeout(_cosLiveT); _cosLiveT = null;
+                if (_cosLiveEat) _cosLiveEatT = Date.now() + COS_LIVE_TAP_MS;
                 // دوای هەڵگرتنی پەنجە چەند چرکەیەک دەیبینێت، پاشان دەوەستێت
                 if (_cosLiveRow) {
                     clearTimeout(_cosLiveKeep);
@@ -20942,11 +20971,34 @@
             }, true);
             document.addEventListener('pointercancel', () => { cosLiveStop(); }, true);
 
+            // ⭐ **تەنها کلیکی هەمان ڕیز دەخورێت.** مەبەستەکە
+            //    ئەوەیە کە هەڵگرتنی پەنجە دوای دانانی درێژ کارتی
+            //    پڕۆفایل نەکاتەوە — نەک ئەوەی هەموو ئەپەکە یەک
+            //    پەنجەدانان لەدەست بدات.
             document.addEventListener('click', e => {
-                if (!window.__cosLiveTap) return;
-                window.__cosLiveTap = 0;
+                const r = _cosLiveEat;
+                if (!r) return;
+                _cosLiveEat = null;
+                if (!_cosLiveEatT || Date.now() > _cosLiveEatT) return;
+                _cosLiveEatT = 0;
+                if (r !== e.target && !r.contains(e.target)) return;
                 e.stopPropagation(); e.preventDefault();
             }, true);
+
+            // ⚠️ **سکڕۆڵ = نە دانانی درێژ، نە پەنجەدانان.**
+            //    ئەندرۆید لە هەندێک حاڵەتدا `pointermove`ی ناڤیگەت
+            //    ناگەیەنێت (سکڕۆڵەکە ڕووداوەکان دەبات)، بۆیە
+            //    پشتبەستن بە `pointercancel` بەتەنها بەس نییە.
+            window.addEventListener('scroll', () => {
+                if (_cosLiveT) { clearTimeout(_cosLiveT); _cosLiveT = null; }
+                _cosLiveEat = null; _cosLiveEatT = 0;
+            }, true);
+
+            // ⭐ ئەپەکە شاردرایەوە (تلیگرام نوقاندرایەوە،
+            //    تابەکە گۆڕا) — هیچ شتێک نابێت بجوڵێت.
+            document.addEventListener('visibilitychange', () => {
+                if (document.hidden) cosLiveStop();
+            });
         }
 
         function rankPrefsOf() { return rpNorm(currentUser && currentUser.rank_prefs); }
