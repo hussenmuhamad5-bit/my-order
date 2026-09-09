@@ -21562,19 +21562,16 @@ body.sx-wide {
    ⚠️ `padding: 0` و `display: block` پێویستن: `.cos-plate`ی
    بنەڕەتی `inline-flex`ـە بە پەدینگەوە، کە لێرەدا شێوەکە
    دەشکێنێت. */
-/* ⭐ **شریتەکە قەبارەی خۆی هەیە — بە پانی شاشەکە درێژ نابێتەوە.**
-   خاوەن ٢٠٢٦-٠٩-٠٨: «پێویستە هەمان قەبارەی دیسکۆرد بێت و زۆر
-   جیاوازی نەبێتەوە لە کاتی گەورەبوونی و بچووکبوونی شاشە…
-   درێژتر ببێتەوە [نا]، تەنها بچووک و گەورە ببێتەوە».
-   لەسەر ویندۆیەکی ١٩٠٠px ڕیزەکە ١٠١٠px دەبێت، بۆیە شریتێکی
-   بێ‌سنوور دەبووە باندێکی ١٠١٠px — نەیمپاڵێتی دیسکۆرد ~٢٣٢px ـە.
-   ⚠️ `inset-inline: 0 auto` واتا لە **دەستپێکی** ڕیزەکەوە
-   (ڕاست لە RTLدا) — لەوێیە کە ژمارە و ئاڤاتار و ناوەکە دانراون. */
+/* ⭐ **شریتەکە بە درێژایی هەموو ڕیزەکەیە.** خاوەن ٢٠٢٦-٠٩-٠٨
+   (بە چوارگۆشەیەکی سوور لەسەر ئەو بەشەی بەتاڵ مابووەوە):
+   «شەیپەکەی ژێری تاوەکو کۆتایی لیستەکە بێ بەپێی لیستەکە گەورە
+   بێ، نەوەکو ئەوەی ئێستا لە نیوەوە بڕاوە — زۆر ناشرینە».
+   ⚠️ سنوورێکی ڕەق (٤٣٠px) تاقی کرایەوە و ڕەتکرایەوە — لەبری
+   ئەو، **بەرزیی ڕیزەکە** لەسەر شاشەی پان زیاد دەکرێت،
+   بۆیە وێنەکە گەورەتر دەبێت **بێ بڕین**. */
 .cos-rowplate {
   position: absolute;
-  inset-block: 0;
-  inset-inline: 0 auto;
-  width: min(100%, var(--cos-pw, 430px));
+  inset: 0;
   display: block;
   padding: 0;
   border-radius: inherit;
@@ -21601,6 +21598,11 @@ body.sx-wide {
    هەمووی بێت… وەکو نموونەکەی دیسکۆرد») — لە ژمارەی پلە و
    ئاڤاتارەوە تا کۆتایی ڕیزەکە، نەک تەنها لە دەوری ناوەکە. */
 .sx-rrow.has-plate {
+  /* ⚠️ دانانی درێژ لەسەر مۆبایل ئەنیمەیشنەکە هەڵدەکات — بەبێ
+     ئەمانە iOS مێنیۆی «کۆپی/شێر» دەکاتەوە و دەقەکە هەڵدەبژێردرێت. */
+  -webkit-touch-callout: none;
+  user-select: none;
+  -webkit-user-select: none;
   padding: var(--cos-pph, 9px) 12px;
   border-radius: var(--cos-prr, var(--r-md, 12px));
   overflow: hidden;
@@ -21639,16 +21641,15 @@ body.sx-wide {
 .sx-rrow.has-plate::after {
   content: '';
   position: absolute;
-  /* هەمان سنووری شریتەکە — ئەگەرنا پەردەکە بەسەر بۆشاییەکەشدا
-     دەکێشرێت و ڕیزەکە بە درێژایی خۆی تاریک دەبێت. */
-  inset-block: 0;
-  inset-inline: 0 auto;
-  width: min(100%, var(--cos-pw, 430px));
+  inset: 0;
   z-index: 1;
   pointer-events: none;
   border-radius: inherit;
+  /* ⚠️ **بە پیکسل، نەک بە ڕێژەی سەدی.** بە سەدی، ناوچەی تاریک
+     لەسەر ڕیزێکی ١٠١٠px دەبووە ٧٨٨px و هەموو هونەرەکەی
+     دادەپۆشی. دیسکۆرد خۆی پیکسل بەکاردەهێنێت. */
   background: linear-gradient(to left,
-    rgba(15, 23, 42, .55) 0%, rgba(15, 23, 42, .28) 42%, transparent 78%);
+    rgba(15, 23, 42, .58) 0px, rgba(15, 23, 42, .3) 150px, transparent 320px);
   /* خاوەن دەتوانێت تۆخییەکەی ڕێک بخات — بە سفر بەتەواوی لادەچێت */
   opacity: var(--cos-psh, 1);
 }
@@ -21668,6 +21669,30 @@ body.sx-wide {
 
 .sx-rrow.has-plate small,
 .sx-rrow.has-plate .sx-rsub { color: inherit; opacity: .78; }
+
+/* ⭐ **وێنەکە بە بەرزکردنەوەی ڕیزەکە گەورە دەبێت، نەک بە
+   دەرپەڕاندنی لە بۆکسەکە.** خاوەن ٢٠٢٦-٠٩-٠٨: «لە شێوەی
+   مۆبایل هەمووی دەرکەوتووە… لە لاپتۆپ هەمووی دەرناکەوێ».
+   ⚠️ **هۆکارەکە:** فایلەکە ٤٤٨×٨٤ـە (ڕێژە ٥.٣٣) و ڕیزەکە
+   ٥٤px بەرزە، بۆیە گەورەترین قەبارەی **نەبڕاو** ٢٨٨×٥٤ـە.
+   هەر ڕێژەیەکی زیاتر لە ١٠٠٪ی بەرزی، سەرەوە و خوارەوەی
+   دەبڕێت (١٢٥٪ → ٦٧.٥px لەناو ٥٤pxدا = ١٣.٥px بڕدراو).
+   ⭐ بۆیە **بەرزیی ڕیزەکە** زیاد دەکرێت: ٥٤ → ٦٢ → ٦٨px،
+   واتا وێنەکە ٢٨٨ → ٣٣١ → ٣٦٣px (+١٥٪ · +٢٦٪) و **هەموویشی**
+   **دەردەکەوێت**.
+   ⚠️ هەموو ڕیزەکان، نەک تەنها ئەوانەی پاڵێتیان هەیە —
+   ئەگەرنا لیستەکە ناتەبا دەبێت.
+   ⚠️ `.sx-rrow.has-plate` دوو پۆلی هەیە، بۆیە دەبێت
+   بنەڕەتەکەی خۆی لێرەشدا بنووسرێتەوە. */
+@media (min-width: 700px) {
+  .sx-rrow { padding: 13px 14px; }
+  .sx-rrow.has-plate { padding: var(--cos-pph, 13px) 14px; }
+}
+
+@media (min-width: 1100px) {
+  .sx-rrow { padding: 16px; }
+  .sx-rrow.has-plate { padding: var(--cos-pph, 16px) 16px; }
+}
 .sx-rrow.has-plate .sx-hidden-name { color: inherit; opacity: .82; }
 
 /* پێشاندانی پاشا — ڕیزی لیستی ڕاستەقینە، چونکە پاڵێت
@@ -21873,17 +21898,38 @@ body.sx-wide {
 
    ⚠️ تەنها `opacity` ئەنیمەیت دەکرێت — هەر خاسیەتێکی تر لە هەر
    فرەیمێکدا لەیئاوتی نوێ دەخوازێت. */
-.cos-fx.is-once {
+/* ⚠️ **`> i.is-once`ـەکەش** — کاتێک ئینترۆ و لووپ پێکەوەن،
+   پۆلەکە دەچێتە سەر `<i class="cos-fx-intro">`، نەک سەر
+   `.cos-fx`. بەبێ ئەم هەڵبژێرە دووەم، ئینترۆکە **هەرگیز کاڵ**
+   **نەدەبووەوە** — لەناکاو ون دەبوو. (پێوانەکراو ٢٠٢٦-٠٩-٠٨) */
+.cos-fx.is-once,
+.cos-fx > i.is-once {
   transition: opacity .55s ease-out;
   opacity: 1;
 }
 
-.cos-fx.is-once.is-gone {
+.cos-fx.is-once.is-gone,
+.cos-fx > i.is-once.is-gone {
+  opacity: 0;
+}
+
+/* ⏸️ پشووی نێوان دوو لێدانی لووپ — خاوەن ٢٠٢٦-٠٩-٠٨:
+   «٥ چرکە… ماوەیەکی بەسەردا تێپەڕی ئەوجا دووبارە ببێتەوە،
+   نەوەک دایم لە دوای یەکتر». هەروەها لە کاتی ئینترۆدا
+   لووپەکە بێدەنگە. */
+.cos-fx > i.cos-fx-loop {
+  transition: opacity .35s ease;
+}
+
+.cos-fx.is-once.is-rest,
+.cos-fx > i.cos-fx-loop.is-rest {
   opacity: 0;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .cos-fx.is-once { transition: none; }
+  .cos-fx.is-once,
+  .cos-fx > i.is-once,
+  .cos-fx > i.cos-fx-loop { transition: none; }
 }
 
 /* ============================================================
@@ -21961,7 +22007,9 @@ body.sx-wide {
    دابەش دەبن و لەسەر هیچ پانییەک ڕیزی ناتەواو نامێنێتەوە. */
 .cos-zi-r {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  /* ⭐ چوار ڕۆڵ ÷ دوو ستوون = دوو ڕیزی تەواو.
+     چوار ستوون لەسەر مۆبایل هەر دووگمەیەک ٥٦px دەکاتەوە. */
+  grid-template-columns: repeat(2, 1fr);
   gap: 4px;
   margin-top: 6px;
 }
@@ -22522,9 +22570,15 @@ body.sx-wide {
    چووەتە `::before` (زووم نابێت ناوەکەش گەورە بکات)، بۆیە
    گۆڕینی وێنە لەسەر توخمەکە بێدەنگ **لە ژێر** چینەکەدا
    دەنەخشێنرا — نەیمپاڵێتی جوڵاو هەرگیز دەرنەدەکەوت. */
+/* ⭐ `.is-live` = ئەو ڕیزەی ئێستا ماوسی لەسەرە (کۆمپیوتەر) یان
+   پەنجەی لەسەر دانراوە (مۆبایل). **یەک ڕیز لە هەر ساتێکدا**،
+   بە `cosLiveSet`ـەوە. لە هەموو کاتێکی تردا شریتەکە وەستاوە —
+   خاوەن ٢٠٢٦-٠٩-٠٨: «ئەگەرنا هەمیشە ستاتیک بێت… هەموو
+   ئەنیمەیشنەکان بەیەکەوە کار نەکەن». */
 #member-card-modal.show .cos-plate.cos-img::before,
 #rw-shop-pane .cos-plate.cos-img::before,
-#rank-pref-body .cos-plate.cos-img::before {
+#rank-pref-body .cos-plate.cos-img::before,
+.sx-rrow.has-plate.is-live .cos-plate.cos-img::before {
   background-image: var(--cos-img-anim, var(--cos-img));
   background-size: var(--cos-fit, auto 100%);
   /* هەمان هەڵگەڕاندنەوەی RTL — ئەگەرنا وەشانی جوڵاو پێچەوانەی
@@ -22882,6 +22936,11 @@ body.sx-wide {
 @media (prefers-reduced-motion: reduce) {
   .cos-av::before, .cos-av::after,
   .cos-plate::after, .cos-fx i { animation: none !important; }
+  /* ⚠️ ئەنیمەیشنی خودی وێنەکە بە `animation: none` ناوەستێت —
+     گۆڕینەکە بۆ فایلی جوڵاو دەبێت هەر ڕووی نەدات. */
+  .sx-rrow.has-plate.is-live .cos-plate.cos-img::before {
+    background-image: var(--cos-img);
+  }
 }
 
 /* ============================================================
@@ -23035,6 +23094,59 @@ body.sx-wide {
   color: #be185d;
   border: 1px solid rgba(236, 72, 153, 0.32);
   white-space: nowrap;
+}
+
+/* ============================================================
+   📋 دوگمەی کۆپیی یەک-کلیک (خاوەن ٢٠٢٦-٠٩-٠٩)
+   ------------------------------------------------------------
+   ⚠️ **٢٦px بۆ پەنجەیە، نەک بۆ ئایکۆنەکە** — ئایکۆنەکە
+      ١٤pxە بەڵام ئاماژی پەنجە ٢٦×٢٦ە. ([[landmines]] ١١٣)
+   ⭐ `flex: 0 0 auto` — لەناو ڕیزێکی فلێکسدا نابێت
+      بچووک ببێتەوە کاتێک ناوەکە درێژە.
+   ============================================================ */
+.od-cp {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  flex: 0 0 auto;
+  margin-inline-start: 6px;
+  padding: 0;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: transparent;
+  color: #64748b;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  vertical-align: middle;
+  transition: background .15s ease, color .15s ease,
+              border-color .15s ease, transform .12s ease;
+}
+.od-cp:hover { background: #f1f5f9; color: #334155; }
+.od-cp:active { transform: scale(.9); }
+.od-cp.is-ok {
+  color: #16a34a;
+  border-color: #86efac;
+  background: #f0fdf4;
+}
+
+/* کارتی فرۆشیار پاشبنەمایەکی تۆخی هەیە — وەشانێکی ڕوون */
+#seller-info-box .od-cp {
+  color: #fff;
+  border-color: rgba(255, 255, 255, .35);
+}
+#seller-info-box .od-cp:hover { background: rgba(255, 255, 255, .16); color: #fff; }
+#seller-info-box .od-cp.is-ok {
+  color: #dcfce7;
+  border-color: rgba(255, 255, 255, .75);
+  background: rgba(255, 255, 255, .18);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .od-cp { transition: none; }
+  .od-cp:active { transform: none; }
 }
 
 /* ============================================================
