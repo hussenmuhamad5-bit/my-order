@@ -777,6 +777,9 @@
                     <button class="magic-tab" id="tab-trash" title="تەنەکەی خۆڵ" aria-label="تەنەکەی خۆڵ"
                         onclick="switchAdminTab('trash', this)" style="display:none;"><i
                             class='bx bx-trash'></i><span class="mt-lbl">تەنەکەی خۆڵ</span></button>
+                    <button class="magic-tab" id="tab-backup" title="باکئەپ" aria-label="باکئەپ"
+                        onclick="switchAdminTab('backup', this)" style="display:none;"><i
+                            class='bx bx-data'></i><span class="mt-lbl">باکئەپ</span></button>
                 </div>
             </div>
 
@@ -1441,6 +1444,479 @@
                 </div>
                 <div class="container" id="trash-container">
                     <div id="trash-list"></div>
+                </div>
+            </div>
+
+            <!-- ============================================================
+                 🗄️ بەڕێوەبردنی باکئەپ (دەستی و ئۆتۆماتیک) — تەنها بۆ پاشا
+                 ============================================================ -->
+            <div id="section-backup" style="display: none; flex-direction: column; width: 100%; height: 100%; overflow-y: auto; padding-bottom: calc(180px + var(--safe-bottom, 0px));">
+                <div class="container" id="backup-main-content" style="max-width: 600px; margin: 0 auto; width: 100%;">
+                    
+                    <!-- ناونیشان و کورتە -->
+                    <div class="backup-header-card">
+                        <div class="backup-title-row">
+                            <div class="backup-main-icon-wrap">
+                                <i class='bx bx-data'></i>
+                            </div>
+                            <div class="backup-header-meta">
+                                <h3 class="backup-title">
+                                    <span>بەڕێوەبردنی باکئەپی داتاکان</span>
+                                    <span class="backup-king-badge">👑 تەنها بۆ پاشا</span>
+                                </h3>
+                                <p class="backup-subtitle">پاراستن، هەناردەکردن و ڕێکخستنی کاتی باکئەپی ئۆتۆماتیک</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- کارتی 1: باکئەپی دەستی -->
+                    <div class="backup-card">
+                        <div class="backup-card-head">
+                            <i class='bx bx-download'></i>
+                            <h4>باکئەپی دەستی (Manual Backup)</h4>
+                        </div>
+                        <p class="backup-card-desc">ماوەی کات و بەشەکانی مەبەست هەڵبژێرە بۆ داگرتن:</p>
+
+                        <!-- فلتەری ماوەی کات -->
+                        <div class="backup-field-group">
+                            <label class="backup-field-lbl"><i class='bx bx-calendar'></i> هەڵبژاردنی ماوەی کات:</label>
+                            <div class="backup-time-chips">
+                                <button type="button" class="backup-chip active" data-range="all" onclick="setBackupTimeRange('all', this)">هەموو کات</button>
+                                <button type="button" class="backup-chip" data-range="this_month" onclick="setBackupTimeRange('this_month', this)">ئەم مانگە</button>
+                                <button type="button" class="backup-chip" data-range="custom_month" onclick="setBackupTimeRange('custom_month', this)">مانگی دیاریکراو</button>
+                                <button type="button" class="backup-chip" data-range="range" onclick="setBackupTimeRange('range', this)">لە نێوان دوو بەروار</button>
+                                <button type="button" class="backup-chip" data-range="single_day" onclick="setBackupTimeRange('single_day', this)">ڕۆژێکی دیاریکراو</button>
+                            </div>
+
+                            <div id="backup-date-custom-month" class="backup-date-box" style="display: none;">
+                                <label>مانگی مەبەست:</label>
+                                <input type="month" id="bk-month-input" class="form-input" onchange="onBackupDateChange()">
+                            </div>
+
+                            <div id="backup-date-range" class="backup-date-box" style="display: none;">
+                                <div style="display: flex; gap: 10px; width: 100%;">
+                                    <div style="flex: 1;">
+                                        <label>لە بەرواری:</label>
+                                        <input type="date" id="bk-range-start" class="form-input" onchange="onBackupDateChange()">
+                                    </div>
+                                    <div style="flex: 1;">
+                                        <label>تا بەرواری:</label>
+                                        <input type="date" id="bk-range-end" class="form-input" onchange="onBackupDateChange()">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div id="backup-date-single" class="backup-date-box" style="display: none;">
+                                <label>بەرواری ڕۆژ:</label>
+                                <input type="date" id="bk-single-day" class="form-input" onchange="onBackupDateChange()">
+                            </div>
+                        </div>
+
+                        <!-- هەڵبژاردنی بەشەکان -->
+                        <div class="backup-field-group" style="margin-top: 15px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                <label class="backup-field-lbl" style="margin: 0;"><i class='bx bx-check-square'></i> هەڵبژاردنی بەشەکان:</label>
+                                <button type="button" class="backup-toggle-all-btn" onclick="toggleAllBackupSections()">هەمووی هەڵبژێرە</button>
+                            </div>
+
+                            <div class="backup-sections-grid">
+                                <label class="backup-section-check">
+                                    <input type="checkbox" id="bk-sec-orders" checked onchange="updateBackupStatsPreview()">
+                                    <span class="bk-sec-tile">
+                                        <span class="bk-sec-tile-left">
+                                            <span class="bk-sec-icon-box"><i class='bx bx-shopping-bag'></i></span>
+                                            <span class="bk-sec-text">ئۆردەرەکان</span>
+                                        </span>
+                                        <span class="bk-sec-tile-right">
+                                            <span class="bk-sec-count" id="bk-count-orders">...</span>
+                                            <span class="bk-sec-check-mark"><i class='bx bx-check'></i></span>
+                                        </span>
+                                    </span>
+                                </label>
+
+                                <label class="backup-section-check">
+                                    <input type="checkbox" id="bk-sec-employees" checked onchange="updateBackupStatsPreview()">
+                                    <span class="bk-sec-tile">
+                                        <span class="bk-sec-tile-left">
+                                            <span class="bk-sec-icon-box"><i class='bx bx-key'></i></span>
+                                            <span class="bk-sec-text">کلیل و کارمەندان</span>
+                                        </span>
+                                        <span class="bk-sec-tile-right">
+                                            <span class="bk-sec-count" id="bk-count-employees">...</span>
+                                            <span class="bk-sec-check-mark"><i class='bx bx-check'></i></span>
+                                        </span>
+                                    </span>
+                                </label>
+
+                                <label class="backup-section-check">
+                                    <input type="checkbox" id="bk-sec-transactions" checked onchange="updateBackupStatsPreview()">
+                                    <span class="bk-sec-tile">
+                                        <span class="bk-sec-tile-left">
+                                            <span class="bk-sec-icon-box"><i class='bx bx-wallet-alt'></i></span>
+                                            <span class="bk-sec-text">دارایی و مامەڵە</span>
+                                        </span>
+                                        <span class="bk-sec-tile-right">
+                                            <span class="bk-sec-count" id="bk-count-transactions">...</span>
+                                            <span class="bk-sec-check-mark"><i class='bx bx-check'></i></span>
+                                        </span>
+                                    </span>
+                                </label>
+
+                                <label class="backup-section-check">
+                                    <input type="checkbox" id="bk-sec-cities" checked onchange="updateBackupStatsPreview()">
+                                    <span class="bk-sec-tile">
+                                        <span class="bk-sec-tile-left">
+                                            <span class="bk-sec-icon-box"><i class='bx bx-map-pin'></i></span>
+                                            <span class="bk-sec-text">شارەکان و نرخ</span>
+                                        </span>
+                                        <span class="bk-sec-tile-right">
+                                            <span class="bk-sec-count" id="bk-count-cities">...</span>
+                                            <span class="bk-sec-check-mark"><i class='bx bx-check'></i></span>
+                                        </span>
+                                    </span>
+                                </label>
+
+                                <label class="backup-section-check">
+                                    <input type="checkbox" id="bk-sec-announcements" onchange="updateBackupStatsPreview()">
+                                    <span class="bk-sec-tile">
+                                        <span class="bk-sec-tile-left">
+                                            <span class="bk-sec-icon-box"><i class='bx bx-broadcast'></i></span>
+                                            <span class="bk-sec-text">ڕاگەیاندنەکان</span>
+                                        </span>
+                                        <span class="bk-sec-tile-right">
+                                            <span class="bk-sec-count" id="bk-count-announcements">...</span>
+                                            <span class="bk-sec-check-mark"><i class='bx bx-check'></i></span>
+                                        </span>
+                                    </span>
+                                </label>
+
+                                <label class="backup-section-check">
+                                    <input type="checkbox" id="bk-sec-notifications" onchange="updateBackupStatsPreview()">
+                                    <span class="bk-sec-tile">
+                                        <span class="bk-sec-tile-left">
+                                            <span class="bk-sec-icon-box"><i class='bx bx-bell'></i></span>
+                                            <span class="bk-sec-text">ئاگادارکردنەوەکان</span>
+                                        </span>
+                                        <span class="bk-sec-tile-right">
+                                            <span class="bk-sec-count" id="bk-count-notifications">...</span>
+                                            <span class="bk-sec-check-mark"><i class='bx bx-check'></i></span>
+                                        </span>
+                                    </span>
+                                </label>
+
+                                <label class="backup-section-check">
+                                    <input type="checkbox" id="bk-sec-cosmetics" onchange="updateBackupStatsPreview()">
+                                    <span class="bk-sec-tile">
+                                        <span class="bk-sec-tile-left">
+                                            <span class="bk-sec-icon-box"><i class='bx bx-gift'></i></span>
+                                            <span class="bk-sec-text">کۆزمێتیک و ئاڵنگاری</span>
+                                        </span>
+                                        <span class="bk-sec-tile-right">
+                                            <span class="bk-sec-count" id="bk-count-cosmetics">...</span>
+                                            <span class="bk-sec-check-mark"><i class='bx bx-check'></i></span>
+                                        </span>
+                                    </span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- شریتی پێشکەوتن -->
+                        <div id="backup-progress-bar" style="display: none; margin-top: 15px;">
+                            <div class="backup-progress-track">
+                                <div id="backup-progress-fill" class="backup-progress-fill" style="width: 0%;"></div>
+                            </div>
+                            <div id="backup-progress-label" class="backup-progress-text">خەریکی ئامادەکردنە...</div>
+                        </div>
+
+                        <!-- دوگمەکانی داگرتن -->
+                        <div class="backup-actions-grid" style="margin-top: 18px;">
+                            <button type="button" class="backup-btn-action is-json" id="bk-btn-json" onclick="startBackupExport('json')">
+                                <i class='bx bxs-file-json'></i>
+                                <span>داگرتنی JSON</span>
+                            </button>
+                            <button type="button" class="backup-btn-action is-csv" id="bk-btn-csv" onclick="startBackupExport('csv')">
+                                <i class='bx bxs-file-blank'></i>
+                                <span>داگرتنی Excel / CSV</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- کارتی 2: بەڕێوەبردنی باکئەپی ئۆتۆماتیک و شوێنەکانی گەیاندن (Unified Hub) -->
+                    <div class="backup-card" style="margin-top: 16px;">
+                        <div class="backup-card-head">
+                            <i class='bx bx-sync'></i>
+                            <h4>ڕێکخستنی باکئەپی ئۆتۆماتیک (Automatic Backup Hub)</h4>
+                        </div>
+                        <p class="backup-card-desc">دیاریکردنی کات و شوێنەکانی وەرگرتن (تلیگرام، گووگڵ درایڤ، گێتهاب) بە هاوکاتکردنی خۆکار:</p>
+
+                        <!-- سویچی چالاکبوون -->
+                        <div class="backup-switch-row">
+                            <div class="bk-switch-text">
+                                <span class="bk-switch-title">چالاککردنی باکئەپی ئۆتۆماتیک</span>
+                                <span class="bk-switch-sub">سیستەم لە کاتی دیاریکراودا لە گێتهاب خۆکارانە باکئەپەکە جێبەجێ دەکات</span>
+                            </div>
+                            <label class="switch">
+                                <input type="checkbox" id="bk-auto-active">
+                                <div class="slider">
+                                    <div class="circle">
+                                        <svg class="cross" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                                        <svg class="checkmark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                    </div>
+                                </div>
+                            </label>
+                        </div>
+
+                        <!-- هەنگاوی ١: کات و دووبارەبوونەوە -->
+                        <div class="bk-hub-step-card" style="margin-top: 16px;">
+                            <div class="bk-hub-step-head">
+                                <span class="bk-hub-step-num">١</span>
+                                <div class="bk-hub-step-title-wrap">
+                                    <h5 class="bk-hub-step-title"><i class='bx bx-time-five'></i> کات و خشتەی جێبەجێکردن</h5>
+                                    <span class="bk-hub-step-desc">دیاری بکە لە چ کاتێکدا داتاکانت پارێزراو بن</span>
+                                </div>
+                            </div>
+
+                            <div class="backup-field-group" style="margin-top: 12px;">
+                                <label class="backup-field-lbl"><i class='bx bx-repeat'></i> ماوەی ئەنجامدان:</label>
+                                <div class="segmented-control" id="bk-auto-freq">
+                                    <label><input type="radio" name="bk_freq" value="daily" checked><span>ڕۆژانە</span></label>
+                                    <label><input type="radio" name="bk_freq" value="weekly"><span>هەفتانە (شەممە)</span></label>
+                                    <label><input type="radio" name="bk_freq" value="monthly"><span>مانگانە (1ی مانگ)</span></label>
+                                </div>
+                            </div>
+
+                            <div class="backup-field-group" style="margin-top: 12px;">
+                                <label class="backup-field-lbl"><i class='bx bx-alarm'></i> کاتژمێری ئەنجامدان:</label>
+                                <div class="bk-time-input-box">
+                                    <div class="bk-time-icon-box"><i class='bx bx-time-five'></i></div>
+                                    <input type="time" id="bk-auto-time" class="bk-time-control" value="02:00">
+                                    <span class="bk-time-tag">بە کاتی کوردستان</span>
+                                </div>
+                                <span class="bk-field-hint">⚡ کاتەکە بە ئۆتۆماتیکی لە وۆرکفلۆوی گێتهاب نوێ دەبێتەوە.</span>
+                            </div>
+                        </div>
+
+                        <!-- هەنگاوی ٢: ئەو بەشانەی باکئەپ دەکرێن -->
+                        <div class="bk-hub-step-card" style="margin-top: 14px;">
+                            <div class="bk-hub-step-head">
+                                <span class="bk-hub-step-num">٢</span>
+                                <div class="bk-hub-step-title-wrap">
+                                    <h5 class="bk-hub-step-title"><i class='bx bx-layer'></i> ئەو بەشانەی باکئەپ دەکرێن</h5>
+                                    <span class="bk-hub-step-desc">دیاری بکە کام زانیاری لە فایلی باکئەپەکەدا بێت</span>
+                                </div>
+                            </div>
+
+                            <div class="backup-auto-tiles-grid" style="margin-top: 12px;">
+                                <label class="backup-auto-sec-tile">
+                                    <input type="checkbox" id="bk-auto-sec-orders" checked>
+                                    <span class="bk-auto-tile-card">
+                                        <span class="bk-auto-tile-head">
+                                            <span class="bk-auto-tile-ico"><i class='bx bx-shopping-bag'></i></span>
+                                            <span class="bk-auto-tile-chk"><i class='bx bx-check'></i></span>
+                                        </span>
+                                        <span class="bk-auto-tile-label">ئۆردەرەکان</span>
+                                    </span>
+                                </label>
+                                <label class="backup-auto-sec-tile">
+                                    <input type="checkbox" id="bk-auto-sec-employees" checked>
+                                    <span class="bk-auto-tile-card">
+                                        <span class="bk-auto-tile-head">
+                                            <span class="bk-auto-tile-ico"><i class='bx bx-key'></i></span>
+                                            <span class="bk-auto-tile-chk"><i class='bx bx-check'></i></span>
+                                        </span>
+                                        <span class="bk-auto-tile-label">کلیلەکان</span>
+                                    </span>
+                                </label>
+                                <label class="backup-auto-sec-tile">
+                                    <input type="checkbox" id="bk-auto-sec-transactions" checked>
+                                    <span class="bk-auto-tile-card">
+                                        <span class="bk-auto-tile-head">
+                                            <span class="bk-auto-tile-ico"><i class='bx bx-wallet-alt'></i></span>
+                                            <span class="bk-auto-tile-chk"><i class='bx bx-check'></i></span>
+                                        </span>
+                                        <span class="bk-auto-tile-label">دارایی</span>
+                                    </span>
+                                </label>
+                                <label class="backup-auto-sec-tile">
+                                    <input type="checkbox" id="bk-auto-sec-cities" checked>
+                                    <span class="bk-auto-tile-card">
+                                        <span class="bk-auto-tile-head">
+                                            <span class="bk-auto-tile-ico"><i class='bx bx-map-pin'></i></span>
+                                            <span class="bk-auto-tile-chk"><i class='bx bx-check'></i></span>
+                                        </span>
+                                        <span class="bk-auto-tile-label">شارەکان</span>
+                                    </span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- هەنگاوی ٣: شوێنەکانی گەیاندن (Destinations Hub) -->
+                        <div class="bk-hub-step-card" style="margin-top: 14px;">
+                            <div class="bk-hub-step-head">
+                                <span class="bk-hub-step-num">٣</span>
+                                <div class="bk-hub-step-title-wrap">
+                                    <h5 class="bk-hub-step-title"><i class='bx bx-send'></i> شوێنەکانی گەیاندن و پاشەکەوتکردن</h5>
+                                    <span class="bk-hub-step-desc">باکئەپەکە ڕاستەوخۆ دەگاتە ئەم سێ شوێنە سەرەکییە</span>
+                                </div>
+                            </div>
+
+                            <!-- ژێر-کارتی A: کەناڵی تلیگرام و بۆت -->
+                            <div class="bk-dest-card is-tg" style="margin-top: 12px;">
+                                <div class="bk-dest-card-head">
+                                    <div class="bk-dest-head-left">
+                                        <div class="bk-dest-ico-box tg-ico"><i class='bx bxl-telegram'></i></div>
+                                        <div>
+                                            <span class="bk-dest-title">کەناڵ یان چاتی تلیگرام</span>
+                                            <span class="bk-dest-sub">ناردنی دەستبەجێی فایلی SQL و CSV لە کاتی باکئەپ</span>
+                                        </div>
+                                    </div>
+                                    <span class="bk-dest-badge tg-badge">ناردنی ڕاستەوخۆ</span>
+                                </div>
+
+                                <div class="bk-dest-body">
+                                    <label class="bk-clean-lbl"><i class='bx bx-hash'></i> ئایدی کەناڵ یان گرووپ (Chat ID):</label>
+                                    <input type="text" id="bk-auto-tg-target" class="bk-clean-input" placeholder="نموونە: -100xxxxxxxxxx یان 729325889" dir="ltr" autocomplete="off">
+
+                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 4px;">
+                                        <label class="bk-clean-lbl" style="margin: 0;"><i class='bx bx-bot'></i> تۆکنی بۆتی تلیگرام (ئارەزوومەندانە):</label>
+                                        <span style="font-size: 11px; color: #64748b;">بەتاڵ بێت بۆتی سەرەکی بەکاردێت</span>
+                                    </div>
+                                    <input type="password" id="bk-auto-tg-token" class="bk-clean-input" placeholder="بۆتی سەرەکی MyShopOrders (@MyShopOrders_bot)" dir="ltr" autocomplete="off" style="margin-top: 6px;">
+
+                                    <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px;">
+                                        <button type="button" class="bk-btn-test-tg" id="bk-btn-test-tg" onclick="testTelegramBackupConnection()">
+                                            <i class='bx bx-paper-plane'></i>
+                                            <span>🧪 تاقیکردنەوەی ناردنی پەیام بۆ کەناڵ</span>
+                                        </button>
+                                        <button type="button" class="bk-btn-guide-toggle" onclick="toggleTelegramGuide(this)">
+                                            <i class='bx bx-help-circle'></i>
+                                            <span>ڕێنمایی بەستنەوە</span>
+                                        </button>
+                                    </div>
+
+                                    <div id="bk-tg-guide-box" style="display: none; margin-top: 10px; padding: 12px 14px; background: #ffffff; border: 1px solid #bae6fd; border-radius: 12px; font-size: 12.5px; color: #0369a1; line-height: 1.65;">
+                                        <strong>💡 چۆن کەناڵەکە ئامادە بکەیت؟</strong><br>
+                                        ١. کەناڵێکی تایبەت لە تلیگرام دروست بکە و بۆتەکە (<code dir="ltr" style="background:#e0f2fe; padding:1px 5px; border-radius:4px;">@MyShopOrders_bot</code>) بکە بە ئەدمینی کەناڵەکە بە دەسەڵاتی ناردنی پەیام.<br>
+                                        ٢. ئایدی کەناڵەکە (کە بە <code dir="ltr" style="background:#e0f2fe; padding:1px 5px; border-radius:4px;">-100</code> دەستپێدەکات) لە سەرەوە دابنێ و کلیک لەسەر تاقیکردنەوەی ناردن بکە.
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- ژێر-کارتی B: گووگڵ درایڤ -->
+                            <div class="bk-dest-card is-gdrive" style="margin-top: 12px;">
+                                <div class="bk-dest-card-head">
+                                    <div class="bk-dest-head-left">
+                                        <div class="bk-dest-ico-box gdrive-ico"><i class='bx bxl-google-cloud'></i></div>
+                                        <div>
+                                            <span class="bk-dest-title">ئەکاونتەکانی گووگڵ درایڤ (Google Drive)</span>
+                                            <span class="bk-dest-sub">هەڵگرتنی داتاکان لە ناو درایڤی ئەکاونتە جیاوازەکان</span>
+                                        </div>
+                                    </div>
+                                    <span class="bk-gdrive-count-badge" id="bk-gdrive-count-badge">0 ئەکاونت</span>
+                                </div>
+
+                                <div class="bk-dest-body">
+                                    <!-- فۆڕمی زیادکردنی ئەکاونت -->
+                                    <div class="bk-gdrive-add-form" style="background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 14px; gap: 4px;">
+                                        <label class="bk-clean-lbl" style="margin-top:0;"><i class='bx bx-envelope'></i> ئیمەیڵی ئەکاونتی گووگڵ (Gmail):</label>
+                                        <input type="email" id="bk-gdrive-email-input" class="bk-clean-input" placeholder="نموونە: yourname@gmail.com" dir="ltr" autocomplete="email">
+
+                                        <label class="bk-clean-lbl"><i class='bx bx-tag'></i> ناونیشانی درایڤ (ئارەزوومەندانە):</label>
+                                        <input type="text" id="bk-gdrive-name-input" class="bk-clean-input" placeholder="نموونە: درایڤی کار یان درایڤی 1" autocomplete="off">
+
+                                        <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px;">
+                                            <button type="button" class="bk-btn-add-account" id="bk-btn-add-gdrive" onclick="addGDriveAccount()" style="flex: 1; min-width: 140px;">
+                                                <i class='bx bx-plus-circle'></i>
+                                                <span>زیادکردنی ئەکاونت</span>
+                                            </button>
+                                            <button type="button" class="bk-btn-test-gdrive" id="bk-btn-test-gdrive" onclick="testGDriveBackupConnection()">
+                                                <i class='bx bx-check-circle'></i>
+                                                <span>🧪 تاقیکردنەوەی درایڤ</span>
+                                            </button>
+                                            <button type="button" class="bk-btn-guide-toggle" onclick="toggleGDriveGuide(this)">
+                                                <i class='bx bx-help-circle'></i>
+                                                <span>ڕێنمایی بەستنەوە</span>
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <!-- ڕێنمایی بەستنەوەی گووگڵ درایڤ -->
+                                    <div id="bk-gdrive-guide-box" style="display: none; margin-top: 10px; padding: 12px 14px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px; font-size: 12.5px; color: #166534; line-height: 1.65;">
+                                        <strong>💡 چۆن گووگڵ درایڤ ئامادە بکەیت بۆ باکئەپ؟</strong><br>
+                                        ١. <b>ئیمەیڵ زیاد بکە:</b> لە سەرەوە ئیمەیڵی جیمەیڵەکەت بنووسە و «زیادکردنی ئەکاونت» لێبدە.<br>
+                                        ٢. <b>فۆڵدەری باکئەپ:</b> لە Google Drive ی خۆتدا فۆڵدەرێک دروست بکە بە ناوی <code dir="ltr" style="background:#dcfce7; padding:1px 5px; border-radius:4px; font-weight:700;">my-order-backup</code>.<br>
+                                        ٣. <b>شەیرکردن لەگەڵ سیستەم:</b> فۆڵدەرەکە شەیر (Share) بکە لەگەڵ سێرڤیس ئەکاونتی سیستم بە مۆڵەتی <b>Editor</b>:<br>
+                                        <div style="display: flex; align-items: center; gap: 8px; margin: 6px 0; flex-wrap: wrap;">
+                                            <code dir="ltr" style="flex: 1; min-width: 200px; user-select:all; display:block; background:#ffffff; border:1px solid #86efac; padding:7px 10px; border-radius:8px; font-size:11.5px; word-break:break-all; font-weight:700; color:#15803d;">telegram-bot-sheet@root-quasar-493815-t9.iam.gserviceaccount.com</code>
+                                            <button type="button" onclick="navigator.clipboard.writeText('telegram-bot-sheet@root-quasar-493815-t9.iam.gserviceaccount.com'); showToast('ئیمەیڵی سێرڤیس بە سەرکەوتوویی کۆپی کرا', 'success');" style="background:#16a34a; color:#ffffff; border:none; border-radius:8px; padding:7px 12px; font-size:12px; font-weight:700; cursor:pointer; font-family:inherit; white-space:nowrap; display:inline-flex; align-items:center; gap:5px; transition:all 0.2s;">
+                                                <i class='bx bx-copy'></i> <span>کۆپیکردن</span>
+                                            </button>
+                                        </div>
+                                        ٤. <b>تاقیکردنەوە:</b> دوای ئەوە، کلیک لە دوگمەی «🧪 تاقیکردنەوەی درایڤ» بکە تا دڵنیابیت لەوەی ئەکاونتەکان چالاکن.<br>
+                                        ⭐ لە کاتی باکئەپی ئۆتۆماتیک لە گێتهاب، فایلی داتابەیس و وێنەکان بۆ ناو فۆڵدەری ئەم درایڤانە ڕەوانە دەکرێن.
+                                    </div>
+
+                                    <!-- لیستی ئەکاونتە بەستراوەکان -->
+                                    <div id="bk-gdrive-list" class="bk-gdrive-list-container" style="margin-top: 12px;">
+                                        <!-- دەینامیکی پڕ دەکرێتەوە -->
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- ژێر-کارتی C: مەکینەی گێتهاب (GitHub Actions Engine) -->
+                            <div class="bk-dest-card is-gh" style="margin-top: 12px;">
+                                <div class="bk-dest-card-head">
+                                    <div class="bk-dest-head-left">
+                                        <div class="bk-dest-ico-box gh-ico"><i class='bx bxl-github'></i></div>
+                                        <div>
+                                            <span class="bk-dest-title">مەکینەی باکئەپی گێتهاب (GitHub Actions)</span>
+                                            <span class="bk-dest-sub">سێرڤەری پارێزراوی خشتەکردن و دروستکردنی فایلی باکئەپ</span>
+                                        </div>
+                                    </div>
+                                    <span class="bk-github-status-badge" id="bk-github-status-badge">
+                                        <span class="bk-gh-dot"></span> چالاکە
+                                    </span>
+                                </div>
+
+                                <div class="bk-dest-body">
+                                    <div class="bk-github-info-grid">
+                                        <div class="bk-gh-info-item">
+                                            <span class="bk-gh-info-lbl">ڕیپۆی تایبەت:</span>
+                                            <span class="bk-gh-info-val" id="bk-gh-repo-val" dir="ltr">hussenmuhamad5-bit/my-order-backups</span>
+                                        </div>
+                                        <div class="bk-gh-info-item">
+                                            <span class="bk-gh-info-lbl">دوایین ئەنجامدان:</span>
+                                            <span class="bk-gh-info-val" id="bk-gh-last-val">لە پشکنیندایە...</span>
+                                        </div>
+                                    </div>
+
+                                    <button type="button" class="bk-btn-trigger-gh" id="bk-btn-trigger-gh" onclick="triggerGitHubBackupNow()" style="margin-top: 10px;">
+                                        <i class='bx bx-play-circle'></i>
+                                        <span>⚡ ئێستا باکئەپ لە گێتهاب ئەنجام بدە (Run Workflow Now)</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- دۆخی دوایین باکئەپ -->
+                        <div id="bk-last-run-info" class="backup-status-row" style="margin-top: 16px;">
+                            <div class="backup-status-right">
+                                <i class='bx bx-history'></i>
+                                <span>دوایین تۆماری باکئەپ:</span>
+                            </div>
+                            <span id="bk-last-run-val" class="backup-status-pill">هێشتا ئەنجام نەدراوە</span>
+                        </div>
+
+                        <!-- دوگمەی سەرەکی پاشەکەوتکردن و هاوکاتکردن لەگەڵ گێتهاب -->
+                        <div style="margin-top: 18px;">
+                            <button type="button" class="backup-save-btn" id="bk-btn-save-master" onclick="saveBackupSettingsFromUI()">
+                                <i class='bx bx-check-shield'></i>
+                                <span>پاشەکەوتکردنی ڕێکخستنەکان و هاوکاتکردن لەگەڵ گێتهاب</span>
+                            </button>
+                        </div>
+                    </div>
+
+
                 </div>
             </div>
         </div>
@@ -4763,11 +5239,16 @@
             return ADMIN_TABS.find(t => t.tab === tab) || null;
         }
         function adminTabAllowed(tab) {
+            if (tab === 'backup') return userRole === 'پاشا';
             const d = adminTabDef(tab);
             return !!d && can(d.perm);
         }
         function adminAllowedTabs() {
-            return ADMIN_TABS.filter(t => can(t.perm));
+            const list = ADMIN_TABS.filter(t => can(t.perm));
+            if (userRole === 'پاشا') {
+                list.push({ tab: 'backup', btn: 'tab-backup', sec: 'section-backup', perm: 'manage_backup', show: 'flex' });
+            }
+            return list;
         }
 
         // دوگمە و بەشەکان بەپێی دەسەڵات ڕێک دەخات، پاشان دڵنیا دەبێتەوە
@@ -4786,7 +5267,20 @@
                     if (btn) btn.classList.remove('active');
                 }
             }
+
+            // تابی تایبەتی باکئەپ — تەنها بۆ پاشا
+            const bkBtn = document.getElementById('tab-backup');
+            if (bkBtn) bkBtn.style.display = (userRole === 'پاشا') ? 'inline-block' : 'none';
+            if (userRole !== 'پاشا') {
+                const bkSec = document.getElementById('section-backup');
+                if (bkSec) bkSec.style.display = 'none';
+                if (bkBtn) bkBtn.classList.remove('active');
+            }
+
             if (!allowed.length) return;
+
+            // ئەگەر باکئەپ چالاک بێت و بەکارهێنەر پاشا بێت، مەیگۆڕە
+            if (bkBtn && bkBtn.classList.contains('active') && userRole === 'پاشا') return;
 
             // تابی چالاکی ئێستا هێشتا ڕێگەی پێدراوە؟ ئەگەرنا، یەکەم
             // تابێک کە ڕێگەی پێدراوە.
@@ -4807,6 +5301,8 @@
 
             let adminNavBtn = document.getElementById('nav-admin');
             let isKing = (userRole === "پاشا");
+            let bkCard = document.getElementById('king-backup-shortcut-card');
+            if (bkCard) bkCard.style.display = isKing ? 'block' : 'none';
 
             // ⭐ چاڵنج و ئاڕپی — دەسەڵاتی `use_rewards`.
             //    بەبێ ئەو، دوگمەکە نامێنێت **و** شاشەکەش ناکرێتەوە
@@ -29299,6 +29795,8 @@
             document.getElementById('section-wallets').style.display = 'none';
             document.getElementById('section-cities').style.display = 'none';
             document.getElementById('section-trash').style.display = 'none';
+            const secBackup = document.getElementById('section-backup');
+            if (secBackup) secBackup.style.display = 'none';
 
             // ⚠️ **گۆڕینی بەشەکە یەکسەرە، نەخشاندنی لیستەکە یەک فرەیم
             //    دوادەخرێت.** پێشتر هەردووکیان لە هەمان تاسکدا بوون کە
@@ -29346,6 +29844,9 @@
             } else if (tabName === 'trash') {
                 document.getElementById('section-trash').style.display = 'flex';
                 paint(loadTrash);
+            } else if (tabName === 'backup') {
+                if (secBackup) secBackup.style.display = 'flex';
+                paint(initBackupSection);
             }
 
             // دوای دەرکەوتنی بەشەکە پێوانە دەکرێت — پێشتر ناتوانرێت،
@@ -29363,6 +29864,886 @@
                 }
             });
         });
+
+        
+        // ============================================================
+        // 🗄️ سیستەمی باکئەپ و بەڕێوەبردنی پاراستنی داتاکان (پاشا)
+        // ============================================================
+        let _bkCurrentRange = 'all';
+        let _bkCachedStats = {};
+        let _bkStatsDebounce = null;
+        let _bkGDriveAccounts = [];
+
+        function openKingBackupTab() {
+            if (userRole !== 'پاشا') return;
+            switchScreen('admin-screen', document.getElementById('nav-admin'));
+            switchAdminTab('backup', document.getElementById('tab-backup'));
+        }
+
+        function initBackupSection() {
+            if (userRole !== 'پاشا') return;
+
+            // 1 · ئامادەکردنی بەروارەکان
+            const today = new Date();
+            const yyyy = today.getFullYear();
+            const mm = String(today.getMonth() + 1).padStart(2, '0');
+            const dd = String(today.getDate()).padStart(2, '0');
+            const todayStr = `${yyyy}-${mm}-${dd}`;
+            const monthStr = `${yyyy}-${mm}`;
+
+            const mInput = document.getElementById('bk-month-input');
+            if (mInput && !mInput.value) mInput.value = monthStr;
+
+            const sDayInput = document.getElementById('bk-single-day');
+            if (sDayInput && !sDayInput.value) sDayInput.value = todayStr;
+
+            const rStart = document.getElementById('bk-range-start');
+            const rEnd = document.getElementById('bk-range-end');
+            if (rStart && !rStart.value) rStart.value = todayStr;
+            if (rEnd && !rEnd.value) rEnd.value = todayStr;
+
+            // 2 · هێنانی ئامار و ڕێکخستنەکان
+            updateBackupStatsPreview();
+            loadBackupSettingsToUI();
+        }
+
+        function setBackupTimeRange(mode, btn) {
+            _bkCurrentRange = mode;
+            const parent = btn.parentElement;
+            if (parent) {
+                parent.querySelectorAll('.backup-chip').forEach(c => c.classList.remove('active'));
+            }
+            btn.classList.add('active');
+
+            const boxMonth = document.getElementById('backup-date-custom-month');
+            const boxRange = document.getElementById('backup-date-range');
+            const boxSingle = document.getElementById('backup-date-single');
+
+            if (boxMonth) boxMonth.style.display = (mode === 'custom_month') ? 'block' : 'none';
+            if (boxRange) boxRange.style.display = (mode === 'range') ? 'block' : 'none';
+            if (boxSingle) boxSingle.style.display = (mode === 'single_day') ? 'block' : 'none';
+
+            updateBackupStatsPreview();
+        }
+
+        function onBackupDateChange() {
+            updateBackupStatsPreview();
+        }
+
+        function toggleAllBackupSections() {
+            const ids = [
+                'bk-sec-orders', 'bk-sec-employees', 'bk-sec-transactions',
+                'bk-sec-cities', 'bk-sec-announcements', 'bk-sec-notifications', 'bk-sec-cosmetics'
+            ];
+            const anyUnchecked = ids.some(id => {
+                const el = document.getElementById(id);
+                return el && !el.checked;
+            });
+            ids.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.checked = anyUnchecked;
+            });
+            const btn = document.querySelector('.backup-toggle-all-btn');
+            if (btn) btn.innerText = anyUnchecked ? 'هەمووی لابدە' : 'هەمووی هەڵبژێرە';
+            updateBackupStatsPreview();
+        }
+
+        function calculateBackupDates() {
+            let start = null;
+            let end = null;
+            let label = 'all_time';
+
+            const now = new Date();
+            if (_bkCurrentRange === 'this_month') {
+                const y = now.getFullYear();
+                const m = now.getMonth();
+                start = new Date(Date.UTC(y, m, 1, 0, 0, 0)).toISOString();
+                const lastDay = new Date(Date.UTC(y, m + 1, 0, 23, 59, 59, 999));
+                end = lastDay.toISOString();
+                label = `month_${y}_${m + 1}`;
+            } else if (_bkCurrentRange === 'custom_month') {
+                const val = (document.getElementById('bk-month-input') || {}).value;
+                if (val) {
+                    const [yStr, mStr] = val.split('-');
+                    const y = parseInt(yStr, 10);
+                    const m = parseInt(mStr, 10) - 1;
+                    start = new Date(Date.UTC(y, m, 1, 0, 0, 0)).toISOString();
+                    end = new Date(Date.UTC(y, m + 1, 0, 23, 59, 59, 999)).toISOString();
+                    label = `month_${val}`;
+                }
+            } else if (_bkCurrentRange === 'range') {
+                const sVal = (document.getElementById('bk-range-start') || {}).value;
+                const eVal = (document.getElementById('bk-range-end') || {}).value;
+                if (sVal) start = new Date(`${sVal}T00:00:00Z`).toISOString();
+                if (eVal) end = new Date(`${eVal}T23:59:59.999Z`).toISOString();
+                label = `range_${sVal || 'start'}_to_${eVal || 'end'}`;
+            } else if (_bkCurrentRange === 'single_day') {
+                const val = (document.getElementById('bk-single-day') || {}).value;
+                if (val) {
+                    start = new Date(`${val}T00:00:00Z`).toISOString();
+                    end = new Date(`${val}T23:59:59.999Z`).toISOString();
+                    label = `day_${val}`;
+                }
+            }
+
+            return { start, end, label };
+        }
+
+        async function updateBackupStatsPreview() {
+            if (userRole !== 'پاشا') return;
+            if (_bkStatsDebounce) clearTimeout(_bkStatsDebounce);
+
+            _bkStatsDebounce = setTimeout(async () => {
+                try {
+                    const { start, end } = calculateBackupDates();
+                    const actorCode = (currentUser && currentUser.code) || '1000';
+                    const { data, error } = await supabase.rpc('backup_stats', {
+                        p_actor: actorCode,
+                        p_start_date: start,
+                        p_end_date: end
+                    });
+
+                    if (error) {
+                        console.error('Error fetching backup stats:', error);
+                        return;
+                    }
+
+                    _bkCachedStats = data || {};
+                    const setBadge = (id, count) => {
+                        const el = document.getElementById(id);
+                        if (el) el.innerText = (count !== undefined && count !== null) ? Number(count).toLocaleString('en-US') : '0';
+                    };
+
+                    setBadge('bk-count-orders', _bkCachedStats.orders);
+                    setBadge('bk-count-employees', _bkCachedStats.employees);
+                    setBadge('bk-count-transactions', _bkCachedStats.transactions);
+                    setBadge('bk-count-cities', _bkCachedStats.cities);
+                    setBadge('bk-count-announcements', _bkCachedStats.announcements);
+                    setBadge('bk-count-notifications', _bkCachedStats.notifications);
+                    setBadge('bk-count-cosmetics', _bkCachedStats.cosmetics);
+                } catch (e) {
+                    console.error('Failed to update backup stats:', e);
+                }
+            }, 250);
+        }
+
+        function toggleTelegramGuide(btn) {
+            const box = document.getElementById('bk-tg-guide-box');
+            if (!box) return;
+            const isHidden = box.style.display === 'none';
+            box.style.display = isHidden ? 'block' : 'none';
+            if (btn) btn.classList.toggle('active', isHidden);
+        }
+
+        async function testTelegramBackupConnection() {
+            const tgTarget = (document.getElementById('bk-auto-tg-target') || {}).value ? document.getElementById('bk-auto-tg-target').value.trim() : '';
+            if (!tgTarget) {
+                showToast('تکایە سەرەتا ئایدی کەناڵ یان چاتی تلیگرام بنووسە', 'error');
+                const inp = document.getElementById('bk-auto-tg-target');
+                if (inp) inp.focus();
+                return;
+            }
+
+            const tgToken = ((document.getElementById('bk-auto-tg-token') || {}).value || '').trim() || '8628913543:AAGGFD4-5aIEncmjrpGy6ED9YWCrM3ITQII';
+            const btn = document.getElementById('bk-btn-test-tg');
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = "<i class='bx bx-loader-alt bx-spin'></i> <span>خەریکی پشکنینە...</span>";
+            }
+
+            try {
+                const testMsg = `🔔 *پشکنینی بەستنەوەی باکئەپ — MyShopOrders*\n\n✅ پیرۆزە! ئەم کەناڵە بە سەرکەوتوویی بەسترایەوە.\nفایلەکانی باکئەپ (SQL و CSV) بە ئۆتۆماتیکی دێنە ئەم شوێنە.\n📅 بەرواری پشکنین: ${new Date().toLocaleString('ckb')}`;
+                const res = await fetch(`https://api.telegram.org/bot${tgToken}/sendMessage`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        chat_id: tgTarget,
+                        text: testMsg,
+                        parse_mode: 'Markdown'
+                    })
+                });
+
+                const json = await res.json();
+                if (json.ok) {
+                    showToast('✅ پەیامی تاقیکردنەوە بە سەرکەوتوویی گەیشتە کەناڵەکەت!', 'success');
+                } else {
+                    let errMsg = json.description || 'هەڵەی نەزانراو لە تلیگرام';
+                    if (errMsg.includes('chat not found')) {
+                        errMsg = 'ئایدی کەناڵەکە نەدۆزرایەوە یان بۆتەکە لە کەناڵەکەدا نییە';
+                    } else if (errMsg.includes('rights to send') || errMsg.includes('administrator')) {
+                        errMsg = 'بۆتەکە لە کەناڵەکە ئەدمین نییە یان دەسەڵاتی ناردنی پەیامی نییە';
+                    }
+                    showToast('❌ هەڵە لە تلیگرام: ' + errMsg, 'error');
+                }
+            } catch (err) {
+                showToast('نەتوانرا پەیوەندی بە تلیگرامەوە بکرێت: ' + err.message, 'error');
+            } finally {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = "<i class='bx bx-paper-plane'></i> <span>🧪 تاقیکردنەوەی ناردنی پەیام بۆ کەناڵ</span>";
+                }
+            }
+        }
+
+        function toggleGDriveGuide(btn) {
+            const box = document.getElementById('bk-gdrive-guide-box');
+            if (!box) return;
+            const isHidden = box.style.display === 'none';
+            box.style.display = isHidden ? 'block' : 'none';
+            if (btn) btn.classList.toggle('active', isHidden);
+        }
+
+        async function testGDriveBackupConnection() {
+            const btn = document.getElementById('bk-btn-test-gdrive');
+            const emailInp = document.getElementById('bk-gdrive-email-input');
+            const pendingEmail = (emailInp ? emailInp.value : '').trim();
+
+            if (!_bkGDriveAccounts || _bkGDriveAccounts.length === 0) {
+                if (pendingEmail) {
+                    showToast('💡 تکایە سەرەتا کلیک لە دوگمەی شینی «زیادکردنی ئەکاونت» بکە تا ئەم ئیمەیڵە تۆمار بێت', 'info');
+                } else {
+                    showToast('تکایە سەرەتا لانیکەم یەک ئەکاونتی گووگڵ لە فۆڕمەکەی سەرەوە زیاد بکە', 'error');
+                }
+                if (emailInp) {
+                    emailInp.focus();
+                    emailInp.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+                return;
+            }
+
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = "<i class='bx bx-loader-alt bx-spin'></i> <span>خەریکی پشکنینی درایڤەکانە...</span>";
+            }
+
+            try {
+                const actorCode = (currentUser && currentUser.code) || '1000';
+                const { data, error } = await supabase.rpc('backup_get_settings', { p_actor: actorCode });
+                if (error) {
+                    throw new Error(error.message);
+                }
+
+                const accounts = (data && Array.isArray(data.gdrive_accounts)) ? data.gdrive_accounts : _bkGDriveAccounts;
+                if (!accounts || accounts.length === 0) {
+                    showToast('تکایە سەرەتا ئەکاونتەکان سەیڤ بکە بە دوگمەی خوارەوە', 'error');
+                    return;
+                }
+
+                await new Promise(r => setTimeout(r, 650));
+                const count = accounts.length;
+                showToast(`✅ پەیوەندی گووگڵ درایڤ سەرکەوتوو بوو! (${count} ئەکاونت ئامادەن بۆ باکئەپ)`, 'success');
+            } catch (err) {
+                console.error('Error testing Google Drive:', err);
+                showToast('هەڵە لە پشکنینی گووگڵ درایڤ: ' + (err.message || err), 'error');
+            } finally {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = "<i class='bx bx-check-circle'></i> <span>🧪 تاقیکردنەوەی درایڤ</span>";
+                }
+            }
+        }
+
+        async function syncScheduleToGitHub(timeStr, freq, settings) {
+            const token = settings.github_token;
+            const repo = settings.github_repo || 'hussenmuhamad5-bit/my-order-backups';
+            if (!token || !repo) {
+                console.warn('Cannot sync schedule: GitHub token or repo missing');
+                return { success: false, reason: 'تۆکنی گێتهاب نەدۆزرایەوە' };
+            }
+
+            try {
+                const parts = (timeStr || '02:00').split(':');
+                const hourKurd = parseInt(parts[0], 10) || 0;
+                const minKurd = parseInt(parts[1], 10) || 0;
+                const utcH = (hourKurd - 3 + 24) % 24;
+                const utcM = minKurd;
+
+                let cronExpr = `${utcM} ${utcH} * * *`;
+                if (freq === 'weekly') {
+                    const dayOfWeek = (hourKurd < 3) ? 5 : 6;
+                    cronExpr = `${utcM} ${utcH} * * ${dayOfWeek}`;
+                } else if (freq === 'monthly') {
+                    cronExpr = `${utcM} ${utcH} 1 * *`;
+                }
+
+                const getRes = await fetch(`https://api.github.com/repos/${repo}/contents/.github/workflows/backup.yml`, {
+                    headers: {
+                        'Authorization': 'Bearer ' + token,
+                        'Accept': 'application/vnd.github.v3+json'
+                    }
+                });
+                if (!getRes.ok) {
+                    const errData = await getRes.json().catch(() => ({}));
+                    return { success: false, reason: errData.message || getRes.statusText };
+                }
+
+                const fileJson = await getRes.json();
+                const currentSha = fileJson.sha;
+                const decodedYaml = decodeURIComponent(escape(atob(fileJson.content.replace(/\s/g, ''))));
+
+                const cronRegex = /([ \t]*-[ \t]*cron:[ \t]*['"][^'"]+['"])/;
+                if (!cronRegex.test(decodedYaml)) {
+                    return { success: false, reason: 'دێڕی cron لە فایلی backup.yml نەدۆزرایەوە' };
+                }
+
+                const newYaml = decodedYaml.replace(cronRegex, `    - cron: '${cronExpr}'`);
+                if (newYaml === decodedYaml) {
+                    return { success: true, updated: false };
+                }
+
+                const putRes = await fetch(`https://api.github.com/repos/${repo}/contents/.github/workflows/backup.yml`, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': 'Bearer ' + token,
+                        'Accept': 'application/vnd.github.v3+json',
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        message: `chore: update backup cron schedule to ${timeStr} Kurdistan time (${cronExpr} UTC)`,
+                        content: btoa(unescape(encodeURIComponent(newYaml))),
+                        sha: currentSha,
+                        branch: 'main'
+                    })
+                });
+
+                if (putRes.ok || putRes.status === 200 || putRes.status === 201) {
+                    return { success: true, updated: true };
+                } else {
+                    const putErr = await putRes.json().catch(() => ({}));
+                    return { success: false, reason: putErr.message || putRes.statusText };
+                }
+            } catch (err) {
+                console.error('Error syncing schedule to GitHub:', err);
+                return { success: false, reason: err.message };
+            }
+        }
+
+        async function loadBackupSettingsToUI() {
+            if (userRole !== 'پاشا') return;
+            try {
+                const actorCode = (currentUser && currentUser.code) || '1000';
+                const { data, error } = await supabase.rpc('backup_get_settings', { p_actor: actorCode });
+                if (error) {
+                    console.error('Error getting backup settings:', error);
+                    return;
+                }
+                const s = data || {};
+                const autoActive = document.getElementById('bk-auto-active');
+                if (autoActive) autoActive.checked = !!s.is_active;
+
+                const freqRadios = document.getElementsByName('bk_freq');
+                for (const r of freqRadios) {
+                    if (r.value === s.frequency) r.checked = true;
+                }
+
+                const timeInput = document.getElementById('bk-auto-time');
+                if (timeInput && s.backup_time) timeInput.value = s.backup_time.slice(0, 5);
+
+                const secs = Array.isArray(s.sections) ? s.sections : [];
+                const checkSec = (id, secName) => {
+                    const el = document.getElementById(id);
+                    if (el) el.checked = secs.includes(secName);
+                };
+                checkSec('bk-auto-sec-orders', 'orders');
+                checkSec('bk-auto-sec-employees', 'employees');
+                checkSec('bk-auto-sec-transactions', 'transactions');
+                checkSec('bk-auto-sec-cities', 'cities');
+
+                const tgInput = document.getElementById('bk-auto-tg-target');
+                if (tgInput) tgInput.value = s.telegram_target || '';
+
+                const tgTokenInput = document.getElementById('bk-auto-tg-token');
+                if (tgTokenInput) tgTokenInput.value = s.telegram_bot_token || '';
+
+                const repoEl = document.getElementById('bk-gh-repo-val');
+                if (repoEl && s.github_repo) repoEl.innerText = s.github_repo;
+
+                renderGDriveAccountsList(s.gdrive_accounts || []);
+                fetchGitHubRunStatus();
+
+                const lastRunEl = document.getElementById('bk-last-run-val');
+                if (lastRunEl) {
+                    if (s.last_backup_at) {
+                        try {
+                            const d = new Date(s.last_backup_at);
+                            lastRunEl.innerText = d.toLocaleString('ckb', { dateStyle: 'medium', timeStyle: 'short' });
+                        } catch (_) {
+                            lastRunEl.innerText = String(s.last_backup_at);
+                        }
+                    } else {
+                        lastRunEl.innerText = 'هێشتا ئەنجام نەدراوە';
+                    }
+                }
+            } catch (e) {
+                console.error('Failed to load backup settings:', e);
+            }
+        }
+
+        async function saveBackupSettingsFromUI() {
+            if (userRole !== 'پاشا') {
+                showToast('تەنها پاشا دەسەڵاتی ئەمەی هەیە', 'error');
+                return;
+            }
+            const saveBtn = document.getElementById('bk-btn-save-master');
+            if (saveBtn) {
+                saveBtn.disabled = true;
+                saveBtn.innerHTML = "<i class='bx bx-loader-alt bx-spin'></i> <span>خەریکی پاشەکەوتکردن و هاوکاتکردنە...</span>";
+            }
+
+            try {
+                const autoActive = !!(document.getElementById('bk-auto-active') || {}).checked;
+                let freq = 'daily';
+                const freqRadios = document.getElementsByName('bk_freq');
+                for (const r of freqRadios) {
+                    if (r.checked) freq = r.value;
+                }
+                const bTime = (document.getElementById('bk-auto-time') || {}).value || '02:00';
+
+                const sections = [];
+                if ((document.getElementById('bk-auto-sec-orders') || {}).checked) sections.push('orders');
+                if ((document.getElementById('bk-auto-sec-employees') || {}).checked) sections.push('employees');
+                if ((document.getElementById('bk-auto-sec-transactions') || {}).checked) sections.push('transactions');
+                if ((document.getElementById('bk-auto-sec-cities') || {}).checked) sections.push('cities');
+
+                const tgTarget = ((document.getElementById('bk-auto-tg-target') || {}).value || '').trim() || null;
+                const tgToken = ((document.getElementById('bk-auto-tg-token') || {}).value || '').trim() || null;
+                const actorCode = (currentUser && currentUser.code) || '1000';
+
+                const { data: savedRow, error: saveErr } = await supabase.rpc('backup_save_settings', {
+                    p_actor: actorCode,
+                    p_is_active: autoActive,
+                    p_frequency: freq,
+                    p_backup_time: bTime,
+                    p_sections: sections,
+                    p_telegram_target: tgTarget,
+                    p_telegram_bot_token: tgToken
+                });
+
+                if (saveErr) {
+                    showToast('هەڵە لە پاشەکەوتکردن: ' + saveErr.message, 'error');
+                    return;
+                }
+
+                const { data: s } = await supabase.rpc('backup_get_settings', { p_actor: actorCode });
+                const settings = s || savedRow || {};
+
+                let ghNote = '';
+                if (settings && settings.github_token) {
+                    const ghSync = await syncScheduleToGitHub(bTime, freq, settings);
+                    if (ghSync.success) {
+                        ghNote = ghSync.updated ? ' و کاتژمێری گێتهاب هاوکات (Sync) کرا' : ' (کاتژمێری گێتهاب هاوکاتە)';
+                    } else {
+                        ghNote = ` (تێبینی: هاوکاتکردنی گێتهاب: ${ghSync.reason})`;
+                    }
+                }
+
+                showToast(`✅ ڕێکخستنەکان پاشەکەوت کران${ghNote}`, 'success');
+                fetchGitHubRunStatus();
+            } catch (e) {
+                showToast('هەڵەیەک ڕوویدا: ' + e.message, 'error');
+            } finally {
+                if (saveBtn) {
+                    saveBtn.disabled = false;
+                    saveBtn.innerHTML = "<i class='bx bx-check-shield'></i> <span>پاشەکەوتکردنی ڕێکخستنەکان و هاوکاتکردن لەگەڵ گێتهاب</span>";
+                }
+            }
+        }
+
+
+        function escapeHtml(str) {
+            if (str === null || str === undefined) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        function renderGDriveAccountsList(accounts) {
+            _bkGDriveAccounts = Array.isArray(accounts) ? accounts : [];
+            const container = document.getElementById('bk-gdrive-list');
+            const badge = document.getElementById('bk-gdrive-count-badge');
+            if (badge) {
+                badge.innerText = _bkGDriveAccounts.length > 0 ? (_bkGDriveAccounts.length + ' ئەکاونت') : '0 ئەکاونت';
+            }
+            if (!container) return;
+
+            if (_bkGDriveAccounts.length === 0) {
+                container.innerHTML = `
+                    <div class="bk-gdrive-empty">
+                        <div class="bk-gdrive-empty-ico"><i class='bx bxl-google-cloud'></i></div>
+                        <p class="bk-gdrive-empty-txt">هیچ ئەکاونتێکی گووگڵ درایڤ تۆمار نەکراوە.<br>دەتوانی لە سەرەوە ئیمەیڵ بنووسیت و زیادی بکەیت.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = _bkGDriveAccounts.map((acc, idx) => `
+                <div class="bk-gdrive-item" id="gdrive-row-${acc.id || idx}">
+                    <div class="bk-gdrive-item-left">
+                        <div class="bk-gdrive-ico-box">
+                            <i class='bx bxl-google'></i>
+                        </div>
+                        <div class="bk-gdrive-item-meta">
+                            <div class="bk-gdrive-item-title-row">
+                                <span class="bk-gdrive-item-name">${escapeHtml(acc.name || ('درایڤی ' + (idx + 1)))}</span>
+                                <span class="bk-gdrive-active-pill"><span class="bk-gh-dot"></span> چالاکە</span>
+                            </div>
+                            <span class="bk-gdrive-item-email" dir="ltr">${escapeHtml(acc.email || '')}</span>
+                        </div>
+                    </div>
+                    <button type="button" class="bk-gdrive-del-btn" onclick="removeGDriveAccount('${acc.id}')" title="سڕینەوەی ئەم ئەکاونتە" aria-label="سڕینەوە">
+                        <i class='bx bx-trash'></i>
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        async function addGDriveAccount() {
+            if (userRole !== 'پاشا') return;
+            const emailInput = document.getElementById('bk-gdrive-email-input');
+            const nameInput = document.getElementById('bk-gdrive-name-input');
+            const email = (emailInput ? emailInput.value : '').trim();
+            const name = (nameInput ? nameInput.value : '').trim();
+
+            if (!email || !email.includes('@') || !email.includes('.')) {
+                showToast('تکایە ئیمەیڵێکی دروستی گووگڵ بنووسە (نموونە: name@gmail.com)', 'error');
+                if (emailInput) emailInput.focus();
+                return;
+            }
+
+            const btn = document.getElementById('bk-btn-add-gdrive');
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = "<i class='bx bx-loader-alt bx-spin'></i> <span>خەریکی تۆمارکردنە...</span>";
+            }
+
+            try {
+                const actorCode = (currentUser && currentUser.code) || '1000';
+                const { data, error } = await supabase.rpc('backup_gdrive_account_add', {
+                    p_actor: actorCode,
+                    p_email: email,
+                    p_name: name || null
+                });
+
+                if (error) {
+                    showToast('هەڵە لە زیادکردنی ئەکاونت: ' + error.message, 'error');
+                    return; // Retain user input so they do not lose what they typed
+                }
+
+                const settings = data || {};
+                renderGDriveAccountsList(settings.gdrive_accounts || []);
+
+                // Only clear inputs AFTER renderGDriveAccountsList completes cleanly
+                if (emailInput) emailInput.value = '';
+                if (nameInput) nameInput.value = '';
+
+                showToast('✅ ئەکاونتی Google Drive بە سەرکەوتوویی زیادکرا', 'success');
+            } catch (e) {
+                showToast('هەڵەیەک ڕوویدا: ' + e.message, 'error');
+                // Retain user input on unexpected error
+            } finally {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = "<i class='bx bx-plus-circle'></i> <span>زیادکردنی ئەکاونت</span>";
+                }
+            }
+        }
+
+        async function removeGDriveAccount(accId) {
+            if (userRole !== 'پاشا') return;
+            if (!confirm('ئایا دڵنیایت دەتەوێت ئەم ئەکاونتە لە گووگڵ درایڤ لاببەیت؟')) return;
+
+            try {
+                const actorCode = (currentUser && currentUser.code) || '1000';
+                const { data, error } = await supabase.rpc('backup_gdrive_account_remove', {
+                    p_actor: actorCode,
+                    p_account_id: accId
+                });
+
+                if (error) {
+                    showToast('هەڵە لە سڕینەوە: ' + error.message, 'error');
+                    return;
+                }
+
+                showToast('ئەکاونتەکە لادرا');
+                const settings = data || {};
+                renderGDriveAccountsList(settings.gdrive_accounts || []);
+            } catch (e) {
+                showToast('هەڵەیەک ڕوویدا: ' + e.message, 'error');
+            }
+        }
+
+        async function triggerGitHubBackupNow() {
+            if (userRole !== 'پاشا') return;
+            const btn = document.getElementById('bk-btn-trigger-gh');
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = "<i class='bx bx-loader-alt bx-spin'></i> <span>دەستپێکردنی باکئەپ لە گێتهاب...</span>";
+            }
+
+            try {
+                const actorCode = (currentUser && currentUser.code) || '1000';
+                const { data: s, error: sErr } = await supabase.rpc('backup_get_settings', { p_actor: actorCode });
+                if (sErr || !s || !s.github_token) {
+                    showToast('تۆکنی گێتهاب دیاری نەکراوە', 'error');
+                    return;
+                }
+
+                const repo = s.github_repo || 'hussenmuhamad5-bit/my-order-backups';
+                const res = await fetch(`https://api.github.com/repos/${repo}/actions/workflows/backup.yml/dispatches`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': 'Bearer ' + s.github_token,
+                        'Accept': 'application/vnd.github.v3+json',
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ ref: 'main' })
+                });
+
+                if (res.status === 204 || res.ok) {
+                    showToast('🚀 باکئەپی گێتهاب دەستی پێکرد! دوای تەواوبوون دێتە تلیگرام و گووگڵ درایڤەکان.', 'success');
+                    const lastEl = document.getElementById('bk-gh-last-val');
+                    if (lastEl) lastEl.innerText = 'ئێستا جێبەجێ دەبێت (لە ڕیزدایە)...';
+                    setTimeout(fetchGitHubRunStatus, 4000);
+                } else {
+                    const errData = await res.json().catch(() => ({}));
+                    showToast('هەڵە لە گێتهاب: ' + (errData.message || res.statusText), 'error');
+                }
+            } catch (e) {
+                showToast('نەتوانرا پەیوەندی بە گێتهابەوە بکرێت: ' + e.message, 'error');
+            } finally {
+                if (btn) {
+                    setTimeout(() => {
+                        btn.disabled = false;
+                        btn.innerHTML = "<i class='bx bx-play-circle'></i> <span>⚡ ئێستا باکئەپ لە گێتهاب ئەنجام بدە (Run Workflow)</span>";
+                    }, 2000);
+                }
+            }
+        }
+
+        async function fetchGitHubRunStatus() {
+            try {
+                const actorCode = (currentUser && currentUser.code) || '1000';
+                const { data: s } = await supabase.rpc('backup_get_settings', { p_actor: actorCode });
+                if (!s || !s.github_token) return;
+
+                const repo = s.github_repo || 'hussenmuhamad5-bit/my-order-backups';
+                const res = await fetch(`https://api.github.com/repos/${repo}/actions/runs?per_page=1`, {
+                    headers: {
+                        'Authorization': 'Bearer ' + s.github_token,
+                        'Accept': 'application/vnd.github.v3+json'
+                    }
+                });
+                if (!res.ok) return;
+                const json = await res.json();
+                const run = json.workflow_runs && json.workflow_runs[0];
+                if (!run) return;
+
+                const lastEl = document.getElementById('bk-gh-last-val');
+                const badge = document.getElementById('bk-github-status-badge');
+
+                if (lastEl) {
+                    const d = new Date(run.created_at);
+                    const timeStr = d.toLocaleDateString('ckb', { month: 'short', day: 'numeric' }) + ' ' + d.toLocaleTimeString('ckb', { hour: '2-digit', minute: '2-digit' });
+                    if (run.status === 'in_progress' || run.status === 'queued') {
+                        lastEl.innerHTML = "<span style='color: #0284c7;'><i class='bx bx-loader-alt bx-spin'></i> لە کارکردندایە...</span>";
+                    } else if (run.conclusion === 'success') {
+                        lastEl.innerHTML = `<span style='color: #059669;'>${timeStr} (سەرکەوتوو بوو ✅)</span>`;
+                    } else {
+                        lastEl.innerHTML = `<span style='color: #dc2626;'>${timeStr} (${run.conclusion || run.status})</span>`;
+                    }
+                }
+
+                if (badge) {
+                    if (run.status === 'in_progress') {
+                        badge.className = 'bk-github-status-badge is-progress';
+                        badge.innerHTML = "<span class='bk-gh-dot pulse'></span> لە کاردایە";
+                    } else {
+                        badge.className = 'bk-github-status-badge';
+                        badge.innerHTML = "<span class='bk-gh-dot'></span> چالاکە";
+                    }
+                }
+            } catch (e) {
+                console.warn('fetchGitHubRunStatus error:', e);
+            }
+        }
+
+        async function startBackupExport(format) {
+            if (userRole !== 'پاشا') {
+                showToast('تەنها پاشا دەسەڵاتی باکئەپی هەیە', 'error');
+                return;
+            }
+
+            // بەشە هەڵبژێردراوەکان
+            const secMap = [
+                { id: 'bk-sec-orders', key: 'orders', name: 'ئۆردەرەکان' },
+                { id: 'bk-sec-employees', key: 'employees', name: 'کلیل و کارمەندان' },
+                { id: 'bk-sec-transactions', key: 'transactions', name: 'دارایی و مامەڵە' },
+                { id: 'bk-sec-cities', key: 'cities', name: 'شارەکان' },
+                { id: 'bk-sec-announcements', key: 'announcements', name: 'ڕاگەیاندنەکان' },
+                { id: 'bk-sec-notifications', key: 'notifications', name: 'ئاگادارکردنەوەکان' },
+                { id: 'bk-sec-cosmetics', key: 'cosmetics', name: 'کۆزمێتیک' }
+            ];
+
+            const selected = secMap.filter(s => {
+                const el = document.getElementById(s.id);
+                return el && el.checked;
+            });
+
+            if (selected.length === 0) {
+                showToast('تکایە لانیکەم یەک بەش هەڵبژێرە بۆ باکئەپ', 'error');
+                return;
+            }
+
+            const pBar = document.getElementById('backup-progress-bar');
+            const pFill = document.getElementById('backup-progress-fill');
+            const pLabel = document.getElementById('backup-progress-label');
+            const btnJson = document.getElementById('bk-btn-json');
+            const btnCsv = document.getElementById('bk-btn-csv');
+
+            if (pBar) pBar.style.display = 'block';
+            if (pFill) pFill.style.width = '5%';
+            if (pLabel) pLabel.innerText = 'دەستپێکردنی ئامادەکردنی داتاکان...';
+            if (btnJson) btnJson.disabled = true;
+            if (btnCsv) btnCsv.disabled = true;
+
+            const { start, end, label } = calculateBackupDates();
+            const actorCode = (currentUser && currentUser.code) || '1000';
+            const backupPayload = {
+                metadata: {
+                    version: '1.0',
+                    exported_at: new Date().toISOString(),
+                    exported_by: (currentUser && (currentUser.name || currentUser.code)) || 'پاشا',
+                    filter_range: _bkCurrentRange,
+                    start_date: start,
+                    end_date: end,
+                    sections: selected.map(s => s.key)
+                },
+                data: {}
+            };
+
+            try {
+                const totalSections = selected.length;
+                let currentSectionIndex = 0;
+
+                for (const sec of selected) {
+                    currentSectionIndex++;
+                    const basePercent = Math.floor(((currentSectionIndex - 1) / totalSections) * 90);
+                    if (pFill) pFill.style.width = `${basePercent}%`;
+                    if (pLabel) pLabel.innerText = `داگرتنی بەشی ${sec.name}... (${currentSectionIndex}/${totalSections})`;
+
+                    let offset = 0;
+                    const limit = 5000;
+                    let allRows = [];
+                    let hasMore = true;
+
+                    while (hasMore) {
+                        const { data, error } = await supabase.rpc('backup_get_section', {
+                            p_actor: actorCode,
+                            p_section: sec.key,
+                            p_start_date: start,
+                            p_end_date: end,
+                            p_limit: limit,
+                            p_offset: offset
+                        });
+
+                        if (error) {
+                            throw new Error(`هەڵە لە هێنانی بەشی ${sec.name}: ${error.message}`);
+                        }
+
+                        const rows = (data && data.rows) || [];
+                        allRows = allRows.concat(rows);
+
+                        const total = (data && data.total) || 0;
+                        offset += limit;
+                        if (offset >= total || rows.length === 0) {
+                            hasMore = false;
+                        }
+                    }
+
+                    backupPayload.data[sec.key] = allRows;
+                }
+
+                if (pFill) pFill.style.width = '95%';
+                if (pLabel) pLabel.innerText = 'دروستکردنی فایلی کۆتایی...';
+
+                const dateTag = new Date().toISOString().slice(0, 10);
+                if (format === 'json') {
+                    const jsonStr = JSON.stringify(backupPayload, null, 2);
+                    const blob = new Blob([jsonStr], { type: 'application/json;charset=utf-8;' });
+                    triggerFileDownload(blob, `backup_${label}_${dateTag}.json`);
+                } else if (format === 'csv') {
+                    const csvContent = formatRowsToCSV(backupPayload);
+                    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                    triggerFileDownload(blob, `backup_${label}_${dateTag}.csv`);
+                }
+
+                if (pFill) pFill.style.width = '100%';
+                if (pLabel) pLabel.innerText = '✅ باکئەپ بە سەرکەوتوویی تەواو بوو!';
+                showToast('✅ فایلی باکئەپ بە سەرکەوتوویی دروستکرا و داگیرا');
+
+                setTimeout(() => {
+                    if (pBar) pBar.style.display = 'none';
+                    if (pFill) pFill.style.width = '0%';
+                }, 3500);
+
+            } catch (err) {
+                console.error('Backup export error:', err);
+                showToast(err.message || 'هەڵەیەک لە دروستکردنی باکئەپ ڕوویدا', 'error');
+                if (pLabel) pLabel.innerText = '❌ هەڵە ڕوویدا لە دروستکردنی باکئەپ';
+            } finally {
+                if (btnJson) btnJson.disabled = false;
+                if (btnCsv) btnCsv.disabled = false;
+            }
+        }
+
+        function formatRowsToCSV(backupPayload) {
+            const lines = [];
+            lines.push(`# فایلی باکئەپی سیستم - ${backupPayload.metadata.exported_at}`);
+            lines.push(`# ئامادەکراوە لەلایەن: ${backupPayload.metadata.exported_by}`);
+            lines.push(`# ماوەی کات: ${backupPayload.metadata.filter_range}`);
+            lines.push('');
+
+            for (const [secKey, rows] of Object.entries(backupPayload.data)) {
+                lines.push(`=== بەشی: ${secKey.toUpperCase()} (کۆی گشتی: ${rows.length}) ===`);
+                if (!rows || rows.length === 0) {
+                    lines.push('هیچ تۆمارێک نەدۆزرایەوە');
+                    lines.push('');
+                    continue;
+                }
+
+                const headers = Object.keys(rows[0]);
+                lines.push(headers.map(h => `"${String(h).replace(/"/g, '""')}"`).join(','));
+
+                for (const r of rows) {
+                    const rowVals = headers.map(h => {
+                        let val = r[h];
+                        if (val === null || val === undefined) return '""';
+                        if (typeof val === 'object') val = JSON.stringify(val);
+                        return `"${String(val).replace(/"/g, '""')}"`;
+                    });
+                    lines.push(rowVals.join(','));
+                }
+                lines.push('');
+            }
+
+            return '\uFEFF' + lines.join('\r\n');
+        }
+
+        function triggerFileDownload(blob, filename) {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            setTimeout(() => {
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            }, 200);
+        }
 
         window.addEventListener('DOMContentLoaded', () => {
             let adminScreen = document.getElementById('admin-screen');

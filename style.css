@@ -523,6 +523,1464 @@ html.is-booting #boot-cover span {
   to { transform: rotate(360deg); }
 }
 
+
+/* ============================================================
+   🗄️ بەشی بەڕێوەبردنی باکئەپ (دەستی + ئۆتۆماتیک) — تەنها بۆ پاشا
+   ============================================================ */
+#section-backup {
+  flex: 1;
+  display: none;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 16px 12px calc(150px + var(--safe-bottom, 0px));
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  box-sizing: border-box;
+}
+
+#section-backup::-webkit-scrollbar {
+  display: none;
+}
+
+#backup-main-content {
+  max-width: 680px;
+  margin: 0 auto;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  box-sizing: border-box;
+}
+
+#king-backup-modal-body #backup-main-content {
+  max-width: 100%;
+  padding-bottom: 10px;
+}
+
+/* کارتی سەردێڕ و بەخێرهاتنی پاشا */
+.backup-header-card {
+  position: relative;
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 18px;
+  padding: 18px 20px;
+  color: #ffffff;
+  box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.18), 0 4px 10px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+}
+
+.backup-header-card::after {
+  content: '';
+  position: absolute;
+  top: -40px;
+  left: -40px;
+  width: 140px;
+  height: 140px;
+  background: radial-gradient(circle, rgba(2, 132, 199, 0.25) 0%, transparent 70%);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.backup-title-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  position: relative;
+  z-index: 1;
+}
+
+.backup-main-icon-wrap {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #0284c7 0%, #38bdf8 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  color: #ffffff;
+  box-shadow: 0 6px 16px rgba(2, 132, 199, 0.35);
+  flex-shrink: 0;
+}
+
+.backup-header-meta {
+  flex: 1;
+  min-width: 0;
+}
+
+.backup-title {
+  font-size: 17px;
+  font-weight: 800;
+  color: #ffffff;
+  margin: 0 0 4px 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.backup-king-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(234, 179, 8, 0.18);
+  border: 1px solid rgba(234, 179, 8, 0.4);
+  color: #fde047;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 20px;
+  letter-spacing: 0.2px;
+}
+
+.backup-subtitle {
+  font-size: 12.5px;
+  color: #94a3b8;
+  margin: 0;
+  line-height: 1.45;
+}
+
+/* کارتە سەرەکییەکان */
+.backup-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 18px;
+  padding: 20px;
+  box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.05);
+  box-sizing: border-box;
+}
+
+.backup-card-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+.backup-card-head i {
+  font-size: 18px;
+  color: #0284c7;
+  background: rgba(2, 132, 199, 0.1);
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.backup-card-head h4 {
+  font-size: 15px;
+  font-weight: 700;
+  color: #1e293b;
+  margin: 0;
+}
+
+.backup-card-desc {
+  font-size: 13px;
+  color: #64748b;
+  margin: 0 0 16px 0;
+  line-height: 1.5;
+}
+
+.backup-field-group {
+  margin-bottom: 14px;
+}
+
+.backup-field-lbl {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #334155;
+  margin-bottom: 8px;
+}
+
+.backup-field-lbl i {
+  color: #0284c7;
+  font-size: 16px;
+}
+
+/* دوگمە و چیپەکانی ماوەی کات */
+.backup-time-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.backup-chip {
+  background: #f8fafc;
+  border: 1.5px solid #e2e8f0;
+  color: #475569;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 8px 14px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  outline: none;
+  font-family: inherit;
+}
+
+.backup-chip:hover {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+  color: #1e293b;
+}
+
+.backup-chip.active {
+  background: #0284c7;
+  border-color: #0284c7;
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(2, 132, 199, 0.28);
+  transform: translateY(-1px);
+}
+
+.backup-date-box {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin-top: 10px;
+}
+
+.backup-date-box label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: #475569;
+  margin-bottom: 6px;
+}
+
+.backup-date-box input[type="date"],
+.backup-date-box input[type="month"],
+.backup-date-box input[type="time"],
+.backup-date-box input[type="text"] {
+  width: 100%;
+  padding: 9px 12px;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 13.5px;
+  background: #ffffff;
+  color: #1e293b;
+  font-family: inherit;
+  box-sizing: border-box;
+}
+
+.backup-date-box input:focus {
+  outline: none;
+  border-color: #0284c7;
+  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
+}
+
+/* دوگمەی هەڵبژاردنی هەمووی */
+.backup-toggle-all-btn {
+  background: rgba(2, 132, 199, 0.08);
+  border: 1px solid rgba(2, 132, 199, 0.2);
+  color: #0284c7;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 4px 10px;
+  border-radius: 8px;
+  transition: all 0.15s ease;
+  font-family: inherit;
+}
+
+.backup-toggle-all-btn:hover {
+  background: #0284c7;
+  color: #ffffff;
+  border-color: #0284c7;
+}
+
+/* گریدی بەشەکان (Tiles) */
+.backup-sections-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  margin-top: 8px;
+}
+
+@media (max-width: 540px) {
+  .backup-sections-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.backup-section-check {
+  display: block;
+  position: relative;
+  cursor: pointer;
+  user-select: none;
+  margin: 0;
+}
+
+.backup-section-check input[type="checkbox"] {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+  margin: 0;
+  pointer-events: none;
+}
+
+.bk-sec-tile {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 11px 12px;
+  background: #f8fafc;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 12px;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-sizing: border-box;
+}
+
+.backup-section-check:hover .bk-sec-tile {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+}
+
+.bk-sec-tile-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.bk-sec-icon-box {
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 17px;
+  color: #64748b;
+  flex-shrink: 0;
+  transition: all 0.2s;
+}
+
+.bk-sec-text {
+  font-size: 13px;
+  font-weight: 600;
+  color: #334155;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: color 0.2s;
+}
+
+.bk-sec-tile-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.bk-sec-count {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #64748b;
+  background: #e2e8f0;
+  padding: 2px 8px;
+  border-radius: 20px;
+  font-variant-numeric: tabular-nums;
+  transition: all 0.2s;
+}
+
+.bk-sec-check-mark {
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  border: 1.5px solid #cbd5e1;
+  background: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  color: transparent;
+  transition: all 0.2s;
+}
+
+/* دۆخی هەڵبژێردراو بۆ تایلەکان */
+.backup-section-check input[type="checkbox"]:checked + .bk-sec-tile {
+  background: #f0f9ff;
+  border-color: #0284c7;
+  box-shadow: 0 2px 8px rgba(2, 132, 199, 0.1);
+}
+
+.backup-section-check input[type="checkbox"]:checked + .bk-sec-tile .bk-sec-icon-box {
+  background: #0284c7;
+  border-color: #0284c7;
+  color: #ffffff;
+}
+
+.backup-section-check input[type="checkbox"]:checked + .bk-sec-tile .bk-sec-text {
+  color: #0f172a;
+  font-weight: 700;
+}
+
+.backup-section-check input[type="checkbox"]:checked + .bk-sec-tile .bk-sec-count {
+  background: rgba(2, 132, 199, 0.15);
+  color: #0284c7;
+}
+
+.backup-section-check input[type="checkbox"]:checked + .bk-sec-tile .bk-sec-check-mark {
+  background: #0284c7;
+  border-color: #0284c7;
+  color: #ffffff;
+}
+
+/* شریتی پێشکەوتن */
+.backup-progress-track {
+  height: 8px;
+  background: #e2e8f0;
+  border-radius: 9999px;
+  overflow: hidden;
+}
+
+.backup-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #0284c7 0%, #38bdf8 100%);
+  border-radius: 9999px;
+  transition: width 0.3s ease;
+}
+
+.backup-progress-text {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #0284c7;
+  text-align: center;
+  margin-top: 8px;
+}
+
+/* دوگمەکانی داگرتن */
+.backup-actions-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+@media (max-width: 480px) {
+  .backup-actions-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.backup-btn-action {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 13px 16px;
+  border-radius: 12px;
+  font-size: 13.5px;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.backup-btn-action i {
+  font-size: 20px;
+}
+
+.backup-btn-action.is-json {
+  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+  color: #ffffff;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.2);
+}
+
+.backup-btn-action.is-json:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.3);
+}
+
+.backup-btn-action.is-csv {
+  background: linear-gradient(135deg, #059669 0%, #047857 100%);
+  color: #ffffff;
+  box-shadow: 0 4px 14px rgba(5, 150, 105, 0.22);
+}
+
+.backup-btn-action.is-csv:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(5, 150, 105, 0.32);
+}
+
+.backup-btn-action:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+
+/* ستایلی نوێکراوەی بەشی ئۆتۆماتیک (UI/UX Pro Max) */
+.backup-switch-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 16px;
+  background: #f8fafc;
+  border-radius: 14px;
+  border: 1.5px solid #e2e8f0;
+  gap: 12px;
+}
+
+.bk-switch-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.bk-switch-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.bk-switch-sub {
+  font-size: 12px;
+  color: #64748b;
+}
+
+/* کاتی ئەنجامدان */
+.bk-time-input-box {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 0 12px;
+  height: 44px;
+  max-width: 320px;
+  transition: all 0.2s;
+}
+
+.bk-time-input-box:hover {
+  border-color: #cbd5e1;
+}
+
+.bk-time-input-box:focus-within {
+  border-color: #2481cc;
+  background: #ffffff;
+  box-shadow: 0 0 0 4px rgba(36, 129, 204, 0.15);
+}
+
+.bk-time-icon-box {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: #e0f2fe;
+  color: #0284c7;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.bk-time-control {
+  border: none;
+  background: transparent;
+  font-size: 15px;
+  font-weight: 700;
+  color: #1e293b;
+  outline: none;
+  font-family: inherit;
+  flex: 1;
+}
+
+.bk-time-tag {
+  font-size: 11px;
+  font-weight: 700;
+  color: #64748b;
+  background: #e2e8f0;
+  padding: 3px 8px;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+
+/* گریدی تایلەکانی بەشەکان لە ئۆتۆماتیک */
+.backup-auto-tiles-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  margin-top: 8px;
+}
+
+@media (max-width: 540px) {
+  .backup-auto-tiles-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.backup-auto-sec-tile {
+  display: block;
+  position: relative;
+  cursor: pointer;
+  user-select: none;
+  margin: 0;
+}
+
+.backup-auto-sec-tile input[type="checkbox"] {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+.bk-auto-tile-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 10px;
+  background: #f8fafc;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 14px;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-sizing: border-box;
+}
+
+.backup-auto-sec-tile:hover .bk-auto-tile-card {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+}
+
+.bk-auto-tile-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.bk-auto-tile-ico {
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 17px;
+  color: #64748b;
+  transition: all 0.2s;
+}
+
+.bk-auto-tile-chk {
+  width: 18px;
+  height: 18px;
+  border-radius: 5px;
+  border: 1.5px solid #cbd5e1;
+  background: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  color: transparent;
+  transition: all 0.2s;
+}
+
+.bk-auto-tile-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: #334155;
+  text-align: right;
+  transition: color 0.2s;
+}
+
+/* دۆخی هەڵبژێردراوی تایلی ئۆتۆماتیک */
+.backup-auto-sec-tile input[type="checkbox"]:checked + .bk-auto-tile-card {
+  background: #f0f9ff;
+  border-color: #0284c7;
+  box-shadow: 0 2px 10px rgba(2, 132, 199, 0.12);
+}
+
+.backup-auto-sec-tile input[type="checkbox"]:checked + .bk-auto-tile-card .bk-auto-tile-ico {
+  background: #0284c7;
+  border-color: #0284c7;
+  color: #ffffff;
+}
+
+.backup-auto-sec-tile input[type="checkbox"]:checked + .bk-auto-tile-card .bk-auto-tile-chk {
+  background: #0284c7;
+  border-color: #0284c7;
+  color: #ffffff;
+}
+
+.backup-auto-sec-tile input[type="checkbox"]:checked + .bk-auto-tile-card .bk-auto-tile-label {
+  color: #0284c7;
+}
+
+/* ئایدی تلیگرام */
+.bk-input-icon-group {
+  display: flex;
+  align-items: center;
+  background: #f8fafc;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 4px 12px;
+  gap: 10px;
+  transition: all 0.2s;
+}
+
+.bk-input-icon-group:focus-within {
+  border-color: #0284c7;
+  background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
+}
+
+.bk-input-affix {
+  font-size: 20px;
+  color: #229ED9;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.bk-affix-input {
+  border: none;
+  background: transparent;
+  padding: 8px 0;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #0f172a;
+  width: 100%;
+  outline: none;
+  font-family: inherit;
+}
+
+.bk-field-hint {
+  display: block;
+  font-size: 11.5px;
+  color: #64748b;
+  margin-top: 5px;
+}
+
+/* کارتی دۆخی دوایین باکئەپ */
+.backup-status-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  margin-top: 14px;
+}
+
+.backup-status-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #475569;
+}
+
+.backup-status-right i {
+  font-size: 18px;
+  color: #0284c7;
+}
+
+.backup-status-pill {
+  font-size: 12px;
+  font-weight: 700;
+  color: #475569;
+  background: #e2e8f0;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* دوگمەی پاشەکەوتکردنی گەورە و شیک */
+.backup-save-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 14px 20px;
+  background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+  color: #ffffff;
+  border-radius: 14px;
+  font-weight: 700;
+  font-size: 14.5px;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(2, 132, 199, 0.35);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  font-family: inherit;
+}
+
+.backup-save-btn i {
+  font-size: 20px;
+}
+
+.backup-save-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(2, 132, 199, 0.45);
+}
+
+.backup-save-btn:active {
+  transform: scale(0.99);
+}
+
+/* بەشی بەڕێوەبردنی گێتهاب (GitHub Actions Box) */
+.bk-github-box {
+  background: #f8fafc;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 16px;
+  margin-top: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.bk-github-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.bk-github-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.bk-github-ico {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: #0f172a;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  flex-shrink: 0;
+}
+
+.bk-github-h {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+}
+
+.bk-github-sub {
+  font-size: 11.5px;
+  color: #64748b;
+  margin: 2px 0 0;
+}
+
+.bk-github-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 11.5px;
+  font-weight: 700;
+  background: #dcfce7;
+  color: #15803d;
+  border: 1px solid #bbf7d0;
+  white-space: nowrap;
+}
+
+.bk-github-status-badge.is-progress {
+  background: #e0f2fe;
+  color: #0369a1;
+  border-color: #bae6fd;
+}
+
+.bk-gh-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #16a34a;
+}
+
+.bk-github-status-badge.is-progress .bk-gh-dot {
+  background: #0284c7;
+}
+
+.bk-gh-dot.pulse {
+  animation: bkDotPulse 1.2s infinite ease-in-out;
+}
+
+@keyframes bkDotPulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(1.4); }
+}
+
+.bk-github-info-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  background: #ffffff;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+}
+
+@media (max-width: 480px) {
+  .bk-github-info-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.bk-gh-info-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.bk-gh-info-lbl {
+  font-size: 11px;
+  color: #64748b;
+  font-weight: 600;
+}
+
+.bk-gh-info-val {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.bk-btn-trigger-gh {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 16px;
+  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+  color: #ffffff;
+  border-radius: 12px;
+  font-size: 13.5px;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.25);
+  transition: all 0.2s;
+  font-family: inherit;
+}
+
+.bk-btn-trigger-gh:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.35);
+}
+
+.bk-btn-trigger-gh:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* بەشی ئەکاونتەکانی Google Drive */
+.bk-gdrive-head-badge {
+  font-size: 11px;
+  font-weight: 700;
+  color: #0284c7;
+  background: #e0f2fe;
+  padding: 3px 8px;
+  border-radius: 6px;
+  margin-right: auto;
+}
+
+.bk-gdrive-add-form {
+  background: #f8fafc;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.bk-gdrive-input-row {
+  display: flex;
+  gap: 8px;
+}
+
+@media (max-width: 480px) {
+  .bk-gdrive-input-row {
+    flex-direction: column;
+  }
+}
+
+.bk-btn-add-account {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 11px 16px;
+  background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+  color: #ffffff;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  box-shadow: 0 2px 8px rgba(2, 132, 199, 0.25);
+  transition: all 0.2s;
+}
+
+.bk-btn-add-account:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(2, 132, 199, 0.35);
+}
+
+.bk-btn-add-account:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.bk-gdrive-count-badge {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #475569;
+  background: #e2e8f0;
+  padding: 2px 8px;
+  border-radius: 12px;
+}
+
+.bk-gdrive-list-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.bk-gdrive-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  background: #ffffff;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 12px;
+  transition: all 0.2s;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.03);
+}
+
+.bk-gdrive-item:hover {
+  border-color: #cbd5e1;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.05);
+}
+
+.bk-gdrive-item-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.bk-gdrive-ico-box {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  color: #16a34a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.bk-gdrive-item-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.bk-gdrive-item-title-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.bk-gdrive-item-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.bk-gdrive-active-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  color: #15803d;
+  background: #dcfce7;
+  padding: 1px 6px;
+  border-radius: 6px;
+}
+
+.bk-gdrive-item-email {
+  font-size: 11.5px;
+  color: #64748b;
+  font-family: monospace;
+}
+
+.bk-gdrive-del-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #dc2626;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  cursor: pointer;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.bk-gdrive-del-btn:hover {
+  background: #dc2626;
+  color: #ffffff;
+  border-color: #dc2626;
+}
+
+.bk-gdrive-empty {
+  text-align: center;
+  padding: 24px 16px;
+  background: #f8fafc;
+  border: 1.5px dashed #cbd5e1;
+  border-radius: 12px;
+}
+
+.bk-gdrive-empty-ico {
+  font-size: 32px;
+  color: #94a3b8;
+  margin-bottom: 6px;
+}
+
+.bk-gdrive-empty-txt {
+  font-size: 12.5px;
+  color: #64748b;
+  line-height: 1.6;
+  margin: 0;
+}
+
+/* ============================================================
+   👑 دیزاینی نوێ و یەکگرتووی هابی باکئەپی ئۆتۆماتیک (Backup Hub)
+   ============================================================ */
+.bk-hub-step-card {
+  background: #f8fafc;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 16px;
+  box-sizing: border-box;
+}
+
+.bk-hub-step-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.bk-hub-step-num {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: #0284c7;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+
+.bk-hub-step-title-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.bk-hub-step-title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: #0f172a;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.bk-hub-step-title i {
+  color: #0284c7;
+  font-size: 16px;
+}
+
+.bk-hub-step-desc {
+  font-size: 12px;
+  color: #64748b;
+}
+
+/* کارتەکانی شوێنی گەیاندن (Destination Cards) */
+.bk-dest-card {
+  background: #ffffff;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 14px;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-sizing: border-box;
+}
+
+.bk-dest-card:hover {
+  border-color: #cbd5e1;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04);
+}
+
+.bk-dest-card.is-tg {
+  border-top: 3px solid #229ED9;
+}
+
+.bk-dest-card.is-gdrive {
+  border-top: 3px solid #059669;
+}
+
+.bk-dest-card.is-gh {
+  border-top: 3px solid #0f172a;
+}
+
+.bk-dest-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.bk-dest-head-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.bk-dest-ico-box {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.bk-dest-ico-box.tg-ico {
+  background: rgba(34, 158, 217, 0.12);
+  color: #229ED9;
+}
+
+.bk-dest-ico-box.gdrive-ico {
+  background: rgba(5, 150, 105, 0.12);
+  color: #059669;
+}
+
+.bk-dest-ico-box.gh-ico {
+  background: #0f172a;
+  color: #ffffff;
+}
+
+.bk-dest-title {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #1e293b;
+  display: block;
+}
+
+.bk-dest-sub {
+  font-size: 11.5px;
+  color: #64748b;
+  display: block;
+  margin-top: 1px;
+}
+
+.bk-dest-badge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+
+.bk-dest-badge.tg-badge {
+  background: #e0f2fe;
+  color: #0369a1;
+}
+
+.bk-dest-body {
+  display: flex;
+  flex-direction: column;
+}
+
+/* دوگمەی تاقیکردنەوەی تلیگرام */
+.bk-btn-test-tg {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 14px;
+  background: #f0f9ff;
+  border: 1px solid #bae6fd;
+  color: #0284c7;
+  border-radius: 10px;
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: inherit;
+}
+
+.bk-btn-test-tg:hover:not(:disabled) {
+  background: #e0f2fe;
+  border-color: #7dd3fc;
+  transform: translateY(-1px);
+}
+
+.bk-btn-test-tg:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.bk-btn-guide-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 8px 12px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  color: #64748b;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: inherit;
+}
+
+.bk-btn-guide-toggle:hover {
+  background: #f1f5f9;
+  color: #1e293b;
+}
+
+.bk-btn-guide-toggle.active {
+  background: #e2e8f0;
+  color: #0f172a;
+  border-color: #cbd5e1;
+}
+
+/* دوگمەی تاقیکردنەوەی گووگڵ درایڤ */
+.bk-btn-test-gdrive {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 14px;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  color: #16a34a;
+  border-radius: 10px;
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: inherit;
+}
+
+.bk-btn-test-gdrive:hover:not(:disabled) {
+  background: #dcfce7;
+  border-color: #86efac;
+  transform: translateY(-1px);
+}
+
+.bk-btn-test-gdrive:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* ستایلی یەکگرتووی ئینپوتەکانی باکئەپ — دەقاودەق وەک ستانداردی وێبسایتەکە */
+.bk-clean-lbl {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #334155;
+  margin-bottom: 6px;
+  margin-top: 10px;
+}
+
+.bk-clean-lbl:first-child {
+  margin-top: 0;
+}
+
+.bk-clean-lbl i {
+  color: #2481cc;
+  font-size: 16px;
+}
+
+.bk-clean-input {
+  width: 100% !important;
+  height: 44px !important;
+  padding: 0 14px !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 10px !important;
+  background: #f8fafc !important;
+  font-size: 14px !important;
+  font-family: inherit !important;
+  color: #1e293b !important;
+  box-sizing: border-box !important;
+  transition: all 0.2s ease !important;
+  margin-bottom: 10px !important;
+}
+
+.bk-clean-input:hover {
+  border-color: #cbd5e1 !important;
+}
+
+.bk-clean-input:focus {
+  outline: none !important;
+  border-color: #2481cc !important;
+  background: #ffffff !important;
+  box-shadow: 0 0 0 4px rgba(36, 129, 204, 0.15) !important;
+}
+
+.bk-clean-input::placeholder {
+  color: #94a3b8 !important;
+  font-weight: 400 !important;
+}
+
+
 @media (prefers-reduced-motion: reduce) {
   .boot-spin { animation-duration: 2.4s; }
 }
