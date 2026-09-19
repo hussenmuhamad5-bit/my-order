@@ -7938,6 +7938,7 @@
             size = size || 44;
             const noTap = !!(opts && opts.noTap);
             let clean = avatarUrl ? String(avatarUrl).trim() : "";
+            if (typeof normalizeMediaUrl === 'function') clean = normalizeMediaUrl(clean);
             // ⚠️ `data-mpn` = ناوی نمایش. کارتەکە لێی دەخوێنێتەوە تاکو
             //    کەسێک کە لە هیچ کاشێکدا نییە (بۆ نموونە
             //    خاوەنی کۆمێنتێک لە دەرەوەی تیمەکەت) بە ناوی
@@ -10288,8 +10289,8 @@
                     </div>` : ''}
                     ${orderIsPrepaid(o) && o.payment_proof_url ? `<div style="margin-top:10px;">
                         <span style="font-size:12px; color:#64748b; display:block; margin-bottom:6px;"><i class='bx bx-receipt'></i> سکرینشۆتی پارەدان</span>
-                        <img src="${o.payment_proof_url}" loading="lazy" class="pay-proof-view"
-                            onclick="openImageGallery(['${o.payment_proof_url}'], 0)">
+                        <img src="${typeof normalizeMediaUrl === 'function' ? normalizeMediaUrl(o.payment_proof_url) : o.payment_proof_url}" loading="lazy" class="pay-proof-view"
+                            onclick="openImageGallery(['${typeof normalizeMediaUrl === 'function' ? normalizeMediaUrl(o.payment_proof_url) : o.payment_proof_url}'], 0)">
                     </div>` : ''}
                 </div>
             </div>`;
@@ -18946,12 +18947,9 @@
 
         // پاڕاوی ناوی URL بۆ ناو `url(…)`ی CSS
         function rpUrl(u) {
-            // ⚠️ **encodeURI بەکار مەهێنە** — URLی هاتوو لە بارکەرەوە
-            //    پێشتر ئینکۆدکراوە (%20، %23)، بۆیە دووبارە
-            //    ئینکۆدکردن %2520ی لێدێت و وێنەکە بێدەنگ بار نابێت
-            //    (پاشبنەمای ڕەش دەمێنێتەوە). تەنها ئەو پیتانە
-            //    لادەبرێن کە پێچەرەوەی url("…") دەشکێنن.
-            return String(u || '').trim().replace(/["\\\r\n]/g, '');
+            let s = String(u || '').trim().replace(/["\\\r\n]/g, '');
+            if (typeof normalizeMediaUrl === 'function') s = normalizeMediaUrl(s);
+            return s;
         }
 
         // ============================================================
@@ -21707,7 +21705,9 @@
         // وێنەی پڕۆفایلی پلە — ئەگەر دانەنرابێت، وێنەی ئاسایی
         function rpAvatarOf(emp, fallback) {
             const p = rpNorm(emp && emp.rank_prefs);
-            return p.avatar || String((emp && emp.avatar) || fallback || '').trim();
+            let av = p.avatar || String((emp && emp.avatar) || fallback || '').trim();
+            if (typeof normalizeMediaUrl === 'function') av = normalizeMediaUrl(av);
+            return av;
         }
 
         // کاشی `rank_prefs`ی ئەوانی تر — تابلۆی پلەکان لێی دەخوێنێتەوە

@@ -117,11 +117,60 @@ if (typeof window !== 'undefined') {
 }
 
 var currentUser = null;
+var CF_R2_PUBLIC_URL = "https://pub-5d1996bbd70b4d5e99499860829c4b46.r2.dev";
+
+function normalizeMediaUrl(url) {
+    if (!url || typeof url !== 'string') return url;
+    if (url.includes('kxztaywhqpekjmjoynin.supabase.co/storage/v1/object/public/order-images/')) {
+        return url.replace('https://kxztaywhqpekjmjoynin.supabase.co/storage/v1/object/public/order-images/', CF_R2_PUBLIC_URL + '/');
+    }
+    return url;
+}
+
 try {
     var savedUserStr = localStorage.getItem('myAppUser');
     if (savedUserStr && savedUserStr !== "undefined") {
         currentUser = JSON.parse(savedUserStr);
+        if (currentUser) {
+            var userChanged = false;
+            if (currentUser.avatar) {
+                var na = normalizeMediaUrl(currentUser.avatar);
+                if (na !== currentUser.avatar) { currentUser.avatar = na; userChanged = true; }
+            }
+            if (currentUser.rank_prefs) {
+                if (currentUser.rank_prefs.avatar) {
+                    var nra = normalizeMediaUrl(currentUser.rank_prefs.avatar);
+                    if (nra !== currentUser.rank_prefs.avatar) { currentUser.rank_prefs.avatar = nra; userChanged = true; }
+                }
+                if (currentUser.rank_prefs.banner) {
+                    var nrb = normalizeMediaUrl(currentUser.rank_prefs.banner);
+                    if (nrb !== currentUser.rank_prefs.banner) { currentUser.rank_prefs.banner = nrb; userChanged = true; }
+                }
+            }
+            if (userChanged) {
+                localStorage.setItem('myAppUser', JSON.stringify(currentUser));
+            }
+        }
     }
 } catch (e) {
     localStorage.removeItem('myAppUser');
 }
+
+try {
+    var accStr = localStorage.getItem('accountList');
+    if (accStr && accStr !== 'undefined') {
+        var accList = JSON.parse(accStr);
+        if (Array.isArray(accList)) {
+            var accsChanged = false;
+            accList.forEach(function (acc) {
+                if (acc && acc.avatar) {
+                    var na = normalizeMediaUrl(acc.avatar);
+                    if (na !== acc.avatar) { acc.avatar = na; accsChanged = true; }
+                }
+            });
+            if (accsChanged) {
+                localStorage.setItem('accountList', JSON.stringify(accList));
+            }
+        }
+    }
+} catch (e) { }
