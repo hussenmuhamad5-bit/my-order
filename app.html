@@ -780,6 +780,9 @@
                     <button class="magic-tab" id="tab-backup" title="باکئەپ" aria-label="باکئەپ"
                         onclick="switchAdminTab('backup', this)" style="display:none;"><i
                             class='bx bx-data'></i><span class="mt-lbl">باکئەپ</span></button>
+                    <button class="magic-tab" id="tab-storage" title="ستۆریج" aria-label="ستۆریج"
+                        onclick="switchAdminTab('storage', this)" style="display:none;"><i
+                            class='bx bx-server'></i><span class="mt-lbl">ستۆریج</span></button>
                 </div>
             </div>
 
@@ -1919,6 +1922,162 @@
                         </div>
                     </div>
 
+
+                </div>
+            </div>
+
+            <!-- ============================================================
+                 🗄️ داشبۆردی بەڕێوەبردنی ستۆریج و کلاود (تەنها بۆ پاشا)
+                 ============================================================ -->
+            <div id="section-storage" style="display: none; flex-direction: column; width: 100%; height: 100%; overflow-y: auto; padding-bottom: calc(180px + var(--safe-bottom, 0px));">
+                <div class="container" id="storage-main-content" style="max-width: 600px; margin: 0 auto; width: 100%;">
+                    
+                    <!-- ناونیشان و کورتە -->
+                    <div class="backup-header-card" style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);">
+                        <div class="backup-title-row">
+                            <div class="backup-main-icon-wrap" style="background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);">
+                                <i class='bx bx-server'></i>
+                            </div>
+                            <div class="backup-header-meta">
+                                <h3 class="backup-title">
+                                    <span>داشبۆردی ستۆریج و کلاود</span>
+                                    <span class="backup-king-badge">👑 پاشا</span>
+                                </h3>
+                                <p class="backup-subtitle">چاودێری و ڕەوشی قەبارەی سوپابەیس و کڵاوتفایەر</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- دوگمەی نوێکردنەوە و ڕەوشی گشتی -->
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin: 16px 0 12px 0;">
+                        <span id="st-last-checked" style="font-size: 12px; color: #64748b; display: flex; align-items: center; gap: 4px;">
+                            <i class='bx bx-time-five'></i> دواین پشکنین: لە بارکردندایە...
+                        </span>
+                        <button type="button" class="backup-toggle-all-btn" onclick="loadStorageDashboardStats(true)" id="st-refresh-btn" style="padding: 6px 12px; font-size: 12px; cursor: pointer;">
+                            <i class='bx bx-refresh'></i> نوێکردنەوەی ئامارەکان
+                        </button>
+                    </div>
+
+                    <!-- کارتی 1: Cloudflare R2 Storage (خەزێنەی سەرەکی وێنەکان) -->
+                    <div class="backup-card" style="border-right: 4px solid #f97316; margin-bottom: 14px;">
+                        <div class="backup-card-head" style="justify-content: space-between;">
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <i class='bx bxl-cloudflare' style="color: #f97316; background: rgba(249, 115, 22, 0.1);"></i>
+                                <div>
+                                    <h4 style="display: flex; align-items: center; gap: 6px;">
+                                        Cloudflare R2 Storage
+                                        <span style="font-size: 10px; background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0; border-radius: 6px; padding: 1px 6px; font-weight: 700;">چالاکە</span>
+                                    </h4>
+                                    <span style="font-size: 11px; color: #64748b;">خەزێنەی خێرای جیهانی و بێسنوور بۆ وێنەکان</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div style="margin-top: 14px;">
+                            <div style="display: flex; justify-content: space-between; font-size: 13px; font-weight: 700; margin-bottom: 6px;">
+                                <span style="color: #334155;">بەکارهێنراو: <span id="st-r2-used-mb" style="color: #f97316;">...</span> MB</span>
+                                <span style="color: #64748b;">سنووری خۆڕایی: 10,240 MB (10 GB)</span>
+                            </div>
+                            <div class="backup-progress-track" style="height: 10px; background: #f1f5f9; border-radius: 6px; overflow: hidden;">
+                                <div id="st-r2-progress" style="width: 0%; height: 100%; background: linear-gradient(90deg, #f97316, #fb923c); border-radius: 6px; transition: width 0.6s ease;"></div>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; font-size: 11.5px; color: #64748b; margin-top: 6px;">
+                                <span>ڕێژەی بەکارهاتوو: <strong id="st-r2-percent" style="color: #f97316;">0%</strong></span>
+                                <span>ماوە: <strong id="st-r2-remain-mb" style="color: #059669;">10,240</strong> MB</span>
+                            </div>
+
+                            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 10px 12px; margin-top: 12px; font-size: 12px; color: #475569; display: flex; flex-direction: column; gap: 6px;">
+                                <div style="display: flex; justify-content: space-between;">
+                                    <span>کۆی وێنە لەسەر Cloudflare R2:</span>
+                                    <strong id="st-r2-orders-count" style="color: #0f172a;">...</strong>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <span>دۆمەینی خێرای گشتی CDN:</span>
+                                    <code dir="ltr" style="background: #e2e8f0; padding: 2px 6px; border-radius: 4px; font-size: 10.5px; color: #0284c7;">r2.dev (چالاک)</code>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- کارتی 2: Supabase Storage (وێنەکان - دەبێت سفر بێت) -->
+                    <div class="backup-card" style="border-right: 4px solid #10b981; margin-bottom: 14px;">
+                        <div class="backup-card-head" style="justify-content: space-between;">
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <i class='bx bx-images' style="color: #10b981; background: rgba(16, 185, 129, 0.1);"></i>
+                                <div>
+                                    <h4 style="display: flex; align-items: center; gap: 6px;">
+                                        Supabase Storage
+                                        <span id="st-storage-badge" style="font-size: 10px; background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0; border-radius: 6px; padding: 1px 6px; font-weight: 700;">بەتاڵە</span>
+                                    </h4>
+                                    <span style="font-size: 11px; color: #64748b;">خەزێنەی وێنەکانی پێشووی سوپابەیس (order-images)</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div style="margin-top: 14px;">
+                            <div style="display: flex; justify-content: space-between; font-size: 13px; font-weight: 700; margin-bottom: 6px;">
+                                <span style="color: #334155;">قەبارەی ئێستا: <span id="st-storage-used-mb" style="color: #10b981;">0</span> MB</span>
+                                <span style="color: #64748b;">سنووری خۆڕایی: 1,000 MB (1 GB)</span>
+                            </div>
+                            <div class="backup-progress-track" style="height: 10px; background: #f1f5f9; border-radius: 6px; overflow: hidden;">
+                                <div id="st-storage-progress" style="width: 0%; height: 100%; background: linear-gradient(90deg, #10b981, #34d399); border-radius: 6px; transition: width 0.6s ease;"></div>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; font-size: 11.5px; color: #64748b; margin-top: 6px;">
+                                <span>ڕێژەی بەکارهاتوو: <strong id="st-storage-percent" style="color: #10b981;">0%</strong></span>
+                                <span>پەڕگەی ماوە لە ستۆریج: <strong id="st-storage-count" style="color: #0f172a;">0</strong></span>
+                            </div>
+
+                            <div id="st-storage-safe-msg" style="background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 12px; padding: 10px 12px; margin-top: 12px; font-size: 12px; color: #065f46; display: flex; align-items: center; gap: 8px;">
+                                <i class='bx bx-check-shield' style="font-size: 18px; color: #10b981;"></i>
+                                <span>ستۆریژی وێنەکان بەتەواوی پارێزراوە و هەموو وێنەکان لەسەر کڵاوتفایەرن.</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- کارتی 3: Supabase Database Storage (داتابەیسی سەرەکی) -->
+                    <div class="backup-card" style="border-right: 4px solid #3b82f6; margin-bottom: 14px;">
+                        <div class="backup-card-head" style="justify-content: space-between;">
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <i class='bx bx-cylinder' style="color: #3b82f6; background: rgba(59, 130, 246, 0.1);"></i>
+                                <div>
+                                    <h4 style="display: flex; align-items: center; gap: 6px;">
+                                        Supabase Database (PostgreSQL)
+                                        <span id="st-db-badge" style="font-size: 10px; background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; border-radius: 6px; padding: 1px 6px; font-weight: 700;">سەلامەتە</span>
+                                    </h4>
+                                    <span style="font-size: 11px; color: #64748b;">تەواوی خشتەکانی ئۆردەر، کارمەند و دارایی</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div style="margin-top: 14px;">
+                            <div style="display: flex; justify-content: space-between; font-size: 13px; font-weight: 700; margin-bottom: 6px;">
+                                <span style="color: #334155;">قەبارە: <span id="st-db-used-mb" style="color: #3b82f6;">...</span> MB</span>
+                                <span style="color: #64748b;">سنووری خۆڕایی: 500 MB</span>
+                            </div>
+                            <div class="backup-progress-track" style="height: 10px; background: #f1f5f9; border-radius: 6px; overflow: hidden;">
+                                <div id="st-db-progress" style="width: 22%; height: 100%; background: linear-gradient(90deg, #3b82f6, #60a5fa); border-radius: 6px; transition: width 0.6s ease;"></div>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; font-size: 11.5px; color: #64748b; margin-top: 6px;">
+                                <span>ڕێژەی بەکارهاتوو: <strong id="st-db-percent" style="color: #3b82f6;">...%</strong></span>
+                                <span>ماوە: <strong id="st-db-remain-mb" style="color: #059669;">...</strong> MB</span>
+                            </div>
+
+                            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 10px 12px; margin-top: 12px; font-size: 12px; color: #475569; display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; text-align: center;">
+                                <div style="background: #ffffff; padding: 8px 6px; border-radius: 8px; border: 1px solid #e2e8f0;">
+                                    <span style="display: block; font-size: 10.5px; color: #64748b;">ئۆردەرەکان</span>
+                                    <strong id="st-db-orders-count" style="font-size: 13px; color: #0f172a;">...</strong>
+                                </div>
+                                <div style="background: #ffffff; padding: 8px 6px; border-radius: 8px; border: 1px solid #e2e8f0;">
+                                    <span style="display: block; font-size: 10.5px; color: #64748b;">کارمەندان</span>
+                                    <strong id="st-db-employees-count" style="font-size: 13px; color: #0f172a;">...</strong>
+                                </div>
+                                <div style="background: #ffffff; padding: 8px 6px; border-radius: 8px; border: 1px solid #e2e8f0;">
+                                    <span style="display: block; font-size: 10.5px; color: #64748b;">دارایی</span>
+                                    <strong id="st-db-transactions-count" style="font-size: 13px; color: #0f172a;">...</strong>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
 
                 </div>
             </div>
@@ -5242,7 +5401,7 @@
             return ADMIN_TABS.find(t => t.tab === tab) || null;
         }
         function adminTabAllowed(tab) {
-            if (tab === 'backup') return userRole === 'پاشا';
+            if (tab === 'backup' || tab === 'storage') return userRole === 'پاشا';
             const d = adminTabDef(tab);
             return !!d && can(d.perm);
         }
@@ -5250,6 +5409,7 @@
             const list = ADMIN_TABS.filter(t => can(t.perm));
             if (userRole === 'پاشا') {
                 list.push({ tab: 'backup', btn: 'tab-backup', sec: 'section-backup', perm: 'manage_backup', show: 'flex' });
+                list.push({ tab: 'storage', btn: 'tab-storage', sec: 'section-storage', perm: 'manage_storage', show: 'flex' });
             }
             return list;
         }
@@ -5280,10 +5440,20 @@
                 if (bkBtn) bkBtn.classList.remove('active');
             }
 
+            // تابی تایبەتی ستۆریج — تەنها بۆ پاشا
+            const stBtn = document.getElementById('tab-storage');
+            if (stBtn) stBtn.style.display = (userRole === 'پاشا') ? 'inline-block' : 'none';
+            if (userRole !== 'پاشا') {
+                const stSec = document.getElementById('section-storage');
+                if (stSec) stSec.style.display = 'none';
+                if (stBtn) stBtn.classList.remove('active');
+            }
+
             if (!allowed.length) return;
 
-            // ئەگەر باکئەپ چالاک بێت و بەکارهێنەر پاشا بێت، مەیگۆڕە
-            if (bkBtn && bkBtn.classList.contains('active') && userRole === 'پاشا') return;
+            // ئەگەر باکئەپ یان ستۆریج چالاک بێت و بەکارهێنەر پاشا بێت، مەیگۆڕە
+            if ((bkBtn && bkBtn.classList.contains('active') && userRole === 'پاشا') ||
+                (stBtn && stBtn.classList.contains('active') && userRole === 'پاشا')) return;
 
             // تابی چالاکی ئێستا هێشتا ڕێگەی پێدراوە؟ ئەگەرنا، یەکەم
             // تابێک کە ڕێگەی پێدراوە.
@@ -29826,6 +29996,8 @@
             document.getElementById('section-trash').style.display = 'none';
             const secBackup = document.getElementById('section-backup');
             if (secBackup) secBackup.style.display = 'none';
+            const secStorage = document.getElementById('section-storage');
+            if (secStorage) secStorage.style.display = 'none';
 
             // ⚠️ **گۆڕینی بەشەکە یەکسەرە، نەخشاندنی لیستەکە یەک فرەیم
             //    دوادەخرێت.** پێشتر هەردووکیان لە هەمان تاسکدا بوون کە
@@ -29876,6 +30048,9 @@
             } else if (tabName === 'backup') {
                 if (secBackup) secBackup.style.display = 'flex';
                 paint(initBackupSection);
+            } else if (tabName === 'storage') {
+                if (secStorage) secStorage.style.display = 'flex';
+                paint(initStorageSection);
             }
 
             // دوای دەرکەوتنی بەشەکە پێوانە دەکرێت — پێشتر ناتوانرێت،
@@ -29893,6 +30068,182 @@
                 }
             });
         });
+
+        // ============================================================
+        // 📊 داشبۆردی بەڕێوەبردنی ستۆریج و کلاود (پاشا)
+        // ============================================================
+        let _stLoading = false;
+        let _stCachedStats = null;
+
+        function openKingStorageTab() {
+            if (userRole !== 'پاشا') return;
+            switchScreen('admin-screen', document.getElementById('nav-admin'));
+            switchAdminTab('storage', document.getElementById('tab-storage'));
+        }
+
+        function initStorageSection() {
+            if (userRole !== 'پاشا') return;
+            loadStorageDashboardStats(false);
+        }
+
+        async function loadStorageDashboardStats(force = false) {
+            if (userRole !== 'پاشا') return;
+            if (_stLoading) return;
+
+            const refreshBtn = document.getElementById('st-refresh-btn');
+            const lastCheckedEl = document.getElementById('st-last-checked');
+
+            if (_stCachedStats && !force) {
+                renderStorageDashboardUI(_stCachedStats);
+                return;
+            }
+
+            _stLoading = true;
+            if (refreshBtn) {
+                refreshBtn.disabled = true;
+                refreshBtn.innerHTML = "<i class='bx bx-loader-alt bx-spin'></i> خەریکی پشکنینە...";
+            }
+
+            try {
+                const { data, error } = await supabase.rpc('get_system_storage_stats');
+                if (error) throw error;
+
+                if (data && data.success) {
+                    _stCachedStats = data;
+                    renderStorageDashboardUI(data);
+                } else {
+                    throw new Error(data ? data.error : 'ناتوانرا ئامارەکان وەربگیرێت');
+                }
+            } catch (err) {
+                console.error('Error loading storage stats:', err);
+                if (lastCheckedEl) {
+                    lastCheckedEl.innerHTML = `<i class='bx bx-error-circle' style='color:#ef4444;'></i> هەڵە لە پشکنین: ${err.message || 'پەیوەندی لەدەستچوو'}`;
+                }
+            } finally {
+                _stLoading = false;
+                if (refreshBtn) {
+                    refreshBtn.disabled = false;
+                    refreshBtn.innerHTML = "<i class='bx bx-refresh'></i> نوێکردنەوەی ئامارەکان";
+                }
+            }
+        }
+
+        function renderStorageDashboardUI(stats) {
+            if (!stats) return;
+
+            // 1. Cloudflare R2
+            const r2Limit = stats.r2_limit_mb || 10240;
+            const r2OrdersCount = stats.r2_orders_count || 0;
+            const r2EstimatedMb = ((r2OrdersCount * 135) / 1024).toFixed(1);
+            const r2Percent = Math.min(100, Math.max(0.1, ((r2EstimatedMb / r2Limit) * 100))).toFixed(1);
+            const r2RemainMb = Math.max(0, (r2Limit - r2EstimatedMb)).toFixed(0);
+
+            const r2UsedEl = document.getElementById('st-r2-used-mb');
+            if (r2UsedEl) r2UsedEl.textContent = Number(r2EstimatedMb).toLocaleString();
+
+            const r2ProgEl = document.getElementById('st-r2-progress');
+            if (r2ProgEl) r2ProgEl.style.width = `${r2Percent}%`;
+
+            const r2PctEl = document.getElementById('st-r2-percent');
+            if (r2PctEl) r2PctEl.textContent = `${r2Percent}%`;
+
+            const r2RemainEl = document.getElementById('st-r2-remain-mb');
+            if (r2RemainEl) r2RemainEl.textContent = Number(r2RemainMb).toLocaleString();
+
+            const r2OrdersEl = document.getElementById('st-r2-orders-count');
+            if (r2OrdersEl) r2OrdersEl.textContent = `${r2OrdersCount.toLocaleString()} وێنەی ئۆردەر`;
+
+            // 2. Supabase Storage (order-images)
+            const stStorageMb = stats.storage_size_mb || 0;
+            const stStorageCount = stats.storage_count || 0;
+            const stStoragePercent = stats.storage_percent || 0;
+
+            const stStorageUsedEl = document.getElementById('st-storage-used-mb');
+            if (stStorageUsedEl) stStorageUsedEl.textContent = stStorageMb.toFixed(1);
+
+            const stStorageProgEl = document.getElementById('st-storage-progress');
+            if (stStorageProgEl) stStorageProgEl.style.width = `${Math.min(100, stStoragePercent)}%`;
+
+            const stStoragePctEl = document.getElementById('st-storage-percent');
+            if (stStoragePctEl) stStoragePctEl.textContent = `${stStoragePercent}%`;
+
+            const stStorageCountEl = document.getElementById('st-storage-count');
+            if (stStorageCountEl) stStorageCountEl.textContent = stStorageCount.toLocaleString();
+
+            const stBadgeEl = document.getElementById('st-storage-badge');
+            if (stBadgeEl) {
+                if (stStorageCount === 0) {
+                    stBadgeEl.textContent = 'بە تەواوەتی بەتاڵە (0)';
+                    stBadgeEl.style.background = '#ecfdf5';
+                    stBadgeEl.style.color = '#059669';
+                    stBadgeEl.style.borderColor = '#a7f3d0';
+                } else {
+                    stBadgeEl.textContent = `${stStorageCount} پەڕگە`;
+                    stBadgeEl.style.background = '#fffbeb';
+                    stBadgeEl.style.color = '#d97706';
+                    stBadgeEl.style.borderColor = '#fde68a';
+                }
+            }
+
+            // 3. Supabase Database (PostgreSQL)
+            const dbUsedMb = stats.db_size_mb || 0;
+            const dbLimitMb = stats.db_limit_mb || 500;
+            const dbPercent = stats.db_percent || 0;
+            const dbRemainMb = Math.max(0, (dbLimitMb - dbUsedMb)).toFixed(1);
+
+            const dbUsedEl = document.getElementById('st-db-used-mb');
+            if (dbUsedEl) dbUsedEl.textContent = dbUsedMb.toFixed(1);
+
+            const dbProgEl = document.getElementById('st-db-progress');
+            if (dbProgEl) {
+                dbProgEl.style.width = `${Math.min(100, dbPercent)}%`;
+                if (dbPercent > 85) {
+                    dbProgEl.style.background = 'linear-gradient(90deg, #ef4444, #f87171)';
+                } else if (dbPercent > 70) {
+                    dbProgEl.style.background = 'linear-gradient(90deg, #f59e0b, #fbbf24)';
+                } else {
+                    dbProgEl.style.background = 'linear-gradient(90deg, #3b82f6, #60a5fa)';
+                }
+            }
+
+            const dbPctEl = document.getElementById('st-db-percent');
+            if (dbPctEl) dbPctEl.textContent = `${dbPercent}%`;
+
+            const dbRemainEl = document.getElementById('st-db-remain-mb');
+            if (dbRemainEl) dbRemainEl.textContent = Number(dbRemainMb).toLocaleString();
+
+            const dbBadgeEl = document.getElementById('st-db-badge');
+            if (dbBadgeEl) {
+                if (dbPercent > 85) {
+                    dbBadgeEl.textContent = 'خەریکە پڕ دەبێت';
+                    dbBadgeEl.style.background = '#fef2f2';
+                    dbBadgeEl.style.color = '#dc2626';
+                    dbBadgeEl.style.borderColor = '#fecaca';
+                } else {
+                    dbBadgeEl.textContent = 'سەلامەتە';
+                    dbBadgeEl.style.background = '#eff6ff';
+                    dbBadgeEl.style.color = '#2563eb';
+                    dbBadgeEl.style.borderColor = '#bfdbfe';
+                }
+            }
+
+            const dbOrdersEl = document.getElementById('st-db-orders-count');
+            if (dbOrdersEl) dbOrdersEl.textContent = (stats.total_orders || 0).toLocaleString();
+
+            const dbEmpEl = document.getElementById('st-db-employees-count');
+            if (dbEmpEl) dbEmpEl.textContent = (stats.total_employees || 0).toLocaleString();
+
+            const dbTransEl = document.getElementById('st-db-transactions-count');
+            if (dbTransEl) dbTransEl.textContent = (stats.total_transactions || 0).toLocaleString();
+
+            // دواین کات
+            const lastCheckedEl = document.getElementById('st-last-checked');
+            if (lastCheckedEl) {
+                const now = new Date();
+                const timeStr = now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                lastCheckedEl.innerHTML = `<i class='bx bx-check-circle' style='color:#10b981;'></i> دواین پشکنین: کاتژمێر ${timeStr}`;
+            }
+        }
 
         
         // ============================================================
