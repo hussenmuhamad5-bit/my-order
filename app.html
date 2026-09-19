@@ -29427,6 +29427,32 @@
             return `${ym}/${code}/${Date.now()}_${rand}_${safe}`;
         }
 
+        const CF_WORKER_UPLOAD_URL = "https://order-image-uploader.hussen-orders.workers.dev/upload";
+        const CF_R2_PUBLIC_URL = "https://pub-5d1996bbd70b4d5e99499860829c4b46.r2.dev";
+
+        async function uploadToCloudflare(blob, filename, onProgress) {
+            const userCode = (currentUser && currentUser.code) ? String(currentUser.code) : 'u';
+            const res = await xhrUpload({
+                url: CF_WORKER_UPLOAD_URL,
+                headers: {
+                    'Content-Type': blob.type || 'image/jpeg',
+                    'X-Filename': encodeURIComponent(filename || 'photo.jpg'),
+                    'X-User-Code': encodeURIComponent(userCode)
+                },
+                body: blob,
+                onProgress: onProgress
+            });
+            if (res.status < 200 || res.status >= 300) {
+                let msg = 'HTTP ' + res.status;
+                try { const j = JSON.parse(res.text); if (j && (j.error || j.message)) msg = j.error || j.message; } catch (e) { }
+                throw new Error(msg);
+            }
+            let j = null;
+            try { j = JSON.parse(res.text); } catch (e) { }
+            if (j && j.success && j.url) return j.url;
+            throw new Error('Cloudflare URL نەگەڕایەوە');
+        }
+
         async function uploadToSupabase(blob, filename, onProgress) {
             if (typeof SUPABASE_URL === 'undefined' || typeof SUPABASE_KEY === 'undefined') {
                 throw new Error('Supabase ڕێکنەخراوە');
@@ -29465,17 +29491,17 @@
             throw new Error((j && j.error && j.error.message) || ('HTTP ' + res.status));
         }
 
-        // Supabase → ئەگەر شکستی هێنا → ImgBB
+        // Cloudflare R2 (سەرەکی) → ئەگەر شکستی هێنا → Supabase Storage (پاشەکەوت)
         async function uploadImage(blob, filename, onProgress) {
             try {
-                return await uploadToSupabase(blob, filename, onProgress);
+                return await uploadToCloudflare(blob, filename, onProgress);
             } catch (e1) {
-                console.warn('Supabase Storage نەیتوانی:', e1 && e1.message);
+                console.warn('Cloudflare R2 نەیتوانی، دەکەوێتە سەر Supabase:', e1 && e1.message);
                 if (onProgress) onProgress(0);
                 try {
-                    return await uploadToImgbb(blob, filename, onProgress);
+                    return await uploadToSupabase(blob, filename, onProgress);
                 } catch (e2) {
-                    console.warn('ImgBB نەیتوانی:', e2 && e2.message);
+                    console.warn('Supabase Storage-یش نەیتوانی:', e2 && e2.message);
                     throw e1; // هەڵەی سەرەکی دەگەڕێندرێتەوە
                 }
             }
