@@ -1451,634 +1451,597 @@
             </div>
 
             <!-- ============================================================
-                 🗄️ بەڕێوەبردنی باکئەپ (دەستی و ئۆتۆماتیک) — تەنها بۆ پاشا
+                 🗄️ باکئەپ — دیزاینی v2 (تەنها بۆ پاشا)
+                 ------------------------------------------------------------
+                 ⭐ دوو پانێڵ (دەستی | ئۆتۆماتیک) لەبری یەک سکڕۆڵی
+                    درێژ — نیوەی درێژی پەڕەکە لەسەر مۆبایل.
+                 ⭐ شوێنەکانی گەیاندن بوون بە **ئەکۆردیۆن**: پێشتر
+                    کارت لەناو کارت لەناو کارت بوو و ناوەڕۆکی
+                    کردبووە ٢١٦px لەسەر شاشەیەکی ٣٦٢px
+                    ([[landmines]] ١٤١).
+                 ⭐ هیچ پەدینگێکی تەنیشتی نییە — `#admin-screen`
+                    پێشتر ٢٠px دادەنێت، بۆیە کارتەکان ڕێک ئەو
+                    پانییەیان هەیە کە کارتی ئۆردەرەکان هەیانە.
                  ============================================================ -->
-            <div id="section-backup" style="display: none; flex-direction: column; width: 100%; height: 100%; overflow-y: auto; padding-bottom: calc(180px + var(--safe-bottom, 0px));">
-                <div class="container" id="backup-main-content" style="max-width: 600px; margin: 0 auto; width: 100%;">
-                    
-                    <!-- ناونیشان و کورتە -->
-                    <div class="backup-header-card">
-                        <div class="backup-title-row">
-                            <div class="backup-main-icon-wrap">
-                                <i class='bx bx-data'></i>
-                            </div>
-                            <div class="backup-header-meta">
-                                <h3 class="backup-title">
-                                    <span>باکئەپی داتاکان</span>
-                                    <span class="backup-king-badge">👑 پاشا</span>
-                                </h3>
-                                <p class="backup-subtitle">پاراستن و هەناردەکردنی داتاکانی سیستم</p>
-                            </div>
+            <div id="section-backup" style="display: none;">
+                <div class="bkv-wrap" id="backup-main-content">
+
+                    <!-- ١ · شریتی دۆخ -->
+                    <div class="bkv-status">
+                        <div class="bkv-status-ico"><i class='bx bx-data'></i></div>
+                        <div class="bkv-status-txt">
+                            <span class="bkv-status-title">
+                                <span class="bkv-dot" id="bkv-dot"></span>
+                                <span id="bkv-state">باکئەپی داتاکان</span>
+                            </span>
+                            <span class="bkv-status-sub" id="bkv-sub">لە بارکردندایە…</span>
                         </div>
+                        <span class="bkv-status-last" id="bkv-last">—</span>
                     </div>
 
-                    <!-- کارتی 1: باکئەپی دەستی -->
-                    <div class="backup-card">
-                        <div class="backup-card-head">
-                            <i class='bx bx-download'></i>
-                            <h4>باکئەپی دەستی</h4>
+                    <!-- ٢ · گۆڕەری پانێڵ -->
+                    <div class="bkv-seg" role="tablist">
+                        <button type="button" class="bkv-seg-btn is-on" id="bkv-tab-manual"
+                            role="tab" aria-selected="true" onclick="bkvPane('manual', this)">
+                            <i class='bx bx-download'></i> دەستی
+                        </button>
+                        <button type="button" class="bkv-seg-btn" id="bkv-tab-auto"
+                            role="tab" aria-selected="false" onclick="bkvPane('auto', this)">
+                            <i class='bx bx-sync'></i> ئۆتۆماتیک
+                        </button>
+                    </div>
+
+                    <!-- ============================================
+                         پانێڵی ١ · باکئەپی دەستی
+                         ============================================ -->
+                    <div class="bkv-pane is-on" id="bkv-pane-manual" role="tabpanel">
+
+                        <div class="bkv-card">
+                            <div class="bkv-t"><i class='bx bx-calendar'></i> ماوەی کات</div>
+                            <div class="bkv-chips">
+                                <button type="button" class="bkv-chip is-on" data-range="all" onclick="setBackupTimeRange('all', this)">هەمووی</button>
+                                <button type="button" class="bkv-chip" data-range="this_month" onclick="setBackupTimeRange('this_month', this)">ئەم مانگە</button>
+                                <button type="button" class="bkv-chip" data-range="custom_month" onclick="setBackupTimeRange('custom_month', this)">مانگێک</button>
+                                <button type="button" class="bkv-chip" data-range="range" onclick="setBackupTimeRange('range', this)">مەودا</button>
+                                <button type="button" class="bkv-chip" data-range="single_day" onclick="setBackupTimeRange('single_day', this)">ڕۆژێک</button>
+                            </div>
+
+                            <!-- یەک دوگمە بۆ هەرسێ مۆدەکە — دەقەکە و ئەو
+                                 شیتەی دەکاتەوە بەپێی چیپی چالاک دەگۆڕدرێن -->
+                            <button type="button" class="bkv-pick" id="bk-date-pick"
+                                onclick="openBkRangePicker()" style="display: none;">
+                                <span class="bkv-pick-ico"><i class='bx bx-calendar-edit' id="bk-date-pick-ico"></i></span>
+                                <span class="bkv-pick-txt">
+                                    <span class="bkv-pick-lbl" id="bk-date-pick-lbl">مەودا</span>
+                                    <span class="bkv-pick-val" id="bk-date-pick-val">دیاری بکە</span>
+                                </span>
+                                <i class='bx bx-chevron-left bkv-pick-chev'></i>
+                            </button>
+
+                            <div class="bkv-note">
+                                <i class='bx bx-info-circle'></i>
+                                <span id="bk-range-sum-txt">هەموو داتاکان لە سەرەتاوە تا ئێستا</span>
+                            </div>
                         </div>
-                        <p class="backup-card-desc">دیاریکردنی کات و بەشەکان بۆ داگرتن:</p>
 
-                        <!-- فلتەری ماوەی کات -->
-                        <div class="backup-field-group">
-                            <label class="backup-field-lbl"><i class='bx bx-calendar'></i> ماوەی کات:</label>
-                            <div class="backup-time-chips">
-                                <button type="button" class="backup-chip active" data-range="all" onclick="setBackupTimeRange('all', this)">هەمووی</button>
-                                <button type="button" class="backup-chip" data-range="this_month" onclick="setBackupTimeRange('this_month', this)">ئەم مانگە</button>
-                                <button type="button" class="backup-chip" data-range="custom_month" onclick="setBackupTimeRange('custom_month', this)">مانگێک</button>
-                                <button type="button" class="backup-chip" data-range="range" onclick="setBackupTimeRange('range', this)">مەودا</button>
-                                <button type="button" class="backup-chip" data-range="single_day" onclick="setBackupTimeRange('single_day', this)">ڕۆژێک</button>
+                        <div class="bkv-card">
+                            <div class="bkv-t">
+                                <i class='bx bx-check-square'></i> بەشەکان
+                                <button type="button" class="bkv-pill bkv-t-act" id="bk-toggle-all"
+                                    onclick="toggleAllBackupSections()">هەمووی</button>
                             </div>
 
-                            <div id="backup-date-custom-month" class="backup-date-box" style="display: none;">
-                                <label>مانگی مەبەست:</label>
-                                <input type="month" id="bk-month-input" class="form-input" onchange="onBackupDateChange()">
+                            <div class="bkv-list">
+                                <label class="bkv-row is-indigo">
+                                    <input type="checkbox" id="bk-sec-orders" checked>
+                                    <span class="bkv-row-in">
+                                        <span class="bkv-row-ico"><i class='bx bx-shopping-bag'></i></span>
+                                        <span class="bkv-row-t">ئۆردەرەکان</span>
+                                        <span class="bkv-row-n" id="bk-count-orders">…</span>
+                                        <span class="bkv-row-k"><i class='bx bx-check'></i></span>
+                                    </span>
+                                </label>
+                                <label class="bkv-row is-sky">
+                                    <input type="checkbox" id="bk-sec-employees" checked>
+                                    <span class="bkv-row-in">
+                                        <span class="bkv-row-ico"><i class='bx bx-key'></i></span>
+                                        <span class="bkv-row-t">کارمەند و کلیل</span>
+                                        <span class="bkv-row-n" id="bk-count-employees">…</span>
+                                        <span class="bkv-row-k"><i class='bx bx-check'></i></span>
+                                    </span>
+                                </label>
+                                <label class="bkv-row is-emerald">
+                                    <input type="checkbox" id="bk-sec-transactions" checked>
+                                    <span class="bkv-row-in">
+                                        <span class="bkv-row-ico"><i class='bx bx-wallet-alt'></i></span>
+                                        <span class="bkv-row-t">دارایی</span>
+                                        <span class="bkv-row-n" id="bk-count-transactions">…</span>
+                                        <span class="bkv-row-k"><i class='bx bx-check'></i></span>
+                                    </span>
+                                </label>
+                                <label class="bkv-row is-amber">
+                                    <input type="checkbox" id="bk-sec-cities" checked>
+                                    <span class="bkv-row-in">
+                                        <span class="bkv-row-ico"><i class='bx bx-map-pin'></i></span>
+                                        <span class="bkv-row-t">شارەکان و نرخ</span>
+                                        <span class="bkv-row-n" id="bk-count-cities">…</span>
+                                        <span class="bkv-row-k"><i class='bx bx-check'></i></span>
+                                    </span>
+                                </label>
+                                <label class="bkv-row is-violet">
+                                    <input type="checkbox" id="bk-sec-announcements">
+                                    <span class="bkv-row-in">
+                                        <span class="bkv-row-ico"><i class='bx bx-broadcast'></i></span>
+                                        <span class="bkv-row-t">ڕاگەیاندن</span>
+                                        <span class="bkv-row-n" id="bk-count-announcements">…</span>
+                                        <span class="bkv-row-k"><i class='bx bx-check'></i></span>
+                                    </span>
+                                </label>
+                                <label class="bkv-row is-rose">
+                                    <input type="checkbox" id="bk-sec-notifications">
+                                    <span class="bkv-row-in">
+                                        <span class="bkv-row-ico"><i class='bx bx-bell'></i></span>
+                                        <span class="bkv-row-t">ئاگاداری</span>
+                                        <span class="bkv-row-n" id="bk-count-notifications">…</span>
+                                        <span class="bkv-row-k"><i class='bx bx-check'></i></span>
+                                    </span>
+                                </label>
+                                <label class="bkv-row is-fuchsia">
+                                    <input type="checkbox" id="bk-sec-cosmetics">
+                                    <span class="bkv-row-in">
+                                        <span class="bkv-row-ico"><i class='bx bx-gift'></i></span>
+                                        <span class="bkv-row-t">جوانکاری</span>
+                                        <span class="bkv-row-n" id="bk-count-cosmetics">…</span>
+                                        <span class="bkv-row-k"><i class='bx bx-check'></i></span>
+                                    </span>
+                                </label>
                             </div>
 
-                            <div id="backup-date-range" class="backup-date-box" style="display: none;">
-                                <div style="display: flex; gap: 10px; width: 100%;">
-                                    <div style="flex: 1;">
-                                        <label>لە بەرواری:</label>
-                                        <input type="date" id="bk-range-start" class="form-input" onchange="onBackupDateChange()">
-                                    </div>
-                                    <div style="flex: 1;">
-                                        <label>تا بەرواری:</label>
-                                        <input type="date" id="bk-range-end" class="form-input" onchange="onBackupDateChange()">
-                                    </div>
+                            <div id="backup-progress-bar" style="display: none; margin-top: 12px;">
+                                <div class="bkv-prog-track">
+                                    <div id="backup-progress-fill" class="bkv-prog-fill" style="width: 0%;"></div>
                                 </div>
-                            </div>
-
-                            <div id="backup-date-single" class="backup-date-box" style="display: none;">
-                                <label>بەرواری ڕۆژ:</label>
-                                <input type="date" id="bk-single-day" class="form-input" onchange="onBackupDateChange()">
+                                <div id="backup-progress-label" class="bkv-prog-txt">خەریکی ئامادەکردنە…</div>
                             </div>
                         </div>
 
-                        <!-- هەڵبژاردنی بەشەکان -->
-                        <div class="backup-field-group" style="margin-top: 15px;">
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                                <label class="backup-field-lbl" style="margin: 0;"><i class='bx bx-check-square'></i> بەشەکان:</label>
-                                <button type="button" class="backup-toggle-all-btn" onclick="toggleAllBackupSections()">هەمووی</button>
-                            </div>
-
-                            <div class="backup-sections-grid">
-                                <label class="backup-section-check">
-                                    <input type="checkbox" id="bk-sec-orders" checked onchange="updateBackupStatsPreview()">
-                                    <span class="bk-sec-tile">
-                                        <span class="bk-sec-tile-left">
-                                            <span class="bk-sec-icon-box"><i class='bx bx-shopping-bag'></i></span>
-                                            <span class="bk-sec-text">ئۆردەرەکان</span>
-                                        </span>
-                                        <span class="bk-sec-tile-right">
-                                            <span class="bk-sec-count" id="bk-count-orders">...</span>
-                                            <span class="bk-sec-check-mark"><i class='bx bx-check'></i></span>
-                                        </span>
-                                    </span>
-                                </label>
-
-                                <label class="backup-section-check">
-                                    <input type="checkbox" id="bk-sec-employees" checked onchange="updateBackupStatsPreview()">
-                                    <span class="bk-sec-tile">
-                                        <span class="bk-sec-tile-left">
-                                            <span class="bk-sec-icon-box"><i class='bx bx-key'></i></span>
-                                            <span class="bk-sec-text">کارمەند و کلیل</span>
-                                        </span>
-                                        <span class="bk-sec-tile-right">
-                                            <span class="bk-sec-count" id="bk-count-employees">...</span>
-                                            <span class="bk-sec-check-mark"><i class='bx bx-check'></i></span>
-                                        </span>
-                                    </span>
-                                </label>
-
-                                <label class="backup-section-check">
-                                    <input type="checkbox" id="bk-sec-transactions" checked onchange="updateBackupStatsPreview()">
-                                    <span class="bk-sec-tile">
-                                        <span class="bk-sec-tile-left">
-                                            <span class="bk-sec-icon-box"><i class='bx bx-wallet-alt'></i></span>
-                                            <span class="bk-sec-text">دارایی</span>
-                                        </span>
-                                        <span class="bk-sec-tile-right">
-                                            <span class="bk-sec-count" id="bk-count-transactions">...</span>
-                                            <span class="bk-sec-check-mark"><i class='bx bx-check'></i></span>
-                                        </span>
-                                    </span>
-                                </label>
-
-                                <label class="backup-section-check">
-                                    <input type="checkbox" id="bk-sec-cities" checked onchange="updateBackupStatsPreview()">
-                                    <span class="bk-sec-tile">
-                                        <span class="bk-sec-tile-left">
-                                            <span class="bk-sec-icon-box"><i class='bx bx-map-pin'></i></span>
-                                            <span class="bk-sec-text">شارەکان و نرخ</span>
-                                        </span>
-                                        <span class="bk-sec-tile-right">
-                                            <span class="bk-sec-count" id="bk-count-cities">...</span>
-                                            <span class="bk-sec-check-mark"><i class='bx bx-check'></i></span>
-                                        </span>
-                                    </span>
-                                </label>
-
-                                <label class="backup-section-check">
-                                    <input type="checkbox" id="bk-sec-announcements" onchange="updateBackupStatsPreview()">
-                                    <span class="bk-sec-tile">
-                                        <span class="bk-sec-tile-left">
-                                            <span class="bk-sec-icon-box"><i class='bx bx-broadcast'></i></span>
-                                            <span class="bk-sec-text">ڕاگەیاندن</span>
-                                        </span>
-                                        <span class="bk-sec-tile-right">
-                                            <span class="bk-sec-count" id="bk-count-announcements">...</span>
-                                            <span class="bk-sec-check-mark"><i class='bx bx-check'></i></span>
-                                        </span>
-                                    </span>
-                                </label>
-
-                                <label class="backup-section-check">
-                                    <input type="checkbox" id="bk-sec-notifications" onchange="updateBackupStatsPreview()">
-                                    <span class="bk-sec-tile">
-                                        <span class="bk-sec-tile-left">
-                                            <span class="bk-sec-icon-box"><i class='bx bx-bell'></i></span>
-                                            <span class="bk-sec-text">ئاگاداری</span>
-                                        </span>
-                                        <span class="bk-sec-tile-right">
-                                            <span class="bk-sec-count" id="bk-count-notifications">...</span>
-                                            <span class="bk-sec-check-mark"><i class='bx bx-check'></i></span>
-                                        </span>
-                                    </span>
-                                </label>
-
-                                <label class="backup-section-check">
-                                    <input type="checkbox" id="bk-sec-cosmetics" onchange="updateBackupStatsPreview()">
-                                    <span class="bk-sec-tile">
-                                        <span class="bk-sec-tile-left">
-                                            <span class="bk-sec-icon-box"><i class='bx bx-gift'></i></span>
-                                            <span class="bk-sec-text">کۆزمێتیک</span>
-                                        </span>
-                                        <span class="bk-sec-tile-right">
-                                            <span class="bk-sec-count" id="bk-count-cosmetics">...</span>
-                                            <span class="bk-sec-check-mark"><i class='bx bx-check'></i></span>
-                                        </span>
-                                    </span>
-                                </label>
-                            </div>
-                        </div>
-
-                        <!-- شریتی پێشکەوتن -->
-                        <div id="backup-progress-bar" style="display: none; margin-top: 15px;">
-                            <div class="backup-progress-track">
-                                <div id="backup-progress-fill" class="backup-progress-fill" style="width: 0%;"></div>
-                            </div>
-                            <div id="backup-progress-label" class="backup-progress-text">خەریکی ئامادەکردنە...</div>
-                        </div>
-
-                        <!-- دوگمەکانی داگرتن -->
-                        <div class="backup-actions-grid" style="margin-top: 18px;">
-                            <button type="button" class="backup-btn-action is-json" id="bk-btn-json" onclick="startBackupExport('json')">
+                        <div class="bkv-acts">
+                            <button type="button" class="bkv-dl is-json" id="bk-btn-json" onclick="startBackupExport('json')">
                                 <i class='bx bxs-file-json'></i>
-                                <span>داگرتنی JSON</span>
+                                <span>JSON</span>
                             </button>
-                            <button type="button" class="backup-btn-action is-csv" id="bk-btn-csv" onclick="startBackupExport('csv')">
+                            <button type="button" class="bkv-dl is-csv" id="bk-btn-csv" onclick="startBackupExport('csv')">
                                 <i class='bx bxs-file-blank'></i>
-                                <span>داگرتنی Excel</span>
+                                <span>Excel</span>
                             </button>
                         </div>
                     </div>
 
-                    <!-- کارتی 2: بەڕێوەبردنی باکئەپی ئۆتۆماتیک و شوێنەکانی گەیاندن (Unified Hub) -->
-                    <div class="backup-card" style="margin-top: 16px;">
-                        <div class="backup-card-head">
-                            <i class='bx bx-sync'></i>
-                            <h4>باکئەپی ئۆتۆماتیک</h4>
-                        </div>
-                        <p class="backup-card-desc">خشتەکردنی کات و شوێنەکانی وەرگرتنی باکئەپ:</p>
+                    <!-- ============================================
+                         پانێڵی ٢ · باکئەپی ئۆتۆماتیک
+                         ============================================ -->
+                    <div class="bkv-pane" id="bkv-pane-auto" role="tabpanel">
 
-                        <!-- سویچی چالاکبوون -->
-                        <div class="backup-switch-row">
-                            <div class="bk-switch-text">
-                                <span class="bk-switch-title">باکئەپی خۆکار</span>
-                                <span class="bk-switch-sub">جێبەجێکردنی خۆکار لە کاتی دیاریکراودا</span>
-                            </div>
-                            <label class="switch">
-                                <input type="checkbox" id="bk-auto-active">
-                                <div class="slider">
-                                    <div class="circle">
-                                        <svg class="cross" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                                        <svg class="checkmark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                        <div class="bkv-card">
+                            <div class="bkv-switch-row">
+                                <div class="bkv-switch-txt">
+                                    <span class="bkv-switch-title">باکئەپی خۆکار</span>
+                                    <span class="bkv-switch-sub">جێبەجێکردنی خۆکار لە کاتی دیاریکراودا</span>
+                                </div>
+                                <label class="switch">
+                                    <input type="checkbox" id="bk-auto-active" onchange="bkvSyncStatus()">
+                                    <div class="slider">
+                                        <div class="circle">
+                                            <svg class="cross" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                                            <svg class="checkmark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                        </div>
                                     </div>
-                                </div>
-                            </label>
-                        </div>
-
-                        <!-- هەنگاوی ١: کات و دووبارەبوونەوە -->
-                        <div class="bk-hub-step-card" style="margin-top: 16px;">
-                            <div class="bk-hub-step-head">
-                                <span class="bk-hub-step-num">١</span>
-                                <div class="bk-hub-step-title-wrap">
-                                    <h5 class="bk-hub-step-title"><i class='bx bx-time-five'></i> ١. کات و خشتە</h5>
-                                    <span class="bk-hub-step-desc">دیاریکردنی کاتی ئەنجامدان</span>
-                                </div>
-                            </div>
-
-                            <div class="backup-field-group" style="margin-top: 12px;">
-                                <label class="backup-field-lbl"><i class='bx bx-repeat'></i> ماوەی ئەنجامدان:</label>
-                                <div class="segmented-control" id="bk-auto-freq">
-                                    <label><input type="radio" name="bk_freq" value="daily" checked><span>ڕۆژانە</span></label>
-                                    <label><input type="radio" name="bk_freq" value="weekly"><span>هەفتانە</span></label>
-                                    <label><input type="radio" name="bk_freq" value="monthly"><span>مانگانە</span></label>
-                                </div>
-                            </div>
-
-                            <div class="backup-field-group" style="margin-top: 12px;">
-                                <label class="backup-field-lbl"><i class='bx bx-alarm'></i> کاتژمێر:</label>
-                                <div class="bk-time-input-box">
-                                    <div class="bk-time-icon-box"><i class='bx bx-time-five'></i></div>
-                                    <input type="time" id="bk-auto-time" class="bk-time-control" value="02:00">
-                                    <span class="bk-time-tag">بە کاتی کوردستان</span>
-                                </div>
-                                <span class="bk-field-hint">⚡ کاتەکە بە ئۆتۆماتیکی لە وۆرکفلۆوی گێتهاب نوێ دەبێتەوە.</span>
+                                </label>
                             </div>
                         </div>
 
-                        <!-- هەنگاوی ٢: ئەو بەشانەی باکئەپ دەکرێن -->
-                        <div class="bk-hub-step-card" style="margin-top: 14px;">
-                            <div class="bk-hub-step-head">
-                                <span class="bk-hub-step-num">٢</span>
-                                <div class="bk-hub-step-title-wrap">
-                                    <h5 class="bk-hub-step-title"><i class='bx bx-layer'></i> ٢. بەشەکانی باکئەپ</h5>
-                                    <span class="bk-hub-step-desc">هەڵبژاردنی داتاکان</span>
-                                </div>
-                            </div>
+                        <div class="bkv-card">
+                            <div class="bkv-t"><i class='bx bx-time-five'></i> کات و خشتە</div>
 
-                            <div class="backup-auto-tiles-grid" style="margin-top: 12px;">
-                                <label class="backup-auto-sec-tile">
+                            <!-- ⭐ هەر سێکیان سەربەخۆن و پێکەوە کار دەکەن.
+                                 هەریەکەیان تەنها **پەنجەرەی خۆی** باکئەپ
+                                 دەکات، نەک هەموو مێژووەکە. -->
+                            <div class="bkv-freq" id="bk-auto-freq">
+                                <label class="bkv-fq">
+                                    <input type="checkbox" name="bk_freq" value="daily" checked onchange="bkvSyncStatus()">
+                                    <span class="bkv-fq-in">
+                                        <span class="bkv-fq-k"><i class='bx bx-check'></i></span>
+                                        <span class="bkv-fq-t">
+                                            <b>ڕۆژانە</b>
+                                            <small id="bkv-win-daily">ڕۆژی ڕابردوو</small>
+                                        </span>
+                                    </span>
+                                </label>
+                                <label class="bkv-fq">
+                                    <input type="checkbox" name="bk_freq" value="weekly" onchange="bkvSyncStatus()">
+                                    <span class="bkv-fq-in">
+                                        <span class="bkv-fq-k"><i class='bx bx-check'></i></span>
+                                        <span class="bkv-fq-t">
+                                            <b>هەفتانە</b>
+                                            <small id="bkv-win-weekly">هەفتەی ڕابردوو</small>
+                                        </span>
+                                    </span>
+                                </label>
+                                <label class="bkv-fq">
+                                    <input type="checkbox" name="bk_freq" value="monthly" onchange="bkvSyncStatus()">
+                                    <span class="bkv-fq-in">
+                                        <span class="bkv-fq-k"><i class='bx bx-check'></i></span>
+                                        <span class="bkv-fq-t">
+                                            <b>مانگانە</b>
+                                            <small id="bkv-win-monthly">مانگی ڕابردوو</small>
+                                        </span>
+                                    </span>
+                                </label>
+                            </div>
+                            <span class="bkv-hint" id="bkv-freq-note"></span>
+
+                            <!-- ⚠️ خانەی `type="time"` بوو بە خانەیەکی شاراوە:
+                                 ئەو تاکە سەرچاوەی ڕاستییە کە بارکردن و
+                                 پاشەکەوتکردن دەیخوێننەوە، بەڵام هەڵبژاردن
+                                 بە شیتی `.sct-*`ی ئەپەکە دەکرێت. -->
+                            <input type="hidden" id="bk-auto-time" value="02:00">
+                            <button type="button" class="bkv-pick" id="bk-time-pick" onclick="openBkTimeSheet()">
+                                <span class="bkv-pick-ico"><i class='bx bx-alarm'></i></span>
+                                <span class="bkv-pick-txt">
+                                    <span class="bkv-pick-lbl">کاتژمێر · بە کاتی کوردستان</span>
+                                    <span class="bkv-pick-val" id="bk-time-pick-val">02:00</span>
+                                </span>
+                                <i class='bx bx-chevron-left bkv-pick-chev'></i>
+                            </button>
+                            <span class="bkv-hint">کاتەکە بە ئۆتۆماتیکی لە وۆرکفلۆوی گێتهاب نوێ دەبێتەوە (کاتی UTC خۆی حیساب دەکرێت).</span>
+                        </div>
+
+                        <div class="bkv-card">
+                            <div class="bkv-t"><i class='bx bx-layer'></i> بەشەکانی باکئەپ</div>
+                            <!-- چوار خانە ÷ دوو ستوون = دوو ڕیزی تەواو -->
+                            <div class="bkv-tiles">
+                                <label class="bkv-tile is-indigo">
                                     <input type="checkbox" id="bk-auto-sec-orders" checked>
-                                    <span class="bk-auto-tile-card">
-                                        <span class="bk-auto-tile-head">
-                                            <span class="bk-auto-tile-ico"><i class='bx bx-shopping-bag'></i></span>
-                                            <span class="bk-auto-tile-chk"><i class='bx bx-check'></i></span>
-                                        </span>
-                                        <span class="bk-auto-tile-label">ئۆردەرەکان</span>
-                                    </span>
+                                    <span class="bkv-tile-in"><i class='bx bx-shopping-bag'></i><span>ئۆردەرەکان</span></span>
                                 </label>
-                                <label class="backup-auto-sec-tile">
+                                <label class="bkv-tile is-sky">
                                     <input type="checkbox" id="bk-auto-sec-employees" checked>
-                                    <span class="bk-auto-tile-card">
-                                        <span class="bk-auto-tile-head">
-                                            <span class="bk-auto-tile-ico"><i class='bx bx-key'></i></span>
-                                            <span class="bk-auto-tile-chk"><i class='bx bx-check'></i></span>
-                                        </span>
-                                        <span class="bk-auto-tile-label">کلیلەکان</span>
-                                    </span>
+                                    <span class="bkv-tile-in"><i class='bx bx-key'></i><span>کلیلەکان</span></span>
                                 </label>
-                                <label class="backup-auto-sec-tile">
+                                <label class="bkv-tile is-emerald">
                                     <input type="checkbox" id="bk-auto-sec-transactions" checked>
-                                    <span class="bk-auto-tile-card">
-                                        <span class="bk-auto-tile-head">
-                                            <span class="bk-auto-tile-ico"><i class='bx bx-wallet-alt'></i></span>
-                                            <span class="bk-auto-tile-chk"><i class='bx bx-check'></i></span>
-                                        </span>
-                                        <span class="bk-auto-tile-label">دارایی</span>
-                                    </span>
+                                    <span class="bkv-tile-in"><i class='bx bx-wallet-alt'></i><span>دارایی</span></span>
                                 </label>
-                                <label class="backup-auto-sec-tile">
+                                <label class="bkv-tile is-amber">
                                     <input type="checkbox" id="bk-auto-sec-cities" checked>
-                                    <span class="bk-auto-tile-card">
-                                        <span class="bk-auto-tile-head">
-                                            <span class="bk-auto-tile-ico"><i class='bx bx-map-pin'></i></span>
-                                            <span class="bk-auto-tile-chk"><i class='bx bx-check'></i></span>
-                                        </span>
-                                        <span class="bk-auto-tile-label">شارەکان</span>
-                                    </span>
+                                    <span class="bkv-tile-in"><i class='bx bx-map-pin'></i><span>شارەکان</span></span>
                                 </label>
                             </div>
                         </div>
 
-                        <!-- هەنگاوی ٣: شوێنەکانی گەیاندن (Destinations Hub) -->
-                        <div class="bk-hub-step-card" style="margin-top: 14px;">
-                            <div class="bk-hub-step-head">
-                                <span class="bk-hub-step-num">٣</span>
-                                <div class="bk-hub-step-title-wrap">
-                                    <h5 class="bk-hub-step-title"><i class='bx bx-send'></i> ٣. شوێنەکانی باکئەپ</h5>
-                                    <span class="bk-hub-step-desc">تلیگرام، گووگڵ درایڤ و گێتهاب</span>
-                                </div>
-                            </div>
+                        <!-- ---------- ئەکۆردیۆنی ١ · تلیگرام ---------- -->
+                        <div class="bkv-acc" id="bkv-acc-tg">
+                            <button type="button" class="bkv-acc-head" onclick="bkvToggleAcc('bkv-acc-tg')" aria-expanded="false">
+                                <span class="bkv-acc-ico is-tg"><i class='bx bxl-telegram'></i></span>
+                                <span class="bkv-acc-txt">
+                                    <span class="bkv-acc-name">تلیگرام</span>
+                                    <span class="bkv-acc-state" id="bkv-st-tg">ناردنی خێرای فایلەکان</span>
+                                </span>
+                                <i class='bx bx-chevron-down bkv-acc-chev'></i>
+                            </button>
+                            <div class="bkv-acc-body"><div><div class="bkv-acc-in">
+                                <label class="bkv-lbl" for="bk-auto-tg-target"><i class='bx bx-hash'></i> ئایدی کەناڵ (Chat ID):</label>
+                                <input type="text" id="bk-auto-tg-target" class="bkv-in"
+                                    placeholder="-100xxxxxxxxxx" dir="ltr" autocomplete="off" oninput="bkvSyncStatus()">
 
-                            <!-- ژێر-کارتی A: کەناڵی تلیگرام و بۆت -->
-                            <div class="bk-dest-card is-tg" style="margin-top: 12px;">
-                                <div class="bk-dest-card-head">
-                                    <div class="bk-dest-head-left">
-                                        <div class="bk-dest-ico-box tg-ico"><i class='bx bxl-telegram'></i></div>
-                                        <div>
-                                            <span class="bk-dest-title">تلیگرام</span>
-                                            <span class="bk-dest-sub">ناردنی دەستبەجێی فایلەکان</span>
-                                        </div>
-                                    </div>
-                                    <span class="bk-dest-badge tg-badge">ڕاستەوخۆ</span>
-                                </div>
+                                <label class="bkv-lbl" for="bk-auto-tg-token"><i class='bx bx-bot'></i> تۆکنی بۆت (ئارەزوومەندانە):</label>
+                                <input type="password" id="bk-auto-tg-token" class="bkv-in"
+                                    placeholder="بەتاڵ بێت، بۆتی سەرەکی بەکاردێت" dir="ltr" autocomplete="off">
+                                <span class="bkv-tip">ئەگەر بەتاڵ بێت، بۆتی سەرەکی MyShopOrders (@MyShopOrders_bot) بەکاردێت.</span>
 
-                                <div class="bk-dest-body">
-                                    <label class="bk-clean-lbl"><i class='bx bx-hash'></i> ئایدی کەناڵ (Chat ID):</label>
-                                    <input type="text" id="bk-auto-tg-target" class="bk-clean-input" placeholder="نموونە: -100xxxxxxxxxx یان 729325889" dir="ltr" autocomplete="off">
-
-                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 4px;">
-                                        <label class="bk-clean-lbl" style="margin: 0;"><i class='bx bx-bot'></i> تۆکنی بۆت (ئارەزوومەندانە):</label>
-                                        <span style="font-size: 11px; color: #64748b;">بەتاڵ بێت بۆتی سەرەکی بەکاردێت</span>
-                                    </div>
-                                    <input type="password" id="bk-auto-tg-token" class="bk-clean-input" placeholder="بۆتی سەرەکی MyShopOrders (@MyShopOrders_bot)" dir="ltr" autocomplete="off" style="margin-top: 6px;">
-
-                                    <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px;">
-                                        <button type="button" class="bk-btn-test-tg" id="bk-btn-test-tg" onclick="testTelegramBackupConnection()">
-                                            <i class='bx bx-paper-plane'></i>
-                                            <span>🧪 تاقیکردنەوە</span>
-                                        </button>
-                                        <button type="button" class="bk-btn-guide-toggle" onclick="toggleTelegramGuide(this)">
-                                            <i class='bx bx-help-circle'></i>
-                                            <span>ڕێنمایی</span>
-                                        </button>
-                                    </div>
-
-                                    <div id="bk-tg-guide-box" style="display: none; margin-top: 10px; padding: 12px 14px; background: #ffffff; border: 1px solid #bae6fd; border-radius: 12px; font-size: 12.5px; color: #0369a1; line-height: 1.65;">
-                                        <strong>💡 چۆن کەناڵەکە ئامادە بکەیت؟</strong><br>
-                                        ١. کەناڵێکی تایبەت لە تلیگرام دروست بکە و بۆتەکە (<code dir="ltr" style="background:#e0f2fe; padding:1px 5px; border-radius:4px;">@MyShopOrders_bot</code>) بکە بە ئەدمینی کەناڵەکە بە دەسەڵاتی ناردنی پەیام.<br>
-                                        ٢. ئایدی کەناڵەکە (کە بە <code dir="ltr" style="background:#e0f2fe; padding:1px 5px; border-radius:4px;">-100</code> دەستپێدەکات) لە سەرەوە دابنێ و کلیک لەسەر تاقیکردنەوەی ناردن بکە.
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- ژێر-کارتی B: گووگڵ درایڤ -->
-                            <div class="bk-dest-card is-gdrive" style="margin-top: 12px;">
-                                <div class="bk-dest-card-head">
-                                    <div class="bk-dest-head-left">
-                                        <div class="bk-dest-ico-box gdrive-ico"><i class='bx bxl-google-cloud'></i></div>
-                                        <div>
-                                            <span class="bk-dest-title">گووگڵ درایڤ</span>
-                                            <span class="bk-dest-sub">پاشەکەوتکردن لە کلاود</span>
-                                        </div>
-                                    </div>
-                                    <span class="bk-gdrive-count-badge" id="bk-gdrive-count-badge">0 ئەکاونت</span>
-                                </div>
-
-                                <div class="bk-dest-body">
-                                    <!-- فۆڕمی زیادکردنی ئەکاونت -->
-                                    <div class="bk-gdrive-add-form" style="background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 14px; gap: 4px;">
-                                        <label class="bk-clean-lbl" style="margin-top:0;"><i class='bx bx-envelope'></i> ئیمەیڵی گووگڵ:</label>
-                                        <input type="email" id="bk-gdrive-email-input" class="bk-clean-input" placeholder="نموونە: yourname@gmail.com" dir="ltr" autocomplete="email">
-
-                                        <label class="bk-clean-lbl"><i class='bx bx-tag'></i> ناوی درایڤ (ئارەزوومەندانە):</label>
-                                        <input type="text" id="bk-gdrive-name-input" class="bk-clean-input" placeholder="نموونە: درایڤی کار یان درایڤی 1" autocomplete="off">
-
-                                        <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px;">
-                                            <button type="button" class="bk-btn-add-account" id="bk-btn-add-gdrive" onclick="addGDriveAccount()" style="flex: 1; min-width: 140px;">
-                                                <i class='bx bx-plus-circle'></i>
-                                                <span>زیادکردن</span>
-                                            </button>
-                                            <button type="button" class="bk-btn-test-gdrive" id="bk-btn-test-gdrive" onclick="testGDriveBackupConnection()">
-                                                <i class='bx bx-check-circle'></i>
-                                                <span>🧪 تاقیکردنەوە</span>
-                                            </button>
-                                            <button type="button" class="bk-btn-guide-toggle" onclick="toggleGDriveGuide(this)">
-                                                <i class='bx bx-help-circle'></i>
-                                                <span>ڕێنمایی</span>
-                                            </button>
-                                        </div>
-                                    </div>
-
-                                    <!-- ڕێنمایی بەستنەوەی گووگڵ درایڤ -->
-                                    <div id="bk-gdrive-guide-box" style="display: none; margin-top: 10px; padding: 12px 14px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px; font-size: 12.5px; color: #166534; line-height: 1.65;">
-                                        <strong>💡 چۆن گووگڵ درایڤ ئامادە بکەیت بۆ باکئەپ؟</strong><br>
-                                        ١. <b>ئیمەیڵ زیاد بکە:</b> لە سەرەوە ئیمەیڵی جیمەیڵەکەت بنووسە و «زیادکردنی ئەکاونت» لێبدە.<br>
-                                        ٢. <b>فۆڵدەری باکئەپ:</b> لە Google Drive ی خۆتدا فۆڵدەرێک دروست بکە بە ناوی <code dir="ltr" style="background:#dcfce7; padding:1px 5px; border-radius:4px; font-weight:700;">my-order-backup</code>.<br>
-                                        ٣. <b>شەیرکردن لەگەڵ سیستەم:</b> فۆڵدەرەکە شەیر (Share) بکە لەگەڵ سێرڤیس ئەکاونتی سیستم بە مۆڵەتی <b>Editor</b>:<br>
-                                        <div style="display: flex; align-items: center; gap: 8px; margin: 6px 0; flex-wrap: wrap;">
-                                            <code dir="ltr" style="flex: 1; min-width: 200px; user-select:all; display:block; background:#ffffff; border:1px solid #86efac; padding:7px 10px; border-radius:8px; font-size:11.5px; word-break:break-all; font-weight:700; color:#15803d;">telegram-bot-sheet@root-quasar-493815-t9.iam.gserviceaccount.com</code>
-                                            <button type="button" onclick="navigator.clipboard.writeText('telegram-bot-sheet@root-quasar-493815-t9.iam.gserviceaccount.com'); showToast('ئیمەیڵی سێرڤیس بە سەرکەوتوویی کۆپی کرا', 'success');" style="background:#16a34a; color:#ffffff; border:none; border-radius:8px; padding:7px 12px; font-size:12px; font-weight:700; cursor:pointer; font-family:inherit; white-space:nowrap; display:inline-flex; align-items:center; gap:5px; transition:all 0.2s;">
-                                                <i class='bx bx-copy'></i> <span>کۆپیکردن</span>
-                                            </button>
-                                        </div>
-                                        ٤. <b>تاقیکردنەوە:</b> دوای ئەوە، کلیک لە دوگمەی «🧪 تاقیکردنەوەی درایڤ» بکە تا دڵنیابیت لەوەی ئەکاونتەکان چالاکن.<br>
-                                        ⭐ لە کاتی باکئەپی ئۆتۆماتیک لە گێتهاب، فایلی داتابەیس و وێنەکان بۆ ناو فۆڵدەری ئەم درایڤانە ڕەوانە دەکرێن.
-                                    </div>
-
-                                    <!-- ئەنجامی تاقیکردنەوەی درایڤ -->
-                                    <div id="bk-gdrive-test-result" style="display: none; margin-top: 10px;"></div>
-
-                                    <!-- لیستی ئەکاونتە بەستراوەکان -->
-                                    <div id="bk-gdrive-list" class="bk-gdrive-list-container" style="margin-top: 12px;">
-                                        <!-- دەینامیکی پڕ دەکرێتەوە -->
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- ژێر-کارتی C: مەکینەی گێتهاب (GitHub Actions Engine) -->
-                            <div class="bk-dest-card is-gh" style="margin-top: 12px;">
-                                <div class="bk-dest-card-head">
-                                    <div class="bk-dest-head-left">
-                                        <div class="bk-dest-ico-box gh-ico"><i class='bx bxl-github'></i></div>
-                                        <div>
-                                            <span class="bk-dest-title">مەکینەی گێتهاب</span>
-                                            <span class="bk-dest-sub">سێرڤەری خشتەکردنی باکئەپ</span>
-                                        </div>
-                                    </div>
-                                    <span class="bk-github-status-badge" id="bk-github-status-badge">
-                                        <span class="bk-gh-dot"></span> چالاکە
-                                    </span>
-                                </div>
-
-                                <div class="bk-dest-body">
-                                    <div class="bk-github-info-grid">
-                                        <div class="bk-gh-info-item">
-                                            <span class="bk-gh-info-lbl">ڕیپۆی تایبەت:</span>
-                                            <span class="bk-gh-info-val" id="bk-gh-repo-val" dir="ltr">hussenmuhamad5-bit/my-order-backups</span>
-                                        </div>
-                                        <div class="bk-gh-info-item">
-                                            <span class="bk-gh-info-lbl">دوایین ئەنجامدان:</span>
-                                            <span class="bk-gh-info-val" id="bk-gh-last-val">لە پشکنیندایە...</span>
-                                        </div>
-                                    </div>
-
-                                    <button type="button" class="bk-btn-trigger-gh" id="bk-btn-trigger-gh" onclick="triggerGitHubBackupNow()" style="margin-top: 10px;">
-                                        <i class='bx bx-play-circle'></i>
-                                        <span>⚡ دەستپێکردنی باکئەپ</span>
+                                <div class="bkv-btns">
+                                    <button type="button" class="bkv-b is-sky" id="bk-btn-test-tg" onclick="testTelegramBackupConnection()">
+                                        <i class='bx bx-paper-plane'></i><span>تاقیکردنەوە</span>
+                                    </button>
+                                    <button type="button" class="bkv-b is-ghost" onclick="toggleTelegramGuide(this)">
+                                        <i class='bx bx-help-circle'></i><span>ڕێنمایی</span>
                                     </button>
                                 </div>
-                            </div>
+
+                                <div id="bk-tg-guide-box" class="bkv-guide" style="display: none;">
+                                    <strong><i class='bx bx-bulb'></i> چۆن کەناڵەکە ئامادە بکەیت؟</strong><br>
+                                    ١. کەناڵێکی تایبەت لە تلیگرام دروست بکە و بۆتەکە
+                                    (<code>@MyShopOrders_bot</code>) بکە بە ئەدمینی کەناڵەکە بە دەسەڵاتی
+                                    ناردنی پەیام.<br>
+                                    ٢. ئایدی کەناڵەکە (کە بە <code>-100</code> دەستپێدەکات) لە سەرەوە دابنێ و
+                                    پەنجە لە «تاقیکردنەوە» بدە.<br>
+                                    ٣. بۆ کەناڵێکی تایبەتی بێ ئایدی ئاشکرا، پەیامێک لە کەناڵەکەوە بۆ
+                                    <code>@userinfobot</code> فۆرەوارد بکە — ئایدییەکە دەداتەوە.
+                                </div>
+                            </div></div></div>
                         </div>
 
-                        <!-- دۆخی دوایین باکئەپ -->
-                        <div id="bk-last-run-info" class="backup-status-row" style="margin-top: 16px;">
-                            <div class="backup-status-right">
-                                <i class='bx bx-history'></i>
-                                <span>دوایین تۆماری باکئەپ:</span>
-                            </div>
-                            <span id="bk-last-run-val" class="backup-status-pill">هێشتا ئەنجام نەدراوە</span>
-                        </div>
-
-                        <!-- دوگمەی سەرەکی پاشەکەوتکردن و هاوکاتکردن لەگەڵ گێتهاب -->
-                        <div style="margin-top: 18px;">
-                            <button type="button" class="backup-save-btn" id="bk-btn-save-master" onclick="saveBackupSettingsFromUI()">
-                                <i class='bx bx-check-shield'></i>
-                                <span>پاشەکەوتکردنی ڕێکخستنەکان</span>
+                        <!-- ---------- ئەکۆردیۆنی ٢ · گووگڵ درایڤ ---------- -->
+                        <div class="bkv-acc" id="bkv-acc-gd">
+                            <button type="button" class="bkv-acc-head" onclick="bkvToggleAcc('bkv-acc-gd')" aria-expanded="false">
+                                <span class="bkv-acc-ico is-gd"><i class='bx bxl-google-cloud'></i></span>
+                                <span class="bkv-acc-txt">
+                                    <span class="bkv-acc-name">گووگڵ درایڤ</span>
+                                    <span class="bkv-acc-state" id="bk-gdrive-count-badge">٠ ئەکاونت</span>
+                                </span>
+                                <i class='bx bx-chevron-down bkv-acc-chev'></i>
                             </button>
-                        </div>
-                    </div>
+                            <div class="bkv-acc-body"><div><div class="bkv-acc-in">
+                                <label class="bkv-lbl" for="bk-gdrive-email-input"><i class='bx bx-envelope'></i> ئیمەیڵی گووگڵ:</label>
+                                <input type="email" id="bk-gdrive-email-input" class="bkv-in"
+                                    placeholder="yourname@gmail.com" dir="ltr" autocomplete="email">
 
+                                <label class="bkv-lbl" for="bk-gdrive-name-input"><i class='bx bx-tag'></i> ناوی درایڤ (ئارەزوومەندانە):</label>
+                                <input type="text" id="bk-gdrive-name-input" class="bkv-in"
+                                    placeholder="نموونە: درایڤی کار" autocomplete="off">
+
+                                <div class="bkv-btns is-3">
+                                    <button type="button" class="bkv-b is-green" id="bk-btn-add-gdrive" onclick="addGDriveAccount()">
+                                        <i class='bx bx-plus-circle'></i><span>زیادکردن</span>
+                                    </button>
+                                    <button type="button" class="bkv-b is-ghost-green" id="bk-btn-test-gdrive" onclick="testGDriveBackupConnection()">
+                                        <i class='bx bx-check-circle'></i><span>تاقیکردنەوە</span>
+                                    </button>
+                                    <button type="button" class="bkv-b is-ghost" onclick="toggleGDriveGuide(this)">
+                                        <i class='bx bx-help-circle'></i><span>ڕێنمایی</span>
+                                    </button>
+                                </div>
+
+                                <div id="bk-gdrive-guide-box" class="bkv-guide" style="display: none;">
+                                    <strong><i class='bx bx-bulb'></i> چۆن گووگڵ درایڤ ئامادە بکەیت؟</strong><br>
+                                    ١. <b>ئیمەیڵ زیاد بکە:</b> لە سەرەوە ئیمەیڵی جیمەیڵەکەت بنووسە و
+                                    «زیادکردن» لێبدە.<br>
+                                    ٢. <b>فۆڵدەری باکئەپ:</b> لە Google Driveی خۆتدا فۆڵدەرێک دروست بکە بە
+                                    ناوی <code>my-order-backup</code>.<br>
+                                    ٣. <b>شەیرکردن لەگەڵ سیستەم:</b> فۆڵدەرەکە شەیر (Share) بکە لەگەڵ
+                                    سێرڤیس ئەکاونتی سیستەم بە مۆڵەتی <b>Editor</b>:
+                                    <div style="display: flex; align-items: center; gap: 7px; margin: 7px 0; flex-wrap: wrap;">
+                                        <code class="bkv-mail" id="bk-svc-mail">telegram-bot-sheet@root-quasar-493815-t9.iam.gserviceaccount.com</code>
+                                        <button type="button" class="bkv-copy"
+                                            data-copy="telegram-bot-sheet@root-quasar-493815-t9.iam.gserviceaccount.com"
+                                            onclick="bkCopyText(this)">
+                                            <i class='bx bx-copy'></i> <span>کۆپیکردن</span>
+                                        </button>
+                                    </div>
+                                    ٤. <b>تاقیکردنەوە:</b> دوای ئەوە پەنجە لە «تاقیکردنەوە» بدە تا دڵنیا
+                                    بیت لەوەی ئەکاونتەکان چالاکن.<br>
+                                    <i class='bx bx-star'></i> لە کاتی باکئەپی ئۆتۆماتیکی گێتهاب، فایلی
+                                    داتابەیس و وێنەکان بۆ ناو فۆڵدەری هەموو ئەم درایڤانە ڕەوانە دەکرێن.
+                                </div>
+
+                                <div id="bk-gdrive-test-result" style="display: none; margin-top: 9px;"></div>
+                                <div id="bk-gdrive-list" class="bkv-drives"></div>
+                            </div></div></div>
+                        </div>
+
+                        <!-- ---------- ئەکۆردیۆنی ٣ · گێتهاب ---------- -->
+                        <div class="bkv-acc" id="bkv-acc-gh">
+                            <button type="button" class="bkv-acc-head" onclick="bkvToggleAcc('bkv-acc-gh')" aria-expanded="false">
+                                <span class="bkv-acc-ico is-gh"><i class='bx bxl-github'></i></span>
+                                <span class="bkv-acc-txt">
+                                    <span class="bkv-acc-name">گێتهاب</span>
+                                    <span class="bkv-acc-state is-ok" id="bk-github-status-badge">سێرڤەری خشتەکردن</span>
+                                </span>
+                                <i class='bx bx-chevron-down bkv-acc-chev'></i>
+                            </button>
+                            <div class="bkv-acc-body"><div><div class="bkv-acc-in">
+                                <div class="bkv-kv" style="margin-top: 10px;">
+                                    <div class="bkv-kv-row">
+                                        <span class="bkv-kv-k">ڕیپۆی تایبەت:</span>
+                                        <span class="bkv-kv-v" id="bk-gh-repo-val">hussenmuhamad5-bit/my-order-backups</span>
+                                    </div>
+                                    <div class="bkv-kv-row">
+                                        <span class="bkv-kv-k">دوایین ئەنجامدان:</span>
+                                        <span class="bkv-kv-v" id="bk-gh-last-val">لە پشکنیندایە…</span>
+                                    </div>
+                                </div>
+                                <div class="bkv-btns">
+                                    <button type="button" class="bkv-b is-dark" id="bk-btn-trigger-gh" onclick="triggerGitHubBackupNow()">
+                                        <i class='bx bx-play-circle'></i><span>دەستپێکردنی باکئەپ ئێستا</span>
+                                    </button>
+                                </div>
+                            </div></div></div>
+                        </div>
+
+                        <!-- ⚠️ ئایدییەکە دەمێنێتەوە: `loadBackupSettingsToUI`
+                             بەرواری دوایین باکئەپی تێدا دەنووسێت، و
+                             `bkvSyncStatus` لەوێوە شریتی سەرەوە پڕ دەکاتەوە. -->
+                        <span id="bk-last-run-val" hidden>هێشتا ئەنجام نەدراوە</span>
+
+                        <button type="button" class="bkv-save" id="bk-btn-save-master" onclick="saveBackupSettingsFromUI()">
+                            <i class='bx bx-check-shield'></i>
+                            <span>پاشەکەوتکردنی ڕێکخستنەکان</span>
+                        </button>
+                    </div>
 
                 </div>
             </div>
 
             <!-- ============================================================
-                 🗄️ داشبۆردی بەڕێوەبردنی ستۆریج و کلاود (تەنها بۆ پاشا)
+                 🗄️ داشبۆردی بەڕێوەبردنی ستۆریج و کلاود — تەنها بۆ پاشا
+                 ------------------------------------------------------------
+                 ⭐ دیزاینەکە لە `style.css`ـە (`.st-*`)، مۆبایل-یەکەم:
+                    یەک ستوون لە ژێر ٧٢٠px، دوو ستوون لە سەرەوەی.
                  ============================================================ -->
-            <div id="section-storage" style="display: none; flex-direction: column; width: 100%; height: 100%; overflow-y: auto; padding-bottom: calc(180px + var(--safe-bottom, 0px));">
-                <div class="container" id="storage-main-content" style="max-width: 600px; margin: 0 auto; width: 100%;">
-                    
-                    <!-- ناونیشان و کورتە -->
-                    <div class="backup-header-card" style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);">
-                        <div class="backup-title-row">
-                            <div class="backup-main-icon-wrap" style="background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);">
-                                <i class='bx bx-server'></i>
+            <div id="section-storage" style="display: none;">
+                <div class="st-container" id="storage-main-content">
+
+                    <!-- هێرۆ -->
+                    <div class="st-hero-banner">
+                        <div class="st-hero-blob-1"></div>
+                        <div class="st-hero-blob-2"></div>
+                        <div class="st-hero-content">
+                            <div>
+                                <div class="st-hero-title-row">
+                                    <h3 class="st-hero-title">ستۆریج و کلاود</h3>
+                                    <span class="st-hero-badge">پاشا</span>
+                                </div>
+                                <p class="st-hero-sub">چاودێری قەبارەی سوپابەیس و کڵاودفلێر</p>
                             </div>
-                            <div class="backup-header-meta">
-                                <h3 class="backup-title">
-                                    <span>داشبۆردی ستۆریج و کلاود</span>
-                                    <span class="backup-king-badge">👑 پاشا</span>
-                                </h3>
-                                <p class="backup-subtitle">چاودێری و ڕەوشی قەبارەی سوپابەیس و کڵاوتفایەر</p>
-                            </div>
+                            <div class="st-hero-icon-box"><i class='bx bx-server'></i></div>
                         </div>
                     </div>
 
-                    <!-- دوگمەی نوێکردنەوە و ڕەوشی گشتی -->
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin: 16px 0 12px 0;">
-                        <span id="st-last-checked" style="font-size: 12px; color: #64748b; display: flex; align-items: center; gap: 4px;">
-                            <i class='bx bx-time-five'></i> دواین پشکنین: لە بارکردندایە...
+                    <!-- شریتی نوێکردنەوە -->
+                    <div class="st-refresh-bar">
+                        <span id="st-last-checked" class="st-last-checked">
+                            <i class='bx bx-time-five'></i> دواین پشکنین: لە بارکردندایە…
                         </span>
-                        <button type="button" class="backup-toggle-all-btn" onclick="loadStorageDashboardStats(true)" id="st-refresh-btn" style="padding: 6px 12px; font-size: 12px; cursor: pointer;">
-                            <i class='bx bx-refresh'></i> نوێکردنەوەی ئامارەکان
+                        <button type="button" class="st-refresh-btn" id="st-refresh-btn" onclick="loadStorageDashboardStats(true)">
+                            <i class='bx bx-refresh'></i> نوێکردنەوە
                         </button>
                     </div>
 
-                    <!-- کارتی 1: Cloudflare R2 Storage (خەزێنەی سەرەکی وێنەکان) -->
-                    <div class="backup-card" style="border-right: 4px solid #f97316; margin-bottom: 14px;">
-                        <div class="backup-card-head" style="justify-content: space-between;">
-                            <div style="display: flex; align-items: center; gap: 10px;">
-                                <i class='bx bxl-cloudflare' style="color: #f97316; background: rgba(249, 115, 22, 0.1);"></i>
-                                <div>
-                                    <h4 style="display: flex; align-items: center; gap: 6px;">
-                                        Cloudflare R2 Storage
-                                        <span style="font-size: 10px; background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0; border-radius: 6px; padding: 1px 6px; font-weight: 700;">چالاکە</span>
-                                    </h4>
-                                    <span style="font-size: 11px; color: #64748b;">خەزێنەی خێرای جیهانی و بێسنوور بۆ وێنەکان</span>
+                    <div class="st-grid">
+
+                        <!-- کارتی ١ · Cloudflare R2 -->
+                        <div class="st-card">
+                            <div class="st-card-head">
+                                <div class="st-card-head-left">
+                                    <div class="st-icon-box st-icon-orange">
+                                        <i class='bx bx-cloud' style="color: #f97316; font-size: 22px;"></i>
+                                    </div>
+                                    <div>
+                                        <h4 class="st-card-title">
+                                            Cloudflare R2
+                                            <span class="st-badge-emerald">چالاکە</span>
+                                        </h4>
+                                        <span class="st-card-sub">خەزێنەی خێرای جیهانی بۆ وێنەکان</span>
+                                    </div>
                                 </div>
-                            </div>
-                        </div>
-                        
-                        <div style="margin-top: 14px;">
-                            <div style="display: flex; justify-content: space-between; font-size: 13px; font-weight: 700; margin-bottom: 6px;">
-                                <span style="color: #334155;">بەکارهێنراو: <span id="st-r2-used-mb" style="color: #f97316;">...</span> MB</span>
-                                <span style="color: #64748b;">سنووری خۆڕایی: 10,240 MB (10 GB)</span>
-                            </div>
-                            <div class="backup-progress-track" style="height: 10px; background: #f1f5f9; border-radius: 6px; overflow: hidden;">
-                                <div id="st-r2-progress" style="width: 0%; height: 100%; background: linear-gradient(90deg, #f97316, #fb923c); border-radius: 6px; transition: width 0.6s ease;"></div>
-                            </div>
-                            <div style="display: flex; justify-content: space-between; font-size: 11.5px; color: #64748b; margin-top: 6px;">
-                                <span>ڕێژەی بەکارهاتوو: <strong id="st-r2-percent" style="color: #f97316;">0%</strong></span>
-                                <span>ماوە: <strong id="st-r2-remain-mb" style="color: #059669;">10,240</strong> MB</span>
                             </div>
 
-                            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 10px 12px; margin-top: 12px; font-size: 12px; color: #475569; display: flex; flex-direction: column; gap: 6px;">
-                                <div style="display: flex; justify-content: space-between;">
-                                    <span>کۆی وێنە لەسەر Cloudflare R2:</span>
-                                    <strong id="st-r2-orders-count" style="color: #0f172a;">...</strong>
+                            <div class="st-metric-box">
+                                <div class="st-metric-header">
+                                    <div>
+                                        <span class="st-metric-lbl">بەکارهێنراو</span>
+                                        <span class="st-metric-num st-metric-num-orange" dir="ltr">
+                                            <span id="st-r2-used-mb">…</span> <small>MB</small>
+                                        </span>
+                                    </div>
+                                    <span class="st-metric-limit" dir="ltr">10,240 MB</span>
                                 </div>
-                                <div style="display: flex; justify-content: space-between; align-items: center;">
-                                    <span>دۆمەینی خێرای گشتی CDN:</span>
-                                    <code dir="ltr" style="background: #e2e8f0; padding: 2px 6px; border-radius: 4px; font-size: 10.5px; color: #0284c7;">r2.dev (چالاک)</code>
+                                <div class="st-progress-track">
+                                    <div id="st-r2-progress" class="st-progress-bar st-prog-orange" style="width: 0%;"></div>
+                                </div>
+                                <div class="st-metric-footer">
+                                    <span>ڕێژە: <strong id="st-r2-percent" style="color: #f97316;">0%</strong></span>
+                                    <span>ماوە: <strong id="st-r2-remain-mb" style="color: #059669;">10,240</strong> MB</span>
+                                </div>
+                            </div>
+
+                            <div class="st-detail-list">
+                                <div class="st-detail-row st-detail-row-border">
+                                    <span>کۆی وێنە لەسەر R2:</span>
+                                    <strong id="st-r2-orders-count" style="color: #0f172a;">…</strong>
+                                </div>
+                                <div class="st-detail-row">
+                                    <span>دۆمەینی خێرای CDN:</span>
+                                    <span class="st-cdn-pill" dir="ltr"><span class="st-pulse-dot"></span> r2.dev</span>
                                 </div>
                             </div>
                         </div>
+
+                        <!-- کارتی ٢ · Supabase Storage -->
+                        <div class="st-card">
+                            <div class="st-card-head">
+                                <div class="st-card-head-left">
+                                    <div class="st-icon-box st-icon-emerald">
+                                        <i class='bx bx-images' style="font-size: 22px;"></i>
+                                    </div>
+                                    <div>
+                                        <h4 class="st-card-title">
+                                            Supabase Storage
+                                            <span class="st-badge-emerald" id="st-storage-badge">بەتاڵە</span>
+                                        </h4>
+                                        <span class="st-card-sub">خەزێنەی پێشووی وێنەکان · <bdi dir="ltr">order-images</bdi></span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="st-metric-box">
+                                <div class="st-metric-header">
+                                    <div>
+                                        <span class="st-metric-lbl">قەبارەی ئێستا</span>
+                                        <span class="st-metric-num st-metric-num-emerald" dir="ltr">
+                                            <span id="st-storage-used-mb">0</span> <small>MB</small>
+                                        </span>
+                                    </div>
+                                    <span class="st-metric-limit" dir="ltr">1,000 MB</span>
+                                </div>
+                                <div class="st-progress-track">
+                                    <div id="st-storage-progress" class="st-progress-bar st-prog-emerald" style="width: 0%;"></div>
+                                </div>
+                                <div class="st-metric-footer">
+                                    <span>ڕێژە: <strong id="st-storage-percent" style="color: #10b981;">0%</strong></span>
+                                    <span>پەڕگەی ماوە: <strong id="st-storage-count" style="color: #0f172a;">0</strong></span>
+                                </div>
+                            </div>
+
+                            <div id="st-storage-safe-msg" class="st-safe-box">
+                                <i class='bx bx-check-shield' style="font-size: 19px; color: #10b981; flex: none;"></i>
+                                <span>ستۆریجی وێنەکان پارێزراوە — هەموو وێنەکان لەسەر کڵاودفلێرن.</span>
+                            </div>
+                        </div>
+
+                        <!-- کارتی ٣ · Supabase Database -->
+                        <div class="st-card st-col-span-2">
+                            <div class="st-card-head">
+                                <div class="st-card-head-left">
+                                    <div class="st-icon-box st-icon-blue">
+                                        <i class='bx bx-cylinder' style="font-size: 22px;"></i>
+                                    </div>
+                                    <div>
+                                        <h4 class="st-card-title">
+                                            Supabase Database
+                                            <span class="st-badge-blue" id="st-db-badge">سەلامەتە</span>
+                                        </h4>
+                                        <span class="st-card-sub">خشتەکانی ئۆردەر، کارمەند و دارایی (PostgreSQL)</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="st-metric-box">
+                                <div class="st-metric-header">
+                                    <div>
+                                        <span class="st-metric-lbl">قەبارە</span>
+                                        <span class="st-metric-num st-metric-num-blue" dir="ltr">
+                                            <span id="st-db-used-mb">…</span> <small>MB</small>
+                                        </span>
+                                    </div>
+                                    <span class="st-metric-limit" dir="ltr">500 MB</span>
+                                </div>
+                                <div class="st-progress-track">
+                                    <div id="st-db-progress" class="st-progress-bar st-prog-blue" style="width: 0%;"></div>
+                                </div>
+                                <div class="st-metric-footer">
+                                    <span>ڕێژە: <strong id="st-db-percent" style="color: #3b82f6;">…%</strong></span>
+                                    <span>ماوە: <strong id="st-db-remain-mb" style="color: #059669;">…</strong> MB</span>
+                                </div>
+                            </div>
+
+                            <div class="st-db-grid">
+                                <div class="st-db-stat-tile">
+                                    <span class="st-db-stat-lbl">ئۆردەرەکان</span>
+                                    <strong class="st-db-stat-val" id="st-db-orders-count">…</strong>
+                                </div>
+                                <div class="st-db-stat-tile">
+                                    <span class="st-db-stat-lbl">کارمەندان</span>
+                                    <strong class="st-db-stat-val" id="st-db-employees-count">…</strong>
+                                </div>
+                                <div class="st-db-stat-tile">
+                                    <span class="st-db-stat-lbl">دارایی</span>
+                                    <strong class="st-db-stat-val" id="st-db-transactions-count">…</strong>
+                                </div>
+                            </div>
+                        </div>
+
                     </div>
-
-                    <!-- کارتی 2: Supabase Storage (وێنەکان - دەبێت سفر بێت) -->
-                    <div class="backup-card" style="border-right: 4px solid #10b981; margin-bottom: 14px;">
-                        <div class="backup-card-head" style="justify-content: space-between;">
-                            <div style="display: flex; align-items: center; gap: 10px;">
-                                <i class='bx bx-images' style="color: #10b981; background: rgba(16, 185, 129, 0.1);"></i>
-                                <div>
-                                    <h4 style="display: flex; align-items: center; gap: 6px;">
-                                        Supabase Storage
-                                        <span id="st-storage-badge" style="font-size: 10px; background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0; border-radius: 6px; padding: 1px 6px; font-weight: 700;">بەتاڵە</span>
-                                    </h4>
-                                    <span style="font-size: 11px; color: #64748b;">خەزێنەی وێنەکانی پێشووی سوپابەیس (order-images)</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div style="margin-top: 14px;">
-                            <div style="display: flex; justify-content: space-between; font-size: 13px; font-weight: 700; margin-bottom: 6px;">
-                                <span style="color: #334155;">قەبارەی ئێستا: <span id="st-storage-used-mb" style="color: #10b981;">0</span> MB</span>
-                                <span style="color: #64748b;">سنووری خۆڕایی: 1,000 MB (1 GB)</span>
-                            </div>
-                            <div class="backup-progress-track" style="height: 10px; background: #f1f5f9; border-radius: 6px; overflow: hidden;">
-                                <div id="st-storage-progress" style="width: 0%; height: 100%; background: linear-gradient(90deg, #10b981, #34d399); border-radius: 6px; transition: width 0.6s ease;"></div>
-                            </div>
-                            <div style="display: flex; justify-content: space-between; font-size: 11.5px; color: #64748b; margin-top: 6px;">
-                                <span>ڕێژەی بەکارهاتوو: <strong id="st-storage-percent" style="color: #10b981;">0%</strong></span>
-                                <span>پەڕگەی ماوە لە ستۆریج: <strong id="st-storage-count" style="color: #0f172a;">0</strong></span>
-                            </div>
-
-                            <div id="st-storage-safe-msg" style="background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 12px; padding: 10px 12px; margin-top: 12px; font-size: 12px; color: #065f46; display: flex; align-items: center; gap: 8px;">
-                                <i class='bx bx-check-shield' style="font-size: 18px; color: #10b981;"></i>
-                                <span>ستۆریژی وێنەکان بەتەواوی پارێزراوە و هەموو وێنەکان لەسەر کڵاوتفایەرن.</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- کارتی 3: Supabase Database Storage (داتابەیسی سەرەکی) -->
-                    <div class="backup-card" style="border-right: 4px solid #3b82f6; margin-bottom: 14px;">
-                        <div class="backup-card-head" style="justify-content: space-between;">
-                            <div style="display: flex; align-items: center; gap: 10px;">
-                                <i class='bx bx-cylinder' style="color: #3b82f6; background: rgba(59, 130, 246, 0.1);"></i>
-                                <div>
-                                    <h4 style="display: flex; align-items: center; gap: 6px;">
-                                        Supabase Database (PostgreSQL)
-                                        <span id="st-db-badge" style="font-size: 10px; background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; border-radius: 6px; padding: 1px 6px; font-weight: 700;">سەلامەتە</span>
-                                    </h4>
-                                    <span style="font-size: 11px; color: #64748b;">تەواوی خشتەکانی ئۆردەر، کارمەند و دارایی</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div style="margin-top: 14px;">
-                            <div style="display: flex; justify-content: space-between; font-size: 13px; font-weight: 700; margin-bottom: 6px;">
-                                <span style="color: #334155;">قەبارە: <span id="st-db-used-mb" style="color: #3b82f6;">...</span> MB</span>
-                                <span style="color: #64748b;">سنووری خۆڕایی: 500 MB</span>
-                            </div>
-                            <div class="backup-progress-track" style="height: 10px; background: #f1f5f9; border-radius: 6px; overflow: hidden;">
-                                <div id="st-db-progress" style="width: 22%; height: 100%; background: linear-gradient(90deg, #3b82f6, #60a5fa); border-radius: 6px; transition: width 0.6s ease;"></div>
-                            </div>
-                            <div style="display: flex; justify-content: space-between; font-size: 11.5px; color: #64748b; margin-top: 6px;">
-                                <span>ڕێژەی بەکارهاتوو: <strong id="st-db-percent" style="color: #3b82f6;">...%</strong></span>
-                                <span>ماوە: <strong id="st-db-remain-mb" style="color: #059669;">...</strong> MB</span>
-                            </div>
-
-                            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 10px 12px; margin-top: 12px; font-size: 12px; color: #475569; display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; text-align: center;">
-                                <div style="background: #ffffff; padding: 8px 6px; border-radius: 8px; border: 1px solid #e2e8f0;">
-                                    <span style="display: block; font-size: 10.5px; color: #64748b;">ئۆردەرەکان</span>
-                                    <strong id="st-db-orders-count" style="font-size: 13px; color: #0f172a;">...</strong>
-                                </div>
-                                <div style="background: #ffffff; padding: 8px 6px; border-radius: 8px; border: 1px solid #e2e8f0;">
-                                    <span style="display: block; font-size: 10.5px; color: #64748b;">کارمەندان</span>
-                                    <strong id="st-db-employees-count" style="font-size: 13px; color: #0f172a;">...</strong>
-                                </div>
-                                <div style="background: #ffffff; padding: 8px 6px; border-radius: 8px; border: 1px solid #e2e8f0;">
-                                    <span style="display: block; font-size: 10.5px; color: #64748b;">دارایی</span>
-                                    <strong id="st-db-transactions-count" style="font-size: 13px; color: #0f172a;">...</strong>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
                 </div>
             </div>
         </div>
@@ -3106,6 +3069,128 @@
             </div>
             <div class="sxd-foot">
                 <button type="button" class="btn sxd-apply" onclick="applySchedTimeSheet()">
+                    <i class='bx bx-check'></i> ئەم کاتە
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================================
+         بەرواری باکئەپ — هەمان ڕۆژژمێری «مەودای دڵخواز»
+         ------------------------------------------------------------
+         ⚠️ ڕۆژژمێرەکە لێرەدا **کۆپی ناکرێتەوە**. هەمان نۆدی
+            `.fcal-wrap` لە `#fcal-home`ـەوە دەگوێزرێتەوە بۆ ئێرە و
+            لە کاتی داخستندا دەگەڕێتەوە (`fcalReturnHome`). یەک نۆد،
+            چوار شوێن — بۆیە هەرگیز لێک دوور ناکەونەوە.
+         ⚠️ داخستن دەبێت بە `closeBkDateSheet` بێت؛ `closeModal`
+            سەربەخۆ `fcalReturnHome`ی بۆ بانگ دەکات، ئەگەرنا دوگمەی
+            گەڕانەوەی تلیگرام ڕۆژژمێرەکە لێرەدا بەجێدەهێڵێت و
+            شیتەکانی تر بەتاڵ دەبنەوە.
+         ⚠️ هیچ `stopPropagation`ێک لێرەدا نییە — ڕووداوەکانی
+            ڕۆژژمێر لەسەر `document` گرێدراون.
+         ============================================================ -->
+    <div id="bk-date-sheet" class="modal-overlay" style="z-index: 2095;"
+        onclick="if (event.target.id === 'bk-date-sheet') closeBkDateSheet()">
+        <div class="modal-content is-sxd">
+            <div class="modal-header">
+                <h3 class="modal-title is-sm"><i class='bx bx-calendar-edit'></i>
+                    <span id="bkd-title">مەودای باکئەپ</span></h3>
+                <button class="modal-close" onclick="closeBkDateSheet()"><i class='bx bx-x'></i></button>
+            </div>
+            <div class="sxd-body" id="bk-cal-slot"></div>
+            <div class="sxd-foot">
+                <div class="sxd-info" id="bkd-info">بەروارەکان هەڵبژێرە</div>
+                <button type="button" class="btn sxd-apply" id="bkd-apply" onclick="applyBkDateSheet()">
+                    <i class='bx bx-check'></i> پەسەندکردن
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================================
+         مانگی باکئەپ — خانەکانی هەمان زمانی دیزاین (`.sct-*`)
+         ------------------------------------------------------------
+         ⚠️ ١٢ مانگ ÷ ٣ ستوون = ٤ ڕیزی تەواو. ناوی مانگی کوردی
+            درێژە (٥–١٣ پیت)، بۆیە ٣ ستوون نەک ٤.
+         ⚠️ مانگی داهاتوو `disabled`ـە — داتای نەبوو باکئەپ ناکرێت.
+         ============================================================ -->
+    <div id="bk-month-sheet" class="modal-overlay" style="z-index: 2095;"
+        onclick="if (event.target.id === 'bk-month-sheet') closeBkMonthSheet()">
+        <div class="modal-content is-sxd">
+            <div class="modal-header">
+                <h3 class="modal-title is-sm"><i class='bx bx-calendar'></i> مانگی باکئەپ</h3>
+                <button class="modal-close" onclick="closeBkMonthSheet()"><i class='bx bx-x'></i></button>
+            </div>
+            <div class="sxd-body">
+                <div class="bkm-yr">
+                    <button type="button" class="bkm-yr-btn" id="bkm-yr-prev"
+                        onclick="bkMonthShiftYear(-1)" aria-label="ساڵی پێشوو">
+                        <i class='bx bx-chevron-right'></i>
+                    </button>
+                    <span class="bkm-yr-val" id="bkm-yr-val" dir="ltr">2026</span>
+                    <button type="button" class="bkm-yr-btn" id="bkm-yr-next"
+                        onclick="bkMonthShiftYear(1)" aria-label="ساڵی داهاتوو">
+                        <i class='bx bx-chevron-left'></i>
+                    </button>
+                </div>
+                <div class="sct-block">
+                    <div class="sct-t">مانگ</div>
+                    <div class="sct-g sct-g-3" id="bkm-grid" role="group" aria-label="مانگ"></div>
+                </div>
+            </div>
+            <div class="sxd-foot">
+                <div class="sxd-info" id="bkm-info">مانگێک هەڵبژێرە</div>
+                <button type="button" class="btn sxd-apply" id="bkm-apply" onclick="applyBkMonthSheet()">
+                    <i class='bx bx-check'></i> ئەم مانگە
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================================
+         کاتی باکئەپی خۆکار — ڕێک هەمان پەیکەری «کاتی دڵخواز»
+         ------------------------------------------------------------
+         پێشبینینی درشت + پ.ن/د.ن + کاتژمێر + خولەک. پۆلەکان هەمان
+         `.sct-*`ن، بۆیە شێوە و ڕەنگ و دۆخی هەڵبژاردن بە تەواوی
+         وەک ئەوەی کاتدارکردنی ئۆردەرن.
+         ⚠️ ژمارەکان `dir="ltr"`ن، ئەگەرنا «٢:٤٥» بە پێچەوانە
+            دەردەکەوێت لە ناو ڕووکاری RTLدا.
+         ============================================================ -->
+    <div id="bk-time-sheet" class="modal-overlay" style="z-index: 2095;"
+        onclick="if (event.target.id === 'bk-time-sheet') closeBkTimeSheet()">
+        <div class="modal-content is-sxd">
+            <div class="modal-header">
+                <h3 class="modal-title is-sm"><i class='bx bx-time'></i> کاتی باکئەپی خۆکار</h3>
+                <button class="modal-close" onclick="closeBkTimeSheet()"><i class='bx bx-x'></i></button>
+            </div>
+
+            <div class="sct-preview">
+                <div class="sct-clock" id="bkt-clock" dir="ltr">
+                    <span class="sct-num" id="bkt-p-h">2</span><span
+                        class="sct-colon">:</span><span class="sct-num" id="bkt-p-m">00</span>
+                </div>
+                <div class="sct-mer-txt" id="bkt-p-r">پ.ن</div>
+            </div>
+
+            <div class="sxd-body">
+                <div class="sct-block">
+                    <div class="sct-t">بەیانی یان ئێوارە</div>
+                    <div class="sct-seg" id="bkt-mer" role="group" aria-label="بەیانی یان ئێوارە"></div>
+                </div>
+
+                <div class="sct-block">
+                    <div class="sct-t">کاتژمێر</div>
+                    <div class="sct-g sct-g-4" id="bkt-hours" role="group" aria-label="کاتژمێر"></div>
+                </div>
+
+                <div class="sct-block">
+                    <div class="sct-t">خولەک</div>
+                    <div class="sct-g sct-g-4" id="bkt-mins" role="group" aria-label="خولەک"></div>
+                </div>
+            </div>
+            <div class="sxd-foot">
+                <div class="sxd-info" id="bkt-info"></div>
+                <button type="button" class="btn sxd-apply" onclick="applyBkTimeSheet()">
                     <i class='bx bx-check'></i> ئەم کاتە
                 </button>
             </div>
@@ -26439,6 +26524,7 @@
 
             fcalD = _schedCalDraft;
             fcalOnChange = schedCalSync;
+            fcalHostId = 'sched-cal-slot';   // ⚠️ هەمان داو — بڕوانە سەرەوە
             fcalHover = null;
             fcalDragEdge = null;
             fcalFocus = cur;
@@ -27662,7 +27748,7 @@
             //    ڕاستەوخۆ ئێرە دەگات و فەنکشنی داخستنی تایبەت
             //    هەرگیز بانگ ناکرێت. بڕوانە [[landmines]].
             if (modalId === 'sx-date-sheet' || modalId === 'sched-date-sheet'
-                || modalId === 'rw-date-sheet') fcalReturnHome();
+                || modalId === 'rw-date-sheet' || modalId === 'bk-date-sheet') fcalReturnHome();
             // پەنجەرەی وردەکاری ئۆردەر داخرا → وەک «پشکنراو» نیشان دەکرێت.
             // ئەمە تاکە ڕێگای داخستنە (X، پاشخان، دەستکاری، سڕینەوە…)
             if (modalId === 'order-details-modal') {
@@ -30101,7 +30187,7 @@
             _stLoading = true;
             if (refreshBtn) {
                 refreshBtn.disabled = true;
-                refreshBtn.innerHTML = "<i class='bx bx-loader-alt bx-spin'></i> خەریکی پشکنینە...";
+                refreshBtn.innerHTML = "<i class='bx bx-loader-alt bx-spin'></i> خەریکی پشکنینە…";
             }
 
             try {
@@ -30123,7 +30209,7 @@
                 _stLoading = false;
                 if (refreshBtn) {
                     refreshBtn.disabled = false;
-                    refreshBtn.innerHTML = "<i class='bx bx-refresh'></i> نوێکردنەوەی ئامارەکان";
+                    refreshBtn.innerHTML = "<i class='bx bx-refresh'></i> نوێکردنەوە";
                 }
             }
         }
@@ -30250,6 +30336,14 @@
         // 🗄️ سیستەمی باکئەپ و بەڕێوەبردنی پاراستنی داتاکان (پاشا)
         // ============================================================
         let _bkCurrentRange = 'all';
+        // ⭐ دۆخی ماوەکە ئێستا لە JSـدایە، نەک لەناو
+        //    `<input type="date">`ـەکاندا: ئەوانە لەسەر هەر ئامێرێک
+        //    شێوازێکی جیاوازیان هەیە و بە `mm/dd/yyyy`ی ئینگلیزی
+        //    دەردەکەوتن. `YYYY-MM-DD` بۆ ڕۆژ، `YYYY-MM` بۆ مانگ.
+        let _bkLastRunAt = null;                    // دوایین باکئەپ (ISO)
+        let _bkRange = { from: null, to: null };   // مەودا
+        let _bkDay = null;                          // ڕۆژێک
+        let _bkMonth = null;                        // مانگێک
         let _bkCachedStats = {};
         let _bkStatsDebounce = null;
         let _bkGDriveAccounts = [];
@@ -30262,52 +30356,614 @@
 
         function initBackupSection() {
             if (userRole !== 'پاشا') return;
+            bkvSyncStatus();
 
-            // 1 · ئامادەکردنی بەروارەکان
+            // ١ · بنەڕەتەکان — ئەمڕۆ و ئەم مانگە
             const today = new Date();
             const yyyy = today.getFullYear();
             const mm = String(today.getMonth() + 1).padStart(2, '0');
             const dd = String(today.getDate()).padStart(2, '0');
-            const todayStr = `${yyyy}-${mm}-${dd}`;
-            const monthStr = `${yyyy}-${mm}`;
+            if (!_bkDay) _bkDay = `${yyyy}-${mm}-${dd}`;
+            if (!_bkMonth) _bkMonth = `${yyyy}-${mm}`;
+            if (!_bkRange.from) { _bkRange.from = `${yyyy}-${mm}-01`; _bkRange.to = `${yyyy}-${mm}-${dd}`; }
 
-            const mInput = document.getElementById('bk-month-input');
-            if (mInput && !mInput.value) mInput.value = monthStr;
+            // ٢ · ڕووکار
+            bkSyncRangeUI();
+            bkSyncTimePick();
 
-            const sDayInput = document.getElementById('bk-single-day');
-            if (sDayInput && !sDayInput.value) sDayInput.value = todayStr;
-
-            const rStart = document.getElementById('bk-range-start');
-            const rEnd = document.getElementById('bk-range-end');
-            if (rStart && !rStart.value) rStart.value = todayStr;
-            if (rEnd && !rEnd.value) rEnd.value = todayStr;
-
-            // 2 · هێنانی ئامار و ڕێکخستنەکان
+            // ٣ · ئامار و ڕێکخستنەکان
             updateBackupStatsPreview();
             loadBackupSettingsToUI();
+        }
+
+        // ============================================================
+        // ڕووکاری ماوەی باکئەپ — یەک دوگمە، سێ مۆد
+        // ------------------------------------------------------------
+        // ⭐ دوگمەکە **یەک** نۆدە و دەقەکەی بەپێی چیپی چالاک
+        //    دەگۆڕدرێت، بۆیە هەرگیز دوو خانەی لێکدژ بەیەکەوە
+        //    دەرناکەون. `all` و `this_month` هیچ هەڵبژاردنێکیان
+        //    ناوێت، بۆیە دوگمەکە بۆیان دەشاردرێتەوە.
+        // ============================================================
+        function bkMonthLabel(ym) {
+            const m = /^(\d{4})-(\d{2})$/.exec(String(ym || ''));
+            if (!m) return '—';
+            return FS_MONTHS[(+m[2]) - 1] + ' ' + fmtNum(m[1]);
+        }
+
+        function bkDayLabel(key) {
+            const d = key ? fdFromKey(key) : null;
+            if (!d) return '—';
+            return fmtNum(d.getDate()) + ' ' + FS_MONTHS[d.getMonth()] + ' ' + fmtNum(d.getFullYear());
+        }
+
+        function bkSyncRangeUI() {
+            const pick = document.getElementById('bk-date-pick');
+            const lbl = document.getElementById('bk-date-pick-lbl');
+            const val = document.getElementById('bk-date-pick-val');
+            const ico = document.getElementById('bk-date-pick-ico');
+            const sum = document.getElementById('bk-range-sum-txt');
+            if (!pick) return;
+
+            const now = new Date();
+            let sumTxt = '';
+
+            if (_bkCurrentRange === 'all') {
+                pick.style.display = 'none';
+                sumTxt = 'هەموو داتاکان لە سەرەتاوە تا ئێستا';
+            } else if (_bkCurrentRange === 'this_month') {
+                pick.style.display = 'none';
+                sumTxt = 'تەنها <b>' + bkMonthLabel(now.getFullYear() + '-'
+                    + String(now.getMonth() + 1).padStart(2, '0')) + '</b>';
+            } else if (_bkCurrentRange === 'custom_month') {
+                pick.style.display = '';
+                pick.setAttribute('onclick', 'openBkMonthSheet()');
+                if (ico) ico.className = 'bx bx-calendar';
+                if (lbl) lbl.innerText = 'مانگ';
+                if (val) val.innerText = bkMonthLabel(_bkMonth);
+                sumTxt = 'تەنها <b>' + bkMonthLabel(_bkMonth) + '</b>';
+            } else if (_bkCurrentRange === 'range') {
+                pick.style.display = '';
+                pick.setAttribute('onclick', 'openBkRangePicker()');
+                if (ico) ico.className = 'bx bx-calendar-edit';
+                if (lbl) lbl.innerText = 'مەودا';
+                const a = _bkRange.from, b = _bkRange.to || _bkRange.from;
+                if (val) val.innerText = (a ? fdRange(a, b) : 'دیاری بکە');
+                const n = (a && b) ? fdDaysBetween(a, b) : 0;
+                sumTxt = a
+                    ? '<b>' + fdRange(a, b) + '</b> · ' + fmtNum(n) + ' ڕۆژ'
+                    : 'مەودایەک دیاری بکە';
+            } else if (_bkCurrentRange === 'single_day') {
+                pick.style.display = '';
+                pick.setAttribute('onclick', 'openBkDayPicker()');
+                if (ico) ico.className = 'bx bx-calendar-check';
+                if (lbl) lbl.innerText = 'ڕۆژ';
+                if (val) val.innerText = bkDayLabel(_bkDay);
+                sumTxt = 'تەنها ڕۆژی <b>' + bkDayLabel(_bkDay) + '</b>';
+            }
+
+            if (sum) sum.innerHTML = sumTxt;
+        }
+
+        // ============================================================
+        // مەودا و ڕۆژ — ڕۆژژمێری `.fcal-wrap` قەرز دەگیرێت
+        // ------------------------------------------------------------
+        // ⭐ هەمان شێوازی `openSxDateSheet`: نۆدەکە **دەگوێزرێتەوە**،
+        //    کۆپی ناکرێتەوە. یەک نۆد، چوار شوێن.
+        // ============================================================
+        let _bkCalDraft = { preset: 'custom', from: null, to: null };
+        let _bkCalMode = 'range';       // 'range' | 'day'
+
+        function bkOpenCal(mode) {
+            _bkCalMode = mode;
+            const today = fdKey(fdToday());
+            if (mode === 'day') {
+                const cur = _bkDay || today;
+                _bkCalDraft = { preset: 'custom', from: cur, to: cur };
+            } else {
+                _bkCalDraft = {
+                    preset: 'custom',
+                    from: _bkRange.from || today,
+                    to: _bkRange.to || _bkRange.from || today
+                };
+            }
+
+            const wrap = document.querySelector('#fcal-home .fcal-wrap')
+                || document.querySelector('.fcal-wrap');
+            const slot = document.getElementById('bk-cal-slot');
+            if (wrap && slot) slot.appendChild(wrap);
+            // ⚠️ مۆدی یەک-ڕۆژ خانەکانی «لە/بۆ» دەشارێتەوە — هەمان
+            //    پۆلی `sched-date-sheet`
+            if (slot) slot.classList.toggle('is-single', mode === 'day');
+
+            const ttl = document.getElementById('bkd-title');
+            if (ttl) ttl.innerText = (mode === 'day') ? 'ڕۆژی باکئەپ' : 'مەودای باکئەپ';
+
+            fcalD = _bkCalDraft;
+            fcalOnChange = bkCalSync;
+            fcalHostId = 'bk-cal-slot';   // ⚠️ بەبێ ئەمە سکڕۆڵ بێدەنگ دەشکێت
+            fcalHover = null;
+            fcalDragEdge = null;
+            fcalFocus = _bkCalDraft.from;
+            fcalAlign(_bkCalDraft.from);
+            // ⭐ پێوانەکراو: ٢٤ مانگ = ٨٢٧ خانە و ١٨٦٤ نۆد لە یەک
+            //    نەخشاندندا. ١٢ نیوەی ئەوەیە و هەمان ژمارەی شیتی
+            //    ئامارەکانە. مانگی کۆنتر بە دوگمەی «مانگی پێشتر»
+            //    (`fcalMore`) دێت، بۆیە هیچ بەروارێک ناگیرێت.
+            fcalBackMonths = 12;        // ⭐ باکئەپ بۆ ڕابردووە، نەک داهاتوو
+            // ⚠️ مانگی داهاتوو هیچ داتایەکی تێدا نییە — نەنەخشێنرێت.
+            //    (شیتی چاڵنج پێویستی بە داهاتووە، بۆیە `fcalReturnHome`
+            //    دەیگەڕێنێتەوە بۆ ١.)
+            fcalFwdMonths = 0;
+
+            document.getElementById('bk-date-sheet').classList.add('show');
+            fcalRender();
+            bkCalSync();
+            requestAnimationFrame(() => fcalScrollToMonth(_bkCalDraft.from, 'auto'));
+        }
+
+        function openBkRangePicker() { bkOpenCal('range'); }
+        function openBkDayPicker() { bkOpenCal('day'); }
+
+        // ⚠️ لە مۆدی یەک-ڕۆژدا دوای هەر کلیکێک `to = from` دادەنرێت —
+        //    ئەوسا خانەکە وەک `is-only` دەردەکەوێت و کلیکی داهاتوو
+        //    لە نوێوە دەستی پێدەکات (هەمان `schedCalSync`).
+        function bkCalSync() {
+            const D = _bkCalDraft;
+            if (_bkCalMode === 'day' && D.from) D.to = D.from;
+            fcalPaint();
+            const info = document.getElementById('bkd-info');
+            const btn = document.getElementById('bkd-apply');
+            const a = D.from, b = D.to || D.from;
+            if (info) {
+                if (!a) {
+                    info.innerHTML = (_bkCalMode === 'day')
+                        ? 'ڕۆژێک هەڵبژێرە' : 'بەرواری دەستپێک هەڵبژێرە';
+                } else if (_bkCalMode === 'day') {
+                    info.innerHTML = '<i class="bx bx-calendar"></i> ' + bkDayLabel(a);
+                } else {
+                    const n = fdDaysBetween(a, b);
+                    info.innerHTML = '<i class="bx bx-calendar"></i> ' + fdRange(a, b)
+                        + ' · <b>' + fmtNum(n) + ' ڕۆژ</b>';
+                }
+            }
+            if (btn) btn.disabled = !a;
+            if (typeof fsSyncInputs === 'function') fsSyncInputs();
+        }
+
+        function closeBkDateSheet() {
+            document.getElementById('bk-date-sheet').classList.remove('show');
+            const slot = document.getElementById('bk-cal-slot');
+            if (slot) slot.classList.remove('is-single');
+            fcalReturnHome();
+        }
+
+        function applyBkDateSheet() {
+            const a = _bkCalDraft.from;
+            if (!a) return;
+            if (_bkCalMode === 'day') {
+                _bkDay = a;
+            } else {
+                _bkRange.from = a;
+                _bkRange.to = _bkCalDraft.to || a;
+            }
+            closeBkDateSheet();
+            bkSyncRangeUI();
+            updateBackupStatsPreview();
+        }
+
+        // ============================================================
+        // مانگی باکئەپ — ڕیزی ساڵ + گریدی ١٢ مانگ
+        // ------------------------------------------------------------
+        // ⚠️ مانگی داهاتوو `disabled`ـە: داتای نەبوو باکئەپ ناکرێت.
+        // ============================================================
+        let _bkmY = 0, _bkmM = 0;       // ساڵ · مانگ (١–١٢)
+
+        function openBkMonthSheet() {
+            const m = /^(\d{4})-(\d{2})$/.exec(String(_bkMonth || ''));
+            const now = new Date();
+            _bkmY = m ? +m[1] : now.getFullYear();
+            _bkmM = m ? +m[2] : (now.getMonth() + 1);
+            bkMonthRender();
+            document.getElementById('bk-month-sheet').classList.add('show');
+        }
+
+        function closeBkMonthSheet() {
+            document.getElementById('bk-month-sheet').classList.remove('show');
+        }
+
+        function bkMonthShiftYear(d) {
+            const now = new Date();
+            const y = _bkmY + d;
+            if (y < 2020 || y > now.getFullYear()) return;
+            _bkmY = y;
+            bkMonthRender();
+        }
+
+        function bkMonthRender() {
+            const g = document.getElementById('bkm-grid');
+            const yv = document.getElementById('bkm-yr-val');
+            const info = document.getElementById('bkm-info');
+            const prev = document.getElementById('bkm-yr-prev');
+            const next = document.getElementById('bkm-yr-next');
+            if (!g) return;
+
+            const now = new Date();
+            const nowY = now.getFullYear(), nowM = now.getMonth() + 1;
+            if (yv) yv.innerText = fmtNum(_bkmY);
+            if (prev) prev.disabled = (_bkmY <= 2020);
+            if (next) next.disabled = (_bkmY >= nowY);
+
+            let h = '';
+            for (let mo = 1; mo <= 12; mo++) {
+                const future = (_bkmY > nowY) || (_bkmY === nowY && mo > nowM);
+                const on = (mo === _bkmM);
+                h += `<button type="button" class="sct-cell is-lg${on ? ' is-on' : ''}"
+                    aria-pressed="${on}"${future ? ' disabled' : ''}
+                    onclick="bkMonthPick(${mo})">${FS_MONTHS[mo - 1]}</button>`;
+            }
+            g.innerHTML = h;
+
+            if (info) {
+                info.innerHTML = '<i class="bx bx-calendar"></i> '
+                    + bkMonthLabel(_bkmY + '-' + String(_bkmM).padStart(2, '0'));
+            }
+        }
+
+        function bkMonthPick(mo) {
+            _bkmM = mo;
+            try {
+                const tg = window.Telegram && window.Telegram.WebApp;
+                if (tg && tg.HapticFeedback) tg.HapticFeedback.selectionChanged();
+            } catch (e) { }
+            bkMonthRender();
+        }
+
+        function applyBkMonthSheet() {
+            _bkMonth = _bkmY + '-' + String(_bkmM).padStart(2, '0');
+            closeBkMonthSheet();
+            bkSyncRangeUI();
+            updateBackupStatsPreview();
+        }
+
+        // ============================================================
+        // کاتی باکئەپی خۆکار — ڕێک هەمان پەیکەری «کاتی دڵخواز»
+        // ------------------------------------------------------------
+        // ⭐ خانەی شاراوەی `#bk-auto-time` تاکە سەرچاوەی ڕاستییە
+        //    (`loadBackupSettingsToUI` و `saveBackupSettingsFromUI`
+        //    ئەوە دەخوێننەوە)؛ ئەم شیتە تەنها دەینووسێتەوە.
+        // ============================================================
+        let _bktH = 2, _bktM = 0, _bktPm = false;
+
+        function bkTimeValue() {
+            const el = document.getElementById('bk-auto-time');
+            const v = (el && el.value) ? el.value : '02:00';
+            return /^\d{1,2}:\d{2}$/.test(v) ? v : '02:00';
+        }
+
+        // ⚠️ «2:00 پ.ن» دەقێکی تێکەڵە — ئاراستەی بینراوی بە بیدی
+        //    دیاری دەکرێت. پێوانەکراو بەبێ ڕەقکردن: ژمارەکە
+        //    [186→211] و «پ.ن» [215→240]، واتا نیشانەکە لە
+        //    **ڕاستی** ژمارەکەیە و خوێنەری RTL یەکەم جار ئەوە
+        //    دەبینێت. RLI بۆ ڕیزەکە + FSI بۆ هەر پارچەیەک ڕەقی
+        //    دەکات. ⚠️ FSI نەک LRI ([[bidi-and-date-direction]]).
+        function bkTimeLabel(hhmm) {
+            const m = /^(\d{1,2}):(\d{2})$/.exec(String(hhmm || ''));
+            if (!m) return '—';
+            const h24 = +m[1];
+            let h = h24 % 12; if (!h) h = 12;
+            const RLI = '\u2067', FSI = '\u2068', PDI = '\u2069';
+            return RLI + FSI + fmtNum(h) + ':' + fmtNum(m[2]) + PDI
+                + ' ' + FSI + (h24 >= 12 ? 'د.ن' : 'پ.ن') + PDI + PDI;
+        }
+
+        function bkSyncTimePick() {
+            const v = bkTimeValue();
+            const el = document.getElementById('bk-time-pick-val');
+            if (el) el.innerText = bkTimeLabel(v);
+            bkvSyncStatus();
+        }
+
+        function openBkTimeSheet() {
+            const m = /^(\d{1,2}):(\d{2})$/.exec(bkTimeValue());
+            const h24 = m ? +m[1] : 2;
+            _bktPm = h24 >= 12;
+            _bktH = h24 % 12; if (!_bktH) _bktH = 12;
+            _bktM = m ? +m[2] : 0;
+            bkTimeRender();
+            document.getElementById('bk-time-sheet').classList.add('show');
+        }
+
+        function closeBkTimeSheet() {
+            document.getElementById('bk-time-sheet').classList.remove('show');
+        }
+
+        function bkTimeRender() {
+            const hb = document.getElementById('bkt-hours');
+            const mb = document.getElementById('bkt-mins');
+            const rb = document.getElementById('bkt-mer');
+            if (!hb) return;
+
+            let hh = '';
+            for (let h = 1; h <= 12; h++) {
+                const on = h === _bktH;
+                hh += `<button type="button" class="sct-cell${on ? ' is-on' : ''}"
+                    aria-pressed="${on}" onclick="bkTimePick('h',${h})">${fmtNum(h)}</button>`;
+            }
+            hb.innerHTML = hh;
+
+            mb.innerHTML = SCT_MINS.map(m => {
+                const on = m === _bktM;
+                return `<button type="button" class="sct-cell${on ? ' is-on' : ''}"
+                    aria-pressed="${on}" onclick="bkTimePick('m',${m})">${fmtNum(String(m).padStart(2, '0'))}</button>`;
+            }).join('');
+
+            rb.innerHTML = [[0, 'پ.ن', 'بەیانی'], [1, 'د.ن', 'ئێوارە']].map(([v, t, sub]) => {
+                const on = (!!v === _bktPm);
+                return `<button type="button" class="sct-seg-btn${on ? ' is-on' : ''}"
+                    aria-pressed="${on}" onclick="bkTimePick('r',${v})"><b>${t}</b><small>${sub}</small></button>`;
+            }).join('');
+
+            const ph = document.getElementById('bkt-p-h');
+            const pm = document.getElementById('bkt-p-m');
+            const pr = document.getElementById('bkt-p-r');
+            if (ph) ph.innerText = fmtNum(_bktH);
+            if (pm) pm.innerText = fmtNum(String(_bktM).padStart(2, '0'));
+            if (pr) pr.innerText = _bktPm ? 'د.ن' : 'پ.ن';
+
+            const info = document.getElementById('bkt-info');
+            if (info) {
+                let h24 = _bktH % 12; if (_bktPm) h24 += 12;
+                info.innerHTML = '<i class="bx bx-globe"></i> بە کاتی کوردستان · '
+                    + '<b>' + fmtNum(String(h24).padStart(2, '0')) + ':'
+                    + fmtNum(String(_bktM).padStart(2, '0')) + '</b>';
+            }
+        }
+
+        function bkTimePick(kind, v) {
+            if (kind === 'h') _bktH = v;
+            else if (kind === 'm') _bktM = v;
+            else _bktPm = !!v;
+            const box = document.getElementById('bkt-clock');
+            if (box) { box.classList.remove('is-bump'); void box.offsetWidth; box.classList.add('is-bump'); }
+            try {
+                const tg = window.Telegram && window.Telegram.WebApp;
+                if (tg && tg.HapticFeedback) tg.HapticFeedback.selectionChanged();
+            } catch (e) { }
+            bkTimeRender();
+        }
+
+        function applyBkTimeSheet() {
+            let h24 = _bktH % 12;
+            if (_bktPm) h24 += 12;
+            const el = document.getElementById('bk-auto-time');
+            if (el) el.value = String(h24).padStart(2, '0') + ':' + String(_bktM).padStart(2, '0');
+            closeBkTimeSheet();
+            bkSyncTimePick();
+        }
+
+        // ============================================================
+        // شریتی دۆخ — سێ ڕاستی لە یەک ڕیزدا
+        // ------------------------------------------------------------
+        // هێرۆیەکی گرادیێنتی ~١٥٠px بوو. ئەوەی بەکارهێنەر دەیەوێت
+        // بیزانێت سێ شتە: ئایا کراوەیە؟ کەی کار دەکات؟ دوایین جار
+        // کەی ڕوویدا؟ ئێستا هەرسێکیان لە شریتێکی ٥٢pxدان.
+        // ============================================================
+        // ============================================================
+        // پەنجەرەی هەر ماوەیەک
+        // ------------------------------------------------------------
+        // ⭐ خاوەن: هەرسێکیان پێکەوە کار دەکەن، بەڵام هەریەکەیان
+        //    **تەنها پەنجەرەی خۆی** باکئەپ دەکات — نەک هەموو مێژووەکە.
+        //      ڕۆژانە  → ئەو ڕۆژەی تێپەڕی (دوێنێ)
+        //      هەفتانە → ئەو هەفتەیەی تێپەڕی
+        //      مانگانە → ئەو مانگەی تێپەڕی
+        // ⚠️ هەفتە بە **شەممە** دەست پێدەکات لەم ئەپەدا، بۆیە
+        //    `getDay()`ی خاو بەکارنایەت — [[week-order]].
+        // ============================================================
+        const BKV_FREQS = ['daily', 'weekly', 'monthly'];
+
+        function bkvWindow(kind, now) {
+            const t = now ? new Date(now) : new Date();
+            t.setHours(0, 0, 0, 0);
+            if (kind === 'daily') {
+                const from = new Date(t); from.setDate(from.getDate() - 1);
+                return { from: from, to: new Date(t.getTime() - 1) };
+            }
+            if (kind === 'weekly') {
+                // شەممە = ٦ لە `getDay()`، بۆیە ئەم ژمێرەرە ڕۆژەکان
+                // لە دوایین شەممەوە دەژمێرێت
+                const back = (t.getDay() + 1) % 7;
+                const thisSat = new Date(t); thisSat.setDate(thisSat.getDate() - back);
+                const prevSat = new Date(thisSat); prevSat.setDate(prevSat.getDate() - 7);
+                return { from: prevSat, to: new Date(thisSat.getTime() - 1) };
+            }
+            const firstThis = new Date(t.getFullYear(), t.getMonth(), 1);
+            const firstPrev = new Date(t.getFullYear(), t.getMonth() - 1, 1);
+            return { from: firstPrev, to: new Date(firstThis.getTime() - 1) };
+        }
+
+        function bkvWindowLabel(kind) {
+            const w = bkvWindow(kind);
+            const d = w.from, e = w.to;
+            if (kind === 'daily') {
+                return fmtNum(d.getDate()) + ' ' + FS_MONTHS[d.getMonth()];
+            }
+            if (kind === 'weekly') {
+                return fmtNum(d.getDate()) + ' ' + FS_MONTHS[d.getMonth()]
+                    + ' – ' + fmtNum(e.getDate()) + ' ' + FS_MONTHS[e.getMonth()];
+            }
+            return FS_MONTHS[d.getMonth()] + ' ' + fmtNum(d.getFullYear());
+        }
+
+        // کۆمەڵەکە لە خانەکانەوە
+        function bkvFreqSet() {
+            const out = [];
+            document.querySelectorAll('#bk-auto-freq input[name="bk_freq"]').forEach(el => {
+                if (el.checked && BKV_FREQS.indexOf(el.value) !== -1) out.push(el.value);
+            });
+            return out;
+        }
+
+        // ⚠️ بەهای کۆنی تاک (`daily`) هێشتا دەبێت کار بکات
+        function bkvFreqApply(raw) {
+            const set = String(raw || 'daily').split(',')
+                .map(x => x.trim()).filter(x => BKV_FREQS.indexOf(x) !== -1);
+            const use = set.length ? set : ['daily'];
+            document.querySelectorAll('#bk-auto-freq input[name="bk_freq"]').forEach(el => {
+                el.checked = use.indexOf(el.value) !== -1;
+            });
+        }
+
+        function bkvSyncFreqWindows() {
+            BKV_FREQS.forEach(k => {
+                const el = document.getElementById('bkv-win-' + k);
+                if (el) el.innerText = bkvWindowLabel(k);
+            });
+            const note = document.getElementById('bkv-freq-note');
+            if (note) {
+                const n = bkvFreqSet().length;
+                note.innerText = n
+                    ? 'هەر یەکێک تەنها پەنجەرەی خۆی باکئەپ دەکات، نەک هەموو مێژووەکە.'
+                    : 'لانیکەم یەکێکیان هەڵبژێرە، ئەگەرنا هیچ ئۆتۆماتیکێک ئەنجام نادرێت.';
+            }
+        }
+
+        function bkvSyncStatus() {
+            bkvSyncFreqWindows();
+            const on = !!(document.getElementById('bk-auto-active') || {}).checked;
+
+            const dot = document.getElementById('bkv-dot');
+            if (dot) dot.classList.toggle('is-on', on);
+
+            const st = document.getElementById('bkv-state');
+            if (st) st.innerText = on ? 'باکئەپی خۆکار کراوەیە' : 'باکئەپی خۆکار داخراوە';
+
+            // ژێرنووس: دووبارەبوونەوە · کاتژمێر · ژمارەی درایڤ · کەناڵ
+            const sub = document.getElementById('bkv-sub');
+            if (sub) {
+                if (!on) {
+                    sub.innerText = 'بۆ ئەنجامدانی خۆکار، تابی «ئۆتۆماتیک» بکەرەوە';
+                } else {
+                    const NAME = { daily: 'ڕۆژانە', weekly: 'هەفتانە', monthly: 'مانگانە' };
+                    const picked = bkvFreqSet();
+                    const freq = picked.length
+                        ? picked.map(k => NAME[k]).join(' + ')
+                        : 'هیچ ماوەیەک';
+                    const n = (_bkGDriveAccounts || []).length;
+                    const tg = ((document.getElementById('bk-auto-tg-target') || {}).value || '').trim();
+                    const bits = [freq + ' ' + bkTimeValue()];
+                    if (tg) bits.push('تلیگرام');
+                    if (n) bits.push(fmtNum(n) + ' درایڤ');
+                    sub.innerText = bits.join(' · ');
+                }
+            }
+
+            // ⚠️ بەرواری ڕەسەن دەخوێندرێتەوە، نەک دەقی پیڵەکە:
+            //    `toLocaleString('ckb')` بە `split(' ')[0]` ژمارەیەکی
+            //    بێ‌مانا دەردەخست. ماوەی نزیک کورتترە **و** بەسوودترە.
+            const l = document.getElementById('bkv-last');
+            if (l) {
+                let txt = '—';
+                if (_bkLastRunAt) {
+                    const d = new Date(_bkLastRunAt);
+                    if (!isNaN(d)) {
+                        const a0 = new Date(); a0.setHours(0, 0, 0, 0);
+                        const b0 = new Date(d); b0.setHours(0, 0, 0, 0);
+                        const days = Math.round((a0 - b0) / 86400000);
+                        txt = days <= 0 ? 'ئەمڕۆ'
+                            : days === 1 ? 'دوێنێ'
+                                : fmtNum(days) + ' ڕۆژ';
+                    }
+                }
+                l.innerText = txt;
+            }
+        }
+
+        // ⭐ دەقی کۆپی لە `data-copy`دایە، نەک لەناو `onclick`دا —
+        //    ئیمەیڵی سێرڤیس ئەکاونت `@` و `.` و `-`ی تێدایە و
+        //    هەندلەرێکی ناوەکی بە دەقێکی درێژ ئاسان دەشکێت.
+        function bkCopyText(btn) {
+            const txt = btn && btn.getAttribute('data-copy');
+            if (!txt) return;
+            const done = () => showToast('کۆپی کرا', 'success');
+            try {
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(txt).then(done, () => bkCopyFallback(txt, done));
+                } else {
+                    bkCopyFallback(txt, done);
+                }
+            } catch (e) { bkCopyFallback(txt, done); }
+        }
+
+        function bkCopyFallback(txt, done) {
+            try {
+                const ta = document.createElement('textarea');
+                ta.value = txt;
+                ta.style.position = 'fixed';
+                ta.style.opacity = '0';
+                document.body.appendChild(ta);
+                ta.select();
+                document.execCommand('copy');
+                document.body.removeChild(ta);
+                done();
+            } catch (e) {
+                showToast('نەتوانرا کۆپی بکرێت — بە دەست هەڵبژێرە', 'error');
+            }
         }
 
         function setBackupTimeRange(mode, btn) {
             _bkCurrentRange = mode;
             const parent = btn.parentElement;
             if (parent) {
-                parent.querySelectorAll('.backup-chip').forEach(c => c.classList.remove('active'));
+                parent.querySelectorAll('.bkv-chip').forEach(c => c.classList.remove('is-on'));
             }
-            btn.classList.add('active');
-
-            const boxMonth = document.getElementById('backup-date-custom-month');
-            const boxRange = document.getElementById('backup-date-range');
-            const boxSingle = document.getElementById('backup-date-single');
-
-            if (boxMonth) boxMonth.style.display = (mode === 'custom_month') ? 'block' : 'none';
-            if (boxRange) boxRange.style.display = (mode === 'range') ? 'block' : 'none';
-            if (boxSingle) boxSingle.style.display = (mode === 'single_day') ? 'block' : 'none';
-
+            btn.classList.add('is-on');
+            bkSyncRangeUI();
             updateBackupStatsPreview();
         }
 
-        function onBackupDateChange() {
-            updateBackupStatsPreview();
+        // ============================================================
+        // دوو پانێڵ — دەستی | ئۆتۆماتیک
+        // ------------------------------------------------------------
+        // ⭐ پێشتر هەردوو بەشەکە یەک سکڕۆڵی درێژ بوون (٣٧٥٩px لەسەر
+        //    شاشەیەکی ٧٢٩px). گۆڕینی پانێڵ درێژییەکە نیوە دەکات و
+        //    بەکارهێنەر بێ سکڕۆڵ دەیبینێت کام بەشدایە.
+        // ⚠️ دۆخەکە لە **خودی پۆلەکە**وە دەخوێندرێتەوە، نەک لە
+        //    ئاڵایەکەوە — دوو سەرچاوە بە کاتدا لێک دوور دەکەونەوە.
+        // ============================================================
+        function bkvPane(which, btn) {
+            document.querySelectorAll('#section-backup .bkv-pane').forEach(p => {
+                p.classList.toggle('is-on', p.id === 'bkv-pane-' + which);
+            });
+            document.querySelectorAll('#section-backup .bkv-seg-btn').forEach(b => {
+                const on = (b === btn);
+                b.classList.toggle('is-on', on);
+                b.setAttribute('aria-selected', on ? 'true' : 'false');
+            });
+            // پانێڵی نوێ لە سەرەوەوە دەست پێدەکات — ئەگەرنا
+            // بەکارهێنەر لە ناوەڕاستی شتێکی تردا دەکەوێتە خوارەوە
+            const sec = document.getElementById('section-backup');
+            if (sec) sec.scrollTop = 0;
+        }
+
+        // ============================================================
+        // ئەکۆردیۆنی شوێنەکانی گەیاندن
+        // ------------------------------------------------------------
+        // ⭐ سێ کارتی هێلانەکراو بوون بە سێ ڕیز. ئەمە ٢٤px پانی
+        //    گەڕاندەوە و پەڕەکەی زۆر کورتتر کرد ([[landmines]] ١٤١).
+        // ⚠️ بۆکسەکە بە `grid-template-rows: 0fr → 1fr` دەجوڵێت،
+        //    بۆیە بەرزییەکەی **ڕاستەقینەیە** و هیچ ناوەڕۆکێک
+        //    نابڕدرێت، چەند درێژ بێت.
+        // ============================================================
+        function bkvToggleAcc(id) {
+            const el = document.getElementById(id);
+            if (!el) return;
+            const open = el.classList.toggle('is-open');
+            const head = el.querySelector('.bkv-acc-head');
+            if (head) head.setAttribute('aria-expanded', open ? 'true' : 'false');
+            try {
+                const tg = window.Telegram && window.Telegram.WebApp;
+                if (tg && tg.HapticFeedback) tg.HapticFeedback.selectionChanged();
+            } catch (e) { }
         }
 
         function toggleAllBackupSections() {
@@ -30323,9 +30979,8 @@
                 const el = document.getElementById(id);
                 if (el) el.checked = anyUnchecked;
             });
-            const btn = document.querySelector('.backup-toggle-all-btn');
+            const btn = document.getElementById('bk-toggle-all');
             if (btn) btn.innerText = anyUnchecked ? 'لادان' : 'هەمووی';
-            updateBackupStatsPreview();
         }
 
         function calculateBackupDates() {
@@ -30342,7 +30997,7 @@
                 end = lastDay.toISOString();
                 label = `month_${y}_${m + 1}`;
             } else if (_bkCurrentRange === 'custom_month') {
-                const val = (document.getElementById('bk-month-input') || {}).value;
+                const val = _bkMonth;
                 if (val) {
                     const [yStr, mStr] = val.split('-');
                     const y = parseInt(yStr, 10);
@@ -30352,13 +31007,13 @@
                     label = `month_${val}`;
                 }
             } else if (_bkCurrentRange === 'range') {
-                const sVal = (document.getElementById('bk-range-start') || {}).value;
-                const eVal = (document.getElementById('bk-range-end') || {}).value;
+                const sVal = _bkRange.from;
+                const eVal = _bkRange.to || _bkRange.from;
                 if (sVal) start = new Date(`${sVal}T00:00:00Z`).toISOString();
                 if (eVal) end = new Date(`${eVal}T23:59:59.999Z`).toISOString();
                 label = `range_${sVal || 'start'}_to_${eVal || 'end'}`;
             } else if (_bkCurrentRange === 'single_day') {
-                const val = (document.getElementById('bk-single-day') || {}).value;
+                const val = _bkDay;
                 if (val) {
                     start = new Date(`${val}T00:00:00Z`).toISOString();
                     end = new Date(`${val}T23:59:59.999Z`).toISOString();
@@ -30369,42 +31024,86 @@
             return { start, end, label };
         }
 
+        // ============================================================
+        // ژمارەکانی بەشەکان
+        // ------------------------------------------------------------
+        // ⭐ پێوانەکراو لەسەر بەرهەم ٢٠٢٦-٠٩-٣٠: `backup_stats`
+        //    **٦٤٠ms** لە کاشی ساردا و **٦٨ms** لە گەرمدا (٧ ژماردنی
+        //    تەواو، ١٨,٦٦٥ بەفەر). لەگەڵ کاتی هاتووچۆدا، هەر
+        //    پەنجەیەک ~٣٠٠ms–١چرکە بێدەنگی بوو — ئەوەی خاوەن پێی
+        //    دەڵێت «قورسی».
+        // ⭐ سێ چارە، هەرسێکیان پێوانەکراون:
+        //    ١. چێکبۆکسەکان ئیتر بانگی ناکەن — ژمارەکان هیچ
+        //       پەیوەندییەکیان پێیەوە نییە (`p_actor, p_start, p_end`).
+        //    ٢. کاش بە کلیلی بەروارەوە — چیپێکی دووبارە یەکسەرە.
+        //    ٣. دۆخی بارکردن، بۆ ئەوەی هەرگیز وەک ڕاوەستاو دەرنەکەوێت.
+        // ============================================================
+        let _bkStatsCache = {};       // { label: stats }
+        let _bkStatsSeq = 0;          // ⚠️ پارێزەری پێشبڕکێ
+
+        function bkPaintCounts(st) {
+            const put = (id, n) => {
+                const el = document.getElementById(id);
+                if (!el) return;
+                el.classList.remove('is-wait');
+                el.innerText = (n !== undefined && n !== null) ? fmtNum(Number(n)) : '0';
+            };
+            put('bk-count-orders', st.orders);
+            put('bk-count-employees', st.employees);
+            put('bk-count-transactions', st.transactions);
+            put('bk-count-cities', st.cities);
+            put('bk-count-announcements', st.announcements);
+            put('bk-count-notifications', st.notifications);
+            put('bk-count-cosmetics', st.cosmetics);
+        }
+
+        function bkCountsWaiting() {
+            document.querySelectorAll('#section-backup .bkv-row-n').forEach(el => {
+                el.classList.add('is-wait');
+            });
+        }
+
         async function updateBackupStatsPreview() {
             if (userRole !== 'پاشا') return;
+            const { start, end, label } = calculateBackupDates();
+
+            // ⭐ ئەم ماوەیە پێشتر هێنراوە → یەکسەر، بێ تۆڕ
+            if (_bkStatsCache[label]) {
+                _bkCachedStats = _bkStatsCache[label];
+                bkPaintCounts(_bkCachedStats);
+                return;
+            }
+
+            bkCountsWaiting();
             if (_bkStatsDebounce) clearTimeout(_bkStatsDebounce);
+            // ⚠️ کلیلی پێشبڕکێ **پێش** `await` دادەنرێت، نەک دوای
+            const seq = ++_bkStatsSeq;
 
             _bkStatsDebounce = setTimeout(async () => {
                 try {
-                    const { start, end } = calculateBackupDates();
                     const actorCode = (currentUser && currentUser.code) || '1000';
                     const { data, error } = await supabase.rpc('backup_stats', {
                         p_actor: actorCode,
                         p_start_date: start,
                         p_end_date: end
                     });
-
+                    // وەڵامێکی درەنگی ماوەیەکی کۆن ڕەت دەکرێتەوە
+                    if (seq !== _bkStatsSeq) return;
                     if (error) {
                         console.error('Error fetching backup stats:', error);
+                        // ⚠️ دۆخی چاوەڕوانی لادەبرێت — ئەگەرنا «…» بۆ
+                        //    هەمیشە دەمێنێتەوە و وەک هەنگی دەردەکەوێت
+                        bkPaintCounts(_bkCachedStats || {});
                         return;
                     }
-
                     _bkCachedStats = data || {};
-                    const setBadge = (id, count) => {
-                        const el = document.getElementById(id);
-                        if (el) el.innerText = (count !== undefined && count !== null) ? Number(count).toLocaleString('en-US') : '0';
-                    };
-
-                    setBadge('bk-count-orders', _bkCachedStats.orders);
-                    setBadge('bk-count-employees', _bkCachedStats.employees);
-                    setBadge('bk-count-transactions', _bkCachedStats.transactions);
-                    setBadge('bk-count-cities', _bkCachedStats.cities);
-                    setBadge('bk-count-announcements', _bkCachedStats.announcements);
-                    setBadge('bk-count-notifications', _bkCachedStats.notifications);
-                    setBadge('bk-count-cosmetics', _bkCachedStats.cosmetics);
+                    _bkStatsCache[label] = _bkCachedStats;
+                    bkPaintCounts(_bkCachedStats);
                 } catch (e) {
                     console.error('Failed to update backup stats:', e);
+                    bkPaintCounts(_bkCachedStats || {});
                 }
-            }, 250);
+            }, 180);
         }
 
         function toggleTelegramGuide(btn) {
@@ -30460,7 +31159,7 @@
             } finally {
                 if (btn) {
                     btn.disabled = false;
-                    btn.innerHTML = "<i class='bx bx-paper-plane'></i> <span>🧪 تاقیکردنەوە</span>";
+                    btn.innerHTML = "<i class='bx bx-paper-plane'></i> <span>تاقیکردنەوە</span>";
                 }
             }
         }
@@ -30553,11 +31252,11 @@
                                 <span style="font-size: 11px; background: #dcfce7; color: #15803d; padding: 2px 8px; border-radius: 6px; font-weight: 700;">سەرکەوتوو بوو ✓</span>
                             </div>
                             <div class="bk-gdrive-test-details">
-                                📁 <b>فۆڵدەر:</b> <code style="background: #dcfce7; padding: 1px 6px; border-radius: 4px; font-weight: 700;">${escapeHtml(f.name || 'my-order-backup')}</code><br>
-                                👤 <b>خاوەنی درایڤ:</b> <b>${ownerText}</b><br>
-                                🔐 <b>مۆڵەتی سیستەم:</b> نووسین و دەستکاری (<span style="color: #15803d; font-weight: 700;">Editor ✓</span>)<br>
-                                ${sharedDateStr ? `📅 <b>کاتی شەیرکردن:</b> ${sharedDateStr}<br>` : ''}
-                                📊 <b>دۆخی فایلەکان:</b> ${f.filesCount > 0 ? (f.filesCount + ' فایل بوونی هەیە') : 'ئامادەیە بۆ وەرگرتنی باکئەپ'}
+                                <i class='bx bx-folder'></i> <b>فۆڵدەر:</b> <code style="background: #dcfce7; padding: 1px 6px; border-radius: 4px; font-weight: 700;">${escapeHtml(f.name || 'my-order-backup')}</code><br>
+                                <i class='bx bx-user'></i> <b>خاوەنی درایڤ:</b> <b>${ownerText}</b><br>
+                                <i class='bx bx-lock-alt'></i> <b>مۆڵەتی سیستەم:</b> نووسین و دەستکاری (<span style="color: #15803d; font-weight: 700;">Editor</span>)<br>
+                                ${sharedDateStr ? `<i class='bx bx-calendar'></i> <b>کاتی شەیرکردن:</b> ${sharedDateStr}<br>` : ''}
+                                <i class='bx bx-file'></i> <b>دۆخی فایلەکان:</b> ${f.filesCount > 0 ? (f.filesCount + ' فایل بوونی هەیە') : 'ئامادەیە بۆ وەرگرتنی باکئەپ'}
                             </div>
                             ${f.webViewLink ? `
                                 <div style="margin-top: 10px;">
@@ -30594,7 +31293,7 @@
             } finally {
                 if (btn) {
                     btn.disabled = false;
-                    btn.innerHTML = "<i class='bx bx-check-circle'></i> <span>🧪 تاقیکردنەوە</span>";
+                    btn.innerHTML = "<i class='bx bx-check-circle'></i> <span>تاقیکردنەوە</span>";
                 }
             }
         }
@@ -30614,13 +31313,13 @@
                 const utcH = (hourKurd - 3 + 24) % 24;
                 const utcM = minKurd;
 
-                let cronExpr = `${utcM} ${utcH} * * *`;
-                if (freq === 'weekly') {
-                    const dayOfWeek = (hourKurd < 3) ? 5 : 6;
-                    cronExpr = `${utcM} ${utcH} * * ${dayOfWeek}`;
-                } else if (freq === 'monthly') {
-                    cronExpr = `${utcM} ${utcH} 1 * *`;
-                }
+                // ⭐ هەمیشە **ڕۆژانە** دەتەقێتەوە، چەند ماوەیەکیش
+                //    چالاک بن. هۆکار: ئەگەر ڕۆژانە چالاک بێت پێویستی
+                //    بە هەموو ڕۆژێکە؛ و ئەگەر تەنها مانگانە چالاک
+                //    بێت، وۆرکفلۆوەکە خۆی لە کاتی کارکردندا بڕیار
+                //    دەدات ئایا ئەمڕۆ یەکەمی مانگە یان نا. یەک کرۆن
+                //    بۆ هەرسێکیان — نەک سێ خشتەی لێکدژ.
+                const cronExpr = `${utcM} ${utcH} * * *`;
 
                 const getRes = await fetch(`https://api.github.com/repos/${repo}/contents/.github/workflows/backup.yml`, {
                     headers: {
@@ -30687,13 +31386,11 @@
                 const autoActive = document.getElementById('bk-auto-active');
                 if (autoActive) autoActive.checked = !!s.is_active;
 
-                const freqRadios = document.getElementsByName('bk_freq');
-                for (const r of freqRadios) {
-                    if (r.value === s.frequency) r.checked = true;
-                }
+                bkvFreqApply(s.frequency);
 
                 const timeInput = document.getElementById('bk-auto-time');
                 if (timeInput && s.backup_time) timeInput.value = s.backup_time.slice(0, 5);
+                bkSyncTimePick();
 
                 const secs = Array.isArray(s.sections) ? s.sections : [];
                 const checkSec = (id, secName) => {
@@ -30715,21 +31412,36 @@
                 if (repoEl && s.github_repo) repoEl.innerText = s.github_repo;
 
                 renderGDriveAccountsList(s.gdrive_accounts || []);
-                fetchGitHubRunStatus();
+                // ⚠️ ڕێکخستنەکان لە دەستماندان — بەبێ ئەم پارامەتەرە
+                //    `fetchGitHubRunStatus` بانگێکی دووەمی
+                //    `backup_get_settings` دەکرد لە هەمان ساتدا.
+                fetchGitHubRunStatus(s);
 
+                // ⭐ سەردێڕی ئەکۆردیۆنی تلیگرام دەبێت بێ کردنەوەی
+                //    بڵێت ئایا ڕێک خراوە یان نا — ئەگەرنا پاشا دەبێت
+                //    هەرسێکیان بکاتەوە تا بزانێت کام تەواو نییە.
+                const tgSt = document.getElementById('bkv-st-tg');
+                if (tgSt) {
+                    const has = !!(s.telegram_target || '').trim();
+                    tgSt.innerText = has ? 'کەناڵ ڕێکخراوە' : 'ئایدی کەناڵ دانەنراوە';
+                    tgSt.classList.toggle('is-ok', has);
+                }
+
+                _bkLastRunAt = s.last_backup_at || null;
                 const lastRunEl = document.getElementById('bk-last-run-val');
                 if (lastRunEl) {
                     if (s.last_backup_at) {
-                        try {
-                            const d = new Date(s.last_backup_at);
-                            lastRunEl.innerText = d.toLocaleString('ckb', { dateStyle: 'medium', timeStyle: 'short' });
-                        } catch (_) {
-                            lastRunEl.innerText = String(s.last_backup_at);
-                        }
+                        const d = new Date(s.last_backup_at);
+                        lastRunEl.innerText = isNaN(d)
+                            ? String(s.last_backup_at)
+                            : (fmtNum(d.getDate()) + ' ' + FS_MONTHS[d.getMonth()]
+                                + ' · ' + fmtNum(String(d.getHours()).padStart(2, '0'))
+                                + ':' + fmtNum(String(d.getMinutes()).padStart(2, '0')));
                     } else {
                         lastRunEl.innerText = 'هێشتا ئەنجام نەدراوە';
                     }
                 }
+                bkvSyncStatus();
             } catch (e) {
                 console.error('Failed to load backup settings:', e);
             }
@@ -30748,11 +31460,15 @@
 
             try {
                 const autoActive = !!(document.getElementById('bk-auto-active') || {}).checked;
-                let freq = 'daily';
-                const freqRadios = document.getElementsByName('bk_freq');
-                for (const r of freqRadios) {
-                    if (r.checked) freq = r.value;
+                // ⚠️ کۆمەڵەکە بە کۆما لەناو هەمان ستوونەکەدا هەڵدەگیرێت،
+                //    بۆیە هیچ پارامەتەرێکی نوێ و هیچ واژۆیەکی چوارەم
+                //    دروست نابێت ([[landmines]] ١٠٨).
+                const freqSet = bkvFreqSet();
+                if (!freqSet.length) {
+                    showToast('لانیکەم یەک ماوە هەڵبژێرە (ڕۆژانە، هەفتانە یان مانگانە)', 'error');
+                    return;
                 }
+                const freq = freqSet.join(',');
                 const bTime = (document.getElementById('bk-auto-time') || {}).value || '02:00';
 
                 const sections = [];
@@ -30800,7 +31516,7 @@
             } finally {
                 if (saveBtn) {
                     saveBtn.disabled = false;
-                    saveBtn.innerHTML = "<i class='bx bx-check-shield'></i> <span>پاشەکەوتکردنی ڕێکخستنەکان و هاوکاتکردن لەگەڵ گێتهاب</span>";
+                    saveBtn.innerHTML = "<i class='bx bx-check-shield'></i> <span>پاشەکەوتکردنی ڕێکخستنەکان</span>";
                 }
             }
         }
@@ -30821,8 +31537,11 @@
             const container = document.getElementById('bk-gdrive-list');
             const badge = document.getElementById('bk-gdrive-count-badge');
             if (badge) {
-                badge.innerText = _bkGDriveAccounts.length > 0 ? (_bkGDriveAccounts.length + ' ئەکاونت') : '0 ئەکاونت';
+                const n = _bkGDriveAccounts.length;
+                badge.innerText = n ? (fmtNum(n) + ' ئەکاونتی بەستراو') : 'هیچ ئەکاونتێک نییە';
+                badge.classList.toggle('is-ok', n > 0);
             }
+            try { bkvSyncStatus(); } catch (e) { }
             if (!container) return;
 
             if (_bkGDriveAccounts.length === 0) {
@@ -30843,8 +31562,7 @@
                         </div>
                         <div class="bk-gdrive-item-meta">
                             <div class="bk-gdrive-item-title-row">
-                                <span class="bk-gdrive-item-name">${escapeHtml(acc.name || ('درایڤی ' + (idx + 1)))}</span>
-                                <span class="bk-gdrive-active-pill"><span class="bk-gh-dot"></span> چالاکە</span>
+                                <span class="bk-gdrive-item-name">${escapeHtml(acc.name || ('درایڤی ' + fmtNum(idx + 1)))}</span>
                             </div>
                             <span class="bk-gdrive-item-email" dir="ltr">${escapeHtml(acc.email || '')}</span>
                         </div>
@@ -30973,16 +31691,20 @@
                 if (btn) {
                     setTimeout(() => {
                         btn.disabled = false;
-                        btn.innerHTML = "<i class='bx bx-play-circle'></i> <span>⚡ دەستپێکردنی باکئەپ</span>";
+                        btn.innerHTML = "<i class='bx bx-play-circle'></i> <span>دەستپێکردنی باکئەپ ئێستا</span>";
                     }, 2000);
                 }
             }
         }
 
-        async function fetchGitHubRunStatus() {
+        async function fetchGitHubRunStatus(known) {
             try {
-                const actorCode = (currentUser && currentUser.code) || '1000';
-                const { data: s } = await supabase.rpc('backup_get_settings', { p_actor: actorCode });
+                let s = known;
+                if (!s) {
+                    const actorCode = (currentUser && currentUser.code) || '1000';
+                    const r = await supabase.rpc('backup_get_settings', { p_actor: actorCode });
+                    s = r.data;
+                }
                 if (!s || !s.github_token) return;
 
                 const repo = s.github_repo || 'hussenmuhamad5-bit/my-order-backups';
@@ -31013,12 +31735,17 @@
                 }
 
                 if (badge) {
-                    if (run.status === 'in_progress') {
-                        badge.className = 'bk-github-status-badge is-progress';
-                        badge.innerHTML = "<span class='bk-gh-dot pulse'></span> لە کاردایە";
+                    // ⚠️ ئێستا ژێرنووسی سەردێڕی ئەکۆردیۆنەکەیە، نەک
+                    //    باجێکی سەربەخۆ — پۆلە کۆنەکان نەماون.
+                    if (run.status === 'in_progress' || run.status === 'queued') {
+                        badge.className = 'bkv-acc-state';
+                        badge.innerText = 'لە کارکردندایە…';
+                    } else if (run.conclusion === 'success') {
+                        badge.className = 'bkv-acc-state is-ok';
+                        badge.innerText = 'دوایین باکئەپ سەرکەوتوو بوو';
                     } else {
-                        badge.className = 'bk-github-status-badge';
-                        badge.innerHTML = "<span class='bk-gh-dot'></span> چالاکە";
+                        badge.className = 'bkv-acc-state';
+                        badge.innerText = 'دوایین باکئەپ: ' + (run.conclusion || run.status);
                     }
                 }
             } catch (e) {

@@ -24687,1076 +24687,721 @@ body.sx-wide {
   .od-cp:active { transform: none; }
 }
 
-/* ============================================================
-   لەیئاوتی کۆمپیوتەر — ویندۆی پان (٢٠٢٦-٠٨-٢٥)
-   ------------------------------------------------------------
-   کێشەکە: `body`ـەکە `max-width: 430px`ـە، بەڵام شەش شاشە
-   `position: fixed; left:0; right:0`ن — واتا پێوانەیان بە
-   **ویندۆ**یە نەک بە `body`. لەسەر مۆبایل جیاوازی نییە (ویندۆکە
-   هەر ٤٣٠px ـە)، بەڵام لەسەر کۆمپیوتەر — بەتایبەت لە تلیگرام
-   دێسکتۆپ — ناوەڕۆکەکە تا کەناری شاشە درێژ دەبێتەوە و
-   پێوانەی ٤٣٠px بێ‌واتا دەبێت.
-
-   چارە: لە ٧٢٠px بەرەوسەرەوە ستوونێکی ناوەڕاست، و ئەو لیستانەی
-   دەگونجێن دەبنە گرید. هەمان بڕیکپۆینتەکانی شاشەی ئامار
-   (٧٢٠ / ١١٠٠) بەکاردێن تا ئەپەکە یەک سیستەم بێت.
-
-   ------------------------------------------------------------
-   ⚠️ بۆچی هەموو لیستەکان نابنە گرید — پێوانەی ڕاستەقینە
-   ------------------------------------------------------------
-   لیستی ئۆردەر بە ڕۆژ کۆکراوەتەوە، و سەردێڕی ڕۆژ ڕیزێکی نوێ
-   دەست پێدەکات. واتا ڕۆژێکی تاک-ئۆردەر نیوەی ڕیزەکە بەتاڵ
-   دەهێڵێتەوە. ژماردنی داتای بەرهەم (٢٠٢٦-٠٨-٢٥):
-
-     • داشبۆرد (ئۆردەری خودی کەس) — ناوەند ٣.٣ بۆ هەر ڕۆژێک،
-       بەڵام **٤٦.٥٪**ی ڕۆژەکان تەنها ١ ئۆردەریان هەیە
-       (٤٦٣ لە ٩٩٥) → گرید نیوەی کات بەتاڵ دەردەکەوێت.
-       بۆیە **یەک ستوون** دەمێنێتەوە، بەڵام باریک و ناوەڕاست.
-
-     • بەڕێوەبردن (هەموو فرۆشیارەکان) — ناوەند **١٢٧.٥** بۆ هەر
-       ڕۆژێک، تەنها ٣.٨٪ی ڕۆژەکان تاک-ئۆردەرن → **دوو ستوون**.
-
-     • جزدان و لیستەکانی ئەدمین — بە ڕۆژ کۆنەکراونەتەوە
-       (`dayHeaders = 0`) → گرید بێ هیچ بۆشاییەک.
-
-   ئەگەر ڕۆژێک تاک-ئۆردەر لە لیستێکی گریددا هەبوو، بۆشاییەکە
-   ئاسایییە — نەک شکاوی.
-
-   ⚠️ هەموو ئەمە لەناو `min-width`ـدان — لە ٧١٩px و خوارتر
-      **هیچ** ناگۆڕێت. مۆبایل دەستی لێ نەدراوە.
-   ============================================================ */
-
-@media (min-width: 720px) {
-  :root {
-    /* لیستی فراوان — هەمان پانی `body.sx-wide`ی شاشەی ئامار */
-    --app-wide: 1140px;
-    /* داشبۆرد و فۆڕم — خوێندنەوە گرنگترە لە پڕکردنی شاشە */
-    --app-narrow: 900px;
-    --app-gutter: 24px;
-  }
-
-  /* ستوونی ناوەڕاست: پادینگ دەبێتە نیوەی ئەوەی زیادەیە.
-     `max()` دڵنیایی دەداتەوە کە لە ویندۆی تەسکدا پادینگی
-     ئاسایی دەمێنێتەوە و ناوەڕۆک ناچەمێتەوە. */
-  #orders-management-screen.active,
-  #wallet-screen.active,
-  #admin-screen.active {
-    padding-inline: max(var(--app-gutter), calc((100% - var(--app-wide)) / 2));
-  }
-
-  #dashboard-screen.active,
-  #order-screen.active,
-  #settings-screen.active {
-    padding-inline: max(var(--app-gutter), calc((100% - var(--app-narrow)) / 2));
-  }
-
-  /* --- لیستەکانی کارت → گرید -------------------------------
-     `gap` تەنها ئاسۆییە: کارتەکان `margin-bottom`ی خۆیان هەیە،
-     بۆیە ڕیزبەندیی ستوونی وەک خۆی دەمێنێتەوە و بۆشایی
-     دووقات دروست نابێت.
-     `align-content: start` ڕێگری لە درێژبوونەوەی ڕیزی کۆتایی
-     دەکات بۆ پڕکردنی بەرزایی. */
-  #management-orders-list,
-  #my-transactions-list,
-  #edit-users-list,
-  #profit-users-list,
-  #wallet-users-list,
-  #admin-cities-list,
-  #trash-list {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0 16px;
-    align-content: start;
-  }
-
-  /* ئەمانە دەبێت بە درێژایی هەموو ستوونەکان بن:
-       [data-day]      سەردێڕی ڕۆژ (`dayHeadHtml`)
-       .win-sentinel   چاودێری «زیاتر بهێنە»ی `winRender`
-                       ⚠️ ئەگەر نەیەتە دوایین ڕیز، سکڕۆڵی
-                          بێکۆتایی پێش وەخت دەوەستێت
-       p               پەیامی «هیچ نییە»
-       h3/h4           سەردێڕی بەشەکان (لیستی جزدان) */
-  #management-orders-list > [data-day],
-  #management-orders-list > .win-sentinel,
-  #management-orders-list > p,
-  #my-transactions-list > [data-day],
-  #my-transactions-list > .win-sentinel,
-  #my-transactions-list > p,
-  #my-transactions-list > h3,
-  #my-transactions-list > h4,
-  #edit-users-list > .win-sentinel,
-  #edit-users-list > p,
-  #profit-users-list > .win-sentinel,
-  #profit-users-list > p,
-  #wallet-users-list > .win-sentinel,
-  #wallet-users-list > p,
-  #admin-cities-list > .win-sentinel,
-  #admin-cities-list > p,
-  #trash-list > .win-sentinel,
-  #trash-list > p {
-    grid-column: 1 / -1;
-  }
-
-  /* ============================================================
-     چاڵنج و ئاڕپی لەسەر شاشەی گەورە
-     ------------------------------------------------------------
-     ⚠️ ئەم شاشەیە **static**ـە (وەک ئامار)، نەک `fixed` وەک
-     داشبۆرد و ئۆردەر — بۆیە `body{max-width:430px}` سنووری
-     دەکات و `padding-inline` هیچ ناکات. پێوانەکراو لە ١٤٠٠px
-     پێش چاکسازی: پانی پانێڵ **٣٣٠px**.
-     چارە: هەمان ڕێڕەوی `body.sx-wide` — پۆلێکی جیا، چونکە
-     `sx-wide` بۆشایی خوارەوەشی دەگۆڕێت و ئەوە بۆ ئامار
-     ڕێکخراوە.
-     ============================================================ */
-  body.rw-wide {
-    max-width: 1140px;
-    padding-left: 24px;
-    padding-right: 24px;
-  }
-
-  /* --- چاڵنج: **یەک ستوونی** ناوەڕاست ----------------------
-     ⚠️ گریدی دوو ستوونی تاقیکرایەوە و **ڕەت کرایەوە**، بە
-     پێوانە: لیستەکە بە بەشەوە دابەش دەبێت («بەم زووانە»،
-     «لە ئارادان»، «کۆتاییهاتووەکان»)، و هەر سەردێڕێک
-     `grid-column: 1 / -1`ـە بۆیە ڕیزێکی نوێ دەست پێدەکات.
-     بەشەکان زۆرجار **یەک** کارتیان هەیە، بۆیە نیوەی هەر
-     ڕیزێک بەتاڵ دەمایەوە. (پێوانەکراو لە ١٤٠٠px: دوو لە
-     سێ بەشەکە تاک-کارت بوون.)
-
-     ئەمە هەمان بڕیاری داشبۆردە و بە هەمان هۆکار — بڕوانە
-     [[desktop-layout]]. ستوونێکی باریکی ناوەڕاست هەرگیز
-     ناتەواو دەرناکەوێت، بە هەر ژمارەیەکی چاڵنجەوە. */
-  #rw-chal-pane,
-  #rw-arp-pane {
-    max-width: 620px;
-    margin-inline: auto;
-  }
-
-  /* ⚠️ ڕیڵی پلیکانەکان **دەبێت** یەک ستوون بمێنێتەوە: هەر
-     ڕیزێک پارچەی ڕیڵی سەرەوە و خوارەوەی خۆی هەیە
-     (`.arp-line`, `flex: 1`) و ئەوانە بە ستوونی یەکدەگرن.
-     گریدی چەند ستوونی ڕیڵەکە دەبڕێت. */
-
-  /* دوگمەی «+»ی چاڵنج بە کەناری ئەم ستوونەوە — نەک بەو
-     ٩٠٠pxەی داشبۆرد (لە ١٤٠٠px نزیکەی ٣٠٠px دوور دەکەوتەوە) */
-  #rw-fab {
-    left: max(var(--app-gutter), calc(50% - 310px - 62px));
-    transform: none;
-  }
-
-  /* چوار خانەی ئامار لە یەک ڕیزدا، نەک ٢×٢ */
-  #dashboard-screen .stats-grid {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-  }
-
-  /* دوگمەی «+» بە کەناری ستوونەکەوە دەنووسێت، نەک بە ١٥%ی ویندۆ
-     (لە ویندۆیەکی ١٤٠٠px، ١٥% دەکاتە ٢١٠px — دوور لە ناوەڕۆکەکە) */
-  .fab-wrapper {
-    /* دەچێتە بۆشایی لای ستوونەکە، نەک لەسەر کارتەکان.
-       لە ویندۆی تەسکدا (بۆشایی نییە) دەگەڕێتەوە سەر پادینگ —
-       هەمان ڕەفتاری مۆبایل. */
-    left: max(var(--app-gutter), calc(50% - (var(--app-narrow) / 2) - 62px));
-    transform: none;
-  }
-}
-
-@media (min-width: 1100px) {
-  /* سێ ستوون تەنها بۆ کارتە بچووکەکان. کارتی ئۆردەر زانیاریی
-     زۆری تێدایە و لە ٣٧٠px دا تەسک دەبێت، بۆیە لە دووان دەمێنێتەوە. */
-  #my-transactions-list,
-  #edit-users-list,
-  #profit-users-list,
-  #wallet-users-list,
-  #admin-cities-list,
-  #trash-list {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-}
-
-
 /* ==================================================================
-   👑 DATA BACKUP — MOBILE REDESIGN  (362 x 804)
-   فۆنت: فۆنتی ڕەسەنی وێبسایتەکە ("AppleEmoji", "Noto Kufi Arabic", sans-serif)
+   👑 باکئەپ — دیزاینی v2 (مۆبایل-یەکەم، ٣٦٠×٧٨٠)
+   ------------------------------------------------------------------
+   خاوەن ٢٠٢٦-٠٩-٣٠: «دیزاینەکەی زۆر ناشرینە… بە تەواوی
+   دیزاینێکی جوان و لاواز بکە… بەتنەکان نە زۆر گەورە بن و نە
+   زۆر بچووک… قەبارەیان بە باری ئاسۆیی زیاتر بکە.»
+
+   پێوانەکراو پێش گۆڕان لەسەر ٣٦٠px:
+     ناڤی خوارەوە  ٠ → ٣٦٠  ·  کارتی ئۆردەر  ٢٠ → ٣٤٠
+     کارتی باکئەپ  ٤٤ → ٣١٦   ← ٤٨px تەسکتر لە هەردووکیان
+
+   ⭐ چوار شتی بنەڕەتی گۆڕان:
+     ١. پانی تەواو — `#admin-screen` پێشتر ٢٠px دادەنێت، بۆیە
+        ئەم بەشە **هیچ** پەدینگێکی تەنیشتی نییە.
+     ٢. هێرۆی گرادیێنتی ~١٥٠px بوو بە شریتێکی دۆخی ٥٢px.
+     ٣. دوو پانێڵ (دەستی | ئۆتۆماتیک) لەبری یەک سکڕۆڵی درێژ.
+     ٤. شوێنەکانی گەیاندن بوون بە ئەکۆردیۆن — کۆتایی بە
+        کارت-لەناو-کارت-لەناو-کارت ([[landmines]] ١٤١).
    ================================================================== */
 
 #section-backup {
+  flex: 1;
+  display: none;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  /* ⚠️ بێ پەدینگی تەنیشتی — بڕوانە سەرەوە */
+  padding: 0 0 calc(180px + var(--safe-bottom, 0px));
+  font-family: "AppleEmoji", "Noto Kufi Arabic", sans-serif;
+  -webkit-tap-highlight-color: transparent;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+
   --ink: #0f172a;
   --muted: #64748b;
   --soft: #94a3b8;
-  --line: #e9eef7;
+  --line: #e8edf6;
+  --wash: #f6f8fc;
   --brand: #4f46e5;
-  --brand2: #7c3aed;
-  background: linear-gradient(180deg, #f6f8fd 0%, #eef2f9 100%);
-  font-family: "AppleEmoji", "Noto Kufi Arabic", sans-serif;
-  -webkit-tap-highlight-color: transparent;
-  scrollbar-width: none !important;
-  -ms-overflow-style: none !important;
 }
-#section-backup::-webkit-scrollbar { display: none !important; }
+#section-backup::-webkit-scrollbar { display: none; }
 #section-backup * { box-sizing: border-box; }
-#section-backup .container { padding: 12px 12px 0; }
 
-/* ---------- shared colour tokens for tiles ---------- */
-#section-backup .is-indigo { --c: #4f46e5; --cbg: #eef2ff; }
-#section-backup .is-amber  { --c: #d97706; --cbg: #fff7ed; }
-#section-backup .is-emerald{ --c: #059669; --cbg: #ecfdf5; }
-#section-backup .is-sky    { --c: #0284c7; --cbg: #f0f9ff; }
-#section-backup .is-rose   { --c: #e11d48; --cbg: #fff1f2; }
-#section-backup .is-violet { --c: #7c3aed; --cbg: #f5f3ff; }
-#section-backup .is-fuchsia{ --c: #c026d3; --cbg: #fdf4ff; }
+#section-backup .bkv-wrap {
+  width: 100%;
+  max-width: 600px;
+  margin: 0 auto;
+  padding-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
 
-/* ================= HERO ================= */
-#section-backup .backup-header-card {
-  position: relative;
-  overflow: hidden;
-  border-radius: 20px;
-  padding: 16px 15px 13px;
-  background: linear-gradient(135deg, #4f46e5 0%, #6d28d9 52%, #7c3aed 100%);
-  box-shadow: 0 14px 28px -16px rgba(79, 70, 229, 0.95);
-  color: #fff;
-}
-#section-backup .backup-header-card::before,
-#section-backup .backup-header-card::after {
-  content: "";
-  position: absolute;
-  border-radius: 50%;
-  pointer-events: none;
-}
-#section-backup .backup-header-card::before {
-  width: 160px; height: 160px; top: -84px; left: -56px;
-  background: rgba(255, 255, 255, 0.10);
-}
-#section-backup .backup-header-card::after {
-  width: 120px; height: 120px; bottom: -72px; right: -36px;
-  background: rgba(255, 255, 255, 0.07);
-}
-#section-backup .backup-title-row {
-  position: relative; z-index: 1;
-  display: flex; align-items: center; gap: 11px;
-}
-#section-backup .backup-main-icon-wrap {
-  width: 44px; height: 44px; flex: none;
-  border-radius: 14px;
-  display: grid; place-items: center;
-  font-size: 24px; color: #fff;
-  background: rgba(255, 255, 255, 0.18);
-  border: 1px solid rgba(255, 255, 255, 0.30);
-  -webkit-backdrop-filter: blur(6px);
-  backdrop-filter: blur(6px);
-}
-#section-backup .backup-header-meta { flex: 1; min-width: 0; }
-#section-backup .backup-title {
-  margin: 0;
-  display: flex; align-items: center; gap: 7px; flex-wrap: wrap;
-  font-size: 15px; font-weight: 800; line-height: 1.45; color: #fff;
-}
-#section-backup .backup-king-badge {
-  font-size: 9.5px; font-weight: 800; line-height: 1.7;
-  padding: 2px 9px; border-radius: 999px;
-  color: #78350f;
-  background: linear-gradient(135deg, #fde68a, #f59e0b);
-  box-shadow: 0 3px 8px -3px rgba(245, 158, 11, 0.95);
-}
-#section-backup .backup-subtitle {
-  margin: 4px 0 0;
-  font-size: 10.5px; font-weight: 600; line-height: 1.6;
-  color: rgba(255, 255, 255, 0.82);
-}
-#section-backup .bk-hero-strip {
-  position: relative; z-index: 1;
-  display: flex; align-items: center; justify-content: space-between;
-  margin-top: 13px; padding: 9px 4px;
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.13);
-  border: 1px solid rgba(255, 255, 255, 0.20);
-}
-#section-backup .bk-hero-stat {
-  flex: 1; display: flex; flex-direction: column; align-items: center; gap: 1px;
-}
-#section-backup .bk-hero-stat b { font-size: 13px; font-weight: 800; line-height: 1.2; color: #fff; }
-#section-backup .bk-hero-stat span { font-size: 9px; font-weight: 600; color: rgba(255, 255, 255, 0.78); }
-#section-backup .bk-hero-sep { width: 1px; height: 22px; background: rgba(255, 255, 255, 0.22); }
+/* ---------- ڕەنگی هەر بەشێک ---------- */
+#section-backup .is-indigo  { --c: #4f46e5; --cbg: #eef2ff; }
+#section-backup .is-sky     { --c: #0284c7; --cbg: #f0f9ff; }
+#section-backup .is-emerald { --c: #059669; --cbg: #ecfdf5; }
+#section-backup .is-amber   { --c: #d97706; --cbg: #fffbeb; }
+#section-backup .is-violet  { --c: #7c3aed; --cbg: #f5f3ff; }
+#section-backup .is-rose    { --c: #e11d48; --cbg: #fff1f2; }
+#section-backup .is-fuchsia { --c: #c026d3; --cbg: #fdf4ff; }
 
-/* ================= CARD ================= */
-#section-backup .backup-card {
-  margin-top: 12px;
-  padding: 14px;
-  border-radius: 18px;
-  background: #ffffff;
-  border: 1px solid var(--line);
-  box-shadow: 0 8px 22px -18px rgba(15, 23, 42, 0.55);
-}
-#section-backup .backup-card-head {
+/* ================= ١ · شریتی دۆخ (٥٢px) ================= */
+/* هێرۆیەکی ١٥٠pxی گرادیێنت بوو. ئەوەی گرنگە سێ ڕاستییە:
+   ئایا کراوەیە؟ کەی؟ دوایین جار کەی ڕوویدا؟ */
+#section-backup .bkv-status {
   display: flex; align-items: center; gap: 10px;
-  margin-bottom: 9px;
-}
-#section-backup .backup-card-head > i {
-  width: 36px; height: 36px; flex: none;
-  border-radius: 12px;
-  display: grid; place-items: center;
-  font-size: 19px; color: #fff;
-  background: linear-gradient(135deg, #4f46e5, #7c3aed);
-  box-shadow: 0 7px 14px -8px rgba(79, 70, 229, 1);
-}
-#section-backup .backup-card-head h4 {
-  margin: 0; font-size: 13.5px; font-weight: 800; color: var(--ink); line-height: 1.4;
-}
-#section-backup .backup-card-desc {
-  margin: 0 0 12px;
-  font-size: 10.5px; font-weight: 600; line-height: 1.7; color: var(--soft);
-}
-
-/* ================= FIELDS ================= */
-#section-backup .backup-field-group { margin-top: 12px; }
-#section-backup .backup-field-group:first-of-type { margin-top: 0; }
-#section-backup .backup-field-lbl {
-  display: flex; align-items: center; gap: 6px;
-  margin: 0 0 8px;
-  font-size: 11.5px; font-weight: 700; color: #475569;
-}
-#section-backup .backup-field-lbl i { font-size: 15px; color: var(--brand); }
-
-/* time chips */
-#section-backup .backup-time-chips { display: flex; flex-wrap: wrap; gap: 6px; }
-#section-backup .backup-chip {
-  flex: 1 1 auto;
-  padding: 9px 10px;
-  border-radius: 11px;
-  border: 1px solid var(--line);
-  background: #f8fafc;
-  color: #475569;
-  font-family: inherit;
-  font-size: 11.5px; font-weight: 700; line-height: 1;
-  white-space: nowrap;
-  cursor: pointer;
-  transition: background 0.2s, color 0.2s, box-shadow 0.2s, transform 0.15s;
-}
-#section-backup .backup-chip:active { transform: scale(0.95); }
-#section-backup .backup-chip.active {
-  background: linear-gradient(135deg, #4f46e5, #7c3aed);
-  border-color: transparent;
-  color: #fff;
-  box-shadow: 0 8px 16px -8px rgba(79, 70, 229, 0.95);
-}
-
-/* date boxes */
-#section-backup .backup-date-box {
-  margin-top: 10px;
-  padding: 11px;
+  padding: 9px 12px;
   border-radius: 14px;
-  background: #f8fafc;
-  border: 1px dashed #dbe3ef;
-}
-#section-backup .backup-date-box label {
-  display: block;
-  margin-bottom: 6px;
-  font-size: 10.5px; font-weight: 700; color: var(--muted);
-}
-#section-backup .form-input {
-  width: 100%; height: 40px;
-  padding: 0 11px;
-  border-radius: 11px;
-  border: 1.5px solid #e2e8f0;
   background: #fff;
-  color: var(--ink);
-  font-family: inherit; font-size: 12.5px;
-  outline: none;
-  transition: border-color 0.2s, box-shadow 0.2s;
+  border: 1px solid var(--line);
+  box-shadow: 0 3px 12px -8px rgba(15, 23, 42, 0.5);
 }
-#section-backup .form-input:focus {
-  border-color: #a5b4fc;
-  box-shadow: 0 0 0 3.5px rgba(99, 102, 241, 0.13);
-}
-#section-backup .bk-daterow { display: flex; gap: 9px; width: 100%; }
-#section-backup .bk-daterow > div { flex: 1; min-width: 0; }
-
-/* toggle-all pill */
-#section-backup .backup-toggle-all-btn {
-  padding: 6px 12px;
-  border-radius: 999px;
-  border: 1px solid #e0e7ff;
-  background: #eef2ff;
-  color: var(--brand);
-  font-family: inherit; font-size: 10.5px; font-weight: 800;
-  cursor: pointer;
-  transition: transform 0.15s, background 0.2s;
-}
-#section-backup .backup-toggle-all-btn:active { transform: scale(0.94); background: #e0e7ff; }
-
-/* ================= MANUAL SECTION LIST ================= */
-#section-backup .backup-sections-grid {
-  display: flex; flex-direction: column; gap: 5px;
-  padding: 6px;
-  border-radius: 16px;
-  background: #f6f8fc;
-  border: 1px solid #eef2f8;
-}
-#section-backup .backup-section-check { position: relative; display: block; cursor: pointer; }
-#section-backup .backup-section-check > input {
-  position: absolute; opacity: 0; width: 0; height: 0; pointer-events: none;
-}
-#section-backup .bk-sec-tile {
-  display: flex; align-items: center; gap: 10px;
-  padding: 9px 10px;
-  border-radius: 12px;
-  border: 1px solid transparent;
-  background: transparent;
-  transition: background 0.2s, box-shadow 0.2s, border-color 0.2s;
-}
-#section-backup .bk-sec-tile-left {
-  display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0;
-}
-#section-backup .bk-sec-icon-box {
-  width: 32px; height: 32px; flex: none;
-  border-radius: 11px;
-  display: grid; place-items: center;
-  font-size: 17px;
-  background: #eef2f8; color: var(--soft);
-  transition: background 0.2s, color 0.2s;
-}
-#section-backup .bk-sec-text {
-  font-size: 12px; font-weight: 700; color: var(--soft);
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  transition: color 0.2s;
-}
-#section-backup .bk-sec-tile-right {
-  display: flex; align-items: center; gap: 9px; flex: none;
-}
-#section-backup .bk-sec-count {
-  min-width: 36px;
-  padding: 4px 8px;
-  border-radius: 999px;
-  background: #eef2f8;
-  color: #a9b6c9;
-  font-size: 10px; font-weight: 800; text-align: center;
-  transition: background 0.2s, color 0.2s;
-}
-#section-backup .bk-sec-check-mark {
-  width: 22px; height: 22px; flex: none;
-  border-radius: 50%;
-  display: grid; place-items: center;
-  font-size: 14px;
-  background: #eef2f8; color: #c3cede;
-  transition: background 0.2s, color 0.2s;
-}
-#section-backup .backup-section-check > input:checked ~ .bk-sec-tile {
-  background: #fff;
-  border-color: #eef2f8;
-  box-shadow: 0 5px 12px -10px rgba(15, 23, 42, 0.6);
-}
-#section-backup .backup-section-check > input:checked ~ .bk-sec-tile .bk-sec-icon-box {
-  background: var(--cbg, #eef2ff); color: var(--c, #4f46e5);
-}
-#section-backup .backup-section-check > input:checked ~ .bk-sec-tile .bk-sec-text {
-  color: var(--ink);
-}
-#section-backup .backup-section-check > input:checked ~ .bk-sec-tile .bk-sec-count {
-  background: var(--cbg, #eef2ff); color: var(--c, #4f46e5);
-}
-#section-backup .backup-section-check > input:checked ~ .bk-sec-tile .bk-sec-check-mark {
-  background: var(--c, #4f46e5); color: #fff;
-}
-
-/* ================= PROGRESS ================= */
-#section-backup .backup-progress-track {
-  height: 9px;
-  border-radius: 999px;
-  background: #eef2f8;
-  overflow: hidden;
-}
-#section-backup .backup-progress-fill {
-  height: 100%;
-  border-radius: 999px;
-  background: linear-gradient(90deg, #4f46e5, #7c3aed);
-  box-shadow: 0 0 12px rgba(99, 102, 241, 0.65);
-  transition: width 0.35s ease;
-}
-#section-backup .backup-progress-text {
-  margin-top: 7px;
-  font-size: 11px; font-weight: 700; color: var(--muted);
-  text-align: center;
-}
-
-/* ================= EXPORT BUTTONS ================= */
-#section-backup .backup-actions-grid {
-  display: grid; grid-template-columns: 1fr 1fr; gap: 9px;
-}
-#section-backup .backup-btn-action {
-  display: flex; align-items: center; justify-content: center; gap: 8px;
-  min-height: 48px;
-  padding: 10px;
-  border: none; border-radius: 15px;
-  color: #fff;
-  font-family: inherit; font-size: 11.5px; font-weight: 800;
-  cursor: pointer;
-  transition: transform 0.15s, box-shadow 0.2s;
-}
-#section-backup .backup-btn-action i { font-size: 19px; }
-#section-backup .backup-btn-action:active { transform: scale(0.96); }
-#section-backup .backup-btn-action.is-json {
-  background: linear-gradient(135deg, #4f46e5, #7c3aed);
-  box-shadow: 0 12px 22px -14px rgba(79, 70, 229, 1);
-}
-#section-backup .backup-btn-action.is-csv {
-  background: linear-gradient(135deg, #10b981, #059669);
-  box-shadow: 0 12px 22px -14px rgba(5, 150, 105, 1);
-}
-
-/* ================= MASTER SWITCH ROW ================= */
-#section-backup .backup-switch-row {
-  display: flex; align-items: center; justify-content: space-between; gap: 10px;
-  padding: 12px;
-  border-radius: 15px;
-  background: linear-gradient(135deg, #f5f3ff, #eef2ff);
-  border: 1px solid #e4e6fb;
-}
-#section-backup .bk-switch-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-#section-backup .bk-switch-title { font-size: 12.5px; font-weight: 800; color: var(--ink); }
-#section-backup .bk-switch-sub { font-size: 10px; font-weight: 600; line-height: 1.6; color: var(--muted); }
-
-/* switch */
-#section-backup .switch {
-  position: relative; flex: none;
-  display: inline-block; width: 52px; height: 30px;
-}
-#section-backup .switch input {
-  position: absolute; opacity: 0; width: 0; height: 0;
-}
-#section-backup .switch .slider {
-  position: absolute; inset: 0;
-  border-radius: 999px;
-  background: #cbd5e1;
-  cursor: pointer;
-  transition: background 0.28s;
-}
-#section-backup .switch .slider .circle {
-  position: absolute; top: 3px; right: 3px;
-  width: 24px; height: 24px;
-  border-radius: 50%;
-  background: #fff;
-  display: grid; place-items: center;
-  color: #94a3b8;
-  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.2);
-  transition: transform 0.28s, color 0.28s;
-}
-#section-backup .switch .slider .circle svg {
-  position: absolute;
-  width: 12px; height: 12px;
-  transition: opacity 0.2s;
-}
-#section-backup .switch .slider .circle .cross { opacity: 1; }
-#section-backup .switch .slider .circle .checkmark { opacity: 0; }
-#section-backup .switch input:checked + .slider {
-  background: linear-gradient(135deg, #4f46e5, #7c3aed);
-}
-#section-backup .switch input:checked + .slider .circle {
-  transform: translateX(-22px);
-  color: #4f46e5;
-}
-#section-backup .switch input:checked + .slider .circle .cross { opacity: 0; }
-#section-backup .switch input:checked + .slider .circle .checkmark { opacity: 1; }
-
-/* ================= STEP CARDS ================= */
-#section-backup .bk-hub-step-card {
-  margin-top: 12px;
-  padding: 12px;
-  border-radius: 16px;
-  background: #fbfcff;
-  border: 1px solid #edf1f9;
-}
-#section-backup .bk-hub-step-head {
-  display: flex; align-items: center; gap: 9px;
-}
-#section-backup .bk-hub-step-num {
-  width: 26px; height: 26px; flex: none;
-  border-radius: 9px;
-  display: grid; place-items: center;
-  font-size: 12px; font-weight: 800; color: #fff;
-  background: linear-gradient(135deg, #4f46e5, #7c3aed);
-  box-shadow: 0 5px 11px -5px rgba(79, 70, 229, 1);
-}
-#section-backup .bk-hub-step-title-wrap { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
-#section-backup .bk-hub-step-title {
-  margin: 0;
-  display: flex; align-items: center; gap: 5px;
-  font-size: 12.5px; font-weight: 800; color: var(--ink); line-height: 1.4;
-}
-#section-backup .bk-hub-step-title i { font-size: 15px; color: var(--brand); }
-#section-backup .bk-hub-step-desc { font-size: 10px; font-weight: 600; color: var(--soft); }
-
-/* ================= SEGMENTED CONTROL ================= */
-#section-backup .segmented-control {
-  display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px;
-  padding: 4px;
-  border-radius: 13px;
-  background: #eef2f8;
-}
-#section-backup .segmented-control label { position: relative; display: block; }
-#section-backup .segmented-control input {
-  position: absolute; opacity: 0; width: 0; height: 0; pointer-events: none;
-}
-#section-backup .segmented-control span {
-  display: block;
-  padding: 9px 4px;
-  border-radius: 10px;
-  text-align: center;
-  font-size: 11.5px; font-weight: 700; color: var(--muted);
-  cursor: pointer;
-  transition: background 0.2s, color 0.2s, box-shadow 0.2s;
-}
-#section-backup .segmented-control input:checked + span {
-  background: #fff;
-  color: var(--brand);
-  box-shadow: 0 3px 9px -3px rgba(15, 23, 42, 0.22);
-}
-
-/* ================= TIME INPUT ================= */
-#section-backup .bk-time-input-box {
-  display: flex; align-items: center; gap: 9px;
-  padding: 8px 10px;
-  border-radius: 13px;
-  background: #fff;
-  border: 1.5px solid #e6ecf6;
-}
-#section-backup .bk-time-icon-box {
-  width: 30px; height: 30px; flex: none;
-  border-radius: 10px;
-  display: grid; place-items: center;
-  font-size: 16px; color: var(--brand); background: #eef2ff;
-}
-#section-backup .bk-time-control {
-  flex: 1; min-width: 0;
-  border: none; outline: none; background: transparent;
-  font-family: inherit; font-size: 14px; font-weight: 800; color: var(--ink);
-  direction: ltr; text-align: left;
-}
-#section-backup .bk-time-tag {
-  flex: none;
-  padding: 5px 8px;
-  border-radius: 999px;
-  background: #f5f3ff; color: #7c3aed;
-  font-size: 9.5px; font-weight: 700; white-space: nowrap;
-}
-#section-backup .bk-field-hint {
-  display: block; margin-top: 7px;
-  font-size: 10px; font-weight: 600; line-height: 1.7; color: var(--soft);
-}
-
-/* ================= AUTO TILES 2x2 ================= */
-#section-backup .backup-auto-tiles-grid {
-  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px;
-}
-#section-backup .backup-auto-sec-tile { position: relative; display: block; cursor: pointer; }
-#section-backup .backup-auto-sec-tile > input {
-  position: absolute; opacity: 0; width: 0; height: 0; pointer-events: none;
-}
-#section-backup .bk-auto-tile-card {
-  display: flex; align-items: center; gap: 8px;
-  padding: 9px;
-  border-radius: 13px;
-  background: #f8fafc;
-  border: 1.5px solid #eef2f8;
-  transition: background 0.2s, border-color 0.2s, box-shadow 0.2s;
-}
-#section-backup .bk-auto-tile-head { display: flex; flex: none; }
-#section-backup .bk-auto-tile-ico {
-  width: 28px; height: 28px; flex: none;
-  border-radius: 9px;
-  display: grid; place-items: center;
-  font-size: 15px;
-  background: #eef2f8; color: var(--soft);
-  transition: background 0.2s, color 0.2s;
-}
-#section-backup .bk-auto-tile-chk { display: none; }
-#section-backup .bk-auto-tile-label {
-  flex: 1; min-width: 0;
-  font-size: 11px; font-weight: 700; color: var(--soft);
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  transition: color 0.2s;
-}
-#section-backup .bk-auto-tile-card::after {
-  content: "\2713";
-  flex: none;
-  width: 18px; height: 18px;
-  border-radius: 50%;
-  display: grid; place-items: center;
-  font-size: 11px; font-weight: 800;
-  background: #eef2f8; color: #c3cede;
-  transition: background 0.2s, color 0.2s;
-}
-#section-backup .backup-auto-sec-tile > input:checked ~ .bk-auto-tile-card {
-  background: #fff;
-  border-color: var(--c, #4f46e5);
-  box-shadow: 0 6px 14px -11px var(--c, #4f46e5);
-}
-#section-backup .backup-auto-sec-tile > input:checked ~ .bk-auto-tile-card .bk-auto-tile-ico {
-  background: var(--cbg, #eef2ff); color: var(--c, #4f46e5);
-}
-#section-backup .backup-auto-sec-tile > input:checked ~ .bk-auto-tile-card .bk-auto-tile-label {
-  color: var(--ink);
-}
-#section-backup .backup-auto-sec-tile > input:checked ~ .bk-auto-tile-card::after {
-  background: var(--c, #4f46e5); color: #fff;
-}
-
-/* ================= DESTINATION CARDS ================= */
-#section-backup .bk-dest-card {
-  margin-top: 10px;
-  border-radius: 16px;
-  overflow: hidden;
-  background: #fff;
-  border: 1.5px solid #edf1f9;
-  padding: 0 !important;
-}
-#section-backup .bk-dest-card-head {
-  display: flex; align-items: center; justify-content: space-between; gap: 8px;
-  padding: 11px 12px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.7);
-}
-#section-backup .bk-dest-card.is-tg .bk-dest-card-head {
-  background: linear-gradient(135deg, #f0f9ff, #e0f2fe);
-}
-#section-backup .bk-dest-card.is-gdrive .bk-dest-card-head {
-  background: linear-gradient(135deg, #f0fdf4, #dcfce7);
-}
-#section-backup .bk-dest-card.is-gh .bk-dest-card-head {
-  background: linear-gradient(135deg, #f8fafc, #eef2f7);
-}
-#section-backup .bk-dest-head-left {
-  display: flex; align-items: center; gap: 9px; min-width: 0;
-}
-#section-backup .bk-dest-ico-box {
+#section-backup .bkv-status-ico {
   width: 34px; height: 34px; flex: none;
   border-radius: 11px;
   display: grid; place-items: center;
   font-size: 19px; color: #fff;
-  box-shadow: 0 6px 13px -7px rgba(15, 23, 42, 0.65);
+  background: linear-gradient(135deg, #6366f1, #7c3aed);
 }
-#section-backup .bk-dest-ico-box.tg-ico { background: linear-gradient(135deg, #38bdf8, #0ea5e9); }
-#section-backup .bk-dest-ico-box.gdrive-ico { background: linear-gradient(135deg, #34d399, #10b981); }
-#section-backup .bk-dest-ico-box.gh-ico { background: linear-gradient(135deg, #475569, #1e293b); }
-#section-backup .bk-dest-title {
-  display: block; font-size: 12.5px; font-weight: 800; color: var(--ink); line-height: 1.4;
-}
-#section-backup .bk-dest-sub {
-  display: block; margin-top: 1px;
-  font-size: 10px; font-weight: 600; color: var(--muted);
-}
-#section-backup .bk-dest-badge,
-#section-backup .bk-gdrive-count-badge,
-#section-backup .bk-github-status-badge {
-  flex: none;
-  padding: 5px 9px;
-  border-radius: 999px;
-  font-size: 9.5px; font-weight: 800; white-space: nowrap;
-  background: #fff;
-}
-#section-backup .bk-dest-badge.tg-badge {
-  color: #0284c7; border: 1px solid #bae6fd;
-}
-#section-backup .bk-gdrive-count-badge {
-  color: #059669; border: 1px solid #a7f3d0;
-}
-#section-backup .bk-github-status-badge {
-  display: inline-flex; align-items: center; gap: 5px;
-  color: #059669; border: 1px solid #a7f3d0;
-}
-#section-backup .bk-gh-dot {
-  width: 6px; height: 6px; border-radius: 50%;
-  background: #10b981;
-  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.22);
-}
-#section-backup .bk-dest-body { padding: 12px; }
-
-/* labels + inputs */
-#section-backup .bk-clean-lbl {
+#section-backup .bkv-status-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+#section-backup .bkv-status-title {
   display: flex; align-items: center; gap: 6px;
-  margin: 10px 0 6px;
-  font-size: 11px; font-weight: 700; color: #475569;
+  font-size: 12.5px; font-weight: 800; color: var(--ink); line-height: 1.3;
 }
-#section-backup .bk-clean-lbl:first-child { margin-top: 0; }
-#section-backup .bk-clean-lbl i { font-size: 14px; color: var(--soft); }
-#section-backup .bk-clean-input {
-  width: 100%; height: 42px;
-  padding: 0 12px;
-  border-radius: 12px;
-  border: 1.5px solid #e6ecf6;
-  background: #f9fbfe;
-  color: var(--ink);
-  font-family: inherit; font-size: 12.5px;
-  outline: none;
-  transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+#section-backup .bkv-dot {
+  width: 7px; height: 7px; flex: none;
+  border-radius: 50%;
+  background: #cbd5e1;
 }
-#section-backup .bk-clean-input::placeholder { color: #a9b6c9; font-size: 11.5px; }
-#section-backup .bk-clean-input:focus {
-  border-color: #a5b4fc;
-  background: #fff;
-  box-shadow: 0 0 0 3.5px rgba(99, 102, 241, 0.12);
+#section-backup .bkv-dot.is-on { background: #10b981; box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.16); }
+#section-backup .bkv-status-sub {
+  font-size: 10px; font-weight: 600; color: var(--soft); line-height: 1.4;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-#section-backup .bk-inline-note {
-  font-size: 10px; font-weight: 600; color: var(--soft);
-}
-
-/* button system */
-#section-backup .bk-btnrow {
-  display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px;
-}
-#section-backup .bk-btnrow > button { flex: 1 1 0; min-width: 0; }
-#section-backup .bk-btn-test-tg,
-#section-backup .bk-btn-guide-toggle,
-#section-backup .bk-btn-add-account,
-#section-backup .bk-btn-test-gdrive,
-#section-backup .bk-btn-trigger-gh {
-  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
-  min-height: 42px;
-  padding: 10px 12px;
-  border: none; border-radius: 12px;
-  font-family: inherit; font-size: 11.5px; font-weight: 800;
-  cursor: pointer;
-  transition: transform 0.15s, box-shadow 0.2s, background 0.2s;
+#section-backup .bkv-status-last {
+  flex: none;
+  padding: 4px 9px;
+  border-radius: 999px;
+  background: var(--wash);
+  border: 1px solid var(--line);
+  font-size: 10px; font-weight: 800; color: var(--muted);
   white-space: nowrap;
 }
-#section-backup .bk-btn-test-tg:active,
-#section-backup .bk-btn-guide-toggle:active,
-#section-backup .bk-btn-add-account:active,
-#section-backup .bk-btn-test-gdrive:active,
-#section-backup .bk-btn-trigger-gh:active { transform: scale(0.96); }
-#section-backup .bk-btn-test-tg i,
-#section-backup .bk-btn-guide-toggle i,
-#section-backup .bk-btn-add-account i,
-#section-backup .bk-btn-test-gdrive i,
-#section-backup .bk-btn-trigger-gh i { font-size: 16px; }
 
-#section-backup .bk-btn-test-tg {
-  background: linear-gradient(135deg, #0ea5e9, #0284c7);
-  color: #fff;
-  box-shadow: 0 10px 18px -12px rgba(2, 132, 199, 1);
+/* ================= ٢ · دوو پانێڵ ================= */
+/* ⚠️ دوو بژاردەی لێکدژ = کۆنترۆڵی پارچەکراو، نەک دوو دوگمە.
+   هەمان زمانی `.sct-seg`ی شیتی کات. */
+#section-backup .bkv-seg {
+  display: grid; grid-template-columns: repeat(2, 1fr); gap: 4px;
+  padding: 4px;
+  border-radius: 13px;
+  background: #e9eef7;
 }
-#section-backup .bk-btn-add-account {
-  background: linear-gradient(135deg, #10b981, #059669);
-  color: #fff;
-  box-shadow: 0 10px 18px -12px rgba(5, 150, 105, 1);
+#section-backup .bkv-seg-btn {
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  min-height: 38px;
+  border: none; border-radius: 10px;
+  background: transparent;
+  color: var(--muted);
+  font-family: inherit; font-size: 12px; font-weight: 700;
+  cursor: pointer;
+  transition: background 0.18s, color 0.18s, box-shadow 0.18s;
 }
-#section-backup .bk-btn-test-gdrive {
-  background: #ecfdf5;
-  color: #059669;
-  border: 1px solid #a7f3d0;
+#section-backup .bkv-seg-btn i { font-size: 16px; }
+#section-backup .bkv-seg-btn.is-on {
+  background: #fff;
+  color: var(--brand);
+  font-weight: 800;
+  box-shadow: 0 2px 7px -2px rgba(15, 23, 42, 0.22);
 }
-#section-backup .bk-btn-guide-toggle {
-  background: #f1f5f9;
-  color: #475569;
-  border: 1px solid #e6ecf6;
-}
+#section-backup .bkv-pane { display: none; flex-direction: column; gap: 10px; }
+#section-backup .bkv-pane.is-on { display: flex; }
 
-/* gdrive form */
-#section-backup .bk-gdrive-add-form {
+/* ================= ٣ · کارتی بنەڕەت ================= */
+#section-backup .bkv-card {
   padding: 12px;
   border-radius: 14px;
-  background: #f9fbfe;
-  border: 1.5px solid #e9eef7;
-}
-
-/* guide boxes */
-#section-backup .bk-guide {
-  margin-top: 10px;
-  padding: 12px;
-  border-radius: 14px;
-  font-size: 11.5px; line-height: 1.95;
-}
-#section-backup .bk-guide strong { font-weight: 800; }
-#section-backup .bk-guide code {
-  padding: 1px 6px;
-  border-radius: 6px;
   background: #fff;
-  font-size: 10.5px; font-weight: 700;
-  direction: ltr;
-  display: inline-block;
+  border: 1px solid var(--line);
+  box-shadow: 0 3px 12px -9px rgba(15, 23, 42, 0.5);
 }
-#section-backup #bk-tg-guide-box {
-  background: #f0f9ff;
-  border: 1px solid #bae6fd;
-  color: #075985;
+#section-backup .bkv-t {
+  display: flex; align-items: center; gap: 6px;
+  margin-bottom: 9px;
+  font-size: 11px; font-weight: 800; color: var(--muted);
+  letter-spacing: 0.01em;
 }
-#section-backup #bk-tg-guide-box code { color: #0369a1; border: 1px solid #e0f2fe; }
-#section-backup #bk-gdrive-guide-box {
-  background: #f0fdf4;
-  border: 1px solid #bbf7d0;
-  color: #166534;
-}
-#section-backup #bk-gdrive-guide-box code { color: #15803d; border: 1px solid #dcfce7; }
-#section-backup .bk-svc-mail {
-  flex: 1; min-width: 180px;
-  display: block;
-  padding: 8px 10px;
-  border-radius: 9px;
-  background: #fff;
-  border: 1px solid #86efac;
-  color: #15803d;
-  font-size: 10.5px; font-weight: 700;
-  word-break: break-all;
-  direction: ltr; text-align: left;
-  user-select: all;
-  -webkit-user-select: all;
-}
-#section-backup .bk-copy-btn {
-  display: inline-flex; align-items: center; gap: 5px;
-  padding: 9px 12px;
-  border: none; border-radius: 9px;
-  background: #16a34a; color: #fff;
-  font-family: inherit; font-size: 11.5px; font-weight: 800;
-  cursor: pointer; white-space: nowrap;
-  transition: transform 0.15s;
-}
-#section-backup .bk-copy-btn:active { transform: scale(0.95); }
+#section-backup .bkv-t i { font-size: 14px; color: var(--brand); }
+#section-backup .bkv-t .bkv-t-act { margin-inline-start: auto; }
 
-/* gdrive list + result */
-#section-backup .bk-gdrive-list-container {
-  display: flex; flex-direction: column; gap: 8px;
-}
-#section-backup .bk-gdrive-list-container:empty { display: none; }
-
-/* dynamic gdrive items inside section-backup */
-#section-backup .bk-gdrive-item {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 10px 12px;
-  background: #ffffff;
-  border: 1.5px solid #e2e8f0;
-  border-radius: 12px;
-  transition: all 0.2s;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.03);
-}
-#section-backup .bk-gdrive-item:hover {
-  border-color: #cbd5e1;
-  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.05);
-}
-#section-backup .bk-gdrive-item-left {
-  display: flex; align-items: center; gap: 9px; min-width: 0;
-}
-#section-backup .bk-gdrive-ico-box {
-  width: 32px; height: 32px;
-  border-radius: 9px;
-  background: #f0fdf4;
-  border: 1px solid #bbf7d0;
-  color: #16a34a;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 18px; flex-shrink: 0;
-}
-#section-backup .bk-gdrive-item-meta {
-  display: flex; flex-direction: column; gap: 2px; min-width: 0;
-}
-#section-backup .bk-gdrive-item-title-row {
-  display: flex; align-items: center; gap: 5px;
-}
-#section-backup .bk-gdrive-item-name {
-  font-size: 11.5px; font-weight: 700; color: #0f172a;
-}
-#section-backup .bk-gdrive-active-pill {
-  display: inline-flex; align-items: center; gap: 3px;
-  font-size: 9.5px; font-weight: 700;
-  color: #15803d; background: #dcfce7;
-  padding: 1px 6px; border-radius: 6px;
-}
-#section-backup .bk-gdrive-item-email {
-  font-size: 10.5px; color: #64748b; font-family: monospace;
-}
-#section-backup .bk-gdrive-del-btn {
-  width: 30px; height: 30px;
-  border-radius: 8px;
-  background: #fef2f2;
-  border: 1px solid #fecaca;
-  color: #dc2626;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 15px; cursor: pointer;
-  transition: all 0.2s; flex-shrink: 0;
-}
-#section-backup .bk-gdrive-del-btn:hover {
-  background: #dc2626; color: #ffffff; border-color: #dc2626;
-}
-#section-backup .bk-gdrive-empty {
-  text-align: center;
-  padding: 18px 12px;
-  background: #f8fafc;
-  border: 1.5px dashed #cbd5e1;
-  border-radius: 12px;
-}
-#section-backup .bk-gdrive-empty-ico {
-  font-size: 28px; color: #94a3b8; margin-bottom: 4px;
-}
-#section-backup .bk-gdrive-empty-txt {
-  font-size: 11px; color: #64748b; line-height: 1.6; margin: 0;
-}
-
-/* github info */
-#section-backup .bk-github-info-grid {
-  display: flex; flex-direction: column; gap: 8px;
-}
-#section-backup .bk-gh-info-item {
-  display: flex; align-items: center; justify-content: space-between; gap: 8px;
-  padding: 9px 11px;
-  border-radius: 12px;
-  background: #f8fafc;
-  border: 1px solid #eef2f8;
-}
-#section-backup .bk-gh-info-lbl {
-  flex: none;
-  font-size: 10.5px; font-weight: 700; color: var(--muted); white-space: nowrap;
-}
-#section-backup .bk-gh-info-val {
-  min-width: 0; max-width: 180px;
-  font-size: 10.5px; font-weight: 800; color: var(--ink);
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  text-align: left;
-}
-#section-backup .bk-btn-trigger-gh {
-  width: 100%; margin-top: 10px;
-  min-height: 46px;
-  background: linear-gradient(135deg, #1e293b, #0f172a);
-  color: #fff;
-  box-shadow: 0 12px 22px -14px rgba(15, 23, 42, 1);
-}
-
-/* ================= LAST RUN + SAVE ================= */
-#section-backup .backup-status-row {
-  display: flex; align-items: center; justify-content: space-between; gap: 8px;
-  margin-top: 14px;
-  padding: 11px 12px;
-  border-radius: 14px;
-  background: #f8fafc;
-  border: 1px dashed #dbe3ef;
-}
-#section-backup .backup-status-right {
-  display: flex; align-items: center; gap: 6px; min-width: 0;
-  font-size: 11px; font-weight: 700; color: #475569;
-}
-#section-backup .backup-status-right i { font-size: 15px; color: var(--brand); }
-#section-backup .backup-status-pill {
-  flex: none;
-  max-width: 150px;
+/* پیلی «هەمووی / لادان» */
+#section-backup .bkv-pill {
   padding: 5px 10px;
   border-radius: 999px;
+  border: 1px solid #e0e7ff;
+  background: #eef2ff;
+  color: var(--brand);
+  font-family: inherit; font-size: 10px; font-weight: 800;
+  cursor: pointer;
+  transition: transform 0.14s, background 0.18s;
+}
+#section-backup .bkv-pill:active { transform: scale(0.94); background: #e0e7ff; }
+
+/* ================= ٤ · چیپەکانی ماوە ================= */
+/* ⚠️ پێنج چیپ بەسەر دوو ستووندا دابەش نابن، بۆیە «هەمووی» —
+   کە ڕەسەتکردنەوەیە نەک مەودایەک — ڕیزی خۆی دەگرێت. */
+#section-backup .bkv-chips {
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px;
+}
+#section-backup .bkv-chip[data-range="all"] { grid-column: 1 / -1; }
+#section-backup .bkv-chip {
+  min-height: 34px;
+  padding: 0 8px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--wash);
+  color: var(--muted);
+  font-family: inherit; font-size: 11.5px; font-weight: 700;
+  cursor: pointer;
+  transition: background 0.18s, color 0.18s, border-color 0.18s, transform 0.14s;
+}
+#section-backup .bkv-chip:active { transform: scale(0.95); }
+/* ⚠️ پێشتر بانگراوندی پڕی بەنەفشی بوو و چیپی «هەمووی»
+   هەموو ڕیزەکە دەگرێت — شریتێکی قورس. هەمان
+   شێوازی `.bkv-seg-btn.is-on` و `.bkv-freq`ی دەوروبەری:
+   سپی لەگەڵ بۆردەری برەند. یەک زمانی دیزاین. */
+#section-backup .bkv-chip.is-on {
   background: #fff;
-  border: 1px solid #e6ecf6;
-  color: #475569;
-  font-size: 10px; font-weight: 800;
+  border-color: var(--brand);
+  color: var(--brand);
+  font-weight: 800;
+  box-shadow: 0 2px 8px -3px rgba(79, 70, 229, 0.7);
+}
+
+/* ================= ٥ · دوگمەی هەڵبژاردنی بەروار ================= */
+#section-backup .bkv-pick {
+  width: 100%;
+  display: flex; align-items: center; gap: 9px;
+  margin-top: 8px;
+  padding: 8px 10px;
+  border-radius: 11px;
+  background: #fff;
+  border: 1.5px solid #dbe3f0;
+  font-family: inherit;
+  text-align: right;
+  cursor: pointer;
+  transition: border-color 0.18s, transform 0.14s;
+}
+#section-backup .bkv-pick:active { transform: scale(0.985); }
+#section-backup .bkv-pick-ico {
+  width: 28px; height: 28px; flex: none;
+  border-radius: 9px;
+  display: grid; place-items: center;
+  font-size: 15px; color: var(--brand); background: #eef2ff;
+}
+#section-backup .bkv-pick-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+#section-backup .bkv-pick-lbl { font-size: 9px; font-weight: 700; color: var(--soft); }
+#section-backup .bkv-pick-val {
+  font-size: 12px; font-weight: 800; color: var(--ink); line-height: 1.45;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-#section-backup .backup-save-btn {
-  width: 100%;
-  display: flex; align-items: center; justify-content: center; gap: 9px;
-  margin-top: 14px;
-  padding: 15px;
-  border: none; border-radius: 16px;
-  background: linear-gradient(135deg, #4f46e5, #7c3aed);
-  color: #fff;
-  font-family: inherit; font-size: 13px; font-weight: 800;
-  cursor: pointer;
-  box-shadow: 0 16px 28px -16px rgba(79, 70, 229, 1);
-  transition: transform 0.15s, box-shadow 0.2s;
+#section-backup .bkv-pick-chev { flex: none; font-size: 17px; color: #c3cede; }
+
+/* کورتەی ئەوەی دەچێتە ناو فایلەکە */
+#section-backup .bkv-note {
+  display: flex; align-items: center; gap: 6px;
+  margin-top: 8px; padding: 7px 10px;
+  border-radius: 10px;
+  background: #eef2ff;
+  font-size: 10.5px; font-weight: 700; color: #4338ca; line-height: 1.55;
 }
-#section-backup .backup-save-btn i { font-size: 19px; }
-#section-backup .backup-save-btn:active {
-  transform: scale(0.985);
-  box-shadow: 0 10px 20px -16px rgba(79, 70, 229, 1);
+#section-backup .bkv-note i { flex: none; font-size: 14px; }
+
+/* ================= ٦ · لیستی بەشەکان (ڕیزی ٤٠px) ================= */
+#section-backup .bkv-list { display: flex; flex-direction: column; gap: 4px; }
+#section-backup .bkv-row { position: relative; display: block; cursor: pointer; }
+#section-backup .bkv-row > input {
+  position: absolute; opacity: 0; width: 0; height: 0; pointer-events: none;
+}
+#section-backup .bkv-row-in {
+  display: flex; align-items: center; gap: 9px;
+  min-height: 40px;
+  padding: 0 9px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  background: var(--wash);
+  transition: background 0.18s, border-color 0.18s;
+}
+#section-backup .bkv-row-ico {
+  width: 26px; height: 26px; flex: none;
+  border-radius: 8px;
+  display: grid; place-items: center;
+  font-size: 15px;
+  background: #e8edf6; color: var(--soft);
+  transition: background 0.18s, color 0.18s;
+}
+#section-backup .bkv-row-t {
+  flex: 1; min-width: 0;
+  font-size: 11.5px; font-weight: 700; color: var(--soft);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  transition: color 0.18s;
+}
+#section-backup .bkv-row-n {
+  flex: none; min-width: 34px;
+  padding: 3px 7px;
+  border-radius: 999px;
+  background: #e8edf6; color: #a9b6c9;
+  font-size: 9.5px; font-weight: 800; text-align: center;
+  transition: background 0.18s, color 0.18s;
+}
+/* دۆخی چاوەڕوانی — بەبێ ئەم، پیڵەکە بە ژمارەی کۆنەوە دەمێنێتەوە
+   و بەکارهێنەر وا دەزانێت هیچ ڕووینەداوە. */
+#section-backup .bkv-row-n.is-wait {
+  color: transparent;
+  background: linear-gradient(90deg, #e8edf6 25%, #f3f6fb 50%, #e8edf6 75%);
+  background-size: 200% 100%;
+  animation: bkvWait 1.1s linear infinite;
+}
+@keyframes bkvWait {
+  from { background-position: 200% 0; }
+  to { background-position: -200% 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  #section-backup .bkv-row-n.is-wait { animation: none; }
+}
+
+#section-backup .bkv-row-k {
+  width: 19px; height: 19px; flex: none;
+  border-radius: 50%;
+  display: grid; place-items: center;
+  font-size: 12px;
+  background: #e8edf6; color: #cbd5e1;
+  transition: background 0.18s, color 0.18s;
+}
+#section-backup .bkv-row > input:checked ~ .bkv-row-in {
+  background: #fff; border-color: var(--line);
+}
+#section-backup .bkv-row > input:checked ~ .bkv-row-in .bkv-row-ico { background: var(--cbg); color: var(--c); }
+#section-backup .bkv-row > input:checked ~ .bkv-row-in .bkv-row-t { color: var(--ink); }
+#section-backup .bkv-row > input:checked ~ .bkv-row-in .bkv-row-n { background: var(--cbg); color: var(--c); }
+#section-backup .bkv-row > input:checked ~ .bkv-row-in .bkv-row-k { background: var(--c); color: #fff; }
+
+/* ================= ٧ · پێشکەوتن و دوگمەی داگرتن ================= */
+#section-backup .bkv-prog-track {
+  height: 7px; border-radius: 999px; background: #e8edf6; overflow: hidden;
+}
+#section-backup .bkv-prog-fill {
+  height: 100%; border-radius: 999px;
+  background: linear-gradient(90deg, #6366f1, #7c3aed);
+  transition: width 0.3s ease;
+}
+#section-backup .bkv-prog-txt {
+  margin-top: 6px;
+  font-size: 10.5px; font-weight: 700; color: var(--muted); text-align: center;
+}
+#section-backup .bkv-acts { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+#section-backup .bkv-dl {
+  display: flex; align-items: center; justify-content: center; gap: 7px;
+  min-height: 44px;
+  border: none; border-radius: 13px;
+  color: #fff;
+  font-family: inherit; font-size: 11.5px; font-weight: 800;
+  cursor: pointer;
+  transition: transform 0.14s, opacity 0.18s;
+}
+#section-backup .bkv-dl i { font-size: 17px; }
+#section-backup .bkv-dl:active { transform: scale(0.96); }
+#section-backup .bkv-dl:disabled { opacity: 0.55; pointer-events: none; }
+#section-backup .bkv-dl.is-json { background: linear-gradient(135deg, #6366f1, #7c3aed); }
+#section-backup .bkv-dl.is-csv { background: linear-gradient(135deg, #10b981, #059669); }
+
+/* ================= ٨ · سویچ ================= */
+#section-backup .bkv-switch-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+}
+#section-backup .bkv-switch-txt { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+#section-backup .bkv-switch-title { font-size: 12.5px; font-weight: 800; color: var(--ink); }
+#section-backup .bkv-switch-sub { font-size: 10px; font-weight: 600; color: var(--muted); line-height: 1.5; }
+/* ⚠️ ئەپەکە سویچێکی تەواوی خۆی هەیە (دێڕی ٢٤٦٥) کە بە گۆڕاوی
+   CSS ڕێک دەخرێت: پانی، بەرزی، تیرەی بازنە، ئۆفسێت، ڕیپڵی
+   `::before`، و ئایکۆنی `scale`. پێشتر ڕێسایەکی تەواوی دووەم
+   لێرەدا نووسرابوو کە لەگەڵیدا شەڕی دەکرد — ئەنجام: شریتەکە
+   ٤٦×٢٤ دەنەخشێنرا بەڵام بازنەکە ٢٢px بوو و بە `top: 3px`
+   **یەک پیکسل لە خوارەوەی شریتەکە دەڕژا**، لەگەڵ دوو سیستەمی
+   ئەنیمەیشن لەسەر یەک نۆد (`transform` بەرامبەر `right`،
+   `opacity` بەرامبەر `scale`).
+   ⭐ «پارچەی ئامادە دووبارە بەکاربهێنە، لەبەری مەگرەوە» —
+   ئێستا تەنها ڕەنگەکەی دەگۆڕدرێت. */
+#section-backup .switch {
+  flex: none;
+  /* ⚠️ `inline-block` دەستەی بەرزیی دێڕ وەردەگرێت، بۆیە
+     ناوەڕاستی سویچەکە بە ڵای ژمارەی دێڕەکە دەبوو.
+     پێوانەکراو: ناوەڕاستی سویچ ٢٣٤ بەرامبەر ٢٣٦ی ڕیزەکە. */
+  line-height: 0;
+  /* ⚠️ `align-items: center` بە **بۆکسی مارجن** ناوەڕاست دەکات.
+     گشتییەکە `margin-top: 10px`ی هەیە، و پێوانە ٤px مارجنی
+     خوارەوەشی دۆزییەوە (ڕیز ٣٥.٨px، سویچ ٢٤px، سەرەوە ٣.٩px) —
+     ئەنجام: ٢px بەرزتر لە ناوەڕاست. `margin: 0` هەموویان دەگرێت. */
+  margin: 0;
+  --switch-checked-bg: #6366f1;
+}
+
+/* ================= ٩ · دووبارەبوونەوە ================= */
+/* ⭐ پێشتر کۆنترۆڵێکی پارچەکراو بوو (یەک لە سێ). ئێستا سێ
+   ڕیزی سەربەخۆن — خاوەن دەیەوێت هەرسێکیان پێکەوە کار بکەن، و
+   هەریەکەیان پەنجەرەی خۆی باکئەپ بکات. کۆنترۆڵێکی پارچەکراو
+   بە شێوازی خۆی دەڵێت «تەنها یەکێک»، بۆیە نەیدەگونجا. */
+#section-backup .bkv-freq {
+  display: flex; flex-direction: column; gap: 5px;
+  padding: 5px;
+  border-radius: 12px;
+  background: var(--wash);
+  border: 1px solid var(--line);
+}
+#section-backup .bkv-fq { position: relative; display: block; cursor: pointer; }
+#section-backup .bkv-fq > input {
+  position: absolute; opacity: 0; width: 0; height: 0; pointer-events: none;
+}
+#section-backup .bkv-fq-in {
+  display: flex; align-items: center; gap: 9px;
+  min-height: 40px;
+  padding: 0 9px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  background: transparent;
+  transition: background 0.18s, border-color 0.18s;
+}
+#section-backup .bkv-fq-k {
+  width: 19px; height: 19px; flex: none;
+  border-radius: 6px;
+  display: grid; place-items: center;
+  font-size: 13px;
+  background: #e2e8f0; color: #cbd5e1;
+  transition: background 0.18s, color 0.18s;
+}
+#section-backup .bkv-fq-t { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+#section-backup .bkv-fq-t b {
+  font-size: 11.5px; font-weight: 700; color: var(--soft);
+  transition: color 0.18s;
+}
+#section-backup .bkv-fq-t small {
+  font-size: 9.5px; font-weight: 600; color: var(--soft); line-height: 1.4;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+#section-backup .bkv-fq > input:checked ~ .bkv-fq-in {
+  background: #fff; border-color: var(--line);
+  box-shadow: 0 2px 7px -5px rgba(15, 23, 42, 0.6);
+}
+#section-backup .bkv-fq > input:checked ~ .bkv-fq-in .bkv-fq-k { background: var(--brand); color: #fff; }
+#section-backup .bkv-fq > input:checked ~ .bkv-fq-in .bkv-fq-t b { color: var(--ink); }
+#section-backup .bkv-fq > input:checked ~ .bkv-fq-in .bkv-fq-t small { color: var(--brand); font-weight: 700; }
+#section-backup .bkv-hint {
+  display: block; margin-top: 7px;
+  font-size: 9.5px; font-weight: 600; line-height: 1.7; color: var(--soft);
+}
+
+/* ================= ١٠ · خانەی بەشەکانی خۆکار (٢×٢) ================= */
+#section-backup .bkv-tiles {
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px;
+}
+#section-backup .bkv-tile { position: relative; display: block; cursor: pointer; }
+#section-backup .bkv-tile > input {
+  position: absolute; opacity: 0; width: 0; height: 0; pointer-events: none;
+}
+#section-backup .bkv-tile-in {
+  display: flex; align-items: center; gap: 7px;
+  min-height: 40px;
+  padding: 0 9px;
+  border-radius: 11px;
+  border: 1.5px solid var(--line);
+  background: var(--wash);
+  transition: background 0.18s, border-color 0.18s;
+}
+#section-backup .bkv-tile-in i { flex: none; font-size: 16px; color: var(--soft); transition: color 0.18s; }
+#section-backup .bkv-tile-in span {
+  flex: 1; min-width: 0;
+  font-size: 11px; font-weight: 700; color: var(--soft);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  transition: color 0.18s;
+}
+#section-backup .bkv-tile > input:checked ~ .bkv-tile-in {
+  background: var(--cbg); border-color: var(--c);
+}
+#section-backup .bkv-tile > input:checked ~ .bkv-tile-in i,
+#section-backup .bkv-tile > input:checked ~ .bkv-tile-in span { color: var(--c); }
+
+/* ================= ١١ · ئەکۆردیۆنی شوێنەکان ================= */
+/* ⭐ ئەمە ئەو کێشەیە چارە دەکات کە کارت لەناو کارت لەناو کارت
+   بوو و ناوەڕۆکی کردبووە ٢١٦px ([[landmines]] ١٤١): ئێستا
+   ئاستێکە، نەک سێ. */
+#section-backup .bkv-acc {
+  border-radius: 14px;
+  background: #fff;
+  border: 1px solid var(--line);
+  box-shadow: 0 3px 12px -9px rgba(15, 23, 42, 0.5);
+  overflow: hidden;
+}
+#section-backup .bkv-acc-head {
+  width: 100%;
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 12px;
+  background: none; border: none;
+  font-family: inherit; text-align: right;
+  cursor: pointer;
+}
+#section-backup .bkv-acc-ico {
+  width: 32px; height: 32px; flex: none;
+  border-radius: 10px;
+  display: grid; place-items: center;
+  font-size: 18px; color: #fff;
+}
+#section-backup .bkv-acc-ico.is-tg { background: linear-gradient(135deg, #38bdf8, #0284c7); }
+#section-backup .bkv-acc-ico.is-gd { background: linear-gradient(135deg, #34d399, #059669); }
+#section-backup .bkv-acc-ico.is-gh { background: linear-gradient(135deg, #475569, #0f172a); }
+#section-backup .bkv-acc-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+#section-backup .bkv-acc-name { font-size: 12.5px; font-weight: 800; color: var(--ink); line-height: 1.35; }
+#section-backup .bkv-acc-state {
+  font-size: 9.5px; font-weight: 600; color: var(--soft); line-height: 1.4;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+#section-backup .bkv-acc-state.is-ok { color: #059669; font-weight: 700; }
+#section-backup .bkv-acc-chev {
+  flex: none; font-size: 19px; color: #c3cede;
+  transition: transform 0.26s cubic-bezier(0.22, 1, 0.36, 1);
+}
+#section-backup .bkv-acc.is-open .bkv-acc-chev { transform: rotate(180deg); }
+
+/* ⚠️ بە `grid-template-rows` دەجوڵێت، نەک بە `max-height`ی ڕەق:
+   سنوورێکی گەورە بۆکسەکە لە یەکەم فرەیمەکاندا تەواو دەکاتەوە
+   لە کاتێکدا ناوەڕۆکەکە هێشتا کاڵە (یاسای CLAUDE.md). */
+#section-backup .bkv-acc-body {
+  display: grid;
+  grid-template-rows: 0fr;
+  overflow: hidden;
+  transition: grid-template-rows 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+  contain: layout paint;
+}
+#section-backup .bkv-acc.is-open .bkv-acc-body { grid-template-rows: 1fr; }
+/* ⚠️ منداڵی ڕاستەوخۆی گرید دەبێت بێ پەدینگ بێت — پەدینگەکە
+   دەچێتە پێچەرێکی سێیەم، ئەگەرنا `0fr` سفر نابێت. */
+#section-backup .bkv-acc-body > div { min-height: 0; overflow: hidden; }
+#section-backup .bkv-acc-in {
+  padding: 2px 12px 12px;
+  border-top: 1px solid var(--line);
+  margin-top: 2px;
+}
+
+/* ================= ١٢ · خانەکانی فۆڕم ================= */
+#section-backup .bkv-lbl {
+  display: flex; align-items: center; gap: 5px;
+  margin: 10px 0 5px;
+  font-size: 10.5px; font-weight: 700; color: var(--muted);
+}
+#section-backup .bkv-lbl i { font-size: 13px; color: var(--soft); }
+#section-backup .bkv-in {
+  width: 100%; height: 38px;
+  padding: 0 10px;
+  border-radius: 10px;
+  border: 1.5px solid #e2e8f0;
+  background: var(--wash);
+  color: var(--ink);
+  font-family: inherit; font-size: 12px;
+  outline: none;
+  transition: border-color 0.18s, background 0.18s, box-shadow 0.18s;
+}
+#section-backup .bkv-in::placeholder { color: #aab7c9; font-size: 11px; }
+#section-backup .bkv-in:focus {
+  border-color: #a5b4fc; background: #fff;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12);
+}
+#section-backup .bkv-tip { display: block; margin-top: 4px; font-size: 9.5px; font-weight: 600; color: var(--soft); }
+
+/* ================= ١٣ · دوگمەکان ================= */
+#section-backup .bkv-btns { display: flex; gap: 7px; margin-top: 10px; }
+#section-backup .bkv-btns > button { flex: 1 1 0; min-width: 0; }
+/* ⚠️ سێ دوگمە بەسەر دوو ستووندا دابەش نابن — کرداری سەرەکی
+   ڕیزی خۆی دەگرێت. پێوانەکراو: [٤٩·٥١·٥١] بۆ [٦١·٧٠·٥٧]. */
+#section-backup .bkv-btns.is-3 {
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px;
+}
+#section-backup .bkv-btns.is-3 > button:first-child { grid-column: 1 / -1; }
+#section-backup .bkv-b {
+  display: inline-flex; align-items: center; justify-content: center; gap: 5px;
+  min-height: 38px;
+  padding: 0 8px;
+  border: none; border-radius: 10px;
+  font-family: inherit; font-size: 11px; font-weight: 800;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: transform 0.14s, opacity 0.18s;
+}
+#section-backup .bkv-b i { font-size: 15px; }
+#section-backup .bkv-b:active { transform: scale(0.96); }
+#section-backup .bkv-b:disabled { opacity: 0.55; pointer-events: none; }
+#section-backup .bkv-b.is-sky { background: linear-gradient(135deg, #0ea5e9, #0284c7); color: #fff; }
+#section-backup .bkv-b.is-green { background: linear-gradient(135deg, #10b981, #059669); color: #fff; }
+#section-backup .bkv-b.is-ghost-green { background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0; }
+#section-backup .bkv-b.is-ghost { background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; }
+#section-backup .bkv-b.is-dark {
+  width: 100%; min-height: 42px;
+  background: linear-gradient(135deg, #1e293b, #0f172a); color: #fff;
+}
+
+/* ================= ١٤ · ڕێنماییەکان ================= */
+#section-backup .bkv-guide {
+  margin-top: 9px;
+  padding: 10px 11px;
+  border-radius: 11px;
+  font-size: 11px; line-height: 1.9;
+}
+#section-backup .bkv-guide b, #section-backup .bkv-guide strong { font-weight: 800; }
+#section-backup .bkv-guide code {
+  padding: 1px 5px; border-radius: 5px; background: #fff;
+  font-size: 10px; font-weight: 700; direction: ltr; display: inline-block;
+}
+#section-backup #bk-tg-guide-box { background: #f0f9ff; border: 1px solid #bae6fd; color: #075985; }
+#section-backup #bk-tg-guide-box code { color: #0369a1; border: 1px solid #e0f2fe; }
+#section-backup #bk-gdrive-guide-box { background: #f0fdf4; border: 1px solid #bbf7d0; color: #166534; }
+#section-backup #bk-gdrive-guide-box code { color: #15803d; border: 1px solid #dcfce7; }
+#section-backup .bkv-mail {
+  flex: 1; min-width: 150px;
+  display: block;
+  padding: 7px 9px;
+  border-radius: 8px;
+  background: #fff; border: 1px solid #86efac; color: #15803d;
+  font-size: 10px; font-weight: 700;
+  word-break: break-all; direction: ltr; text-align: left;
+  user-select: all; -webkit-user-select: all;
+}
+#section-backup .bkv-copy {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 8px 11px;
+  border: none; border-radius: 8px;
+  background: #16a34a; color: #fff;
+  font-family: inherit; font-size: 11px; font-weight: 800;
+  white-space: nowrap; cursor: pointer;
+  transition: transform 0.14s;
+}
+#section-backup .bkv-copy:active { transform: scale(0.95); }
+
+/* ================= ١٥ · لیستی درایڤ ================= */
+#section-backup .bkv-drives { display: flex; flex-direction: column; gap: 6px; margin-top: 9px; }
+#section-backup .bkv-drives:empty { display: none; }
+#section-backup .bk-gdrive-item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 9px;
+  border-radius: 11px;
+  background: var(--wash);
+  border: 1px solid var(--line);
+}
+#section-backup .bk-gdrive-item-left { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; }
+#section-backup .bk-gdrive-ico-box {
+  width: 28px; height: 28px; flex: none;
+  border-radius: 8px;
+  background: #f0fdf4; border: 1px solid #bbf7d0; color: #16a34a;
+  display: grid; place-items: center; font-size: 16px;
+}
+#section-backup .bk-gdrive-item-meta { display: flex; flex-direction: column; gap: 1px; flex: 1; min-width: 0; }
+#section-backup .bk-gdrive-item-title-row { display: flex; align-items: center; gap: 5px; min-width: 0; }
+#section-backup .bk-gdrive-item-name {
+  font-size: 11px; font-weight: 800; color: var(--ink);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+#section-backup .bk-gdrive-item-email {
+  font-size: 9.5px; color: var(--muted); font-family: monospace;
+  direction: ltr; text-align: left; line-height: 1.5;
+  word-break: break-all;
+}
+#section-backup .bk-gdrive-del-btn {
+  width: 28px; height: 28px; flex: none;
+  border-radius: 8px;
+  background: #fef2f2; border: 1px solid #fecaca; color: #dc2626;
+  display: grid; place-items: center;
+  font-size: 14px; cursor: pointer;
+  transition: background 0.18s, color 0.18s;
+}
+#section-backup .bk-gdrive-del-btn:active { background: #dc2626; color: #fff; }
+#section-backup .bk-gdrive-empty {
+  margin-top: 9px;
+  padding: 14px 10px;
+  border-radius: 11px;
+  background: var(--wash);
+  border: 1.5px dashed #cbd5e1;
+  text-align: center;
+}
+#section-backup .bk-gdrive-empty-ico { font-size: 24px; color: var(--soft); margin-bottom: 3px; }
+#section-backup .bk-gdrive-empty-txt { margin: 0; font-size: 10.5px; color: var(--muted); line-height: 1.6; }
+
+/* ئەنجامی تاقیکردنەوەی درایڤ */
+#section-backup .bk-gdrive-test-card {
+  padding: 10px 11px;
+  border-radius: 11px;
+  background: #f0fdf4; border: 1px solid #bbf7d0;
+}
+#section-backup .bk-gdrive-test-card.is-error { background: #fef2f2; border-color: #fecaca; }
+#section-backup .bk-gdrive-test-header {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  margin-bottom: 6px; flex-wrap: wrap;
+}
+#section-backup .bk-gdrive-test-title {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 11.5px; font-weight: 800; color: #15803d;
+}
+#section-backup .bk-gdrive-test-card.is-error .bk-gdrive-test-title { color: #b91c1c; }
+#section-backup .bk-gdrive-test-details { font-size: 10.5px; line-height: 1.85; color: #166534; }
+#section-backup .bk-gdrive-test-card.is-error .bk-gdrive-test-details { color: #991b1b; }
+#section-backup .bk-gdrive-test-link {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 7px 10px; border-radius: 8px;
+  background: #16a34a; color: #fff;
+  font-size: 10.5px; font-weight: 800; text-decoration: none;
+}
+
+/* ================= ١٦ · زانیاریی گێتهاب ================= */
+#section-backup .bkv-kv { display: flex; flex-direction: column; gap: 6px; }
+#section-backup .bkv-kv-row {
+  display: flex; flex-direction: column; gap: 2px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: var(--wash);
+  border: 1px solid var(--line);
+}
+#section-backup .bkv-kv-k { font-size: 9.5px; font-weight: 700; color: var(--soft); }
+/* ⚠️ ناوی ڕیپۆکە ١٨٠px دەوێت — بڕین ئەو زانیارییە دەشارێتەوە کە
+   دەڵێت باکئەپەکە بۆ کوێ دەچێت. بۆیە دەشکێت، نابڕدرێت. */
+#section-backup .bkv-kv-v {
+  font-size: 10.5px; font-weight: 800; color: var(--ink); line-height: 1.55;
+  direction: ltr; text-align: left; word-break: break-all;
+}
+
+/* ================= ١٧ · پاشەکەوتکردن ================= */
+#section-backup .bkv-save {
+  width: 100%;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  min-height: 46px;
+  border: none; border-radius: 14px;
+  background: linear-gradient(135deg, #6366f1, #7c3aed);
+  color: #fff;
+  font-family: inherit; font-size: 12.5px; font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 12px 22px -16px rgba(99, 102, 241, 1);
+  transition: transform 0.14s, opacity 0.18s;
+}
+#section-backup .bkv-save i { font-size: 18px; }
+#section-backup .bkv-save:active { transform: scale(0.985); }
+#section-backup .bkv-save:disabled { opacity: 0.6; pointer-events: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  #section-backup .bkv-acc-body,
+  #section-backup .bkv-acc-chev,
+  #section-backup .bkv-chip,
+  #section-backup .bkv-pick { transition: none; }
 }
 
 /* ============================================================
@@ -25772,7 +25417,10 @@ body.sx-wide {
   height: 100%;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: 14px 12px calc(140px + var(--safe-bottom, 20px));
+  /* ⚠️ بێ پەدینگی تەنیشتی. `#admin-screen` پێشتر ٢٠px دادەنێت،
+     بۆیە هەر پەدینگێکی زیادە کارتەکان لە کارتی ئۆردەرەکان
+     تەسکتر دەکات. پێوانەکراو: ٢٧٢px بەرامبەر ٣٢٠px. */
+  padding: 14px 0 calc(180px + var(--safe-bottom, 0px));
   scrollbar-width: none !important;
   -ms-overflow-style: none !important;
   box-sizing: border-box;
@@ -25948,7 +25596,7 @@ body.sx-wide {
   gap: 14px;
 }
 
-@media (min-width: 768px) {
+@media (min-width: 720px) {
   .st-grid {
     grid-template-columns: repeat(2, 1fr);
     gap: 16px;
@@ -26243,5 +25891,238 @@ body.sx-wide {
 @keyframes pulseDot {
   0%, 100% { opacity: 1; transform: scale(1); }
   50% { opacity: 0.5; transform: scale(1.3); }
+}
+
+/* ==================================================================
+   ڕۆژ · مانگ · کات — دوگمە، نەک خانەی خاو
+   ------------------------------------------------------------------
+   ⚠️ `<input type="date">`ی ڕەسەن لەسەر هەر ئامێرێک شێوازێکی
+      جیاوازی هەیە و بە `mm/dd/yyyy`ی ئینگلیزی دەردەکەوێت. ئەپەکە
+      ڕۆژژمێری خۆی هەیە (`.fcal-wrap`، سێ شوێن قەرزی دەگرن) و
+      کاتژمێری خۆی (`.sct-*`)، بۆیە باکئەپیش هەمان شیتەکان قەرز
+      دەگرێت — یەک زمانی دیزاین لە تەواوی ئەپەکەدا.
+   ================================================================== */
+/* ---------- هەڵبژێری مانگ (شیتی سەربەخۆ) ---------- */
+/* ⚠️ ١٢ مانگ ÷ ٣ ستوون = ٤ ڕیزی تەواو — هیچ ڕیزێکی ناتەواو
+      نامێنێتەوە. ناوی مانگی کوردی درێژە، بۆیە ٣ نەک ٤. */
+.sct-g-3 { grid-template-columns: repeat(3, 1fr); }
+.sct-cell.is-lg { min-height: 52px; font-size: 12.5px; line-height: 1.4; }
+.sct-cell:disabled { opacity: 0.32; pointer-events: none; }
+
+.bkm-yr {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  margin-bottom: var(--sp-3);
+  padding: 4px;
+  border-radius: var(--r-md);
+  background: #f1f5f9;
+}
+.bkm-yr-btn {
+  width: 42px; height: 42px; flex: none;
+  border: none; border-radius: calc(var(--r-md) - 4px);
+  background: #fff; color: var(--primary);
+  font-size: 21px;
+  display: grid; place-items: center;
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.12);
+  transition: transform 0.12s ease;
+}
+.bkm-yr-btn:active { transform: scale(0.92); }
+.bkm-yr-btn:disabled { opacity: 0.32; pointer-events: none; box-shadow: none; }
+.bkm-yr-val {
+  flex: 1; text-align: center;
+  font-size: 18px; font-weight: 800; color: var(--text-main);
+  font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bkm-yr-btn { transition: none; }
+  #section-backup .bkv-pick { transition: none; }
+}
+
+
+/* ============================================================
+   لەیئاوتی کۆمپیوتەر — ویندۆی پان (٢٠٢٦-٠٨-٢٥)
+   ------------------------------------------------------------
+   کێشەکە: `body`ـەکە `max-width: 430px`ـە، بەڵام شەش شاشە
+   `position: fixed; left:0; right:0`ن — واتا پێوانەیان بە
+   **ویندۆ**یە نەک بە `body`. لەسەر مۆبایل جیاوازی نییە (ویندۆکە
+   هەر ٤٣٠px ـە)، بەڵام لەسەر کۆمپیوتەر — بەتایبەت لە تلیگرام
+   دێسکتۆپ — ناوەڕۆکەکە تا کەناری شاشە درێژ دەبێتەوە و
+   پێوانەی ٤٣٠px بێ‌واتا دەبێت.
+
+   چارە: لە ٧٢٠px بەرەوسەرەوە ستوونێکی ناوەڕاست، و ئەو لیستانەی
+   دەگونجێن دەبنە گرید. هەمان بڕیکپۆینتەکانی شاشەی ئامار
+   (٧٢٠ / ١١٠٠) بەکاردێن تا ئەپەکە یەک سیستەم بێت.
+
+   ------------------------------------------------------------
+   ⚠️ بۆچی هەموو لیستەکان نابنە گرید — پێوانەی ڕاستەقینە
+   ------------------------------------------------------------
+   لیستی ئۆردەر بە ڕۆژ کۆکراوەتەوە، و سەردێڕی ڕۆژ ڕیزێکی نوێ
+   دەست پێدەکات. واتا ڕۆژێکی تاک-ئۆردەر نیوەی ڕیزەکە بەتاڵ
+   دەهێڵێتەوە. ژماردنی داتای بەرهەم (٢٠٢٦-٠٨-٢٥):
+
+     • داشبۆرد (ئۆردەری خودی کەس) — ناوەند ٣.٣ بۆ هەر ڕۆژێک،
+       بەڵام **٤٦.٥٪**ی ڕۆژەکان تەنها ١ ئۆردەریان هەیە
+       (٤٦٣ لە ٩٩٥) → گرید نیوەی کات بەتاڵ دەردەکەوێت.
+       بۆیە **یەک ستوون** دەمێنێتەوە، بەڵام باریک و ناوەڕاست.
+
+     • بەڕێوەبردن (هەموو فرۆشیارەکان) — ناوەند **١٢٧.٥** بۆ هەر
+       ڕۆژێک، تەنها ٣.٨٪ی ڕۆژەکان تاک-ئۆردەرن → **دوو ستوون**.
+
+     • جزدان و لیستەکانی ئەدمین — بە ڕۆژ کۆنەکراونەتەوە
+       (`dayHeaders = 0`) → گرید بێ هیچ بۆشاییەک.
+
+   ئەگەر ڕۆژێک تاک-ئۆردەر لە لیستێکی گریددا هەبوو، بۆشاییەکە
+   ئاسایییە — نەک شکاوی.
+
+   ⚠️ هەموو ئەمە لەناو `min-width`ـدان — لە ٧١٩px و خوارتر
+      **هیچ** ناگۆڕێت. مۆبایل دەستی لێ نەدراوە.
+   ============================================================ */
+
+@media (min-width: 720px) {
+  :root {
+    /* لیستی فراوان — هەمان پانی `body.sx-wide`ی شاشەی ئامار */
+    --app-wide: 1140px;
+    /* داشبۆرد و فۆڕم — خوێندنەوە گرنگترە لە پڕکردنی شاشە */
+    --app-narrow: 900px;
+    --app-gutter: 24px;
+  }
+
+  /* ستوونی ناوەڕاست: پادینگ دەبێتە نیوەی ئەوەی زیادەیە.
+     `max()` دڵنیایی دەداتەوە کە لە ویندۆی تەسکدا پادینگی
+     ئاسایی دەمێنێتەوە و ناوەڕۆک ناچەمێتەوە. */
+  #orders-management-screen.active,
+  #wallet-screen.active,
+  #admin-screen.active {
+    padding-inline: max(var(--app-gutter), calc((100% - var(--app-wide)) / 2));
+  }
+
+  #dashboard-screen.active,
+  #order-screen.active,
+  #settings-screen.active {
+    padding-inline: max(var(--app-gutter), calc((100% - var(--app-narrow)) / 2));
+  }
+
+  /* --- لیستەکانی کارت → گرید -------------------------------
+     `gap` تەنها ئاسۆییە: کارتەکان `margin-bottom`ی خۆیان هەیە،
+     بۆیە ڕیزبەندیی ستوونی وەک خۆی دەمێنێتەوە و بۆشایی
+     دووقات دروست نابێت.
+     `align-content: start` ڕێگری لە درێژبوونەوەی ڕیزی کۆتایی
+     دەکات بۆ پڕکردنی بەرزایی. */
+  #management-orders-list,
+  #my-transactions-list,
+  #edit-users-list,
+  #profit-users-list,
+  #wallet-users-list,
+  #admin-cities-list,
+  #trash-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0 16px;
+    align-content: start;
+  }
+
+  /* ئەمانە دەبێت بە درێژایی هەموو ستوونەکان بن:
+       [data-day]      سەردێڕی ڕۆژ (`dayHeadHtml`)
+       .win-sentinel   چاودێری «زیاتر بهێنە»ی `winRender`
+                       ⚠️ ئەگەر نەیەتە دوایین ڕیز، سکڕۆڵی
+                          بێکۆتایی پێش وەخت دەوەستێت
+       p               پەیامی «هیچ نییە»
+       h3/h4           سەردێڕی بەشەکان (لیستی جزدان) */
+  #management-orders-list > [data-day],
+  #management-orders-list > .win-sentinel,
+  #management-orders-list > p,
+  #my-transactions-list > [data-day],
+  #my-transactions-list > .win-sentinel,
+  #my-transactions-list > p,
+  #my-transactions-list > h3,
+  #my-transactions-list > h4,
+  #edit-users-list > .win-sentinel,
+  #edit-users-list > p,
+  #profit-users-list > .win-sentinel,
+  #profit-users-list > p,
+  #wallet-users-list > .win-sentinel,
+  #wallet-users-list > p,
+  #admin-cities-list > .win-sentinel,
+  #admin-cities-list > p,
+  #trash-list > .win-sentinel,
+  #trash-list > p {
+    grid-column: 1 / -1;
+  }
+
+  /* ============================================================
+     چاڵنج و ئاڕپی لەسەر شاشەی گەورە
+     ------------------------------------------------------------
+     ⚠️ ئەم شاشەیە **static**ـە (وەک ئامار)، نەک `fixed` وەک
+     داشبۆرد و ئۆردەر — بۆیە `body{max-width:430px}` سنووری
+     دەکات و `padding-inline` هیچ ناکات. پێوانەکراو لە ١٤٠٠px
+     پێش چاکسازی: پانی پانێڵ **٣٣٠px**.
+     چارە: هەمان ڕێڕەوی `body.sx-wide` — پۆلێکی جیا، چونکە
+     `sx-wide` بۆشایی خوارەوەشی دەگۆڕێت و ئەوە بۆ ئامار
+     ڕێکخراوە.
+     ============================================================ */
+  body.rw-wide {
+    max-width: 1140px;
+    padding-left: 24px;
+    padding-right: 24px;
+  }
+
+  /* --- چاڵنج: **یەک ستوونی** ناوەڕاست ----------------------
+     ⚠️ گریدی دوو ستوونی تاقیکرایەوە و **ڕەت کرایەوە**، بە
+     پێوانە: لیستەکە بە بەشەوە دابەش دەبێت («بەم زووانە»،
+     «لە ئارادان»، «کۆتاییهاتووەکان»)، و هەر سەردێڕێک
+     `grid-column: 1 / -1`ـە بۆیە ڕیزێکی نوێ دەست پێدەکات.
+     بەشەکان زۆرجار **یەک** کارتیان هەیە، بۆیە نیوەی هەر
+     ڕیزێک بەتاڵ دەمایەوە. (پێوانەکراو لە ١٤٠٠px: دوو لە
+     سێ بەشەکە تاک-کارت بوون.)
+
+     ئەمە هەمان بڕیاری داشبۆردە و بە هەمان هۆکار — بڕوانە
+     [[desktop-layout]]. ستوونێکی باریکی ناوەڕاست هەرگیز
+     ناتەواو دەرناکەوێت، بە هەر ژمارەیەکی چاڵنجەوە. */
+  #rw-chal-pane,
+  #rw-arp-pane {
+    max-width: 620px;
+    margin-inline: auto;
+  }
+
+  /* ⚠️ ڕیڵی پلیکانەکان **دەبێت** یەک ستوون بمێنێتەوە: هەر
+     ڕیزێک پارچەی ڕیڵی سەرەوە و خوارەوەی خۆی هەیە
+     (`.arp-line`, `flex: 1`) و ئەوانە بە ستوونی یەکدەگرن.
+     گریدی چەند ستوونی ڕیڵەکە دەبڕێت. */
+
+  /* دوگمەی «+»ی چاڵنج بە کەناری ئەم ستوونەوە — نەک بەو
+     ٩٠٠pxەی داشبۆرد (لە ١٤٠٠px نزیکەی ٣٠٠px دوور دەکەوتەوە) */
+  #rw-fab {
+    left: max(var(--app-gutter), calc(50% - 310px - 62px));
+    transform: none;
+  }
+
+  /* چوار خانەی ئامار لە یەک ڕیزدا، نەک ٢×٢ */
+  #dashboard-screen .stats-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  /* دوگمەی «+» بە کەناری ستوونەکەوە دەنووسێت، نەک بە ١٥%ی ویندۆ
+     (لە ویندۆیەکی ١٤٠٠px، ١٥% دەکاتە ٢١٠px — دوور لە ناوەڕۆکەکە) */
+  .fab-wrapper {
+    /* دەچێتە بۆشایی لای ستوونەکە، نەک لەسەر کارتەکان.
+       لە ویندۆی تەسکدا (بۆشایی نییە) دەگەڕێتەوە سەر پادینگ —
+       هەمان ڕەفتاری مۆبایل. */
+    left: max(var(--app-gutter), calc(50% - (var(--app-narrow) / 2) - 62px));
+    transform: none;
+  }
+}
+
+@media (min-width: 1100px) {
+  /* سێ ستوون تەنها بۆ کارتە بچووکەکان. کارتی ئۆردەر زانیاریی
+     زۆری تێدایە و لە ٣٧٠px دا تەسک دەبێت، بۆیە لە دووان دەمێنێتەوە. */
+  #my-transactions-list,
+  #edit-users-list,
+  #profit-users-list,
+  #wallet-users-list,
+  #admin-cities-list,
+  #trash-list {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
 }
 
