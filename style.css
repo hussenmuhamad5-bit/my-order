@@ -428,6 +428,35 @@ select,
   gap: 10px;
 }
 
+/* ڕێنمایی ژێر ناوی کاڵا — «هەر کاڵایەک جیا زیاد بکە» (خاوەن ٢٠٢٦-١٠-٠١).
+   بە بنەڕەت هێڵێکی کاڵ؛ کاتێک ناوەکە وەک دوو کاڵا دەردەکەوێت
+   («X + Y») دەبێتە ئاگاداری. ⚠️ تەنها ئاگادارییە، ڕێگری ناکات. */
+.item-name-hint {
+  display: flex;
+  align-items: flex-start;
+  gap: 5px;
+  margin: -6px 2px 10px;
+  font-size: 11px;
+  line-height: 1.6;
+  color: #64748b;
+}
+
+.item-name-hint > i {
+  font-size: 13px;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.item-name-hint.is-warn {
+  margin-inline: 0;
+  padding: 8px 10px;
+  border-radius: 9px;
+  background: #fffbeb;
+  border: 1px solid #fcd34d;
+  color: #92400e;
+  font-weight: 600;
+}
+
 .cart-list {
   list-style: none;
   padding: 0;
@@ -13162,18 +13191,68 @@ body {
   opacity: .6;
 }
 
+/* 🎨 پەیامێک کە دەقەکەی دەستەواژەیەکی خێرای ڕەنگدارە (db/092).
+   ⚠️ **دوو هەڵبژێر، نەک یەک.** `.ocmt-row.is-mine .ocmt-bubble`
+      سێ پۆلە (٠,٣,٠) بەڵام `.ocmt-bubble.is-qc` دوو پۆلە (٠,٢,٠)،
+      بۆیە بە یەک ڕێسا پەیامی **خۆم** ڕەنگەکەی وەرنەدەگرت — و ئەوە
+      ڕێک ئەو کەسەیە کە پەنجەی لە چیپەکە داوە، واتا سەرەکیترین
+      دۆخ. پۆلەکان بژمێرە، پشت بە ڕیزبەندی مەبەستە. */
+.ocmt-bubble.is-qc,
+.ocmt-row.is-mine .ocmt-bubble.is-qc {
+  background: color-mix(in srgb, var(--qc) 11%, #fff);
+  border-color: color-mix(in srgb, var(--qc) 34%, transparent);
+}
+
+/* ناو و پلە لەسەر باکڕەوەندی ڕەنگاوڕەنگ — هەمان ڕەنگی تۆختر،
+   ئەگەرنا شینی بنەڕەتی لەگەڵ سەوز/سووردا ناکۆکە */
+.ocmt-bubble.is-qc .ocmt-name {
+  color: color-mix(in srgb, var(--qc) 88%, #000);
+}
+
+.ocmt-bubble.is-qc .ocmt-role {
+  background: color-mix(in srgb, var(--qc) 15%, #fff);
+  color: color-mix(in srgb, var(--qc) 78%, #000);
+}
+
+/* ⚠️ **فلێکس، نەک دوو دەقی تەنیشت یەک.** پێشتر ناوەکە و پلەکە دوو
+   ڕوونی دەقی **لکاو** بوون لەناو یەک بلۆکدا، بۆیە شەیپکەری عەرەبی
+   پیتی کۆتایی ناوەکەی بە یەکەم پیتی پلەکەوە دەلکاند: «نیان» +
+   «بەڕێوەبەر» دەبووە «نیاـنبەڕێوەبەر» — ن لە شێوەی **سەرەتایی**دا
+   دەنەخشێنرا، بۆیە وەک پیتێکی **بڕاو** دەردەکەوت (خاوەن ٢٠٢٦-٠٩-٣٠:
+   «پیتی ناوەکە بڕاوە و بە بەڕێوەبەرەکەوە نووساوە»).
+   `margin` ئەم لکانە **ناشکێنێت** — تەنها گلیفەکان لێک دوور دەخاتەوە.
+   ⭐ منداڵی فلێکس بلۆک دەکرێت، بۆیە هەریەکەیان ڕوونی شەیپی خۆیانن.
+   بڕوانە [[landmines]] ١٤٧. */
 .ocmt-name {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
   font-size: 11px;
   font-weight: 800;
   color: var(--primary);
   margin-bottom: 2px;
 }
 
+/* ⚠️ `min-width: 0` لەسەر **خودی خانەکە** — کەمترین قەبارەی
+   خۆکاری منداڵی فلێکس `min-content`ە، نەک سفر ([[landmines]] ١٣٧) */
+.ocmt-nm {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .ocmt-role {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: #f1f5f9;
   font-size: 9.5px;
   font-weight: 700;
-  color: #94a3b8;
-  margin-inline-start: 5px;
+  color: #64748b;
 }
 
 .ocmt-body {
@@ -15931,6 +16010,30 @@ body.sx-wide {
   transform: scale(.96);
 }
 
+/* ============================================================
+   🎨 ڕەنگی دەستەواژەی خێرا (db/092)
+   ------------------------------------------------------------
+   یەک گۆڕاو (`--qc`) هەرسێ پێکهاتەکە دەردەهێنێت — بۆردەر،
+   پاشبنەما و دەق — بۆیە هەر ڕەنگێکی خاوەن خۆی ڕێک دەخات و
+   هیچ ڕەنگێکی دەستنووس لە CSSدا نامێنێتەوە.
+   ⚠️ پاشبنەماکە **تێکەڵەیەکی کاڵە**، نەک ڕەنگە ڕەقەکە: دەقی
+      ڕەش لەسەر سەوزی تۆخ ناخوێندرێتەوە.
+   ⚠️ `:not(.active)` پێویستە: چیپی **هەڵبژێردراوی** هۆکار
+      (`.reason-chip.active`، دێڕی ١٠١٤٠) هەمان چڕیی هەیە بەڵام
+      **پێشترە**، بۆیە بەبێ ئەم دەرکردنە ڕەنگی دەستەواژەکە
+      بێدەنگ دۆخی «هەڵبژێردراو» دەشارێتەوە. پۆلەکان بژمێرە. */
+.ocmt-q.is-c,
+.reason-chip.is-c:not(.active) {
+  border-color: color-mix(in srgb, var(--qc) 38%, transparent);
+  background: color-mix(in srgb, var(--qc) 10%, #fff);
+  color: color-mix(in srgb, var(--qc) 82%, #000);
+}
+
+.ocmt-q.is-c:active,
+.reason-chip.is-c:not(.active):active {
+  background: color-mix(in srgb, var(--qc) 20%, #fff);
+}
+
 /* کاتێک دەنێردرێت — `guardSubmit` دوگمەکە `disabled` دەکات */
 .ocmt-q:disabled {
   opacity: .5;
@@ -15967,6 +16070,106 @@ body.sx-wide {
   font-size: var(--fs-sm, 13px);
   color: var(--text-main);
   word-break: break-word;
+}
+
+/* ============================================================
+   🎨 هەڵبژاردنی ڕەنگ بۆ هەر دەستەواژەیەک (db/092)
+   ------------------------------------------------------------
+   ⭐ دەقەکە بە ڕەنگەکەی خۆیەوە دەردەکەوێت، بۆیە پاشا **ئەنجامەکە**
+      دەبینێت لە کاتی هەڵبژاردندا، نەک ناوی ڕەنگێک.
+   ============================================================ */
+.qp-txt.is-c {
+  display: inline-block;
+  align-self: center;
+  padding: 3px 9px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--qc) 38%, transparent);
+  background: color-mix(in srgb, var(--qc) 10%, #fff);
+  color: color-mix(in srgb, var(--qc) 82%, #000);
+  font-weight: var(--font-bold, 700);
+}
+
+/* سوایچەکە خۆی دوگمەی کردنەوەی پاڵێتەیە. ٣٠px وەک `.qp-b`،
+   بۆیە ڕیزەکە هەر بەرزییەک ناگۆڕێت. */
+.qp-sw {
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 1px solid color-mix(in srgb, var(--qc, #cbd5e1) 45%, transparent);
+  border-radius: var(--r-sm, 9px);
+  background: var(--qc, #fff);
+  cursor: pointer;
+}
+
+/* بێ ڕەنگ — خانەیەکی شەترەنجی، بۆیە «بێ ڕەنگ» لە «سپی» جیا دەبێتەوە */
+.qp-sw.is-none {
+  border-color: var(--line, #e6e8ec);
+  background:
+    linear-gradient(45deg, #e2e8f0 25%, transparent 25%, transparent 75%, #e2e8f0 75%) 0 0 / 10px 10px,
+    linear-gradient(45deg, #e2e8f0 25%, #fff 25%, #fff 75%, #e2e8f0 75%) 5px 5px / 10px 10px;
+}
+
+.qp-sw:active { transform: scale(.94); }
+
+/* پانێڵی پاڵێت — لە ژێر ڕیزەکەدا، لەناو هەمان شیتدا */
+.qp-pal-wrap {
+  padding: 2px 4px 10px;
+}
+
+/* ⚠️ **گرید، نەک `flex-wrap`** — و ژمارەکە دەبێت دابەش ببێت:
+   ١٠ خانە (٨ ڕەنگی ئامادە + «بێ ڕەنگ» + «دڵخواز») ÷ ٥ ستوون =
+   دوو ڕیزی **تەواو**. بە `flex-wrap` هەشتیان دەچوونە ڕیزی یەکەم و
+   دووان بە تەنها لە خوارەوە دەمانەوە. */
+.qp-pal {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  justify-items: center;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--line, #e6e8ec);
+  border-radius: var(--r-md, 12px);
+  background: #f8fafc;
+}
+
+/* ⚠️ ٣٠px بۆ **پەنجەیە** — بازنەی بینراو بچووکترە لەوەی
+   دەست‌لێدەدرێت ([[landmines]]: ٢٦px بۆ پەنجە، نەک بۆ ئایکۆن) */
+.qp-pc {
+  position: relative;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background: var(--qc, #fff);
+  color: #64748b;
+  font-size: 15px;
+  cursor: pointer;
+  box-shadow: inset 0 0 0 1px rgba(15, 23, 42, .08);
+}
+
+.qp-pc.is-on {
+  border-color: #0f172a;
+}
+
+.qp-pc.is-none,
+.qp-pc.is-pick {
+  background: #fff;
+}
+
+/* خانەی ڕەنگی سیستەم — دەشاردرێتەوە، لەیبڵەکە دەیکاتەوە */
+.qp-pc.is-pick input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
 }
 
 .qp-acts { display: flex; gap: 4px; flex-shrink: 0; }
@@ -16311,6 +16514,101 @@ body.sx-wide {
   align-items: center;
   justify-content: center;
   font-size: 16px;
+  /* ⚠️ باجی «+٥» لەسەر گۆشەکەی دادەنرێت، بۆیە دەبێت مەڵبەندی
+     شوێندانان بێت. بەبێ ئەم دێڕە باجەکە دەچێتە سەر `.notif-row`
+     کە `position: relative`ـە و لە گۆشەی **ڕیزەکە** دەردەکەوێت. */
+  position: relative;
+}
+
+/* ============================================================
+   🗂️ «+٥» — چەند ئاگادارییەکی هەمان ئۆردەر (db/093)
+   ------------------------------------------------------------
+   خاوەن (٢٠٢٦-٠٩-٣٠): «لە شوێنی ئایکۆنی کۆمێنت لە سەرەوە بە
+   ژمارە کۆمێنتەکانی تریش بنووسرێت… بۆ ئەوەی قەڵەباڵغ نەبێت.»
+   ⚠️ ڕەنگەکە لە جۆرەکەوە دێت (inline)، بۆیە لێرەدا تەنها
+      شێوە و شوێن — هیچ ڕەنگێکی دەستنووس نییە.
+   ⚠️ لە RTLدا `inset-inline-end` = لای **چەپ**ی ئایکۆنەکە،
+      بۆیە باجەکە لەسەر دەقەکە نایەت.
+   ============================================================ */
+.notif-more {
+  position: absolute;
+  top: -5px;
+  inset-inline-end: -6px;
+  min-width: 17px;
+  height: 17px;
+  padding: 0 4px;
+  border-radius: 999px;
+  border: 2px solid #fff;
+  box-sizing: content-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-family: inherit;
+  font-size: 9.5px;
+  font-weight: 800;
+  line-height: 1;
+  cursor: pointer;
+  /* ⚠️ ژمارەکە لاتینییە (`fmtNum`) و «+»ـەکەی پێوەیە — بە
+     ئاراستەی RTL «٥+» دەردەکەوێت. */
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+
+/* ⚠️ ٢٦px بۆ **پەنجەیە**، نەک بۆ باجەکە — باجەکە ١٧pxـە و
+   بە تەنها پەنجەدانانی پێوە ناگیرێت. بۆکسی نادیار درێژ
+   دەکرێتەوە بەبێ گۆڕینی شوێنی ئەوەی دەبینرێت. */
+.notif-more::after {
+  content: '';
+  position: absolute;
+  inset: -7px;
+  border-radius: 999px;
+}
+
+.notif-more:active {
+  transform: scale(.9);
+}
+
+/* ڕیزێکی نەخوێندراو پاشبنەمایەکی شینی هەیە، بۆیە چوارچێوەی
+   سپی لەوێدا نادیار دەبێت — هەمان ڕەنگی ڕیزەکە. */
+.notif-row.is-unread .notif-more {
+  border-color: #f2f7fc;
+}
+
+/* ---- ئەوانەی تری گروپەکە ----
+   ⚠️ هیچ ڕیزێک **ون نابێت**: پارە زۆرترین کۆکردنەوەی هەیە
+      (پێوانەی ١٤ ڕۆژ: ١,٣٨٨ ڕیز)، و هەریەکەیان بڕێکی جیاوازە.
+      بۆیە «+٥» دەکرێتەوە و هەموو بڕەکان دەردەکەون — کۆکردنەوە
+      قەڵەباڵغی لادەبات، نەک زانیاری. */
+.notif-sub {
+  margin-top: 8px;
+  padding-inline-start: 0;
+  border-top: 1px dashed #dbe4ee;
+}
+
+.notif-sub-row {
+  padding: 7px 0 0;
+}
+
+.notif-sub-row+.notif-sub-row {
+  border-top: 1px solid #f1f5f9;
+  margin-top: 7px;
+}
+
+/* ئەوەی هێشتا نەخوێندراوە — هەمان نیشانەی ڕیزە سەرەکییەکان،
+   بەڵام وەک هێڵێکی تەنیشت، چونکە پاشبنەمای ڕیزەکە پێشتر شینە */
+.notif-sub-row.is-unread {
+  border-inline-start: 2px solid var(--primary, #2481cc);
+  padding-inline-start: 8px;
+  margin-inline-start: -10px;
+}
+
+/* «٦ ئاگاداری» لەناو ڕیزی کاتەکەدا — بۆ ئەوەی ژمارەکە
+   ڕوونکراوە بێت، نەک تەنها نیشانەیەک */
+.notif-grp {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
 }
 
 .olog-skel .notif-dot {
@@ -19472,6 +19770,13 @@ body.sx-wide {
 
 .rkex-o b {
   color: var(--text-main);
+}
+
+/* «٣ کاڵای جیاواز، یان ١ کاڵا × ٣ دانە» — دانە دەژمێردرێت نەک دێڕ (db/058) */
+.rkex-o small {
+  display: block;
+  font-size: 10.5px;
+  color: #94a3b8;
 }
 
 .rkex-rows {
