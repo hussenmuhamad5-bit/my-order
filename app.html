@@ -8267,6 +8267,13 @@
                 if (_ocmtTab === 'comments' && _reviewOpenId)
                     ocmtSync(orderCommentsCache[_reviewOpenId] || []);
             } catch (e) { }
+            // ⭐ ڕیزەکانی ئاگادارکردنەوەش ڕەنگی کۆتا کۆمێنتیان لێرەوەیە
+            //    (`notifQuickColorOf`) — ئەگەر پانێڵەکە کراوەیە، بیگۆڕە.
+            //    `renderNotifications` شوێنی سکڕۆڵ دەپارێزێت.
+            try {
+                const nm = document.getElementById('notif-modal');
+                if (nm && nm.classList.contains('show')) renderNotifications();
+            } catch (e) { }
         }
 
         function qpIsKing() {
@@ -13641,10 +13648,49 @@
         //    بەم شێوەیە قەڵەباڵغی نامێنێت **و** هیچ ژمارەیەک ون نابێت.
         const _notifOpenGrp = new Set();
 
+        // ============================================================
+        // 🗂️ سێ شێوازی کۆکردنەوە (خاوەن ٢٠٢٦-١٠-٠١)
+        // ------------------------------------------------------------
+        // «ئاگادارکردنەوەکان ئەوەندە کەڵەکە نەبن… هەر ئۆردەرێک یەک
+        // ڕیز، و گۆڕانکارییەکانی بە ئایکۆن ڕیز بکرێن.»
+        //
+        //   'order'  (چیپی «هەمووی»)  → `o|<ئۆردەر>` — هەر ئۆردەرێک یەک
+        //            کارت؛ ڕیزێک ئایکۆن بە ژمارەوە (`NOTIF_ACTS`).
+        //   'member' (چیپی «ئۆردەری نوێ») → `m|<خاوەن>|<ڕۆژ>` —
+        //            «لارین — 5 ئۆردەری نوێ · ئەمڕۆ».
+        //   'kind'   (هەموو چیپەکانی تر) → `<جۆر>|<ئۆردەر>` — وەک db/093.
+        //
+        // پێوانەی بەرهەم (١٤ ڕۆژ): بەڕێوەبەرێک لە «تیمەکەم» ٢,٥٣٧ ڕیز
+        // → ٩٣٥ کارت؛ پاشا لە «ئۆردەری نوێ» ١,٧٢٩ → ٥٤٩.
+        // ⚠️ هێشتا **تەنها نەخشاندنە** — کاشەکە ڕیزی خاو هەڵدەگرێت.
+        // ⚠️ کلیلەکان پێشگری جیاوازیان هەیە (`o|` · `m|`) بۆیە دۆخی
+        //    کراوەی `_notifOpenGrp` لە نێوان شێوازەکاندا تێکەڵ نابێت.
+        function notifGroupMode() {
+            return _notifKind === 'all' ? 'order'
+                : (_notifKind === 'create' ? 'member' : 'kind');
+        }
+
+        // ڕۆژی ناوخۆیی (YYYY-MM-DD) — هەمان شێوەی `formatDayLabel`
+        function notifDayKey(iso) {
+            const d = new Date(iso);
+            if (isNaN(d.getTime())) return '';
+            const p = x => (x < 10 ? '0' : '') + x;
+            return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
+        }
+
         function notifGroupKey(n) {
             if (!n || n.kind === 'announce' || n.announce_id) return '';
             const oid = String(n.order_id || '');
-            return oid ? (String(n.kind || '') + '|' + oid) : '';
+            const mode = notifGroupMode();
+            if (mode === 'member' && n.kind === 'create') {
+                // ⚠️ `subject` = خاوەنی ئۆردەر بۆ هەموو جۆرەکان جگە لە
+                //    پارە (پێوانەکراو: ٣,١٢٤ لە ٣,٢٢٠ «نوێ»؛ ئەوانی تر
+                //    ئۆردەرەکەیان سڕاوەتەوە)
+                const who = String(n.subject_code || n.actor_code || '');
+                return who ? ('m|' + who + '|' + notifDayKey(n.created_at)) : '';
+            }
+            if (!oid) return '';
+            return mode === 'order' ? ('o|' + oid) : (String(n.kind || '') + '|' + oid);
         }
 
         function notifGroup(rows) {
@@ -13681,10 +13727,15 @@
                     : notifStateHtml('bx-bell', 'هیچ ئاگادارکردنەوەیەکت نییە',
                         'گۆڕانی حاڵەتی ئۆردەر، پارەی جزدان و کۆمێنتەکان لێرە کۆدەبنەوە');
             }
+            const mode = notifGroupMode();
             return notifGroup(rows).map(g => {
                 const n = g.head;
                 // ئاگاداریی دەستی کارتێکی دەوڵەمەندە — دەق، وێنە، ڕیاکشن
                 if (n.kind === 'announce' && n.announce_id) return announceCardHtml(n);
+                // ⭐ «هەمووی» → کارتی ئۆردەر · «ئۆردەری نوێ» → ڕیزی ئەندام.
+                //    ڕیزێکی بێ ئۆردەر (چاڵنج، پارەی دەستی) هەر ڕیزی ئاسایی دەمێنێتەوە.
+                if (g.key && mode === 'order') return notifOrderCardHtml(g);
+                if (g.key && mode === 'member' && g.key.indexOf('m|') === 0) return notifMemberRowHtml(g);
 
                 // ئەوانەی تری هەمان ئۆردەر — «+٥»ی سەر ئایکۆنەکە
                 const more = g.all.length - 1;
@@ -13715,8 +13766,12 @@
                 // هەموو ڕیزێک دەستی لێدەدرێت — دەستلێدان واتای
                 // «ئەمەم بینی». ئەوانەی ئۆردەریان پێوەیە دەشکرێنەوە.
                 const open = more > 0 && _notifOpenGrp.has(g.key);
+                // 🎨 کۆتا کۆمێنت دەستەواژەیەکی خێرای ڕەنگدار بوو → ڕەنگی کاڵی ئەو
+                const qc = notifQuickColorOf(g.all);
                 const cls = 'notif-row' + (unread ? ' is-unread' : '')
-                    + (oid ? ' is-clickable' : '') + (open ? ' is-open' : '');
+                    + (oid ? ' is-clickable' : '') + (open ? ' is-open' : '')
+                    + (qc ? ' has-qc' : '');
+                const qcStyle = qc ? ` style="--qc:${qc}; --qcb:${notifTint(qc)};"` : '';
                 // ⚠️ یەک پەنجەدانان = **هەموو** گروپەکە خوێندراو، بۆیە
                 //    ناسنامەکان پێکەوە دەنێردرێن، نەک تەنها هی سەرەکە —
                 //    ئەگەرنا ٥ دانەی شاراوە بە نەخوێندراوی دەمێننەوە و
@@ -13751,7 +13806,7 @@
                             </div>`;
                     }).join('')}</div>`
                     : '';
-                return `<div class="${cls}"${click}${more > 0 ? ` data-grp="${histEsc(g.key)}"` : ''}>
+                return `<div class="${cls}"${qcStyle}${click}${more > 0 ? ` data-grp="${histEsc(g.key)}"` : ''}>
                         <span class="notif-dot" style="background:${meta.color}1f; color:${meta.color};"><i class='bx ${meta.icon}'></i>${badge}</span>
                         <div class="notif-body">
                             <div class="notif-top"><b>${title}</b></div>
@@ -13765,6 +13820,218 @@
                         </div>
                     </div>`;
             }).join('');
+        }
+
+        // ============================================================
+        // 🗂️ کارتی ئۆردەر — چیپی «هەمووی» (خاوەن ٢٠٢٦-١٠-٠١)
+        // ------------------------------------------------------------
+        //   ئۆردەری لارین-هەنار                          (●)
+        //   nc08V-Id7tG · 5 کاتژمێر
+        //   [کۆمێنت 3] [دەستکاری 1] [حاڵەت 2] [قازانج] [پارە 2]
+        //
+        // ⭐ پەنجە لە ئایکۆن = ڕاستەوخۆ ئەو بەشە (`go`):
+        //      comments → چاتی ئۆردەرەکە
+        //      log      → «مێژووی کردارەکان»، کراوە و سکڕۆڵکراو
+        //      profit   → دابەشکردنی قازانج (بێ دەسەڵات → مێژوو)
+        //      money    → لیستی بڕەکان لە شوێنی خۆی
+        //      info     → زانیاریی ئۆردەر
+        // ⭐ پارە لە شوێنی خۆی دەکرێتەوە، نەک بە ئۆردەرەکە: هەر ڕیزێکی
+        //    جزدان بڕێکی جیاوازە (قازانج · پاشەکەوت · گەڕاندنەوە) و دوو
+        //    بڕ هەرگیز کۆ ناکرێنەوە — بۆیە هەموویان وەک خۆیان.
+        // ⚠️ پەنجە لە ئایکۆن **تەنها ئەو جۆرە** خوێندراو دەکات؛ پەنجە
+        //    لە کارتەکە هەموو ئۆردەرەکە.
+        // ============================================================
+        const NOTIF_ACTS = [
+            { k: 'create', icon: 'bx-plus-circle', color: '#2481cc', t: 'ئۆردەری نوێ', go: 'info', noCount: true },
+            { k: 'comment', icon: 'bx-message-rounded-dots', color: '#2481cc', t: 'کۆمێنت', go: 'comments' },
+            { k: 'edit', icon: 'bx-edit-alt', color: '#f39c12', t: 'دەستکاری', go: 'log' },
+            { k: 'status', icon: 'bx-transfer', color: '#8b5cf6', t: 'گۆڕانی حاڵەت', go: 'log' },
+            { k: 'return', icon: 'bx-undo', color: '#dc2626', t: 'گەڕانەوە', go: 'log' },
+            { k: 'distribute', icon: 'bx-check-circle', color: '#10b981', t: 'دابەشکردنی قازانج', go: 'profit' },
+            { k: 'wallet', icon: 'bx-wallet', color: '#0d9488', t: 'پارە', go: 'money' }
+        ];
+
+        // گەڕانەوە حاڵەتێکە بەڵام ئایکۆنی خۆی هەیە (٣٦٢ ڕیز لە ١٤ ڕۆژدا)
+        function notifActOf(n) {
+            if (n.kind === 'status' && /گەڕا/.test(String(n.to_status || ''))) return 'return';
+            return String(n.kind || '');
+        }
+
+        // ============================================================
+        // 🎨 ڕەنگی کۆتا کۆمێنتی خێرا (خاوەن ٢٠٢٦-١٠-٠١)
+        // ------------------------------------------------------------
+        // «ئەگەر کۆتا کۆمێنت "بیکە بە گەیشتوو" بوو، ڕیزەکە سەوزی کاڵ
+        // بێت؛ ئەگەر "گەڕاوە" سووری کاڵ — هەر ڕەنگێک بۆ ئەو کۆمێنتە
+        // خێرایە دانرابوو، بەڵام بە کاڵی.»
+        // ⭐ **کۆتا کۆمێنت** بڕیار دەدات: لیستەکە نوێترین-یەکەمە، بۆیە
+        //    یەکەم ڕیزی `comment` دەگیرێت. ئەگەر ئەو کۆمێنتە خێرا
+        //    نەبوو، هیچ ڕەنگێک — تەنانەت ئەگەر یەکێکی کۆنتر خێرا بووبێت.
+        // ⭐ ڕەنگ لە **دەستەواژەکەوە** (`qpColorOf`)، هەمان سەرچاوەی
+        //    حەبابی چات — گۆڕینی ڕەنگ لە ڕێکخستن دەستبەجێ لێرەش دەگۆڕێت
+        //    (`qpRepaint` ئەم لیستەش دەنەخشێنێتەوە).
+        function notifQuickColorOf(list) {
+            const c = (list || []).find(x => x && x.kind === 'comment');
+            return c ? qpColorOf('comment', c.body) : '';
+        }
+
+        // ڕەنگی کاڵ و **ناڕوون** (تێکەڵ لەگەڵ سپی) — ناڕوونە بۆ ئەوەی
+        // ئەڵقەی باجی «+N» هەمان ڕەنگی پاشبنەماکە وەربگرێت
+        function notifTint(hex, a) {
+            const m = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(String(hex || ''));
+            if (!m) return '';
+            const k = a == null ? 0.14 : a;
+            return '#' + [m[1], m[2], m[3]].map(h => {
+                const v = Math.round(255 - (255 - parseInt(h, 16)) * k);
+                return (v < 16 ? '0' : '') + v.toString(16);
+            }).join('');
+        }
+
+        // ⚠️ ناسنامەکان دەچنە ناو `onclick`ـەوە → تەنها ژمارە و کۆما
+        function notifIdsOf(list) {
+            return (list || []).map(x => String(x.id || '').replace(/[^0-9]/g, ''))
+                .filter(Boolean).join(',');
+        }
+
+        // ⚠️ ڕیزی پارە `order_code`ی نییە (٣,٦٢٢ لە ٣,٦٢٢) — کۆدەکە
+        //    تەنها لە دەقەکەدایە («… لە ئۆردەری Vp9p0-gp2mZ»).
+        const NOTIF_CODE_RE = /([A-Za-z0-9]{3,12}-[A-Za-z0-9]{3,12})/;
+
+        function notifOrderCodeOf(g) {
+            for (const x of g.all) if (x.order_code) return String(x.order_code);
+            for (const x of g.all) {
+                const m = NOTIF_CODE_RE.exec(String(x.body || '') + ' ' + String(x.title || ''));
+                if (m) return m[1];
+            }
+            const o = allGlobalOrdersData[String(g.head.order_id)];
+            return o && o.order_code ? String(o.order_code) : '';
+        }
+
+        // خاوەنی ئۆردەر — `subject` بۆ هەموو جۆرەکان جگە لە پارە، کە
+        // `subject`ـەکەی خاوەنی **جزدانەکەیە** (= وەرگر، ٣,٦٢٢ لە ٣,٦٢٢).
+        // پاشەکشە: ئۆردەری کاشکراو، پاشان پێشگری کۆدەکە (= کۆدی فرۆشیار).
+        function notifOrderOwnerOf(g, code) {
+            for (const x of g.all) {
+                if (x.kind !== 'wallet' && x.subject_code) {
+                    return { code: String(x.subject_code), name: String(x.subject_name || '') };
+                }
+            }
+            const o = allGlobalOrdersData[String(g.head.order_id)];
+            if (o && o.seller_code) return { code: String(o.seller_code), name: '' };
+            const pre = String(code || '').split('-')[0];
+            return pre ? { code: pre, name: '' } : null;
+        }
+
+        function notifOrderCardHtml(g) {
+            const oid = String(g.head.order_id || '').replace(/[^0-9A-Za-z_-]/g, '');
+            const code = notifOrderCodeOf(g);
+            const owner = notifOrderOwnerOf(g, code);
+            const me = owner && currentUser && String(owner.code) === String(currentUser.code);
+            const who = me ? 'خۆت'
+                : (owner ? (hierarchyChain(owner.code, owner.name) || firstNameOf(owner.name) || owner.code) : '');
+            const unread = g.all.some(x => !x.read_at);
+
+            // جۆرەکان بە ڕیزبەندیی ژیانی ئۆردەر؛ جۆرێکی نەناسراو ون
+            // نابێت — بە ئایکۆنی خۆی دێتە کۆتایی
+            const by = Object.create(null);
+            g.all.forEach(x => { const a = notifActOf(x); (by[a] = by[a] || []).push(x); });
+            const known = new Set(NOTIF_ACTS.map(a => a.k));
+            const acts = NOTIF_ACTS.filter(a => by[a.k]).concat(Object.keys(by)
+                .filter(k => !known.has(k))
+                .map(k => {
+                    const meta = NOTIF_KIND_META[k] || { icon: 'bx-bell', color: '#64748b' };
+                    return { k: k, icon: meta.icon, color: meta.color, t: 'ئاگاداری', go: 'info' };
+                }));
+
+            const moneyOpen = _notifOpenGrp.has(g.key + '|w');
+            const chips = acts.map(a => {
+                const list = by[a.k];
+                const n = list.length;
+                const un = list.some(x => !x.read_at);
+                const label = a.noCount ? '' : fmtNum(n);
+                const open = a.go === 'money' && moneyOpen;
+                return `<button type="button" class="notif-act${un ? ' is-unread' : ''}${open ? ' is-open' : ''}"
+                        style="--c:${a.color}; --cb:${a.color}1a; --cbd:${a.color}66;"
+                        onclick="notifActClick(event, '${notifIdsOf(list)}', '${oid}', '${a.go}', this)"
+                        aria-label="${histEsc((a.noCount ? '' : fmtNum(n) + ' ') + a.t)}"
+                        title="${histEsc(a.t)}"><i class='bx ${a.icon}'></i>${label ? `<b>${histEsc(label)}</b>` : ''}</button>`;
+            }).join('');
+
+            const money = moneyOpen && by.wallet
+                ? `<div class="notif-sub">${by.wallet.map(x => `
+                        <div class="notif-sub-row${x.read_at ? '' : ' is-unread'}">
+                            <div class="notif-detail"><b>${histEsc(notifCleanTitle(x.title))}</b>${x.body ? '\n' + histEsc(x.body) : ''}</div>
+                            <div class="notif-time"><i class='bx bx-time-five'></i> ${histEsc(getRelativeTime(x.created_at))}</div>
+                        </div>`).join('')}</div>`
+                : '';
+
+            // 🎨 کۆتا **کۆمێنتی** ئەم ئۆردەرە (نەک کۆتا ڕووداو) — ئەگەر
+            //    دەستەواژەیەکی خێرای ڕەنگدار بوو، کارتەکە ڕەنگی کاڵی ئەو دەگرێت
+            const qc = notifQuickColorOf(g.all);
+            const cls = 'notif-row notif-ocard' + (unread ? ' is-unread' : '') + (oid ? ' is-clickable' : '')
+                + (qc ? ' has-qc' : '');
+            const qcStyle = qc ? ` style="--qc:${qc}; --qcb:${notifTint(qc)};"` : '';
+            const click = oid ? ` onclick="notifRowClick('${notifIdsOf(g.all)}', '${oid}', this)"` : '';
+            return `<div class="${cls}"${qcStyle} data-grp="${histEsc(g.key)}"${click}>
+                    <span class="notif-dot" style="background:#2481cc1f; color:#2481cc;"><i class='bx bx-package'></i></span>
+                    <div class="notif-body">
+                        <div class="notif-top"><b>${who ? 'ئۆردەری ' + histEsc(who) : 'ئۆردەر'}</b></div>
+                        <div class="notif-time">
+                            ${code ? `<span class="notif-code" dir="ltr">${histEsc(code)}</span><span aria-hidden="true">·</span>` : ''}
+                            <i class='bx bx-time-five'></i> ${histEsc(getRelativeTime(g.head.created_at))}
+                        </div>
+                        <div class="notif-acts">${chips}</div>
+                        ${money}
+                    </div>
+                </div>`;
+        }
+
+        // ============================================================
+        // 👤 «ئۆردەری نوێ» — هەر ئەندامێک بۆ هەر ڕۆژێک یەک ڕیز
+        // ------------------------------------------------------------
+        //   لارین-هەنار — 5 ئۆردەری نوێ
+        //   ئەمڕۆ · 2 کاتژمێر                                   ⌄
+        //     nc08V-Id7tG   2 کاتژمێر                           ‹
+        //     nc08V-Pb3rD   3 کاتژمێر                           ‹
+        // ⭐ پەنجە لە ڕیزەکە = لیستەکە دەکرێتەوە **و** هەمووی خوێندراو
+        //    («بینیم کە ٥ ئۆردەری زیاد کرد») — هەمان یاسای «پەنجە لە ڕیز
+        //    = بینیم». پەنجە لە ئۆردەرێک = زانیارییەکەی.
+        // ⚠️ ڕۆژەکە بەشێکە لە کلیلەکە، بۆیە «٣ دوێنێ + ٥ ئەمڕۆ» دوو
+        //    ڕیزن نەک «٨» — کاتی ئۆردەرەکان ون نابێت.
+        // ============================================================
+        function notifMemberRowHtml(g) {
+            const n0 = g.head;
+            const code = String(n0.subject_code || n0.actor_code || '');
+            const me = currentUser && code === String(currentUser.code);
+            const who = me ? 'خۆت' : (hierarchyChain(code, n0.subject_name || n0.actor_name) || code);
+            const day = formatDayLabel(notifDayKey(n0.created_at)).label;
+            const isToday = day === 'ئەمڕۆ';
+            const open = _notifOpenGrp.has(g.key);
+            const unread = g.all.some(x => !x.read_at);
+            const list = open ? `<div class="notif-sub">${g.all.map(x => {
+                    const xo = String(x.order_id || '').replace(/[^0-9A-Za-z_-]/g, '');
+                    const xc = String(x.order_code || '') || (NOTIF_CODE_RE.exec(String(x.title || '')) || [])[1] || '';
+                    const xid = String(x.id || '').replace(/[^0-9]/g, '');
+                    return `<button type="button" class="notif-sub-row notif-olink${x.read_at ? '' : ' is-unread'}"
+                            ${xo ? `onclick="notifSubOpen(event, '${xid}', '${xo}', this)"` : 'disabled'}>
+                            <span class="notif-code" dir="ltr">${histEsc(xc || '—')}</span>
+                            <span class="notif-olink-t">${histEsc(getRelativeTime(x.created_at))}</span>
+                            <i class='bx bx-chevron-left'></i>
+                        </button>`;
+                }).join('')}</div>` : '';
+            return `<div class="notif-row notif-mrow is-clickable${unread ? ' is-unread' : ''}${open ? ' is-open' : ''}"
+                    data-grp="${histEsc(g.key)}" aria-expanded="${open ? 'true' : 'false'}"
+                    onclick="notifMemberToggle(event, '${notifIdsOf(g.all)}', this)">
+                    <span class="notif-dot" style="background:#2481cc1f; color:#2481cc;"><i class='bx bx-plus-circle'></i></span>
+                    <div class="notif-body">
+                        <div class="notif-top"><b>${histEsc(who)}</b><span class="notif-cnt"> — ${histEsc(fmtNum(g.all.length))} ئۆردەری نوێ</span></div>
+                        <div class="notif-time">
+                            <i class='bx bx-calendar'></i> ${histEsc(day)}
+                            ${isToday ? `<span aria-hidden="true">·</span><i class='bx bx-time-five'></i> ${histEsc(getRelativeTime(n0.created_at))}` : ''}
+                            <i class='bx bx-chevron-down notif-mrow-arrow'></i>
+                        </div>
+                        ${list}
+                    </div>
+                </div>`;
         }
 
         // ============================================================
@@ -14975,13 +15242,17 @@
             const s = rwPickedSeason(d);
             const isKing = !!d.is_king;
             let out = '';
-            if (isKing && all.length > 1) out += rwSeasonTabsHtml(all, s);
+            // ⭐ db/095: ئەندامیش دوو وەرز دەبینێت کاتێک ئاڕپیی مانگی ڕابردوو
+            //    هێشتا بۆی کراوەیە (ئۆردەری چاوەڕوان · خەڵاتی وەرنەگیراو ·
+            //    وەرگرتن لە ٢٤ کاتژمێری ڕابردوودا). سێرڤەر بڕیار دەدات.
+            if (all.length > 1) out += rwSeasonTabsHtml(all, s);
             if (!s) {
                 out += notifStateHtml('bx-medal', 'هیچ وەرزێکی چالاک نییە',
                     isKing ? 'بە دوگمەی + وەرزێکی نوێ بکەرەوە' : 'کاتێک وەرزی نوێ دەست پێدەکات لێرە دەردەکەوێت');
             } else {
                 const tiers = (s.tiers || []).slice();
                 out += rwSeasonHeroHtml(s, tiers, isKing);
+                out += rwGraceHtml(s, isKing);
                 out += tiers.length
                     ? `<div class="arp-track">`
                     + tiers.map((t, i) => arpRowHtml(t, s.my_points, isKing, i, tiers.length, tiers)).join('')
@@ -15007,16 +15278,47 @@
             return out;
         }
 
-        // ---- هەڵبژێری وەرز (تەنها پاشا، تەنها ئەگەر زیاتر لە یەک هەبێت) ----
+        // ---- هەڵبژێری وەرز (هەرکەسێک کە زیاتر لە یەک وەرزی هەیە) ----
+        // `late` (db/095) = کۆتایی هاتووە بەڵام هێشتا خاڵی دواکەوتوو دەدات.
+        function rwSeasonState(x) {
+            return x.active ? 'چالاک' : (x.late ? 'کۆتایی هاتووە' : 'ڕاگیراو');
+        }
+
         function rwSeasonTabsHtml(all, cur) {
             return `<div class="rw-seasons">
                 ${all.map(x => `<button type="button"
                     class="rw-season${String(x.id) === String(cur && cur.id) ? ' on' : ''}${x.active ? ' is-live' : ''}"
                     onclick="rwPickSeason('${x.id}')">
                     <span class="rw-season-t">${rwEsc(x.title)}</span>
-                    <span class="rw-season-m">${x.active ? 'چالاک' : 'ڕاگیراو'} · ${fmtNum((x.tiers || []).length)} پلیکان</span>
+                    <span class="rw-season-m">${rwSeasonState(x)} · ${fmtNum((x.tiers || []).length)} پلیکان</span>
                 </button>`).join('')}
             </div>`;
+        }
+
+        // ============================================================
+        // ⏳ ئاڕپیی مانگی ڕابردوو — بۆچی هێشتا لێرەیە (db/095)
+        // ------------------------------------------------------------
+        // خاوەن ٢٠٢٦-١٠-٠١: «با لای ئەوانە دیار بێت کە ئۆردەریان
+        // هێشتا یەکلایی نەکراوەتەوە… کاتێک هەموو خەڵاتێکیان وەرگرت،
+        // دوای ٢٤ کاتژمێر ون بێت.» سێ ژمارەکە (`grace`) لە سێرڤەرەوەن —
+        // هەمان سێ مەرجی دەرکەوتن — بۆیە ئەم دەقە هەرگیز لە ڕاستی
+        // جیاواز نابێت.
+        // ⚠️ تەنها بۆ ئەندام و تەنها بۆ وەرزی ناچالاک.
+        function rwGraceHtml(s, isKing) {
+            if (isKing || !s || s.active || !s.grace) return '';
+            const g = s.grace;
+            const p = Number(g.pending) || 0, e = Number(g.earned) || 0;
+            let msg;
+            if (p > 0) {
+                msg = `ئەم ئاڕپییە کۆتایی هاتووە، بەڵام <b>${fmtNum(p)} ئۆردەرت</b> هێشتا یەکلایی نەکراوەتەوە — ئەگەر بگەن، خاڵەکانیان بۆ ئێرە دەژمێردرێت.`;
+            } else if (e > 0) {
+                msg = `ئەم ئاڕپییە کۆتایی هاتووە — <b>${fmtNum(e)} خەڵات</b>ت هەیە کە هێشتا وەرت نەگرتووە.`;
+            } else {
+                const left = g.last_claim ? (Date.parse(g.last_claim) + 24 * 3600e3 - Date.now()) : 0;
+                const h = Math.max(1, Math.ceil(left / 3600e3));
+                msg = `هەموو خەڵاتەکانت وەرگرت — ئەم ئاڕپییە دوای <b>${fmtNum(h)} کاتژمێر</b> لێرە لادەچێت.`;
+            }
+            return `<div class="arp-grace"><i class='bx bx-time-five'></i><span>${msg}</span></div>`;
         }
 
         function rwPickSeason(id) {
@@ -15113,7 +15415,7 @@
             return `<div class="arp-hero-stick"><div class="arp-hero">
                 <div class="arp-hero-head">
                     <span class="arp-hero-name"><i class='bx bxs-medal'></i>${rwEsc(s.title)}</span>
-                    ${(isKing && s.active === false) ? `<span class="arp-timer is-off"><i class='bx bx-pause'></i>ڕاگیراو</span>` : ''}
+                    ${(isKing && s.active === false && !s.late) ? `<span class="arp-timer is-off"><i class='bx bx-pause'></i>ڕاگیراو</span>` : ''}
                     ${timerChip}
                 </div>
                 ${isKing ? `<div class="arp-hero-king">
@@ -24307,6 +24609,14 @@
         const NOTIF_PAGE = 40;
         let _notifDone = {}, _notifBusy = false;
 
+        // ⭐ شێوازە کۆکراوەکان (ئۆردەر · ئەندام) زۆر ڕیز دەخەنە یەک
+        //    کارتەوە — ٤٠ ڕیزی خاو دەبنە ~١٥ کارت و شاشەکە بە نیوەیی
+        //    دەمێنێتەوە. ١٠٠ = سنووری سێرڤەر (`least(p_limit, 100)`).
+        //    هیچ ڕیزێک ون نابێت: «ئاگاداری کۆنتر» هەر دەمێنێت.
+        function notifPageSize() {
+            return notifGroupMode() === 'kind' ? NOTIF_PAGE : 100;
+        }
+
         function notifListHtml(scope) {
             const key = notifKey(scope);
             const rows = _notifCache[key] || [];
@@ -24372,10 +24682,13 @@
             const keep = box ? box.scrollTop : 0;
             try {
                 const rows = _notifCache[key] || [];
+                // ⚠️ قەبارەکە پێش `await` وەردەگیرێت — هەمان ژمارە بۆ
+                //    داواکاری و بۆ «تەواو بوو؟»
+                const lim = notifPageSize();
                 const { data, error } = await supabase.rpc('notifications_page', {
                     p_user_code: String(currentUser.code),
                     p_scope: scope,
-                    p_limit: NOTIF_PAGE,
+                    p_limit: lim,
                     p_before_id: rows.length ? rows[rows.length - 1].id : null,
                     p_kinds: notifKindsParam()
                 });
@@ -24384,7 +24697,7 @@
                 // ناوەڕۆکی ئاگاداریەکان — یەک بانگ بۆ هەموو پەڕەکە
                 await loadAnnouncements(page);
                 _notifCache[key] = rows.concat(page);
-                _notifDone[key] = page.length < NOTIF_PAGE;
+                _notifDone[key] = page.length < lim;
                 // بەکارهێنەر لەوانەیە پۆل یان جۆری گۆڕیبێت لە کاتی هێنانەکەدا
                 if (notifKey(_notifTab) === key && box) {
                     box.innerHTML = notifListHtml(scope);
@@ -24412,10 +24725,11 @@
             }
 
             try {
+                const lim = notifPageSize();
                 const { data, error } = await supabase.rpc('notifications_page', {
                     p_user_code: String(currentUser.code),
                     p_scope: scope,
-                    p_limit: NOTIF_PAGE,
+                    p_limit: lim,
                     p_before_id: null,
                     p_kinds: notifKindsParam()
                 });
@@ -24436,7 +24750,7 @@
                         .sort((a, b) => Number(b.id) - Number(a.id));
                 } else {
                     _notifCache[key] = page;
-                    _notifDone[key] = page.length < NOTIF_PAGE;
+                    _notifDone[key] = page.length < lim;
                 }
                 _notifLoaded[key] = true;
                 // لەوانەیە بەکارهێنەر پۆل/جۆری گۆڕیبێت لە کاتی هێنانەکەدا
@@ -24728,16 +25042,25 @@
             if (_notifOpenGrp.has(key)) _notifOpenGrp.delete(key);
             else _notifOpenGrp.add(key);
 
-            // ڕیزەکە لە نوێوە دروست دەکرێتەوە لە **هەمان دروستکەر**ەوە
-            // (`notifRowsHtml`) — ئەگەرنا ڕیزی کراوە و ڕیزی داخراو
-            // دوو پەیکەری جیاوازیان دەبێت.
+            notifRepaintGroup(row);
+        }
+
+        // ڕیزێک لە نوێوە دروست دەکرێتەوە لە **هەمان دروستکەر**ەوە
+        // (`notifRowsHtml`) — ئەگەرنا ڕیزی کراوە و ڕیزی داخراو دوو
+        // پەیکەری جیاوازیان دەبێت. ⭐ تەنها ئەو ڕیزە، نەک هەموو لیستەکە —
+        // شوێنی سکڕۆڵ نالەرزێت. ڕیزە نوێیەکە دەگەڕێنێتەوە.
+        function notifRepaintGroup(row) {
+            const key = row && row.getAttribute('data-grp');
+            if (!key) return row;
             const rows = _notifCache[notifKey(_notifTab)] || [];
             const g = notifGroup(rows).find(x => x.key === key);
-            if (!g) return;
-            const html = notifRowsHtml(g.all);
+            if (!g) return row;
             const tmp = document.createElement('div');
-            tmp.innerHTML = html;
-            if (tmp.firstElementChild) row.replaceWith(tmp.firstElementChild);
+            tmp.innerHTML = notifRowsHtml(g.all);
+            const fresh = tmp.firstElementChild;
+            if (!fresh) return row;
+            row.replaceWith(fresh);
+            return fresh;
         }
 
         // دەستلێدانی ڕیز: هەمیشە نیشان دەکرێت، و ئەگەر ئۆردەری
@@ -24745,6 +25068,71 @@
         function notifRowClick(id, oid, el) {
             markOneNotifRead(id, el);
             if (oid) openNotifOrder(oid, el);
+        }
+
+        // پەنجە لە ئایکۆنێکی کارتی ئۆردەر — تەنها ئەو جۆرە خوێندراو
+        // دەبێت، پاشان ڕاستەوخۆ ئەو بەشەی ئۆردەرەکە دەکرێتەوە.
+        // ⚠️ `stopPropagation` — کارتەکە خۆی کرتەکراوە.
+        // ⚠️ `markOneNotifRead` پێش یەکەم `await` `read_at` دادەنێت،
+        //    بۆیە نەخشاندنەوەی دواتر دۆخی نوێ دەبینێت.
+        function notifActClick(ev, ids, oid, go, el) {
+            if (ev) { ev.stopPropagation(); ev.preventDefault(); }
+            let row = el && el.closest('.notif-row');
+            if (go === 'money') {
+                const key = row && row.getAttribute('data-grp');
+                if (key) {
+                    const k = key + '|w';
+                    if (_notifOpenGrp.has(k)) _notifOpenGrp.delete(k);
+                    else _notifOpenGrp.add(k);
+                }
+            }
+            markOneNotifRead(ids, null);
+            row = notifRepaintGroup(row);
+            if (go !== 'money' && oid) openNotifOrder(oid, row, go);
+        }
+
+        // ڕیزی ئەندام لە «ئۆردەری نوێ» — لیستەکە دەکاتەوە/دادەخات
+        function notifMemberToggle(ev, ids, el) {
+            if (ev && ev.target && ev.target.closest && ev.target.closest('.notif-olink')) return;
+            const key = el && el.getAttribute('data-grp');
+            if (!key) return;
+            if (_notifOpenGrp.has(key)) _notifOpenGrp.delete(key);
+            else _notifOpenGrp.add(key);
+            markOneNotifRead(ids, null);
+            notifRepaintGroup(el);
+        }
+
+        // یەکێک لە ئۆردەرەکانی لیستی ئەندامێک
+        function notifSubOpen(ev, id, oid, btn) {
+            if (ev) { ev.stopPropagation(); ev.preventDefault(); }
+            markOneNotifRead(id, btn);
+            openNotifOrder(oid, btn && btn.closest('.notif-row'));
+        }
+
+        // دوای کردنەوەی ئۆردەر لە ئایکۆنێکەوە — ڕاستەوخۆ ئەو بەشە.
+        // ⚠️ قازانج تەنها بۆ ئەوانەی دەسەڵاتیان هەیە نەخشێنراوە
+        //    (`#order-profit-box`)؛ بەبێ ئەو «مێژووی کردارەکان» دەکرێتەوە،
+        //    کە هەمان ڕووداوی تێدایە.
+        function orderDetailsGoTo(go) {
+            if (!go || go === 'info') return;
+            if (go === 'comments') {
+                try { switchOrderModalTab('comments'); } catch (e) { }
+                return;
+            }
+            let target = go === 'profit' ? document.getElementById('order-profit-box') : null;
+            if (!target) {
+                const fold = document.getElementById('odet-fold-log');
+                if (fold) {
+                    if (!fold.classList.contains('is-open')) {
+                        const b = fold.querySelector('.odet-fold-btn');
+                        if (b) toggleOrderFold(b);
+                    }
+                    target = fold;
+                }
+            }
+            if (target) requestAnimationFrame(() => {
+                try { target.scrollIntoView({ block: 'start', behavior: 'smooth' }); } catch (e) { }
+            });
         }
 
         function setNotifKind(k) {
@@ -24825,7 +25213,9 @@
             }
         }
 
-        async function openNotifOrder(orderId, el) {
+        // `go` (ئارەزوومەندانە) — لە ئایکۆنێکی کارتی ئۆردەرەوە: دوای
+        // کردنەوە ڕاستەوخۆ دەچێتە ئەو بەشە (`orderDetailsGoTo`).
+        async function openNotifOrder(orderId, el, go) {
             const id = String(orderId || '');
             if (!id) return;
 
@@ -24865,7 +25255,10 @@
             // لەسەر یەک دادەنرێن و پاشخانەکە زۆر تاریک دەبێت.
             const nm = document.getElementById('notif-modal');
             if (nm && nm.classList.contains('show')) nm.classList.add('is-under');
-            openOrderDetails(id);
+            // ⚠️ ئۆردەرەکە لێرەدا لە کاشدایە، بۆیە `openOrderDetails` بەبێ
+            //    هیچ `await`ێک دەینەخشێنێت — دوای ئەوە بەشەکە ئامادەیە.
+            await openOrderDetails(id);
+            if (go) orderDetailsGoTo(go);
         }
 
         // ============================================================

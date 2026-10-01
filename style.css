@@ -16611,6 +16611,145 @@ body.sx-wide {
   gap: 3px;
 }
 
+/* ============================================================
+   🗂️ کارتی ئۆردەر («هەمووی») + ڕیزی ئەندام («ئۆردەری نوێ»)
+   خاوەن ٢٠٢٦-١٠-٠١: «هەر ئۆردەرێک یەک ڕیز، گۆڕانکارییەکان بە
+   ئایکۆن ڕیز بکرێن و ژمارەیان لەسەر بێت.»
+   ⚠️ ڕەنگ لە جۆرەکەوە دێت بە گۆڕاو (`--c` · `--cb` · `--cbd`)،
+      وەک `.notif-dot` — هیچ ڕەنگێکی دەستنووس بۆ هەر جۆرێک لێرە نییە.
+   ⚠️ ٣٠px بەرزی = بۆ پەنجە، نەک بۆ ئایکۆنەکە.
+   ============================================================ */
+.notif-acts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.notif-act {
+  --c: #64748b;
+  --cb: #f1f5f9;
+  --cbd: #e2e8f0;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 30px;
+  padding: 0 9px;
+  border-radius: 999px;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  color: #64748b;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.notif-act i {
+  font-size: 16px;
+  color: var(--c);
+}
+
+/* ژمارە لاتینییە (`fmtNum`) — دابڕاو لە ئاراستەی کوردی */
+.notif-act b {
+  font-weight: 800;
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+
+/* نەخوێندراو = ڕەنگی جۆرەکە؛ خوێندراو = خۆڵەمێشی */
+.notif-act.is-unread {
+  background: var(--cb);
+  border-color: var(--cbd);
+  color: var(--c);
+}
+
+.notif-act.is-open {
+  box-shadow: inset 0 0 0 1.5px var(--c);
+}
+
+.notif-act:active {
+  transform: scale(.94);
+}
+
+/* 🎨 کۆتا کۆمێنت دەستەواژەیەکی خێرای ڕەنگدار بوو (خاوەن ٢٠٢٦-١٠-٠١)
+   «بیکە بە گەیشتوو» → سەوزی کاڵ · «گەڕاوە» → سووری کاڵ.
+   ⭐ نەخوێندراو: پاشبنەمای شینی کاڵ دەبێتە کاڵی ئەو ڕەنگە (`--qcb`،
+      ناڕوون، لە JSـەوە). خوێندراو: سپی دەمێنێتەوە بەڵام هێڵێکی ڕەنگی
+      لە سەرەتای ڕیزەکە — بۆ ئەوەی دوای خوێندنەوەش بناسرێتەوە، بەبێ
+      ئەوەی وەک نەخوێندراو دەربکەوێت.
+   ⚠️ `.notif-row.is-unread` و `.notif-row.is-clickable:active` هەردووکیان
+      دوو-پلەن؛ ئەمانە سێ-پلەن بۆیە دەیانبەزێنن. */
+.notif-row.has-qc {
+  border-inline-start: 3px solid var(--qc);
+}
+
+.notif-row.has-qc.is-unread {
+  background: var(--qcb);
+}
+
+.notif-row.has-qc.is-clickable:active {
+  box-shadow: inset 0 0 0 999px rgba(15, 23, 42, .05);
+}
+
+/* ئەڵقەی باجی «+N» هەمان ڕەنگی پاشبنەما */
+.notif-row.has-qc.is-unread .notif-more {
+  border-color: var(--qcb);
+}
+
+/* «— 5 ئۆردەری نوێ» لە تەنیشت ناوەکە */
+.notif-cnt {
+  color: #475569;
+  font-weight: 600;
+}
+
+/* تیری کردنەوە — لە کۆتایی دێڕی کاتەکەدا (چەپ لە RTL) */
+/* ⚠️ `.notif-time i` (١٣px) دوو-پلەیە، بۆیە ئەمەش دوو-پلەیە */
+.notif-time .notif-mrow-arrow {
+  margin-inline-start: auto;
+  font-size: 18px;
+  color: #94a3b8;
+  transition: transform .2s ease;
+}
+
+.notif-mrow.is-open .notif-mrow-arrow {
+  transform: rotate(180deg);
+}
+
+/* ئۆردەرێک لە لیستی ئەندامێک — دوگمەیەکی تەواو-پان بۆ پەنجە */
+.notif-olink {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 36px;
+  background: none;
+  border: 0;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-main);
+  text-align: start;
+  cursor: pointer;
+}
+
+.notif-olink-t {
+  font-size: var(--fs-2xs);
+  font-weight: 500;
+  color: #64748b;
+}
+
+.notif-olink > .bx-chevron-left {
+  margin-inline-start: auto;
+  font-size: 18px;
+  color: #94a3b8;
+}
+
+.notif-olink:active {
+  background: rgba(36, 129, 204, .08);
+}
+
 .olog-skel .notif-dot {
   background: #e8eef5;
 }
@@ -22529,6 +22668,28 @@ body.sx-wide {
 }
 
 .arp-timer.is-over { background: rgba(0, 0, 0, 0.22); color: #e9d5ff; }
+
+/* ⏳ ئاڕپیی مانگی ڕابردوو — بۆچی هێشتا لێرەیە (db/095، خاوەن ٢٠٢٦-١٠-٠١).
+   لە **دەرەوەی** کارتی لکاوی سەرەوە، بۆیە بەرزیی لکاوەکە ناگۆڕێت. */
+.arp-grace {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  margin: 10px 0 4px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  color: #92400e;
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+.arp-grace > i {
+  font-size: 16px;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
 
 .arp-hero-body {
   position: relative;
