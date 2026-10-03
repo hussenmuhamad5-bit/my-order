@@ -302,6 +302,28 @@ async function _staffAdopt(fromCode, applyNew) {
     return null;
 }
 
+// لینکی یەکجاری → session (sessionـی پێشوو پارک دەکرێت)
+async function _staffVerify(r, fromCode) {
+    return _staffAdopt(fromCode, async function () {
+        var v = await supabase.auth.verifyOtp({ token_hash: r.token_hash, type: r.type || 'magiclink' });
+        if (v && v.error) return v.error.status === 429 ? 'rate_limited' : (v.error.message || 'verify_failed');
+        return null;
+    });
+}
+
+// ~٢ چرکە چاوەڕێ دەکات بزانێت پەڕەیەکی تری ئەم ئامێرە (هەمان localStorage)
+// sessionـێکی **نوێی** ئەم ئەکاونتەی دانا یان نا — نەک ئەوەی پێشتر هەبوو
+// (بۆ نموونە دوای گۆڕینی پاسوۆرد سێرڤەر ئەوەی کوشتووە)
+async function _staffWaitShared(code, beforeRt) {
+    for (var i = 0; i < 5; i++) {
+        await new Promise(function (res) { setTimeout(res, 400); });
+        var s = await staffCurrentSession();
+        var m = s && s.user && s.user.app_metadata;
+        if (m && m.emp_code === code && s.refresh_token !== beforeRt) return true;
+    }
+    return false;
+}
+
 // چوونەژوورەوە: `staff-login` → `verifyOtp`.
 //   payload  = { action: 'password'|'setup'|'telegram'|'impersonate', … }
 //   opts.fromCode    = ئەکاونتی ئێستای ئامێرەکە (بۆ پارککردن)
@@ -311,6 +333,7 @@ async function staffLogin(payload, opts) {
     opts = opts || {};
     if (!supabase || !supabase.auth) return { ok: false, error: 'network' };
 
+    var before = await staffCurrentSession();
     var r = await staffLoginCall(payload, opts.accessToken);
     // `setup` گەیشت بەڵام وەڵامەکە ون بوو → پاسوۆردەکە ئێستا دانراوە
     if (payload.action === 'setup' && !r.ok && r.error === 'network') {
@@ -319,11 +342,23 @@ async function staffLogin(payload, opts) {
     }
     if (!r || !r.ok) return { ok: false, error: (r && r.error) || 'server' };
 
-    var verr = await _staffAdopt(opts.fromCode, async function () {
-        var v = await supabase.auth.verifyOtp({ token_hash: r.token_hash, type: r.type || 'magiclink' });
-        if (v && v.error) return v.error.status === 429 ? 'rate_limited' : (v.error.message || 'verify_failed');
-        return null;
-    });
+    var verr = await _staffVerify(r, opts.fromCode);
+    // ⭐ لینکەکە بەتاڵ بووەوە: هەمان ئەکاونت لە هەمان ساتدا لە پەڕەیەکی تر
+    //    (یان ئامێرێکی تر) لینکی وەرگرت، و Supabase تەنها نوێترینیان قبووڵ
+    //    دەکات. (لە production بینرا: تلیگرامی ئەندرۆید، دوو پەڕە، ٥٥ms.)
+    //    پێشتر ئەمە دەیبردە پەڕەی چوونەژوورەوە و sessionـی پەڕەکەی تریشی دەکوژاند.
+    if (verr && verr !== 'rate_limited' && r.employee && r.employee.code) {
+        if (await _staffWaitShared(r.employee.code, before && before.refresh_token)) {
+            verr = null;   // پەڕەکەی تری ئەم ئامێرە سەرکەوت — sessionـەکە هاوبەشە
+        } else {
+            // جارێکی تر، لینکێکی نوێ. `setup` پاسوۆردەکەی پێشتر دانا.
+            var again = payload.action === 'setup'
+                ? { action: 'password', code: payload.code, password: payload.new_password, init_data: payload.init_data }
+                : payload;
+            var r2 = await staffLoginCall(again, opts.accessToken);
+            if (r2 && r2.ok) { r = r2; verr = await _staffVerify(r2, opts.fromCode); }
+        }
+    }
     if (verr) {
         console.warn('verifyOtp:', verr);
         return { ok: false, error: verr === 'rate_limited' ? 'rate_limited' : 'verify_failed' };
