@@ -54,7 +54,7 @@ begin
           join pg_namespace n on n.oid = p.pronamespace
          where n.nspname = 'public'
            and p.prokind = 'f'
-           and pg_get_userbyid(p.proowner) = current_user
+           and pg_get_userbyid(p.proowner) = 'postgres'
            and not exists (
                select 1 from pg_depend d
                 where d.classid = 'pg_proc'::regclass
@@ -65,10 +65,10 @@ begin
     end loop;
 end $$;
 
-alter default privileges in schema public grant all     on tables    to anon;
-alter default privileges in schema public grant all     on sequences to anon;
-alter default privileges in schema public grant execute on functions to anon;
-alter default privileges                  grant execute on functions to public;
+alter default privileges for role postgres in schema public grant all     on tables    to anon;
+alter default privileges for role postgres in schema public grant all     on sequences to anon;
+alter default privileges for role postgres in schema public grant execute on functions to anon;
+alter default privileges for role postgres                  grant execute on functions to public;
 
 -- ٤) وێنەکان — policyی ئەپلۆدی کۆن
 drop policy if exists order_images_insert_staff on storage.objects;

@@ -186,6 +186,16 @@ r = await as('service_role', null, 'select public.staff_google_sa_key() k');    
 r = await as('service_role', null, "insert into staff_login_failures (code) values ('X')"); ok('writes login failures', !r.error, r);
 r = await as('service_role', null, 'select public.staff_gate()');               ok('pre-request gate passes', !r.error, r);
 
+console.log('\nPRE-REQUEST GATE ROBUSTNESS (runs before EVERY API request):');
+// On a pooled connection a custom GUC that was set before reads back as '' — ''::jsonb would throw
+for (const role of ['anon', 'service_role', 'authenticated']) {
+  await db.exec(`reset role; select set_config('request.jwt.claims', '', false); set role ${role};`);
+  let err = null;
+  try { await db.query('select public.staff_gate()'); } catch (e) { err = e.message; }
+  await db.exec('reset role;');
+  ok(`empty request.jwt.claims does not crash the gate (${role})`, err === null, err);
+}
+
 console.log('\nOTHER CHECKS:');
 r = await db.query(`select count(*)::int n from pg_policies where schemaname='public' and policyname='staff_all'`);
 ok('staff_all on every public table except staff_login_failures', r.rows[0].n === 8, r.rows);

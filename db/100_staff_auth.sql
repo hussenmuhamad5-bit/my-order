@@ -32,6 +32,12 @@
 
 begin;
 
+--  ⚠️ `create policy` قفڵێکی تەواو لەسەر هەر خشتەیەک دادەنێت تا کۆتایی
+--     transaction. ئەگەر داواکارییەکی درێژی ئەپەکە خشتەیەکی گرتبێت،
+--     ئەمە **دەوەستێت** (و هەمووی دەگەڕێتەوە) لەجیاتی ئەوەی ئەپەکە
+--     ڕابگرێت — تەنها دووبارە Run بکەرەوە.
+set local lock_timeout = '3s';
+
 -- ------------------------------------------------------------
 -- ١) بەستنەوەی کارمەند بە بەکارهێنەری Supabase Auth
 -- ------------------------------------------------------------
@@ -100,14 +106,23 @@ declare
     t record;
 begin
     for t in
-        select c.relname
+        select c.relname, c.relrowsecurity,
+               exists (select 1 from pg_policies p
+                        where p.schemaname = 'public'
+                          and p.tablename = c.relname
+                          and p.policyname = 'staff_all') as has_policy
           from pg_class c
           join pg_namespace n on n.oid = c.relnamespace
          where n.nspname = 'public'
            and c.relkind in ('r', 'p')
     loop
-        execute format('alter table public.%I enable row level security', t.relname);
-        execute format('drop policy if exists staff_all on public.%I', t.relname);
+        -- هەر قفڵێکی بێ‌پێویست قفڵێکە کە ئەپەکە چاوەڕێی دەکات
+        if not t.relrowsecurity then
+            execute format('alter table public.%I enable row level security', t.relname);
+        end if;
+        if t.has_policy then
+            execute format('drop policy staff_all on public.%I', t.relname);
+        end if;
         execute format(
             'create policy staff_all on public.%I for all to authenticated '
             'using ((select public.is_employee())) '
@@ -136,7 +151,7 @@ begin
           join pg_namespace n on n.oid = p.pronamespace
          where n.nspname = 'public'
            and p.prokind = 'f'
-           and pg_get_userbyid(p.proowner) = current_user
+           and pg_get_userbyid(p.proowner) = 'postgres'
            and not exists (
                select 1 from pg_depend d
                 where d.classid = 'pg_proc'::regclass
@@ -156,10 +171,10 @@ grant execute on function public.login_code_status(text) to anon;
 --  ⚠️ `public` (هەمووان) بە شێوەی **گشتی** EXECUTE وەردەگرێت، نەک
 --     لەسەر ئاستی schema — شێوەی `in schema public` ناتوانێت لای
 --     ببات، بۆیە دوو دێڕی جیاوازن.
-alter default privileges in schema public revoke all     on tables    from anon;
-alter default privileges in schema public revoke all     on sequences from anon;
-alter default privileges in schema public revoke execute on functions from anon;
-alter default privileges                  revoke execute on functions from public;
+alter default privileges for role postgres in schema public revoke all     on tables    from anon;
+alter default privileges for role postgres in schema public revoke all     on sequences from anon;
+alter default privileges for role postgres in schema public revoke execute on functions from anon;
+alter default privileges for role postgres                  revoke execute on functions from public;
 
 -- ------------------------------------------------------------
 -- ٦) وێنەکان (Supabase Storage)
@@ -288,9 +303,18 @@ stable
 security definer
 set search_path = public
 as $$
+declare
+    v_role text;
 begin
-    if coalesce(current_setting('request.jwt.claims', true)::jsonb ->> 'role', '') = 'authenticated'
-       and not public.is_employee() then
+    --  ⚠️ `nullif`: لەسەر پەیوەندییەکی دووبارەبەکارهاتوو ئەم بەهایە دەکرێت
+    --     دەقی بەتاڵ ('') بێت، و `''::jsonb` هەڵە دەدات — ئەوەش **هەموو**
+    --     داواکارییەکی API دەشکاند (ئەپەکە، ئەپی Dart، بۆتەکە). هەمان
+    --     پارێزەری `auth.uid()`ـی Supabase.
+    v_role := coalesce(nullif(current_setting('request.jwt.claims', true), '')::jsonb ->> 'role', '');
+    if v_role <> 'authenticated' then
+        return;   -- anon / service_role: هیچ (anon پێشتر هیچی نییە)
+    end if;
+    if not public.is_employee() then
         raise sqlstate 'PGRST' using
             message = json_build_object(
                 'code', 'not_staff',
