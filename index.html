@@ -358,13 +358,19 @@
             }
 
             try {
-                const { data } = await supabase.from('employees').select('*').eq('code', code).single();
+                const { data, error } = await supabase.from('employees').select('*').eq('code', code).single();
+                // ڕاگیراو: قوفڵەکە (db/100) هەموو داواکارییەکی ئەو sessionـە ڕەت
+                // دەکاتەوە. sessionـەکە لادەبەین؛ ئەکاونتەکە لە لیستەکە دەمێنێتەوە.
+                if (error && error.code === 'not_staff') { await staffSignOut(); showMsg(HELD_MSG); return; }
                 if (data && isHeld(data)) { showMsg(HELD_MSG); return; }
                 if (data) {
                     delete data.password;
                     localStorage.setItem('myAppUser', JSON.stringify(data));
                     saveAccountToList(data);
                     window.location.replace('app.html');
+                } else if (error && error.code !== 'PGRST116') {
+                    // کێشەی تۆڕ — ئەکاونتەکە مەسڕەوە
+                    showMsg("❌ کێشە لە پەیوەندی ئینتەرنێت هەیە.");
                 } else {
                     showMsg("❌ ئەم ئەکاونتە ئیتر بوونی نییە.");
                     removeSavedAccount(code);
@@ -451,7 +457,14 @@
         //    چوونەژوورەوە هیچ دەسەڵاتێکی نییە (db/100)، و ئەگەر کاری
         //    بکردایە پاسوۆردەکەی دەهێنا. هەڵە → throw، نەک «بوونی نییە».
         async function fetchCodeStatus(code) {
-            const { data, error } = await supabase.rpc('login_code_status', { p_code: code });
+            let { data, error } = await supabase.rpc('login_code_status', { p_code: code });
+            // sessionی ئەکاونتێکی ڕاگیراو هێشتا لەم ئامێرەیە → قوفڵەکە (db/100)
+            // هەموو داواکارییەکی بە `not_staff` ڕەت دەکاتەوە. ئەو sessionـە
+            // لێرە هیچ سوودێکی نییە: لای دەبەین و وەک میوان دووبارە دەپرسین.
+            if (error && error.code === 'not_staff') {
+                await staffSignOut();
+                ({ data, error } = await supabase.rpc('login_code_status', { p_code: code }));
+            }
             if (error || !Array.isArray(data)) throw (error || new Error('login_code_status'));
             return data.length ? data[0] : null;
         }

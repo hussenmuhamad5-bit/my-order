@@ -128,18 +128,20 @@ async function serveSupabase(w: World, route: Route) {
         return uid ? json(200, { id: uid, aud: 'authenticated', role: 'authenticated', email: 'e@x.invalid', app_metadata: { emp_code: w.users[uid] }, user_metadata: {} }) : json(401, { code: 'bad_jwt' });
     }
 
-    // PostgREST, enforcing db/100: anon → 42501 (except login_code_status); non-staff → 403 not_staff
+    // PostgREST, enforcing db/100. Like the real pre-request gate (`staff_gate`), a signed-in
+    // non-staff session is refused on EVERY request, `login_code_status` included (seen on
+    // production); anon → 42501 except `login_code_status`.
     if (p.startsWith('/rest/v1/')) {
         const uid = w.access[auth.replace(/^Bearer /, '')];
         const code = uid ? w.users[uid] : null;
         const emp = code ? w.emps[code] : null;
+        if (uid && (!emp || emp.suspended)) return json(403, { code: 'not_staff', details: null, hint: null, message: 'Not an active employee' });
         if (p === '/rest/v1/rpc/login_code_status') {
             const c = JSON.parse(req.postData() || '{}').p_code;
             const e = w.emps[c];
             return json(200, e ? [{ full_name: e.full_name, avatar: e.avatar, role: e.role, needs_password: !String(e.password || '').trim(), suspended: !!e.suspended }] : []);
         }
         if (!uid) return json(401, { code: '42501', message: 'permission denied for table ' + p });
-        if (!emp || emp.suspended) return json(403, { code: 'not_staff', message: 'Not an active employee' });
         if (p === '/rest/v1/rpc/current_emp_code') return json(200, code);
         if (p === '/rest/v1/employees') {
             const eqCode = (url.searchParams.get('code') || '').replace(/^eq\./, '');
@@ -417,6 +419,57 @@ console.log('\nT11 rate-limited verification (shared mobile IP)');
     await page.fill('#login-code', 'KING1'); await page.fill('#login-pass', 'kingpw1'); await sleep(700);
     await page.click('#login-btn'); await sleep(2000);
     ok('clear «wait a minute» message, stays on login page', dialogs.some(d => d.includes('یەک خولەک')) && page.url().includes('index.html'), dialogs);
+    await ctx.close();
+}
+
+// ============ T12: a suspended account's session is still on this device ============
+console.log('\nT12 suspended account still holding a session on this device');
+{
+    // someone else sets their first password on the same device
+    const w = makeWorld();
+    const { ctx, page, dialogs } = await newPage(w);
+    await page.goto(SITE + '/index.html');
+    await page.fill('#login-code', 'MEMB1'); await page.fill('#login-pass', 'memberpw'); await sleep(700);
+    await page.click('#login-btn'); await waitApp(page); await sleep(2500);
+    w.emps.MEMB1.suspended = true;
+    await page.goto(SITE + '/index.html?add=1');
+    await page.fill('#login-code', 'NEW01');
+    await page.locator('#login-code').dispatchEvent('input');
+    await page.waitForSelector('#pw-setup.show', { timeout: 5000 }).catch(() => null);
+    const shown = await page.locator('#pw-setup.show').count();
+    ok('code check still works (stale session dropped, asked as a guest)', shown === 1, dialogs);
+    if (shown) {
+        await page.fill('#pw-new', 'fresh123');
+        const confirmSel = await page.$('#pw-confirm') ? '#pw-confirm' : (await page.$('#pw-new2') ? '#pw-new2' : null);
+        if (confirmSel) await page.fill(confirmSel, 'fresh123');
+        await page.locator('#pw-new').dispatchEvent('input');
+        if (confirmSel) await page.locator(confirmSel).dispatchEvent('input');
+        await page.click('#pw-setup-btn');
+        ok('first password set and logged in', await waitApp(page) && w.emps.NEW01.password === 'fresh123', dialogs);
+    }
+    await ctx.close();
+}
+{
+    // switching to a saved account that was suspended meanwhile
+    const w = makeWorld();
+    const { ctx, page, dialogs } = await newPage(w);
+    await page.goto(SITE + '/index.html');
+    await page.fill('#login-code', 'MEMB1'); await page.fill('#login-pass', 'memberpw'); await sleep(700);
+    await page.click('#login-btn'); await waitApp(page); await sleep(2500);
+    await page.goto(SITE + '/index.html?add=1');
+    await page.fill('#login-code', 'KING1'); await page.fill('#login-pass', 'kingpw1'); await sleep(700);
+    await page.click('#login-btn'); await waitApp(page); await sleep(2500);
+    w.emps.MEMB1.suspended = true;   // KING1 active, MEMB1 parked
+    await page.goto(SITE + '/index.html?add=1');
+    await page.evaluate(() => (window as any).quickLogin('MEMB1'));
+    await sleep(1500);
+    ok('held message, not «no longer exists»', dialogs.some(d => d.includes('ڕاگیراوە')) && !dialogs.some(d => d.includes('بوونی نییە')), dialogs);
+    ok('suspended account kept in the saved list', JSON.parse(await ls(page, 'savedAccounts') || '[]').some((a: { code: string }) => a.code === 'MEMB1'));
+    ok('its session is not left active on the device', await sessionCode(page) !== 'MEMB1');
+    ok('KING1 session still parked to come back', !!JSON.parse(await ls(page, 'staffSessions') || '{}').KING1);
+    ok('stays on the login page', page.url().includes('index.html'));
+    await page.evaluate(() => (window as any).quickLogin('KING1'));
+    ok('tapping KING1 goes back in without a password', await waitApp(page) && (await sleep(2500), await sessionCode(page)) === 'KING1', { url: page.url(), dialogs });
     await ctx.close();
 }
 

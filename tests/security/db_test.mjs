@@ -8,6 +8,7 @@ import { fileURLToPath } from 'node:url';
 const REPO = fileURLToPath(new URL('../../', import.meta.url));
 const MIG = fs.readFileSync(`${REPO}/db/100_staff_auth.sql`, 'utf8');
 const RB = fs.readFileSync(`${REPO}/db/100_staff_auth_rollback.sql`, 'utf8');
+const FIX101 = fs.readFileSync(`${REPO}/db/101_staff_gate_headers.sql`, 'utf8');
 
 const BOOT = `
 create role anon nologin noinherit;
@@ -174,6 +175,25 @@ console.log('\nSUSPENDED EMPLOYEE (HELD1, still holding a valid JWT):');
 r = await as('authenticated', HELD, 'select count(*)::int n from orders');    ok('sees 0 orders', !r.error && r.rows[0].n === 0, r);
 r = await as('authenticated', HELD, "insert into orders (seller_code) values ('HELD1')"); ok('cannot insert', !!r.error, r);
 r = await as('authenticated', HELD, 'select public.staff_gate()');            ok('pre-request gate blocks (so definer rpcs too)', !!r.error && /Not an active employee/.test(r.error), r);
+// PostgREST only turns a 'PGRST' error into that HTTP status when MESSAGE is
+// {code, message} and DETAIL is {status, headers}; otherwise the client gets
+// a 500 (PGRST121) instead of the 403 `not_staff` the app reacts to.
+async function gateFormat() {
+  await db.exec(`reset role; select set_config('request.jwt.claims', '${JSON.stringify({ role: 'authenticated', sub: HELD })}', false); set role authenticated;`);
+  let e = null;
+  try { await db.query('select public.staff_gate()'); } catch (x) { e = x; }
+  await db.exec('reset role;');
+  let msg = null, det = null;
+  try { msg = JSON.parse(e.message); det = JSON.parse(e.detail); } catch { /* invalid below */ }
+  const valid = !!e && e.code === 'PGRST' && msg?.code === 'not_staff' && typeof msg?.message === 'string'
+    && det?.status === 403 && !!det?.headers && typeof det.headers === 'object' && !Array.isArray(det.headers);
+  return { valid, got: e && { code: e.code, message: e.message, detail: e.detail } };
+}
+async function gateFormatOk(label) {
+  const g = await gateFormat();
+  ok(label, g.valid, g.got);
+}
+await gateFormatOk('gate error is a valid PostgREST 403 (message {code,message}, detail {status,headers})');
 
 console.log('\nAUTHENTICATED NON-EMPLOYEE (e.g. a self-signup):');
 r = await as('authenticated', STRANGER, 'select count(*)::int n from orders');  ok('sees 0 orders', !r.error && r.rows[0].n === 0, r);
@@ -221,6 +241,27 @@ ok('a password change revokes that user\'s sessions', (await db.query(`select co
 
 console.log('\nIDEMPOTENT: run migration a second time');
 try { await db.exec(MIG); ok('second run succeeds', true); } catch (e) { ok('second run succeeds', false, e.message); }
+
+console.log('\nFIX 101 on top of an applied 100 (production path)');
+// the gate exactly as db/100 first shipped it (DETAIL without `headers`)
+await db.exec(`create or replace function public.staff_gate() returns void language plpgsql stable security definer set search_path = public as $$
+declare v_role text;
+begin
+    v_role := coalesce(nullif(current_setting('request.jwt.claims', true), '')::jsonb ->> 'role', '');
+    if v_role <> 'authenticated' then return; end if;
+    if not public.is_employee() then
+        raise sqlstate 'PGRST' using
+            message = json_build_object('code', 'not_staff', 'message', 'Not an active employee')::text,
+            detail = json_build_object('status', 403)::text;
+    end if;
+end; $$;`);
+ok('first-shipped gate lacks `headers` (PostgREST answers 500)', !(await gateFormat()).valid);
+try { await db.exec(FIX101); ok('db/101 applies', true); } catch (e) { ok('db/101 applies', false, e.message); }
+await gateFormatOk('after db/101 the gate still answers a valid 403');
+r = await as('authenticated', KING, 'select public.staff_gate()');                 ok('after db/101 the gate passes an employee', !r.error, r);
+r = await as('anon', null, 'select public.staff_gate()');                         ok('after db/101 the gate passes anon', !r.error, r);
+r = await db.query(`select has_function_privilege('public','public.staff_gate()','EXECUTE') p`);
+ok('after db/101 no PUBLIC execute on the gate', r.rows[0].p === false, r.rows);
 
 console.log('\nROLLBACK');
 try { await db.exec(RB); ok('rollback runs', true); } catch (e) { ok('rollback runs', false, e.message); }

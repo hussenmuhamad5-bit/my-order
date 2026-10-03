@@ -54,6 +54,9 @@
 **SQL Editor** → هەموو `db/100_staff_auth.sql` → Run. یەک transactionـە.
 لە کۆتایی فایلەکەدا دوو پرسیاری پشکنین هەیە — دەبێت `true` و `0` بدەنەوە.
 
+ئەگەر `db/100`ـی پێشووت جێبەجێ کردبوو (پێش زیادکردنی `headers`)، `db/101_staff_gate_headers.sql`یش
+Run بکە. بێ ئەو، کارمەندی ڕاگیراو بەجیاتی پەیامی «ڕاگیراوە» هەڵەی 500 دەبینێت.
+
 ### هەنگاوی ٢ — Edge Functions
 
 بۆ هەر سێکیان **«Verify JWT» دەبێت کوژاوە بێت** — خۆیان پشکنین دەکەن.
@@ -131,12 +134,12 @@
 
 ## تاقیکردنەوەکان
 
-`tests/security/` — ١٦٢ پشکنین، هیچیان دەست لە داتابەیسی ڕاستەقینە نادەن:
+`tests/security/` — ١٧٧ پشکنین، هیچیان دەست لە داتابەیسی ڕاستەقینە نادەن:
 
 ```
 cd tests/security && npm install && npm test
 ```
 
-- `db_test.mjs` — `db/100` و rollback لە Postgresـی ناوخۆیی (PGlite)
+- `db_test.mjs` — `db/100`، `db/101` و rollback لە Postgresـی ناوخۆیی (PGlite)
 - `fn_test.mts` — لۆجیکی `staff-login` (واژووی تلیگرام، پاسوۆرد، سنووری هەوڵ، login_as، خاوەنداریەتی بەکارهێنەری Auth)
 - `e2e.mts` — `index.html`/`app.html`ـی ڕاستەقینە لە Chromium لەگەڵ Supabaseـی ساختە

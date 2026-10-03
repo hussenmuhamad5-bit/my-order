@@ -315,11 +315,13 @@ begin
         return;   -- anon / service_role: هیچ (anon پێشتر هیچی نییە)
     end if;
     if not public.is_employee() then
+        --  ⚠️ PostgREST هەردوو `status` و `headers` لە DETAIL داوا دەکات؛
+        --     بێ `headers` وەڵامەکە دەبێت 500 (PGRST121) نەک 403.
         raise sqlstate 'PGRST' using
             message = json_build_object(
                 'code', 'not_staff',
                 'message', 'Not an active employee')::text,
-            detail = json_build_object('status', 403)::text;
+            detail = json_build_object('status', 403, 'headers', json_build_object())::text;
     end if;
 end;
 $$;
