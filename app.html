@@ -3768,7 +3768,8 @@
         </div>
     </div>
 
-    <script src="config.js"></script>
+    <!-- ?v= — config.jsـی نوێ لەگەڵ HTMLـی نوێ؛ هەر کاتێک config.js بە شێوەیەک گۆڕا کە HTMLـی کۆن لەگەڵی کار نەکات، ژمارەکە بگۆڕە (cacheـی وێبگەڕ ١٠ خولەکە) -->
+    <script src="config.js?v=20261003"></script>
     <script>
 
         // Load Supabase script dynamically
@@ -4240,6 +4241,7 @@
         // ============================================================
         const SUSPENDED_MSG = "⛔ ئەم ئەکاونتە ڕاگیراوە. پەیوەندی بە بەڕێوەبەرایەتییەوە بکە.";
         const STALE_SESSION_MSG = "🔑 پاسوۆردی ئەم ئەکاونتە گۆڕاوە — بە پاسوۆردە نوێیەکە بچۆرەوە ژوورەوە.";
+        const RELOGIN_MSG = "🔒 نوێکردنەوەی ئاسایش: تکایە تەنها ئەم جارە دووبارە بچۆرەوە ژوورەوە.";
 
         // هۆکاری دەرچوون دەگوازرێتەوە بۆ `index.html`، ئەگەرنا
         // بەکارهێنەر لە پەڕەی چوونەژوورەوە دەبێت بێ ئەوەی بزانێت
@@ -4253,6 +4255,8 @@
             if (_accountLockedOut) return;
             _accountLockedOut = true;
             try { localStorage.removeItem('myAppUser'); } catch (e) { }
+            // sessionـی ئەم ئامێرە لە سێرڤەریش دەکوژرێت (db/100)
+            try { staffSignOut(); } catch (e) { }
             stashLogoutReason(msg);
             if (msg) { try { showToast(msg, "error"); } catch (e) { } }
             setTimeout(() => { window.location.replace("index.html"); }, 900);
@@ -4266,12 +4270,24 @@
             if (!currentUser || !currentUser.code) { forceLogout("ئەم ئەکاونتە نەماوە."); return false; }
             try {
                 const { data, error } = await supabase.from('employees').select('*').eq('code', currentUser.code);
-                if (error) { console.warn('پشکنینی ئەکاونت: کێشەی پەیوەندی', error); return true; }
+                if (error) {
+                    // ⭐ db/100: ڕاگیراو بە 403ـی `not_staff` ڕەت دەکرێتەوە، و
+                    //    بێ session هیچ دەسەڵاتێک نییە (42501 / PGRST30x).
+                    //    ئەمانە کێشەی تۆڕ نین — fail-open نابێت.
+                    if (error.code === 'not_staff') { forceLogout(SUSPENDED_MSG); return false; }
+                    if (error.code === '42501' || error.code === 'PGRST301' || error.code === 'PGRST302') {
+                        forceLogout(RELOGIN_MSG); return false;
+                    }
+                    console.warn('پشکنینی ئەکاونت: کێشەی پەیوەندی', error);
+                    return true;
+                }
                 if (!data || data.length === 0) {
                     forceLogout("⚠️ ئەم کلیلە سڕاوەتەوە! ناتوانیت بەردەوام بیت.");
                     return false;
                 }
                 let rec = data[0];
+                // پاسوۆرد هەرگیز لە `localStorage` هەڵناگیرێت — ئەپەکە پێویستی پێی نییە
+                delete rec.password;
 
                 // ⭐ ئەم دوو پشکنینە **پێش** نوێکردنەوەی `currentUser`ن.
                 //    ئەگەر دوایان بکەویت، ژمێرەری کۆنی سەر ئامێرەکە
@@ -4307,6 +4323,71 @@
                 console.warn('پشکنینی ئەکاونت: هەڵەی چاوەڕواننەکراو', e);
                 return true; // fail-open بۆ ئەوەی بەکارهێنەری ڕاست قوفڵ نەبێت
             }
+        }
+
+        // ============================================================
+        // sessionـی چوونەژوورەوە (db/100) — پێش هەموو داواکارییەک
+        // ------------------------------------------------------------
+        // ئەپەکە ئیتر کلیلی service_role بەکارناهێنێت: هەموو داتاکە بە
+        // sessionـی کارمەندەوە دێت. `myAppUser` بەتەنها هیچ نییە.
+        //
+        //   • session هەیە → پشکنین کە هی هەمان ئەکاونتە
+        //   • نییە (بۆ نموونە یەکەم کردنەوە دوای نوێکردنەوەکە) → ئەگەر
+        //     لە تلیگرامدایە و ئەم تلیگرامە بەم ئەکاونتەوە بەسترابێت،
+        //     بێدەنگ دەچێتەوە ژوورەوە؛ ئەگەرنا یەک جار پاسوۆرد
+        // ============================================================
+        let _staffSessionOk = false;
+        let _staffSwitching = false;   // لە کاتی ئاڵوگۆڕ/دەرچووندا SIGNED_OUT پشتگوێ دەخرێت
+
+        async function ensureStaffSession() {
+            if (!currentUser || !currentUser.code) return false;
+            let s = await staffCurrentSession();
+            if (!s && tgInitData()) {
+                const r = await staffLogin({
+                    action: 'telegram', init_data: tgInitData(), prefer_code: currentUser.code, strict: true
+                });
+                if (r.ok) s = await staffCurrentSession();
+                else if (r.error === 'held') { forceLogout(SUSPENDED_MSG); return false; }
+                else if (r.error === 'rate_limited') { forceLogout(staffLoginMsg('rate_limited')); return false; }
+            }
+            if (!s) { forceLogout(RELOGIN_MSG); return false; }
+
+            // ئایا sessionـەکە هی هەمان ئەکاونتە؟ (لەوانەیە `myAppUser`
+            // و session لە کاتی ئاڵوگۆڕێکی نیوەچڵدا جیاواز بن)
+            try {
+                const { data, error } = await supabase.rpc('current_emp_code');
+                if (error) {
+                    if (error.code === 'not_staff') { forceLogout(SUSPENDED_MSG); return false; }
+                    console.warn('current_emp_code:', error);   // تۆڕ — `ensureAccountActive` دووبارە دەپشکنێت
+                } else if (!data) {
+                    forceLogout(SUSPENDED_MSG);
+                    return false;
+                } else if (String(data) !== String(currentUser.code)) {
+                    // session ڕاستییەکەیە — ئەکاونتەکەی ئەو دەکرێتەوە
+                    const { data: rec } = await supabase.from('employees').select('*').eq('code', data).single();
+                    if (rec) {
+                        delete rec.password;
+                        localStorage.setItem('myAppUser', JSON.stringify(rec));
+                        window.location.reload();
+                        return false;
+                    }
+                    forceLogout(RELOGIN_MSG);
+                    return false;
+                }
+            } catch (e) { console.warn('ensureStaffSession:', e); }
+
+            _staffSessionOk = true;
+            // تۆکن نوێ نەبووەوە (پاسوۆرد گۆڕدرا، ڕاگیرا) → ئامێرەکە دەربچێت.
+            // ⚠️ `setTimeout`: لەناو ئەم callbackـە نابێت فەنکشنێکی تری
+            //    auth بانگ بکرێت — supabase-js قفڵ دەبێت.
+            try {
+                supabase.auth.onAuthStateChange(function (ev) {
+                    if (ev === 'SIGNED_OUT' && _staffSessionOk && !_staffSwitching) {
+                        setTimeout(function () { forceLogout(RELOGIN_MSG); }, 0);
+                    }
+                });
+            } catch (e) { }
+            return true;
         }
 
         // ============================================================
@@ -5390,6 +5471,9 @@
             }
 
             // پشکنینی ئاسایش: ئایا کلیلی ئەم ئەکاونتە هێشتا هەیە؟ ئەگەر سڕابێتەوە → دەرچوون
+            // sessionـی چوونەژوورەوە — بەبێ ئەوە هیچ داتایەک نایەت (db/100)
+            if (!await ensureStaffSession()) return;
+
             if (!await ensureAccountActive()) return;
 
             // ناسنامەی تلیگرام — بەبێی هیچ ئاگادارکردنەوەیەک ناگات
@@ -5752,6 +5836,8 @@
             // پەیوەندیی ئەم ئەکاونتە بەم تلیگرامەوە دەسڕدرێتەوە —
             // ئەگەرنا دوای دەرچوونیش ئاگادارکردنەوەکانی دەهاتن
             try { await unlinkCurrentChat(currentUser && currentUser.code); } catch (e) { }
+            _staffSwitching = true;
+            await staffSignOut();
             localStorage.removeItem('myAppUser');
             window.location.href = "index.html";
         }
@@ -5775,6 +5861,7 @@
             // ناهێنم» — بۆیە ئاگادارکردنەوەکانیشی دەوەستێت
             try { await unlinkCurrentChat(code); } catch (e) { }
             setSavedAccounts(getSavedAccounts().filter(x => x.code !== code));
+            staffRevokeParked(code);
             renderSwitcherAccounts();
         }
 
@@ -5831,17 +5918,38 @@
             }
 
             showToast("ئاڵوگۆڕکردنی ئەکاونت...", "loading");
+            _staffSwitching = true;
             try {
+                // ⭐ پێشتر تەنها `myAppUser` دەگۆڕا. ئێستا sessionـی ئەو
+                //    ئەکاونتەش پێویستە: پارککراو → تلیگرام → پاسوۆرد
+                let sw = await staffSwitchTo(prev.code, code);
+                if (!sw.ok && tgInitData()) {
+                    const r = await staffLogin({ action: 'telegram', init_data: tgInitData(), prefer_code: code, strict: true }, { fromCode: prev.code });
+                    if (r.ok) sw = { ok: true };
+                    else if (r.error === 'held') { _staffSwitching = false; showToast("⛔ ئەم ئەکاونتە ڕاگیراوە — ناکرێتەوە.", "error"); return; }
+                }
+                if (!sw.ok) {
+                    // پاسوۆرد پێویستە (تەنها ئەم جارە) — ئەکاونتی ئێستا دەمێنێت
+                    // و پەڕەی چوونەژوورەوە کۆدەکەی ئامادە دەبێت
+                    window.location.href = "index.html?add=1&code=" + encodeURIComponent(code);
+                    return;
+                }
+                // ئەکاونتی پێشوو لە لیستدا نییە → sessionـەکەی پارک نەکرێت
+                if (!getSavedAccounts().some(a => a.code === prev.code)) staffRevokeParked(prev.code);
+
                 const { data } = await supabase.from('employees').select('*').eq('code', code).single();
                 if (data) {
+                    delete data.password;
                     localStorage.setItem('myAppUser', JSON.stringify(data));
                     saveAccountToList(data);
                     window.location.reload();
                 } else {
+                    _staffSwitching = false;
                     showToast("ئەم ئەکاونتە ئیتر بوونی نییە!", "error");
                     removeSavedAccountApp(code);
                 }
             } catch (e) {
+                _staffSwitching = false;
                 showToast("کێشە لە ئاڵوگۆڕکردندا ڕوویدا", "error");
             }
         }
@@ -6274,6 +6382,14 @@
                 const { error: upErr } = await supabase.from('employees')
                     .update({ password: nw }).eq('code', currentUser.code);
                 if (upErr) throw upErr;
+
+                // ⭐ db/100: گۆڕینی پاسوۆرد هەموو sessionـەکانی ئەم ئەکاونتە لە
+                //    سێرڤەر دەکوژێت — ئەوەی ئەم ئامێرەش. بە پاسوۆردە نوێکە
+                //    sessionـێکی نوێ وەردەگیرێت تا دەرنەچێت.
+                _staffSwitching = true;
+                try { await staffLogin({ action: 'password', code: currentUser.code, password: nw }, { fromCode: currentUser.code }); }
+                catch (e) { console.warn('re-login:', e); }
+                _staffSwitching = false;
 
                 // ⭐ گۆڕینی پاسوۆرد `session_epoch` بەرز دەکاتەوە (db/049)،
                 //    واتا هەموو ئامێرەکانی تر دەردەکرێن. بەڵام **ئەم**
@@ -22572,9 +22688,9 @@
         // پلەکانی خۆی گۆڕی، ناسنامە ڕاستەقینەکەی (ناوی تەواو، کۆد،
         // بەڕێوەبەرەکەی) تەنها بۆ **خۆی، پاشا، و بەڕێوەبەرەکەی**
         // دەردەکەوێت.
-        // ⚠️ ئەمە **ڕووکارە**. RLS نییە و `service_role` لە
-        //    وێبگەڕدایە، بۆیە ئەمە پارێزەری ڕاستەقینە نییە —
-        //    شاردنەوەیەکی ڕێزلێنانە، نەک ئاسایش.
+        // ⚠️ ئەمە **ڕووکارە**. RLS (db/100) تەنها کەسی دەرەوە
+        //    ڕادەگرێت، نەک کارمەندێک لە کارمەندێکی تر — بۆیە ئەمە
+        //    پارێزەری ڕاستەقینە نییە، شاردنەوەیەکی ڕێزلێنانەیە.
         // ⚠️ سەرپەرشت و ڕاوێژکار **نایبینن** — خاوەنەکە بە ڕوونی
         //    وتی «پاشا یان بەڕێوەبەرەکەی».
         // ============================================================
@@ -30719,11 +30835,16 @@
             if (typeof SUPABASE_URL === 'undefined' || typeof SUPABASE_KEY === 'undefined') {
                 throw new Error('Supabase ڕێکنەخراوە');
             }
+            // ⚠️ db/100: ئەپلۆد تەنها بە sessionـی کارمەند — کلیلی گشتی
+            //    بەتەنها ڕەت دەکرێتەوە
+            const sess = await staffCurrentSession();
+            if (!sess) throw new Error('session نییە — دووبارە بچۆرەوە ژوورەوە');
             const path = makeImagePath(filename);
             const res = await xhrUpload({
                 url: `${SUPABASE_URL}/storage/v1/object/${IMG_BUCKET}/${encodeURI(path)}`,
                 headers: {
-                    'Authorization': 'Bearer ' + SUPABASE_KEY,
+                    'Authorization': 'Bearer ' + sess.access_token,
+                    'apikey': SUPABASE_KEY,
                     'x-upsert': 'true',
                     'Content-Type': blob.type || 'image/jpeg'
                 },
@@ -32211,9 +32332,15 @@
                 const targetAccount = _bkGDriveAccounts[0] || {};
                 const emailToTest = targetAccount.email || pendingEmail || '';
 
-                const res = await fetch('https://kxztaywhqpekjmjoynin.supabase.co/functions/v1/gdrive-test', {
+                // ⚠️ تەنها پاشا — فەنکشنەکە sessionـەکە دەپشکنێت
+                const sess = await staffCurrentSession();
+                const res = await fetch(SUPABASE_URL + '/functions/v1/gdrive-test', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'apikey': SUPABASE_KEY,
+                        'Authorization': 'Bearer ' + (sess ? sess.access_token : '')
+                    },
                     body: JSON.stringify({ email: emailToTest })
                 });
 
@@ -33741,14 +33868,25 @@
 
             showToast("چوونەژوورەوە...", "loading");
             try {
-                const { data } = await supabase.from('employees').select('*').eq('code', code).single();
-                if (!data) { showToast("ئەم ئەکاونتە ئیتر بوونی نییە!", "error"); return; }
-                // ⛔ ئەکاونتی ڕاگیراو بە هیچ دەرگایەک ناکرێتەوە — ئەمەش
-                //    دەرگایەکە (db/049)
-                if (data.suspended) { showToast("⛔ ئەم ئەکاونتە ڕاگیراوە — ناکرێتەوە.", "error"); return; }
+                // ⭐ sessionـی ئەو ئەکاونتە لە سێرڤەرەوە دێت (`impersonate`)،
+                //    و سێرڤەر خۆی دەسەڵاتی login_as و ڕاگرتن دەپشکنێت.
+                //    sessionـی خۆم پارک دەکرێت تا بگەڕێمەوە.
+                const cur = await staffCurrentSession();
+                if (!cur) { forceLogout(RELOGIN_MSG); return; }
 
                 // ئەکاونتی ئێستا هەمیشە پاشەکەوت دەکرێت — ئەگەرنا ڕێگەی گەڕانەوە نامێنێت
                 if (currentUser) saveAccountToList(currentUser);
+
+                _staffSwitching = true;
+                const r = await staffLogin({ action: 'impersonate', target_code: code },
+                    { fromCode: currentUser.code, accessToken: cur.access_token });
+                if (!r.ok) {
+                    _staffSwitching = false;
+                    const m = { no_code: "ئەم ئەکاونتە ئیتر بوونی نییە!", held: "⛔ ئەم ئەکاونتە ڕاگیراوە — ناکرێتەوە.", forbidden: "دەسەڵاتت نییە بۆ ئەم کردارە!" };
+                    showToast(m[r.error] || staffLoginMsg(r.error), "error");
+                    return;
+                }
+                const data = r.employee;
 
                 if (confirm(`دەتەوێت زانیاری ئەکاونتی «${data.full_name || code}» پاشەکەوت بکەیت؟\n\nلە «ئاڵوگۆڕی ئەکاونت» دەردەکەوێت و جاری داهاتوو بە یەک کلیک دەچیتە ژوورەوە.`)) {
                     saveAccountToList(data);
@@ -34021,6 +34159,7 @@
 
                 // پاسوۆرد تەنها کاتێک دەنێردرێت کە دەسەڵاتی هەبێت و ڕاستەقینە گۆڕابێت
                 let passChanged = false;
+                let newPassValue = null;
                 if (can('view_passwords')) {
                     const passInput = document.getElementById('e-password');
                     if (passInput) {
@@ -34029,6 +34168,7 @@
                         if (newPass !== oldPass) {
                             updateData.password = newPass;
                             passChanged = true;
+                            newPassValue = newPass;
                         }
                     }
                 }
@@ -34041,6 +34181,15 @@
                 //    ژمێرەری نوێ لێرەوە دەخوێندرێتەوە، ئەگەرنا پاشا لە
                 //    یەکەم پشکنینی دوورەپەڕدا خۆی دەردەکرد.
                 if (passChanged && currentUser && String(code) === String(currentUser.code)) {
+                    // ⭐ db/100: گۆڕینی پاسوۆرد هەموو sessionـەکانی ئەم ئەکاونتە لە
+                    //    سێرڤەر دەکوژێت — ئەوەی ئەم ئامێرەش. بە پاسوۆردە نوێکە
+                    //    sessionـێکی نوێ وەردەگیرێت تا دەرنەچێت.
+                    if (newPassValue) {
+                        _staffSwitching = true;
+                        try { await staffLogin({ action: 'password', code: code, password: newPassValue }, { fromCode: currentUser.code }); }
+                        catch (e) { console.warn('re-login:', e); }
+                        _staffSwitching = false;
+                    }
                     try {
                         const { data: fresh } = await supabase.from('employees')
                             .select('session_epoch').eq('code', code).single();
