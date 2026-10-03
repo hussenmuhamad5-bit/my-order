@@ -3769,7 +3769,7 @@
     </div>
 
     <!-- ?v= — config.jsـی نوێ لەگەڵ HTMLـی نوێ؛ هەر کاتێک config.js بە شێوەیەک گۆڕا کە HTMLـی کۆن لەگەڵی کار نەکات، ژمارەکە بگۆڕە (cacheـی وێبگەڕ ١٠ خولەکە) -->
-    <script src="config.js?v=20261003"></script>
+    <script src="config.js?v=20261003b"></script>
     <script>
 
         // Load Supabase script dynamically
@@ -4350,6 +4350,9 @@
                 else if (r.error === 'held') { forceLogout(SUSPENDED_MSG); return false; }
                 else if (r.error === 'rate_limited') { forceLogout(staffLoginMsg('rate_limited')); return false; }
             }
+            // پەڕەیەکی تری ئەم ئامێرە لەم ساتەدا چووە ژوورەوە؟ ئەوە بەکاردێت —
+            // `forceLogout` لێرەدا sessionـی هاوبەشی ئەویش دەکوژێت
+            if (!s) s = await staffCurrentSession();
             if (!s) { forceLogout(RELOGIN_MSG); return false; }
 
             // ئایا sessionـەکە هی هەمان ئەکاونتە؟ (لەوانەیە `myAppUser`

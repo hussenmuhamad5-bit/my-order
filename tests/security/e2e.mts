@@ -1,6 +1,6 @@
 // تاقیکردنەوەی تەواو: index.html / app.html / config.js ـی ڕاستەقینە لە Chromium، لەگەڵ Supabaseـی ساختە
 // (GoTrue + PostgREST ـی ساختە کە یاساکانی db/100 جێبەجێ دەکەن + handler.ts ـی ڕاستەقینە).
-import { chromium, type Page, type Route } from 'playwright';
+import { chromium, type BrowserContext, type Page, type Route } from 'playwright';
 import { createHandler, type Employee } from '../../supabase/functions/staff-login/handler.ts';
 import { sign } from '@telegram-apps/init-data-node';
 import http from 'node:http';
@@ -74,6 +74,8 @@ function makeWorld() {
             let uid = Object.keys(users).find(u => users[u] === e.code);
             if (!uid) { uid = 'uid-' + e.code; users[uid] = e.code; }
             emps[e.code].auth_user_id = uid;
+            // like GoTrue: a new magic link replaces the user's previous unused one
+            for (const k in otps) if (otps[k] === uid) delete otps[k];
             const th = 'th-' + e.code + '-' + (++n);
             otps[th] = uid;
             return { token_hash: th, type: 'magiclink' };
@@ -82,7 +84,10 @@ function makeWorld() {
         employeeByAuthUser: async (u) => { const c = users[u]; return c ? { ...emps[c] } : null; },
         now: () => Date.now(),
     });
-    return { emps, chats, users, otps, access, refresh, failures, log, newSession, revokeUser, handler };
+    // loginDelayMs: hold staff-login answers so two logins can overlap (T13)
+    const opt = { loginDelayMs: 0 };
+    const stats = { verifyFail: 0 };
+    return { emps, chats, users, otps, access, refresh, failures, log, newSession, revokeUser, handler, opt, stats };
 }
 
 async function serveSupabase(w: World, route: Route) {
@@ -100,6 +105,7 @@ async function serveSupabase(w: World, route: Route) {
     // Edge Function → the real handler
     if (p === '/functions/v1/staff-login') {
         const res = await w.handler(new Request(req.url(), { method: req.method(), headers: h, body: req.postData() ?? undefined }));
+        if (w.opt.loginDelayMs) await new Promise(r => setTimeout(r, w.opt.loginDelayMs));
         return route.fulfill({ status: res.status, headers: { ...cors, 'content-type': 'application/json' }, body: await res.text() });
     }
 
@@ -107,7 +113,7 @@ async function serveSupabase(w: World, route: Route) {
     if (p === '/auth/v1/verify') {
         const b = JSON.parse(req.postData() || '{}');
         const uid = w.otps[b.token_hash];
-        if (!uid) return json(403, { code: 'otp_expired', msg: 'Token has expired or is invalid' });
+        if (!uid) { w.stats.verifyFail++; return json(403, { code: 'otp_expired', msg: 'Token has expired or is invalid' }); }
         delete w.otps[b.token_hash];
         return json(200, w.newSession(uid));
     }
@@ -181,9 +187,14 @@ function tgStub(initData: string, user: Record<string, unknown> | null) {
     })();`;
 }
 
-async function newPage(w: World, tg: { initData: string; user: Record<string, unknown> | null } = { initData: '', user: null }, storage?: Record<string, string>) {
+type Tg = { initData: string; user: Record<string, unknown> | null };
+async function newPage(w: World, tg: Tg = { initData: '', user: null }, storage?: Record<string, string>) {
     const ctx = await browser.newContext();
     if (storage) await ctx.addInitScript((st) => { if (location.origin === 'http://localhost:8766' && !sessionStorage.getItem('__seeded')) { for (const k in st) localStorage.setItem(k, st[k]); sessionStorage.setItem('__seeded', '1'); } }, storage);
+    return { ctx, ...await addPage(ctx, w, tg) };
+}
+// another tab in the same browser (shares localStorage with the first)
+async function addPage(ctx: BrowserContext, w: World, tg: Tg = { initData: '', user: null }) {
     const page = await ctx.newPage();
     const dialogs: string[] = [];
     page.on('dialog', d => { dialogs.push(d.message()); d.accept(); });
@@ -193,7 +204,7 @@ async function newPage(w: World, tg: { initData: string; user: Record<string, un
     await page.route('https://telegram.org/**', r => r.fulfill({ status: 200, contentType: 'text/javascript', body: tgStub(tg.initData, tg.user) }));
     await page.route(/^https:\/\/kxztaywhqpekjmjoynin\.supabase\.co\//, r => serveSupabase(w, r));
     await page.routeWebSocket(/supabase\.co/, () => { /* realtime: never connects */ });
-    return { ctx, page, dialogs };
+    return { page, dialogs };
 }
 
 const browser = await chromium.launch(process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {});
@@ -202,6 +213,8 @@ const waitIndex = (page: Page) => page.waitForURL(/index\.html/, { timeout: 1500
 const ls = (page: Page, k: string) => page.evaluate((key) => localStorage.getItem(key), k);
 const sessionCode = async (page: Page) => page.evaluate(async () => { const s = await (window as any).staffCurrentSession(); return s && s.user ? String(s.user.id).replace(/^uid-/, '') : null; });
 const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
+// every time this tab lands on the login page
+const trackLoginPage = (page: Page) => { const navs: string[] = []; page.on('framenavigated', f => { if (f === page.mainFrame() && /index\.html/.test(f.url())) navs.push(f.url()); }); return navs; };
 
 // ============ T1: password login, then the app uses the session ============
 console.log('\nT1 password login (outside Telegram)');
@@ -471,6 +484,53 @@ console.log('\nT12 suspended account still holding a session on this device');
     await page.evaluate(() => (window as any).quickLogin('KING1'));
     ok('tapping KING1 goes back in without a password', await waitApp(page) && (await sleep(2500), await sessionCode(page)) === 'KING1', { url: page.url(), dialogs });
     await ctx.close();
+}
+
+// ============ T13: the same account logs in twice at the same moment ============
+// Seen on production: one phone, two pages of the Mini App → two staff-login calls 55 ms
+// apart. Supabase keeps only the newest magic link, so the first page's link is dead.
+console.log('\nT13 the same account logs in twice at the same moment');
+{
+    // two tabs / web views on one device (they share localStorage)
+    const w = makeWorld();
+    w.opt.loginDelayMs = 1500;   // both links are issued before either is used
+    const initData = sign({ user: { id: 500, first_name: 'King' }, query_id: 'Q' } as never, BOT, new Date());
+    const tg = { initData, user: { id: 500, first_name: 'King' } };
+    const { ctx, page, dialogs } = await newPage(w, tg, { myAppUser: JSON.stringify({ ...w.emps.KING1, password: undefined }) });
+    const tab2 = await addPage(ctx, w, tg);
+    const navs1 = trackLoginPage(page), navs2 = trackLoginPage(tab2.page);
+    await Promise.all([page.goto(SITE + '/app.html'), tab2.page.goto(SITE + '/app.html')]);
+    await sleep(9000);
+    const calls = w.log.filter(l => l.m === 'POST' && l.p === '/functions/v1/staff-login').length;
+    ok('the two logins really collided (a link was replaced)', calls >= 2 && w.stats.verifyFail >= 1, { calls, verifyFail: w.stats.verifyFail });
+    ok('no bounce through the login page, no extra login round', navs1.length === 0 && navs2.length === 0 && calls === 2, { navs1, navs2, calls });
+    const relogin = (d: string[]) => d.some(x => x.includes('نوێکردنەوەی ئاسایش'));
+    ok('tab 1 is in the app as KING1, never told to log in again', page.url().includes('app.html') && await sessionCode(page) === 'KING1' && !relogin(dialogs), { url: page.url(), dialogs });
+    ok('tab 2 is in the app as KING1, never told to log in again', tab2.page.url().includes('app.html') && await sessionCode(tab2.page) === 'KING1' && !relogin(tab2.dialogs), { url: tab2.page.url(), dialogs: tab2.dialogs });
+    await ctx.close();
+}
+{
+    // two devices (separate storage)
+    const w = makeWorld();
+    w.opt.loginDelayMs = 1500;
+    const initData = sign({ user: { id: 500, first_name: 'King' }, query_id: 'Q' } as never, BOT, new Date());
+    const tg = { initData, user: { id: 500, first_name: 'King' } };
+    const seed = { myAppUser: JSON.stringify({ ...w.emps.KING1, password: undefined }) };
+    const a = await newPage(w, tg, seed);
+    const b = await newPage(w, tg, seed);
+    const navsA = trackLoginPage(a.page), navsB = trackLoginPage(b.page);
+    await Promise.all([a.page.goto(SITE + '/app.html'), b.page.goto(SITE + '/app.html')]);
+    await sleep(9000);
+    const relogin = (d: string[]) => d.some(x => x.includes('نوێکردنەوەی ئاسایش'));
+    const calls = w.log.filter(l => l.m === 'POST' && l.p === '/functions/v1/staff-login').length;
+    ok('two devices: the logins collided', w.stats.verifyFail >= 1, w.stats);
+    ok('two devices: the loser asks once more instead of bouncing to the login page', navsA.length === 0 && navsB.length === 0 && calls === 3, { navsA, navsB, calls });
+    ok('two devices: both end in the app as KING1 without «log in again»',
+        a.page.url().includes('app.html') && b.page.url().includes('app.html')
+        && await sessionCode(a.page) === 'KING1' && await sessionCode(b.page) === 'KING1'
+        && !relogin(a.dialogs) && !relogin(b.dialogs),
+        { a: a.page.url(), b: b.page.url(), da: a.dialogs, db: b.dialogs });
+    await a.ctx.close(); await b.ctx.close();
 }
 
 await browser.close(); srv.close();
