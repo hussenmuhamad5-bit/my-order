@@ -3,10 +3,9 @@
 // ------------------------------------------------------------
 //  ⚠️ پێشتر هەر کەسێک دەیتوانی بانگی بکات. ئێستا تەنها پاشا.
 //  ⚠️ کلیلی تایبەتی service accountـی گووگڵ لە کۆدەکەدا بوو —
-//     ئەم فایلە لە GitHubـی گشتیدایە، بۆیە ئێستا لە Secret دێت:
-//       GOOGLE_SA_PRIVATE_KEY  (هەموو دەقی -----BEGIN PRIVATE KEY----- …)
-//       GOOGLE_SA_EMAIL        (ئارەزوومەندانە)
-//     Supabase → Edge Functions → Secrets. بڕوانە SECURITY-ROLLOUT.md
+//     ئەم فایلە لە GitHubـی گشتیدایە، بۆیە ئێستا لە Vault دێت
+//     (`staff_google_sa_key()`, db/100 — نهێنی `google_sa_private_key`).
+//     Secretـی `GOOGLE_SA_PRIVATE_KEY` (ئارەزوومەندانە) لە پێشترە.
 //  «Verify JWT» کوژاوە بێت — پشکنینەکە لە `requireKing`ـدایە.
 // ============================================================
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
@@ -18,8 +17,6 @@ const corsHeaders = {
 };
 
 const SERVICE_EMAIL = Deno.env.get('GOOGLE_SA_EMAIL') || "telegram-bot-sheet@root-quasar-493815-t9.iam.gserviceaccount.com";
-// Secretـەکان هەندێک جار `\n` وەک دوو پیت هەڵدەگرن
-const PRIVATE_KEY_PEM = (Deno.env.get('GOOGLE_SA_PRIVATE_KEY') || '').replace(/\\n/g, '\n');
 
 function secretKey(): string {
   try {
@@ -71,9 +68,21 @@ function base64url(input: Uint8Array | string): string {
   return b64.replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
 }
 
+// Secret لە پێشترە، ئەگەرنا Vault. هەندێک جار `\n` وەک دوو پیت هەڵدەگیرێت.
+async function privateKeyPem(): Promise<string> {
+  let pem = Deno.env.get('GOOGLE_SA_PRIVATE_KEY') || '';
+  if (!pem) {
+    const { data, error } = await admin.rpc('staff_google_sa_key');
+    if (error) console.error('staff_google_sa_key', error);
+    pem = typeof data === 'string' ? data : '';
+  }
+  return pem.replace(/\\n/g, '\n');
+}
+
 async function getGoogleAccessToken(): Promise<string> {
+  const PRIVATE_KEY_PEM = await privateKeyPem();
   if (!PRIVATE_KEY_PEM.includes('PRIVATE KEY')) {
-    throw new Error('GOOGLE_SA_PRIVATE_KEY لە Edge Function Secrets دانەنراوە');
+    throw new Error('کلیلی گووگڵ دانەنراوە (Vault: google_sa_private_key)');
   }
   const binaryKey = pemToBinary(PRIVATE_KEY_PEM);
   const cryptoKey = await crypto.subtle.importKey(

@@ -87,6 +87,7 @@ drop function if exists public.staff_gate();
 drop trigger  if exists trg_employees_revoke_sessions on public.employees;
 drop function if exists public.employees_revoke_auth_sessions();
 drop function if exists public.staff_bot_token();
+drop function if exists public.staff_google_sa_key();
 drop table    if exists public.staff_login_failures;
 
 commit;

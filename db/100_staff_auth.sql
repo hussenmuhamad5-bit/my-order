@@ -237,6 +237,25 @@ $$;
 revoke execute on function public.staff_bot_token() from public, anon, authenticated;
 grant  execute on function public.staff_bot_token() to service_role;
 
+--  کلیلی تایبەتی service accountـی گووگڵ بۆ `gdrive-test`. پێشتر لە
+--  ناو کۆدی فەنکشنەکەدا بوو؛ ئێستا لە Vault (شفرەکراو). ناوی نهێنییەکە:
+--  `google_sa_private_key`. ئەگەر دانەنرابێت، null دەگەڕێنێتەوە.
+create or replace function public.staff_google_sa_key()
+returns text
+language sql
+stable
+security definer
+set search_path = public
+as $$
+    select decrypted_secret
+      from vault.decrypted_secrets
+     where name = 'google_sa_private_key'
+     limit 1;
+$$;
+
+revoke execute on function public.staff_google_sa_key() from public, anon, authenticated;
+grant  execute on function public.staff_google_sa_key() to service_role;
+
 --  هەوڵە شکستخواردووەکانی پاسوۆرد — بۆ ڕێگری لە تاقیکردنەوەی
 --  هەزاران پاسوۆرد. هیچ policyیەکی نییە، واتا تەنها service_role.
 create table if not exists public.staff_login_failures (

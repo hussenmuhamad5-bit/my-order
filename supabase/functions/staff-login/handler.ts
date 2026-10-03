@@ -101,6 +101,30 @@ export function publicRow(emp: Employee): Record<string, unknown> {
     return rest;
 }
 
+/** ئەو بەشەی Supabase Auth کە `issueLoginWith` پێویستی پێیەتی (بۆ تاقیکردنەوە ساختە دەکرێت) */
+export interface AuthAdmin {
+    createUser(email: string, empCode: string): Promise<{ id: string | null; exists: boolean }>;
+    generateMagicLink(email: string): Promise<{ userId: string; empCode: unknown; tokenHash: string; type: string }>;
+    linkEmployee(code: string, uid: string): Promise<void>;
+}
+
+/**
+ * بەکارهێنەری Auth بۆ کارمەندێک (یەکجار دروست دەکرێت) + لینکی یەکجاری.
+ * ⛔ تەنها بەکارهێنەرێک کە خۆمان دروستمان کردووە (`app_metadata.emp_code`).
+ *    `app_metadata` تەنها بە کلیلی نهێنی دادەنرێت. ئەگەر کەسێک پێشتر بە
+ *    «sign up» هەمان ئیمەیڵی دروست کردبێت (ئیمەیڵەکان لە کۆدەوە دەردەهێنرێن،
+ *    بۆیە پێشبینی دەکرێن)، بەبێ ئەم پشکنینە ئەکاونتی ئەو دەبەسترایەوە بە
+ *    کارمەندەکە و دەیتوانی بە پاسوۆردی خۆی وەک ئەو بچێتە ژوورەوە.
+ */
+export async function issueLoginWith(api: AuthAdmin, emp: Employee, domain?: string): Promise<{ token_hash: string; type: string }> {
+    const email = staffEmail(emp.code, domain);
+    if (!emp.auth_user_id) await api.createUser(email, emp.code);   // «exists» → خوارەوە پشکنین دەکرێت
+    const link = await api.generateMagicLink(email);
+    if (link.empCode !== emp.code) throw new Error('auth user ownership mismatch for ' + emp.code);
+    if (emp.auth_user_id !== link.userId) await api.linkEmployee(emp.code, link.userId);
+    return { token_hash: link.tokenHash, type: link.type || 'magiclink' };
+}
+
 const isHeld = (emp: Employee | null) => !!(emp && emp.suspended);
 const hasPassword = (emp: Employee) => String(emp.password ?? '').trim() !== '';
 

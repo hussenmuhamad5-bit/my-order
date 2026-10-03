@@ -1,5 +1,5 @@
 // تاقیکردنەوەی لۆجیکی `staff-login` (handler.ts) بە داتای ساختە — Node 22+ (--experimental-strip-types)
-import { createHandler, verifyInitData, staffEmail, safeEqual, canLoginAs, publicRow, type Employee } from '../../supabase/functions/staff-login/handler.ts';
+import { createHandler, verifyInitData, staffEmail, safeEqual, canLoginAs, publicRow, issueLoginWith, type Employee } from '../../supabase/functions/staff-login/handler.ts';
 import { sign } from '@telegram-apps/init-data-node';
 
 let pass = 0, fail = 0;
@@ -163,6 +163,46 @@ r = await call(w, { action: 'impersonate', target_code: 'HELD1' }, { authorizati
 ok('cannot enter a suspended account', r.status === 403 && r.body.error === 'held', r);
 r = await call(w, { action: 'impersonate', target_code: 'MEMB1' }, { authorization: 'Bearer jwt-held' });
 ok('suspended caller → 403 not_staff', r.status === 403 && r.body.error === 'not_staff', r);
+
+console.log('\nissueLoginWith (auth user ownership)');
+{
+    // fake Supabase Auth: users by email, app_metadata only settable by the admin API
+    const mk = () => {
+        const byEmail: Record<string, { id: string; meta: Record<string, unknown> }> = {};
+        const links: Record<string, string> = {};
+        let n = 0;
+        const api = {
+            createUser: async (email: string, empCode: string) => {
+                if (byEmail[email]) return { id: null, exists: true };
+                byEmail[email] = { id: 'u' + (++n), meta: { emp_code: empCode } }; return { id: byEmail[email].id, exists: false };
+            },
+            generateMagicLink: async (email: string) => {
+                if (!byEmail[email]) byEmail[email] = { id: 'u' + (++n), meta: {} };     // GoTrue signs up unknown emails
+                return { userId: byEmail[email].id, empCode: byEmail[email].meta.emp_code, tokenHash: 'th' + n, type: 'magiclink' };
+            },
+            linkEmployee: async (code: string, uid: string) => { links[code] = uid; },
+            // what an attacker can do with open sign-ups: create a user with any email, no app_metadata
+            publicSignup: (email: string) => { byEmail[email] = { id: 'attacker', meta: {} }; },
+        };
+        return { api, byEmail, links };
+    };
+    let f = mk();
+    let res = await issueLoginWith(f.api, { code: 'KING1' });
+    ok('first login creates + links the auth user', res.token_hash.startsWith('th') && f.links.KING1 === f.byEmail[staffEmail('KING1')].id, f.links);
+    res = await issueLoginWith(f.api, { code: 'KING1', auth_user_id: f.links.KING1 });
+    ok('next login reuses it (no relink)', !!res.token_hash);
+    f = mk();
+    f.api.publicSignup(staffEmail('MEMB1'));
+    let threw = '';
+    try { await issueLoginWith(f.api, { code: 'MEMB1' }); } catch (e) { threw = String(e); }
+    ok('squatted email (public sign-up) is REFUSED, never linked', /ownership/.test(threw) && !f.links.MEMB1, { threw, links: f.links });
+    f = mk();
+    await issueLoginWith(f.api, { code: 'A1' });
+    f.byEmail[staffEmail('A1')].meta = {};   // e.g. someone else's user under that email
+    threw = '';
+    try { await issueLoginWith(f.api, { code: 'A1', auth_user_id: f.links.A1 }); } catch (e) { threw = String(e); }
+    ok('existing link but foreign auth user → refused', /ownership/.test(threw), threw);
+}
 
 console.log('\nrequest handling');
 w = makeWorld();

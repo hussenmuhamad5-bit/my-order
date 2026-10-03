@@ -27,7 +27,7 @@ grant execute on function auth.uid() to anon, authenticated, service_role;
 
 create schema vault;
 create table vault.decrypted_secrets (name text, decrypted_secret text);
-insert into vault.decrypted_secrets values ('telegram_bot_token', 'TEST:TOKEN');
+insert into vault.decrypted_secrets values ('telegram_bot_token', 'TEST:TOKEN'), ('google_sa_private_key', 'PEM');
 
 create schema storage;
 create table storage.objects (id serial primary key, bucket_id text, name text);
@@ -143,6 +143,7 @@ r = await as('anon', null, "select public.orders_count('KING1')");        ok('ca
 r = await as('anon', null, "select * from public.login_code_status('NEW01')");
 ok('CAN call login_code_status (login page)', !r.error && r.rows.length === 1 && r.rows[0].needs_password === true, r);
 r = await as('anon', null, "select * from public.staff_bot_token()");     ok('cannot read bot token', !!r.error, r);
+r = await as('anon', null, "select public.staff_google_sa_key()");       ok('cannot read Google key', !!r.error, r);
 r = await as('anon', null, "insert into storage.objects (bucket_id, name) values ('order-images','x.jpg')");
 ok('cannot upload images', !!r.error, r);
 r = await as('anon', null, "select count(*) from storage.objects where bucket_id='order-images'");
@@ -166,6 +167,7 @@ ok('cannot upload to another bucket', !!r.error, r);
 r = await as('authenticated', KING, 'select public.staff_gate()');            ok('pre-request gate passes employee', !r.error, r);
 r = await as('authenticated', KING, 'select public.current_emp_code() c');    ok('current_emp_code = KING1', r.rows && r.rows[0].c === 'KING1', r);
 r = await as('authenticated', KING, 'select * from public.staff_bot_token()'); ok('employee cannot read bot token', !!r.error, r);
+r = await as('authenticated', KING, 'select public.staff_google_sa_key()');   ok('employee cannot read Google key', !!r.error, r);
 r = await as('authenticated', KING, 'select * from public.staff_login_failures'); ok('employee cannot read login failures', !!r.error, r);
 
 console.log('\nSUSPENDED EMPLOYEE (HELD1, still holding a valid JWT):');
@@ -180,6 +182,7 @@ r = await as('authenticated', STRANGER, 'select public.staff_gate()');          
 console.log('\nSERVICE ROLE (Dart app, bot, Edge Functions):');
 r = await as('service_role', null, 'select count(*)::int n from orders');       ok('reads everything', !r.error && r.rows[0].n === 4, r);
 r = await as('service_role', null, 'select public.staff_bot_token() t');        ok('reads bot token', !r.error && r.rows[0].t === 'TEST:TOKEN', r);
+r = await as('service_role', null, 'select public.staff_google_sa_key() k');    ok('reads Google key', !r.error && r.rows[0].k === 'PEM', r);
 r = await as('service_role', null, "insert into staff_login_failures (code) values ('X')"); ok('writes login failures', !r.error, r);
 r = await as('service_role', null, 'select public.staff_gate()');               ok('pre-request gate passes', !r.error, r);
 

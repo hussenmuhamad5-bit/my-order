@@ -39,13 +39,15 @@
 
 ### هەنگاوی ٠ — ئامادەکاری (هیچ کاریگەرییەکی نییە)
 
-1. **Authentication → Sign In / Providers → «Allow new users to sign up» → OFF**
-   (و «Anonymous sign-ins» کوژاوە بمێنێت). بەکارهێنەرەکان تەنها لە `staff-login`ـەوە دروست دەبن.
-2. **Project Settings → API Keys → «Publishable and secret API keys»**: دڵنیابە کلیلێکی secret
-   (`sb_secret_…`) هەیە. ئەگەر نەبوو، «Create new API keys».
-3. **Edge Functions → Secrets → Add**: `GOOGLE_SA_PRIVATE_KEY` = هەموو دەقی
-   `-----BEGIN PRIVATE KEY----- … -----END PRIVATE KEY-----` لە کۆدی ئێستای `gdrive-test`
-   (Edge Functions → gdrive-test → Code). ئەو کلیلە ئیتر لە کۆدەکەدا نامێنێت چونکە ئەم repo گشتییە.
+1. **Vault**: کلیلی تایبەتی گووگڵ (لە کۆدی ئێستای `gdrive-test`) وەک نهێنیی
+   `google_sa_private_key` هەڵدەگیرێت. `gdrive-test` لەوێوە دەیخوێنێتەوە
+   (`staff_google_sa_key()`، `db/100`)، بۆیە ئیتر لە کۆدەکەدا نامێنێت — ئەم repo گشتییە.
+2. **پێشنیار (ئارەزوومەندانە):** Authentication → Sign In / Providers →
+   «Allow new users to sign up» → OFF. پێویست نییە: تەنانەت ئەگەر کەسێک بەکارهێنەرێک
+   دروست بکات، هیچ دەسەڵاتێکی نییە (`staff_gate` + RLS)، و `staff-login` هەرگیز
+   بەکارهێنەرێک ناگرێتەوە کە خۆی دروستی نەکردبێت (`app_metadata.emp_code`).
+3. کلیلی `sb_secret_…` تەنها بۆ هەنگاوی ٤ پێویستە (ئەپی Dart و بۆت). Edge Functionـەکان
+   خۆکارانە کلیلی گونجاو بەکاردەهێنن.
 
 ### هەنگاوی ١ — داتابەیس
 
@@ -129,12 +131,12 @@
 
 ## تاقیکردنەوەکان
 
-`tests/security/` — ١٥٢ پشکنین، هیچیان دەست لە داتابەیسی ڕاستەقینە نادەن:
+`tests/security/` — ١٥٩ پشکنین، هیچیان دەست لە داتابەیسی ڕاستەقینە نادەن:
 
 ```
 cd tests/security && npm install && npm test
 ```
 
 - `db_test.mjs` — `db/100` و rollback لە Postgresـی ناوخۆیی (PGlite)
-- `fn_test.mts` — لۆجیکی `staff-login` (واژووی تلیگرام، پاسوۆرد، سنووری هەوڵ، login_as)
+- `fn_test.mts` — لۆجیکی `staff-login` (واژووی تلیگرام، پاسوۆرد، سنووری هەوڵ، login_as، خاوەنداریەتی بەکارهێنەری Auth)
 - `e2e.mts` — `index.html`/`app.html`ـی ڕاستەقینە لە Chromium لەگەڵ Supabaseـی ساختە

@@ -18,7 +18,7 @@
 // ============================================================
 
 import { createClient } from 'npm:@supabase/supabase-js@2';
-import { createHandler, staffEmail, type Deps, type Employee } from './handler.ts';
+import { createHandler, issueLoginWith, type AuthAdmin, type Deps, type Employee } from './handler.ts';
 
 // کلیلی نوێ (`sb_secret_…`) لە پێشترە؛ کلیلی کۆن تەنها وەک پاشەکەوت —
 // کاتێک کلیلە کۆنەکان دەکوژێنرێنەوە، ئەم فەنکشنە هەر کاردەکات.
@@ -36,6 +36,33 @@ const EMAIL_DOMAIN = Deno.env.get('STAFF_EMAIL_DOMAIN') || 'staff.my-order.inval
 const admin = createClient(SUPABASE_URL, secretKey(), {
     auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
 });
+
+const authAdmin: AuthAdmin = {
+    async createUser(email, empCode) {
+        const { data, error } = await admin.auth.admin.createUser({
+            email, email_confirm: true, app_metadata: { emp_code: empCode },
+        });
+        if (data?.user) return { id: data.user.id, exists: false };
+        // «email_exists» = هەوڵێکی پێشوو (یان کەسێکی تر) — `issueLoginWith` دەیپشکنێت
+        if (error && /exist|already|registered/i.test(error.message)) return { id: null, exists: true };
+        throw error ?? new Error('createUser: empty');
+    },
+    async generateMagicLink(email) {
+        const { data, error } = await admin.auth.admin.generateLink({ type: 'magiclink', email });
+        if (error) throw error;
+        if (!data?.properties?.hashed_token || !data.user) throw new Error('generateLink: empty');
+        return {
+            userId: data.user.id,
+            empCode: (data.user.app_metadata as Record<string, unknown> | undefined)?.emp_code,
+            tokenHash: data.properties.hashed_token,
+            type: data.properties.verification_type || 'magiclink',
+        };
+    },
+    async linkEmployee(code, uid) {
+        const { error } = await admin.from('employees').update({ auth_user_id: uid }).eq('code', code);
+        if (error) throw error;
+    },
+};
 
 const deps: Deps = {
     async getEmployee(code) {
@@ -92,32 +119,9 @@ const deps: Deps = {
         return out;
     },
 
-    // بەکارهێنەری Auth بۆ ئەم کارمەندە (یەکجار دروست دەکرێت) +
-    // لینکی چوونەژوورەوەی یەکجاری. هیچ ئیمەیڵێک نانێردرێت.
-    async issueLogin(emp) {
-        const email = staffEmail(emp.code, EMAIL_DOMAIN);
-        let uid = emp.auth_user_id || null;
-
-        if (!uid) {
-            const { data, error } = await admin.auth.admin.createUser({
-                email, email_confirm: true, app_metadata: { emp_code: emp.code },
-            });
-            if (data?.user) uid = data.user.id;
-            // «email_exists» = هەوڵێکی پێشوو پێش بەستنەوە وەستا — خوارەوە دەدۆزرێتەوە
-            else if (error && !/exist|already|registered/i.test(error.message)) throw error;
-        }
-
-        const { data: link, error: le } = await admin.auth.admin.generateLink({ type: 'magiclink', email });
-        if (le) throw le;
-        if (!link?.properties?.hashed_token || !link.user) throw new Error('generateLink: empty');
-        uid = link.user.id;
-
-        if (emp.auth_user_id !== uid) {
-            const { error } = await admin.from('employees').update({ auth_user_id: uid }).eq('code', emp.code);
-            if (error) throw error;
-        }
-        return { token_hash: link.properties.hashed_token, type: link.properties.verification_type || 'magiclink' };
-    },
+    // بەکارهێنەری Auth + لینکی یەکجاری — لۆجیک و پشکنینی خاوەنداریەتی
+    // لە `issueLoginWith`ـدایە (handler.ts، تاقیکراوە). هیچ ئیمەیڵێک نانێردرێت.
+    issueLogin: (emp) => issueLoginWith(authAdmin, emp, EMAIL_DOMAIN),
 
     async userFromJwt(jwt) {
         const { data, error } = await admin.auth.getUser(jwt);
