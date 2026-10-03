@@ -1739,7 +1739,7 @@
                                 <label class="bkv-lbl" for="bk-auto-tg-token"><i class='bx bx-bot'></i> تۆکنی بۆت (ئارەزوومەندانە):</label>
                                 <input type="password" id="bk-auto-tg-token" class="bkv-in"
                                     placeholder="بەتاڵ بێت، بۆتی سەرەکی بەکاردێت" dir="ltr" autocomplete="off">
-                                <span class="bkv-tip">ئەگەر بەتاڵ بێت، بۆتی سەرەکی MyShopOrders (@MyShopOrders_bot) بەکاردێت.</span>
+                                <span class="bkv-tip">ئەگەر بەتاڵ بێت، بۆتی سەرەکی MyShopOrders (@MyShopOrders_bot) بەکاردێت. دوگمەی «تاقیکردنەوە» تۆکنی پێویستە.</span>
 
                                 <div class="bkv-btns">
                                     <button type="button" class="bkv-b is-sky" id="bk-btn-test-tg" onclick="testTelegramBackupConnection()">
@@ -32253,7 +32253,15 @@
                 return;
             }
 
-            const tgToken = ((document.getElementById('bk-auto-tg-token') || {}).value || '').trim() || '8628913543:AAGGFD4-5aIEncmjrpGy6ED9YWCrM3ITQII';
+            // ⚠️ پێشتر تۆکنی بۆتی سەرەکی لێرە نووسرابوو، بۆیە بۆ هەموو سەردانکەرێکی
+            //    سایتەکە و لە GitHubـی گشتیدا دیار بوو. تۆکن هەرگیز لە کۆدی سایتدا مەنووسە.
+            const tgToken = ((document.getElementById('bk-auto-tg-token') || {}).value || '').trim();
+            if (!tgToken) {
+                showToast('بۆ تاقیکردنەوە، تۆکنی بۆتەکە لە خانەی «تۆکنی بۆت» بنووسە', 'error');
+                const inp = document.getElementById('bk-auto-tg-token');
+                if (inp) inp.focus();
+                return;
+            }
             const btn = document.getElementById('bk-btn-test-tg');
             if (btn) {
                 btn.disabled = true;
