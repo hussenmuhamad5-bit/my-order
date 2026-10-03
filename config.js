@@ -3,6 +3,68 @@ var APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwtKMGXHm2XEA499c
 var SUPABASE_URL = "https://kxztaywhqpekjmjoynin.supabase.co";
 var SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt4enRheXdocXBla2ptam95bmluIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NzE0MzkxMCwiZXhwIjoyMDkyNzE5OTEwfQ.-C3Z_nPQEK0KuDD8UehCJjp3Jp5u-wpxcNXM62EErvs";
 
+// ============================================================
+//  دووبارە ناردنەوەی خۆکار بۆ داواکارییە خوێندنەوەییەکان
+// ------------------------------------------------------------
+//  ⚠️ هەندێک ئایفۆن لەسەر هەندێک ئینتەرنێت (بەتایبەتی Kurdistan Net
+//     و I.Q Online) لە ٥٠–٧٠%ی داواکارییە POSTـەکانیان ون دەبن:
+//     لۆگی Supabase پیشانی دەدات کە preflight (OPTIONS) دەگات، بەڵام
+//     POSTـەکە هەرگیز ناگات. GETـەکان کاردەکەن چونکە Safari و
+//     کتێبخانەی supabase-js خۆیان بێدەنگ دووبارەیان دەکەنەوە
+//     (`RETRYABLE_METHODS = GET/HEAD/OPTIONS`) — بەڵام POST هەرگیز.
+//     هەموو `supabase.rpc()`ـێک POSTـە، بۆیە ئۆردەرەکان و جووڵەکانی
+//     جزدان شکستیان دەهێنا («پەیوەندی نەکرا») لە کاتێکدا باڵانس
+//     (GET) دەهات. ئەندرۆید و تۆڕەکانی تر ئەم کێشەیەیان نییە.
+//
+//  ئێستا ئەگەر RPCـێکی خوارەوە لە ئاستی تۆڕدا شکستی هێنا (نەک
+//  وەڵامی هەڵە لە سێرڤەرەوە)، تا ٣ جار دووبارە دەنێردرێتەوە.
+//  GET لێرە دووبارە ناکرێتەوە — کتێبخانەکە خۆی دەیکات.
+//
+//  ⚠️ لیستەکە تەنها فەنکشنی STABLEـە (`pg_proc.provolatile = 's'`).
+//     PostgREST ئەمانە لە ترانزاکشنی تەنها-خوێندنەوەدا جێبەجێ دەکات،
+//     بۆیە دووبارەکردنەوەیان **ناتوانێت** هیچ شتێک دووجار بنووسێت.
+//     فەنکشنێکی نوێ کە دەنووسێت (پارە، ئۆردەر، کۆمێنت…) **هەرگیز**
+//     لێرە زیاد مەکە — ئەگەر داواکارییەکە گەیشتبێت و تەنها وەڵامەکە
+//     ون بووبێت، دووبارەکردنەوە دەبێتە دوو جار نووسین.
+// ============================================================
+var SB_RETRY_RPCS = {
+    orders_page: 1, orders_status_counts: 1, orders_day_counts: 1, orders_member_counts: 1,
+    wallet_tx_page: 1, wallet_tx_hold: 1, wallets_overview: 1,
+    member_stats: 1, rank_page: 1, login_code_status: 1,
+    notifications_page: 1, my_notif_unread_counts: 1, my_notif_unread_by_kind: 1,
+    my_unread_comment_counts: 1, my_unread_announcements: 1, announcements_by_ids: 1, announcement_stats: 1,
+    order_comments_page: 1, order_comment_reactions_page: 1, order_comment_readers: 1,
+    my_trash_page: 1, trash_page: 1, trash_counts: 1, trash_payload: 1,
+    quick_phrases_list: 1, quick_phrases_admin: 1,
+    cosmetics_catalog: 1, cosmetics_admin_list: 1, shop_home: 1,
+    reward_progress_list: 1, reward_claims_list: 1
+};
+var SB_RETRY_DELAYS = [300, 800, 1600];   // میلیچرکە — ٣ هەوڵی زیادە
+
+function _sbCanRetry(url, method) {
+    if (method !== 'POST') return false;
+    var m = /\/rest\/v1\/rpc\/([A-Za-z0-9_]+)(?:[?#]|$)/.exec(url);
+    return !!(m && SB_RETRY_RPCS[m[1]]);
+}
+
+function sbFetch(input, init) {
+    var url = typeof input === 'string' ? input : String((input && input.url) || input);
+    var method = String((init && init.method) || (input && input.method) || 'GET').toUpperCase();
+    if (!_sbCanRetry(url, method)) return fetch(input, init);
+
+    var attempt = 0;
+    function run() {
+        return fetch(input, init).catch(function (err) {
+            // AbortError = کۆدەکە خۆی ڕایگرت، نەک تۆڕ — دووبارە مەکەرەوە
+            if ((err && err.name === 'AbortError') || attempt >= SB_RETRY_DELAYS.length) throw err;
+            var wait = SB_RETRY_DELAYS[attempt++];
+            console.warn('sbFetch: هەوڵی ' + (attempt + 1) + ' بۆ ' + method + ' ' + url.split('?')[0], err);
+            return new Promise(function (r) { setTimeout(r, wait); }).then(run);
+        });
+    }
+    return run();
+}
+
 // Initialize Supabase client
 var supabase = null;
 
@@ -10,7 +72,9 @@ var supabase = null;
 function initializeSupabase() {
     try {
         if (window.supabase && window.supabase.createClient) {
-            supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+            supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+                global: { fetch: sbFetch }
+            });
             
             // Check if the client has the required methods
             if (supabase && supabase.from && typeof supabase.from === 'function') {
