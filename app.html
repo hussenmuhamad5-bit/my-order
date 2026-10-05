@@ -9963,19 +9963,14 @@
             // پێشتر سێ هەنگاوی جیاواز بوون (خوێندنەوە ← نووسینەوە ← تۆمار)
             // و ئەگەر هەنگاوی کۆتایی شکستی دەهێنا، باڵانسەکە بە دەستی
             // دەگەڕێندرایەوە. ئێستا داتابەیس خۆی هەمووی پێکەوە دەگەڕێنێتەوە.
-            const { error: waErr } = await supabase.rpc('wallet_apply', {
-                p_rows: [{
-                    user_code: memberCode,
-                    order_id: String(orderId),
-                    amount: -delta,
-                    wallet_type: 'balance',
-                    type: delta > 0 ? WALLET_PAY_TYPE : WALLET_REFUND_TYPE,
-                    description: delta > 0
-                        ? `پارەدان لە جزدان بۆ ئۆردەری ${orderCode || orderId}`
-                        : `گەڕانەوەی پارەی جزدان لە ئۆردەری ${orderCode || orderId}`
-                }],
-                p_created_by: userName,
-                p_lock_key: 'order_profit:' + String(orderId)
+            // ⭐ db/110: جووڵەی پارە بە فەنکشنی پشکنراوەوە دەڕوات. سێرڤەر
+            //    خۆی دێلتاکە دەژمێرێت و ناسنامەی ڕاستەقینە بەکاردەهێنێت —
+            //    بۆیە تەنها بڕی مەبەست و کۆدەکان دەنێردرێن.
+            const { error: waErr } = await supabase.rpc('wallet_pay_order', {
+                p_order_id: String(orderId),
+                p_member_code: memberCode,
+                p_desired: want,
+                p_order_code: orderCode || String(orderId)
             });
             if (waErr) throw waErr;
 
@@ -36495,7 +36490,10 @@
 
             showToast("ڕاستکردنەوەی مێژوو...", "loading");
             try {
-                await supabase.from('transactions').insert(rows);
+                // ⭐ db/110: جیاوازییەکە لەسەر سێرڤەر دەژمێردرێتەوە و تۆمار
+                //    دەکرێت — بە پشکنینی دەسەڵاتی بەڕێوەبردنی جزدان.
+                const { error: fxErr } = await supabase.rpc('fix_wallet_history', { p_code: code });
+                if (fxErr) throw fxErr;
                 showToast("مێژووەکە کۆک کرایەوە", "success");
                 delete walletTxCache[code];
                 delete walletHoldCache[code];
@@ -36759,19 +36757,13 @@
                     return;
                 }
 
-                const newB = oldB - b, newS = oldS - s;
-                await supabase.from('employees').update({ balance: newB, savings: newS }).eq('code', code);
-
-                const rows = [];
-                if (b > 0) rows.push({
-                    user_code: code, amount: -b, type: "پێدانی مووچە", description: reason,
-                    created_by: userName, wallet_type: 'balance', old_balance: oldB, new_balance: newB
+                // ⭐ db/110: باڵانس لەسەر سێرڤەر کەم دەکرێتەوە و تۆمار دەکرێت،
+                //    بە پشکنینی دەسەڵات و ناسنامەی ڕاستەقینە. (ژماردنی ناو
+                //    براوزەر تەنها بۆ پێشبینین و پشکنینی «بڕی ئامادە»یە.)
+                const { error: salErr } = await supabase.rpc('pay_salary', {
+                    p_code: code, p_balance: b, p_savings: s, p_reason: reason
                 });
-                if (s > 0) rows.push({
-                    user_code: code, amount: -s, type: "پێدانی مووچە (پاشەکەوت)", description: reason,
-                    created_by: userName, wallet_type: 'savings', old_balance: oldS, new_balance: newS
-                });
-                await supabase.from('transactions').insert(rows);
+                if (salErr) throw salErr;
 
                 showToast(`مووچە درا: ${(b + s).toLocaleString()} د.ع`, "success");
                 delete walletTxCache[code];
@@ -37094,7 +37086,12 @@
 
             showToast("خەریکی سەیڤکردن...", "loading");
             try {
-                await supabase.from('employees').update({ profit_rate: parseFloat(rate) }).eq('code', code);
+                // ⭐ db/110: بە فەنکشنی پشکنراوەوە (دەسەڵاتی set_profit_rates
+                //    + ناسنامەی ڕاستەقینە)، نەک نووسینی ڕاستەوخۆ.
+                const { error: prErr } = await supabase.rpc('set_member_profit_rate', {
+                    p_code: code, p_rate: parseFloat(rate)
+                });
+                if (prErr) throw prErr;
                 showToast("بە سەرکەوتوویی سەیڤ کرا!", "success");
 
                 // نوێکردنەوەی نرخەکە لەناو مێشکی ئەپەکەدا بێ ئەوەی ڕیفرێش بکەین
@@ -37151,7 +37148,9 @@
 
                 // باڵانس لە داتابەیسدا ژماردن دەکرێت (balance = balance + amount)
                 // نەک لە کڵاینت، بۆیە دوو داواکاری هاوکات یەکتری ون ناکەن.
-                const { error: waErr } = await supabase.rpc('wallet_apply', {
+                // ⭐ db/110: بە فەنکشنی پشکنراوەوە (دەسەڵاتی بەڕێوەبردنی جزدان
+                //    + ناسنامەی ڕاستەقینە)، نەک wallet_applyـی کراوە.
+                const { error: waErr } = await supabase.rpc('wallet_admin_apply', {
                     p_rows: [{
                         user_code: userCode,
                         amount: finalAmount,
@@ -37159,7 +37158,6 @@
                         type: typeText,
                         description: reason
                     }],
-                    p_created_by: userName,
                     p_lock_key: 'wallet:' + userCode
                 });
                 if (waErr) {
