@@ -10009,13 +10009,11 @@
         let editingOrderWalletPaid = 0;   // ئەوەی پێشتر لەم ئۆردەرەدا دراوە
         let walletPayLocked = false;      // ئۆردەری کەسێکی ترە — دەستی لێ نادرێت
 
+        // ⭐ db/112: باڵانس و خولەکە لە یەک بانگی سێرڤەرەوەن (`wallet_hold`)
+        //    — نەک ١,٠٠٠ ڕیزی یەکەمی جووڵەکان.
         async function fetchWalletReady(code) {
-            const { data: u, error } = await supabase.from('employees')
-                .select('balance, savings').eq('code', code).single();
-            if (error) throw error;
-            const w = await fetchTxAndOrderDates(code);
-            const s = splitWalletByHold(w.txs, u ? u.balance : 0, u ? u.savings : 0, w.dates);
-            return Math.max(0, Math.round(s.bal.ready));
+            const h = await fetchWalletHold(code);
+            return Math.max(0, Math.round(h.split.bal.ready));
         }
 
         async function ensureWalletReady(force) {
@@ -13552,14 +13550,20 @@
                 <i class='bx bx-message-rounded-dots'></i>${un || n}</span>`;
         }
 
+        // ⭐ db/113: یەک بەهای jsonb `{ "<order_id>": n }`، نەک ڕیز.
+        //    `my_unread_comment_counts`ی کۆن هەموو ئۆردەرەکانی سیستەمی
+        //    دەژمارد (≈٤,٧٠٠ بۆ هەر کەسێک) و PostgREST لە ١,٠٠٠دا دەیبڕی —
+        //    نیشانەی «نەخوێندراو» لەسەر کارتەکانی خۆت بە هەڕەمەکی دەهات.
+        //    ئێستا سێرڤەر تەنها ئۆردەرەکانی مەودای تۆ دەژمێرێت (پاشا هەمووی؛
+        //    ئەوانی تر هێڵی خۆیان) و ناسنامە لە دانیشتنەوە وەردەگرێت.
         async function refreshUnreadComments() {
             if (!currentUser || !currentUser.code) return;
             try {
-                const { data, error } = await supabase.rpc('my_unread_comment_counts', {
+                const { data, error } = await supabase.rpc('my_unread_comment_map', {
                     p_user_code: String(currentUser.code)
                 });
                 if (error) throw error;
-                unreadCommentMap = new Map((data || []).map(r => [String(r.order_id), Number(r.n) || 0]));
+                unreadCommentMap = new Map(Object.entries(data || {}).map(([oid, n]) => [String(oid), Number(n) || 0]));
             } catch (e) { console.warn('unreadComments:', e); }
         }
 
@@ -21429,7 +21433,7 @@
         //     سێرڤەرەوە دێت (db/052)، کڵاینت دووبارەی ناکاتەوە.
         //
         //  ⚠️ **پارەی «چاوەڕوانی» ستوونێک نییە** — لە مێژووی
-        //     جووڵەکانەوە دەژمێردرێت (`splitWalletByHold`، خولی ١٠
+        //     جووڵەکانەوە دەژمێردرێت (`wallet_hold_rows`، db/112 — خولی ١٠
         //     ڕۆژە لە `orders.date`ـەوە). بۆ ١٣٨ ئەندام ئەوە ١٣٨
         //     داواکاری دەبوو؛ db/052 هەموویان دەکاتە **یەک** بانگ.
         //     پێوانەکراو لەسەر بەرهەم ٢٠٢٦-٠٨-٣٠: ~٨٥ml (٩٬٢١٥ جووڵە،
@@ -35495,9 +35499,10 @@
                 let canSeeSavings = can('view_savings');
                 document.getElementById('my-wallet-savings-container').style.display = canSeeSavings ? 'block' : 'none';
 
-                // پارەی ئامادە — بەبێ چاوەڕوانی، چونکە هەموو مێژووی جووڵەکان
-                // دەخوێنێتەوە و لیستی خوارەوە نابێت لەبەر ئەوە دوابکەوێت
-                loadMyWalletSplit(me ? me.balance : 0, me ? me.savings : 0, canSeeSavings);
+                // پارەی ئامادە — بەبێ چاوەڕوانی، تا لیستی خوارەوە دوانەکەوێت.
+                // ⭐ db/112: باڵانس و خولەکە هەردووکیان لە `wallet_hold`ـەوە
+                //    دێن (یەک وێنەی سێرڤەر)، بۆیە ژمارەکانی ئێرە نانێردرێن.
+                loadMyWalletSplit(canSeeSavings);
 
                 // یەکەم پەڕە — ئەوانی تر بە دوگمەی «جوڵەی کۆنتر» دێن،
                 // بۆیە هیچ جوڵەیەک ون نابێت (پێشتر لە ٥٠ دەوەستا)
@@ -35710,168 +35715,78 @@
         const PAYOUT_HOLD_DAYS = 10;
         const DAY_MS = 86400000;
 
-        // بەرواری ئۆردەر دەقە، بە شێوەی «YYYY-MM-DD hh:mm:ss AM|PM».
-        // هەمان شیکارییەی `getRelativeTime` — بەبێ ئەمە `new Date()`
-        // لە هەندێ وێبگەڕدا NaN دەداتەوە.
-        function parseAppDate(s) {
-            if (!s) return 0;
-            const m = String(s).match(/(\d{4})-(\d{2})-(\d{2})\s+(\d{1,2}):(\d{2}):(\d{2})\s*(AM|PM)/i);
-            if (m) {
-                let h = parseInt(m[4], 10);
-                const ap = m[7].toUpperCase();
-                if (ap === 'PM' && h < 12) h += 12;
-                if (ap === 'AM' && h === 12) h = 0;
-                return new Date(+m[1], +m[2] - 1, +m[3], h, +m[5], +m[6]).getTime();
-            }
-            const d = new Date(s);
-            return isNaN(d.getTime()) ? 0 : d.getTime();
+        // ============================================================
+        // ⭐ دابەشکردنی جزدان لەسەر سێرڤەر — یەک بانگ، یەک بەها (db/112)
+        // ------------------------------------------------------------
+        // پێشتر براوزەر هەموو جووڵەکانی دەهێنا (`wallet_tx_hold`) و خۆی
+        // دەیژمارد. بەڵام PostgREST زۆرترین **١,٠٠٠ ڕیز** دەگەڕێنێتەوە
+        // (کۆنترین یەکەم)، بۆیە بۆ هەر کەسێک کە زیاتری هەبوو، **نوێترین**
+        // ڕیزەکان — ئەوانەی لە خولەکەدان — هەرگیز نەدەگەیشتن: «چاوەڕوانی»
+        // سفر دەبوو و هەموو باڵانسەکە «ئامادەی مووچە» دەردەکەوت. خاوەن
+        // ٢٠٢٦-١٠-٠٧: «خولەکە بۆ هەندێک ئەندام کار ناکات» — ئەندامێک
+        // ١,١٨٩ جووڵەی هەبوو و ٢٠٢٦-١٠-٠٦ نزیکەی ٨٠٠,٠٠٠ د.ع پێش کاتی
+        // خۆی درا. (ناو و کۆدەکان لە vaultـدان — ئەم فایلە گشتییە.)
+        //
+        // ئێستا `wallet_hold` هەموو دابەشکردنەکە لەسەر سێرڤەر دەژمێرێت و وەک
+        // **یەک بەهای jsonb** دەینێرێتەوە — سنووری ڕیز ناتوانێت بیبڕێت، و
+        // باڵانس و جووڵەکان لە یەک وێنەی داتابەیسەوەن. هەمان فەنکشن
+        // `pay_salary` دەپارێزێت (`OVER_READY`)، بۆیە ژمارەی سەر شاشە و
+        // پشکنینی مووچە هەرگیز لێک جیا نابنەوە. یاساکە خۆی (١٠ ڕۆژ لە
+        // بەرواری تۆمارکردنی ئۆردەر) تەنها لە `wallet_hold_rows`ـدایە.
+        //
+        // ⚠️ شێوەی گەڕاوە هەمان شێوەی `splitWalletByHold`ی کۆنە
+        //    (`bal`/`sav` → ready · pending · pendingN · due · fromOrders ·
+        //    bonus · cut · fix · items · expected · actual · diff)، بۆیە
+        //    هەموو پیشاندەرەکان (`renderWalletHoldSplit` · `wholdMerge` ·
+        //    `renderWalletAudit`) وەک خۆیان ماونەتەوە.
+        // ============================================================
+        function walletHoldSide(x) {
+            const n = (v) => parseFloat(v) || 0;
+            const s = x || {};
+            return {
+                ready: n(s.ready),
+                pending: n(s.pending),
+                pendingN: parseInt(s.pendingN, 10) || 0,
+                due: s.due == null ? null : n(s.due),
+                fromOrders: n(s.fromOrders),
+                bonus: n(s.bonus),
+                cut: n(s.cut),
+                fix: n(s.fix),
+                items: (Array.isArray(s.items) ? s.items : []).map(it => ({
+                    oid: String(it.oid), net: n(it.net), start: n(it.start), due: n(it.due), sav: !!it.sav
+                })),
+                expected: n(s.expected),
+                actual: n(s.actual),
+                diff: n(s.diff)
+            };
         }
 
-        // ============================================================
-        // جووڵەکان + بەرواری تۆمارکردنی ئۆردەرەکانیان — یەک بانگ
-        // ------------------------------------------------------------
-        // ⚠️ پێشتر ئەمە دوو داواکاری بوو و جۆینەکە بە دەست لە
-        //    کڵاینتدا دەکرا. لیستی ناسنامەکان بەم شێوەیە دروست
-        //    دەکرا: `ids.map(String).filter(Boolean)` — و `map`
-        //    پێش `filter` بوو، بۆیە `null` (ڕیزی مووچە/پاداشت)
-        //    دەبووە دەقی `'null'` کە ڕاستە و دەرباز دەبوو.
-        //    داواکارییەکە دەکەوت بە:
-        //        invalid input syntax for type bigint: "null"
-        //    هەڵەکە بێدەنگ هەڵدەگیرا → **هەموو** بەروارەکان ون
-        //    دەبوون → خولی ١٠ ڕۆژە لە کاتی گەیشتنەوە دەستی
-        //    پێدەکردەوە. بڕوانە db/028.
-        //
-        //    ئێستا جۆینەکە لەسەر سێرڤەرە. هیچ لیستێکی ناسنامە
-        //    دروست ناکرێت، بۆیە ئەم جۆرە هەڵەیە ناتوانێت
-        //    دووبارە ببێتەوە.
-        // ============================================================
-        async function fetchTxAndOrderDates(code) {
-            const { data, error } = await supabase.rpc('wallet_tx_hold', {
-                p_user_code: String(code)
-            });
-            if (error) throw error;
-
-            const rows = data || [];
-            const dates = new Map();
-            // ⭐ خاوەن و کۆدی ئۆردەرەکە (db/073) — بۆ لیستی وردی
-            //    چاوەڕوانی: «هی خۆم» بەرامبەر «هی تیمەکەم».
-            // ⚠️ ناوەکە لە SQLـەوە دێت، نەک `getEmployeeByCode` —
-            //    بەڕێوەبەر لە شاشەی جزداندا تۆماری ئەندامەکانی
-            //    بار نەکردووە. [[landmines]] ٨١
+        // ⭐ خاوەن و کۆدی ئۆردەرە چاوەڕوانەکان (db/073 → db/112) — بۆ
+        //    لیستی وردی: «هی خۆم» بەرامبەر «هی تیمەکەم».
+        // ⚠️ ناوەکە لە SQLـەوە دێت، نەک `getEmployeeByCode` — بەڕێوەبەر
+        //    لە شاشەی جزداندا تۆماری ئەندامەکانی بار نەکردووە. [[landmines]] ٨١
+        function walletHoldFromServer(j) {
             const meta = new Map();
-            rows.forEach(r => {
-                if (!r.order_id) return;
-                const oid = String(r.order_id);
-                if (r.order_date) {
-                    const t = parseAppDate(r.order_date);
-                    if (t) dates.set(oid, t);
-                }
-                if (!meta.has(oid)) meta.set(oid, {
-                    seller: r.seller_code ? String(r.seller_code) : '',
-                    name: r.seller_name ? String(r.seller_name) : '',
-                    code: r.order_code ? String(r.order_code) : ''
+            Object.entries((j && j.meta) || {}).forEach(([oid, m]) => {
+                meta.set(String(oid), {
+                    seller: m && m.seller ? String(m.seller) : '',
+                    name: m && m.name ? String(m.name) : '',
+                    code: m && m.code ? String(m.code) : ''
                 });
             });
-            return { txs: rows, dates: dates, meta: meta };
+            return {
+                split: { bal: walletHoldSide(j && j.bal), sav: walletHoldSide(j && j.sav) },
+                meta: meta,
+                balance: parseFloat(j && j.balance) || 0,
+                savings: parseFloat(j && j.savings) || 0
+            };
         }
 
-        function splitWalletByHold(txs, balance, savings, orderDates) {
-            const cutoff = Date.now() - PAYOUT_HOLD_DAYS * DAY_MS;
-            const groups = {};              // کلیل: جزدان|ئۆردەر
-            // fromOrders + bonus + cut == ready (هەمیشە)
-            // ⭐ `items` = هەر ئۆردەرێکی چاوەڕوان بە تەنها، بۆ لیستی
-            //    وردەکاری. کۆیان == `pending` **بێجگە لە** بەشی
-            //    `fix` (ڕاستکردنەوەی مێژوو) کە ئۆردەری نییە — ئەوە
-            //    ڕووکار بە ڕیزێکی جیا پیشانی دەدات، نەک بێدەنگ
-            //    فڕێی بدات.
-            const mk = () => ({ ready: 0, pending: 0, pendingN: 0, due: null, fromOrders: 0, bonus: 0, cut: 0, fix: 0, items: [] });
-            const out = { bal: mk(), sav: mk() };
-
-            (txs || []).forEach(t => {
-                // ڕیزە کۆنەکان لەوانەیە wallet_typeیان نەبێت — بە جۆرەکەی دەناسرێنەوە
-                const isSav = (t.wallet_type === 'savings' || t.type === 'پاشەکەوتی ئۆردەر');
-                const amt = parseFloat(t.amount || 0);
-                const b = isSav ? out.sav : out.bal;
-
-                // پاداشت/سزا/مووچە/دەستکاری — لە خولی چاوەڕوانیدا نین،
-                // یەکسەر دەچنە سەر «ئامادە»
-                //
-                // پارەدانی ئۆردەر لە جزدانیش هەروەها: پارەکە **ئێستا** لە
-                // جزدانەکە دەرچووە، بۆیە نابێت وەک پارەی «لە چاوەڕوانیدا»
-                // بژمێردرێت — ئەگەرنا «ئامادە» بەردەوام دەبێت لە پیشاندانی
-                // پارەیەک کە پێشتر خەرجکراوە و دەکرێت دووجار خەرج بکرێت
-                // ڕاستکردنەوەی مێژوو جیا کۆدەکرێتەوە. ئەم ڕیزەیە ڕیزەیەکی
-                // دووبارە/ونبوو پووچ دەکاتەوە کە زۆرجار خۆی لە «چاوەڕوانی»دایە،
-                // بۆیە نابێت یەکسەر بکەوێتە سەر «ئامادە» — ئەگەرنا ئامادە
-                // ساڵب دەبێت و بە هەڵە وەک «قەرز» دەردەکەوێت.
-                if (t.type === HISTORY_FIX_TYPE) { b.fix += amt; return; }
-
-                if (!t.order_id || isWalletPayTx(t)) {
-                    if (amt >= 0) b.bonus += amt; else b.cut += amt;
-                    return;
-                }
-
-                const key = (isSav ? 's|' : 'b|') + t.order_id;
-                const ts = t.created_at ? new Date(t.created_at).getTime() : 0;
-                if (!groups[key]) groups[key] = { sav: isSav, net: 0, first: ts, oid: String(t.order_id) };
-                groups[key].net += amt;
-                if (ts && (!groups[key].first || ts < groups[key].first)) groups[key].first = ts;
-            });
-
-            Object.keys(groups).forEach(k => {
-                const g = groups[k];
-                if (Math.abs(g.net) < 0.01) return;      // گەڕاوەتەوە — هیچی نەماوە
-                const b = g.sav ? out.sav : out.bal;
-
-                // ⭐ خولی ١٠ ڕۆژ لە کاتی **دروستکردنی ئۆردەر**ەوە
-                //    دەست پێدەکات، نەک لە کاتی گەیشتنی.
-                //
-                //    ئەنجامەکەی:
-                //      • ئۆردەرێک کە لەناو ١٠ ڕۆژەکەدا گەیشتوو بێت →
-                //        دەمێنێتەوە لە چاوەڕوانی تا ڕۆژی ١٠ـەمی
-                //        دروستکردنەکەی
-                //      • ئۆردەرێک کە ١٠ ڕۆژی بەسەردا تێپەڕیوە و
-                //        دواتر گەیشتوو بکرێت → یەکسەر ڕاکێشانە
-                //
-                //    ئەگەر بەروارەکە نەدۆزرایەوە (ئۆردەر سڕاوەتەوە یان
-                //    لە تەنەکەی خۆڵدایە)، دەگەڕێتەوە بۆ کاتی یەکەم
-                //    جووڵەی پارە — هەمان ڕەفتاری کۆن.
-                const start = (orderDates && orderDates.get(g.oid)) || g.first;
-
-                if (start && start <= cutoff) { b.fromOrders += g.net; return; }
-                b.pending += g.net; b.pendingN++;
-                const due = start + PAYOUT_HOLD_DAYS * DAY_MS;
-                if (b.due === null || due < b.due) b.due = due;
-                b.items.push({ oid: g.oid, net: g.net, start: start, due: due, sav: !!g.sav });
-            });
-
-            // ئامادە دەکرێت ساڵب بێت و ئەمە بەئەنقەستە: ئەگەر سزا لە پارەی
-            // ئامادە زیاتر بێت، قەرزەکە دەمێنێتەوە و خۆکارانە لە یەکەم
-            // ئۆردەرەوە دەبڕدرێت کە خولی ١٠ ڕۆژەکەی تەواو دەبێت
-            // ڕاستکردنەوەکان سەرەتا لە «چاوەڕوانی» دەبڕدرێن — ئەو ڕیزە
-            // دووبارانە لەوێن کە پووچیان دەکەنەوە. تەنها ئەوەی چاوەڕوانی
-            // هەڵینەگرێت دەکەوێتە سەر «ئامادە» و دەبێتە قەرزی ڕاستەقینە.
-            [out.bal, out.sav].forEach(b => {
-                if (!b.fix) return;
-                const absorb = b.fix < 0
-                    ? -Math.min(-b.fix, Math.max(0, b.pending))
-                    : Math.min(b.fix, Math.max(0, -b.pending));
-                b.pending += absorb;
-                const rest = b.fix - absorb;
-                if (rest >= 0) b.bonus += rest; else b.cut += rest;
-            });
-
-            out.bal.ready = (parseFloat(balance) || 0) - out.bal.pending;
-            out.sav.ready = (parseFloat(savings) || 0) - out.sav.pending;
-
-            // پشکنین: باڵانسی تۆمارکراو دەبێت یەکسان بێت بە کۆی جووڵەکان
-            [['bal', balance], ['sav', savings]].forEach(([k, v]) => {
-                const b = out[k];
-                b.expected = b.pending + b.fromOrders + b.bonus + b.cut;
-                b.actual = parseFloat(v) || 0;
-                b.diff = b.actual - b.expected;
-            });
-            return out;
+        async function fetchWalletHold(code) {
+            const { data, error } = await supabase.rpc('wallet_hold', { p_code: String(code) });
+            if (error) throw error;
+            if (!data) throw new Error('WALLET_NOT_FOUND');
+            return walletHoldFromServer(data);
         }
 
         // ============================================================
@@ -36505,7 +36420,7 @@
         // «جزدانەکەم» — پارەی بەردەستی خودی ئەندام
         // ------------------------------------------------------------
         // ئەندام دەبێت بزانێت لە کۆی باڵانسەکەی چەندی **ئێستا** دەکرێت
-        // وەریبگرێت. هەمان حیسابی لای ئەدمین بەکاردێت (splitWalletByHold)
+        // وەریبگرێت. هەمان حیسابی لای ئەدمین بەکاردێت (`wallet_hold`، db/112)
         // تا هەردوو لا هەمان ژمارە ببینن.
         // ============================================================
         function mwSplitHtml(b, label) {
@@ -36561,7 +36476,7 @@
             note.innerHTML = html;
         }
 
-        async function loadMyWalletSplit(balance, savings, canSeeSavings) {
+        async function loadMyWalletSplit(canSeeSavings) {
             const note = document.getElementById('my-hold-note');
             if (!note || !currentUser) return;
             // سپینەری «حیسابکردنی پارەی ئامادە» تەنها جاری یەکەم دەردەکەوێت. دوای
@@ -36573,12 +36488,12 @@
                 note.innerHTML = `<div class="mw-hold-row"><i class='bx bx-loader-alt bx-spin'></i> حیسابکردنی پارەی ئامادە...</div>`;
             }
             try {
-                const w = await fetchTxAndOrderDates(currentUser.code);
+                const h = await fetchWalletHold(currentUser.code);
                 // ⭐ کاش دەکرێت تا شیتی وردەکاری هەمان ژمارە بەکاربهێنێت —
                 //    نەک داواکارییەکی دووەم بکات و ژمارەیەکی تر پیشان بدات
-                walletHoldCache[currentUser.code] = splitWalletByHold(w.txs, balance, savings, w.dates);
-                walletMetaCache[currentUser.code] = w.meta;
-                renderMyWalletSplit(walletHoldCache[currentUser.code], canSeeSavings);
+                walletHoldCache[currentUser.code] = h.split;
+                walletMetaCache[currentUser.code] = h.meta;
+                renderMyWalletSplit(h.split, canSeeSavings);
             } catch (e) {
                 // ژمارە هەڵە پیشاندان لە هیچ پیشاندان خراپترە
                 const bal = document.getElementById('my-bal-split');
@@ -36599,18 +36514,18 @@
             const salBtn = document.getElementById('w-salary-btn');
             if (salBtn) { salBtn.disabled = true; salBtn.style.opacity = '0.5'; }
             try {
-                // باڵانس ڕاستەوخۆ لە داتابەیسەوە دەهێنرێت — نەک لە لیستی
+                // باڵانس ڕاستەوخۆ لە داتابەیسەوە دێت — نەک لە لیستی
                 // ناوەوەی allEditableUsers. ئەو لیستە لەوانەیە کۆن بێت (بۆ
                 // نموونە یەکسەر دوای زیادکردنی پارە)، و ئەوسا باڵانسی کۆن
                 // بەرامبەر جووڵەی نوێ بەراورد دەکرێت و «جیاوازی»یەکی درۆیین
                 // دەردەکەوێت کە بەڕێوەبەر بە هەڵە ڕاستی دەکاتەوە.
-                const [uRes, w] = await Promise.all([
-                    supabase.from('employees').select('balance, savings').eq('code', code).single(),
-                    fetchTxAndOrderDates(code)
-                ]);
-                const u = uRes && uRes.data;
-                walletHoldCache[code] = splitWalletByHold(w.txs, u ? u.balance : 0, u ? u.savings : 0, w.dates);
-                walletMetaCache[code] = w.meta;
+                // ⭐ db/112: باڵانس و هەموو جووڵەکان لە **یەک** بانگدان
+                //    (`wallet_hold`) — نە پێشبڕکێی دوو داواکاری، نە سنووری
+                //    ١,٠٠٠ ڕیز کە «جیاوازی»ـیەکی درۆیینی لە پشکنینی جزداندا
+                //    دروست دەکرد بۆ هەر کەسێک کە زیاتر لە ١,٠٠٠ جووڵەی هەبوو.
+                const h = await fetchWalletHold(code);
+                walletHoldCache[code] = h.split;
+                walletMetaCache[code] = h.meta;
                 // لەوانەیە بەکارهێنەر جزدانەکەی داخستبێت پێش گەڕانەوەی داتاکە
                 if (window.currentWalletCode === code) renderWalletHoldSplit(walletHoldCache[code]);
             } catch (e) {
@@ -36746,10 +36661,7 @@
             try {
                 // دووبارە لەسەر داتای نوێی سێرڤەر دەپشکنرێت — لەوانەیە ئەم
                 // ماوەیە ئۆردەرێک گەڕابێتەوە یان کەسێکی تر مووچەی دابێت
-                const { data: u } = await supabase.from('employees').select('balance, savings').eq('code', code).single();
-                const oldB = parseFloat(u.balance || 0), oldS = parseFloat(u.savings || 0);
-                const fw = await fetchTxAndOrderDates(code);
-                const fresh = splitWalletByHold(fw.txs, oldB, oldS, fw.dates);
+                const fresh = (await fetchWalletHold(code)).split;
                 if (b > Math.floor(fresh.bal.ready) || s > Math.floor(fresh.sav.ready)) {
                     walletHoldCache[code] = fresh;
                     renderWalletHoldSplit(fresh);
@@ -36758,11 +36670,18 @@
                 }
 
                 // ⭐ db/110: باڵانس لەسەر سێرڤەر کەم دەکرێتەوە و تۆمار دەکرێت،
-                //    بە پشکنینی دەسەڵات و ناسنامەی ڕاستەقینە. (ژماردنی ناو
-                //    براوزەر تەنها بۆ پێشبینین و پشکنینی «بڕی ئامادە»یە.)
+                //    بە پشکنینی دەسەڵات و ناسنامەی ڕاستەقینە.
+                // ⭐ db/112: سێرڤەر خۆی «ئامادە» دەپشکنێت (`OVER_READY`) — ئەو
+                //    پشکنینەی سەرەوە تەنها بۆ پەیامێکی ڕوونترە، نەک پارێزەر.
                 const { error: salErr } = await supabase.rpc('pay_salary', {
                     p_code: code, p_balance: b, p_savings: s, p_reason: reason
                 });
+                if (salErr && /OVER_READY/.test(String(salErr.message || ''))) {
+                    delete walletHoldCache[code];
+                    loadWalletHoldSplit(code, true);
+                    showToast(`پارەی ناو خولی ${fmtNum(PAYOUT_HOLD_DAYS)} ڕۆژ نادرێت — ژمارەکان نوێ کرانەوە`, "error");
+                    return;
+                }
                 if (salErr) throw salErr;
 
                 showToast(`مووچە درا: ${(b + s).toLocaleString()} د.ع`, "success");
