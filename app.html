@@ -3769,7 +3769,7 @@
     </div>
 
     <!-- ?v= — config.jsـی نوێ لەگەڵ HTMLـی نوێ؛ هەر کاتێک config.js بە شێوەیەک گۆڕا کە HTMLـی کۆن لەگەڵی کار نەکات، ژمارەکە بگۆڕە (cacheـی وێبگەڕ ١٠ خولەکە) -->
-    <script src="config.js?v=20261003b"></script>
+    <script src="config.js?v=20261009a"></script>
     <script>
 
         // Load Supabase script dynamically
@@ -4437,42 +4437,26 @@
             const u = tg && tg.initDataUnsafe && tg.initDataUnsafe.user;
             if (!u || !u.id) return;                 // لە دەرەوەی تلیگرام کراوەتەوە
 
-            const tgId = String(u.id);
-            const tgUsername = u.username || "";
-            const tgName = (u.first_name || "") + (u.last_name ? " " + u.last_name : "");
-
-            // ⭐ پەیوەندی — هەمیشە، تەنانەت ئەگەر هیچ نەگۆڕابێت.
-            //
-            //    یەک ئەکاونت دەکرێت لەسەر چەند تلیگرامێک کرابێتەوە.
-            //    `employees.telegram_id` تەنها یەک خانەیە، بۆیە
-            //    ئەوەی دواتر بیکاتەوە ئەوانی پێشووی دەسڕێتەوە و
-            //    ئاگادارکردنەوە تەنها بۆ یەکێکیان دەچوو.
-            //    `employee_chats` هەموویان هەڵدەگرێت (db/018).
+            // ⭐ G10: ناسنامەی تلیگرام تەنها لە سێرڤەر دەنووسرێت. پێشتر لێرە
+            //    لە `initDataUnsafe`ـەوە دەنووسرا — تلیگرام ئەوە واژوو ناکات،
+            //    بۆیە هەر کەسێک دەیتوانی ناسنامەی تلیگرامی کەسێکی تر بخاتە
+            //    سەر ئەکاونتی خۆی. ئێستا `staff-login` (`link_telegram`)
+            //    واژووی `initData` دەپشکنێت، پاشان هەم `employees` هەم
+            //    `employee_chats` نوێ دەکاتەوە (هەمیشە — `last_seen_at`).
+            //    `initDataUnsafe` تەنها دەڵێت «لەناو تلیگرامین»؛ نانووسرێت.
+            const initData = (typeof tgInitData === 'function') ? tgInitData() : '';
+            if (!initData) return;
             try {
-                await supabase.rpc('link_employee_chat', {
-                    p_code: String(currentUser.code),
-                    p_telegram_id: tgId,
-                    p_username: tgUsername || null,
-                    p_name: tgName || null
-                });
-            } catch (e) { console.warn('linkChat:', e); }
-
-            // هەمان ناسنامەیە → هیچ داواکارییەکی تر نانێردرێت
-            if (String(currentUser.telegram_id || "") === tgId
-                && String(currentUser.telegram_username || "") === tgUsername
-                && String(currentUser.telegram_name || "") === tgName) return;
-
-            try {
-                const { error } = await supabase.from('employees').update({
-                    telegram_id: tgId,
-                    telegram_username: tgUsername,
-                    telegram_name: tgName
-                }).eq('code', currentUser.code);
-                if (error) throw error;
-
-                currentUser.telegram_id = tgId;
-                currentUser.telegram_username = tgUsername;
-                currentUser.telegram_name = tgName;
+                const sess = await staffCurrentSession();
+                if (!sess) return;
+                const r = await staffLoginCall({ action: 'link_telegram', init_data: initData }, sess.access_token);
+                if (!r || r.ok !== true || !r.telegram) {
+                    if (r && r.error) console.warn('link_telegram:', r.error);
+                    return;
+                }
+                currentUser.telegram_id = r.telegram.id;
+                currentUser.telegram_username = r.telegram.username;
+                currentUser.telegram_name = r.telegram.name;
                 try { localStorage.setItem('myAppUser', JSON.stringify(currentUser)); } catch (e) { }
             } catch (e) {
                 // شکستی ئەمە نابێت ڕێگری لە کارکردنی ئەپەکە بکات
@@ -5028,6 +5012,33 @@
         function canViewWallet(code) { return canActOnWallet(code, 'view'); }
         function canManageWallet(code) { return canActOnWallet(code, 'manage'); }
 
+        // ⭐ «دەتوانم کلیلی ئەم کەسە دەستکاری بکەم یان بسڕمەوە؟» — ئاوێنەی
+        //    `perm_can_admin_key` (db/114)، کە سێرڤەر بە هەمان یاسا دەیپشکنێت.
+        //    پاشا: هەموو کەس. هەر کەسێکی تر: خۆی نا · پاشا نا · کلیل-دەسەڵات ·
+        //    و (کلیلی هەموان، یان تیمەکەم **و پلەیەک کە خۆم دروستی دەکەم**).
+        // ⚠️ پێشتر لیستەکە هەموو تیمەکەی پیشان دەدا — سەرپەرشتێک کە
+        //    کلیل-دەسەڵاتی هەبوو کلیلی **بەڕێوەبەرەکەی خۆی** و سەرپەرشتی
+        //    هاوئاستی دەکردەوە و دەیگۆڕی. ([[landmines]] ١٦٧)
+        function canAdminKey(code, role) {
+            if (!currentUser || !code) return false;
+            if (userRole === 'پاشا') return true;
+            if (isSelfAdminLocked(code)) return false;
+            let r = normalizeRole(role || '');
+            if (r === 'پاشا') return false;
+            let all = permOn('manage_all_keys');
+            if (!(permOn('create_key') || all)) return false;
+            if (all) return true;
+            return isInMyTeam(code) && creatableRoles(userRole).includes(r);
+        }
+
+        // پەیامی پارێزەری سێرڤەر (db/114) — «CODE: دەقی کوردی» → تەنها دەقەکە
+        function serverGuardMsg(err) {
+            let m = String((err && (err.message || err)) || '');
+            // db/114 (کلیل) · db/116–118 (ناسنامە، خشتە، ئۆردەر) · db/119 (پاسوۆرد) · db/120 (دابەشکردن)
+            let x = /\b(?:NOT_STAFF|IDENTITY_LOCKED|SELF_LOCKED|COLUMN_LOCKED|NO_PERM_KEY|NO_PERM_CREATE|NO_PERM_PASSWORD|NO_PERM_DELETE|ONLY_NEW_KEYS|ROLE_NOT_ALLOWED|CHAIN_NOT_ALLOWED|NOT_ALLOWED|NO_PERM_WALLET|NO_PERM_TRASH|ORDER_LOCKED|PRINT_LOCKED|ORDER_SCHEDULED_PENDING|NO_PERM_STATUS|NO_PERM_EDIT|NO_PERM_PRINT|NO_PERM_DISTRIBUTE|BAD_DATE|TOO_MANY|DIST_ROWS|DIST_OVER_TOTAL|DIST_PERM):\s*([^\n]+)/.exec(m);
+            return x ? x[1].trim() : '';
+        }
+
         // ئایا دەسەڵاتی بەڕێوەبردنی ئەم بەکارهێنەرەم هەیە بۆ ئەم دەسەڵاتە مەودادارە؟ (set_profit_rates / manage_wallets)
         function canManageUser(code, permKey) {
             if (userRole === 'پاشا') return true;
@@ -5050,9 +5061,13 @@
         function _permQ(key) { return `<button type="button" class="perm-q" onclick="showPermHelp(event,this,'${key}')" tabindex="-1">؟</button>`; }
 
         function renderScopeSeg(mode, key, isKingEditor) {
-            let opts = [{ v: 'none', ic: 'bx-x', t: 'نەدراوە' }, { v: 'team', ic: 'bx-group', t: 'تیم' }];
-            if (isKingEditor) opts.push({ v: 'all', ic: 'bx-globe', t: 'هەموان' });
-            let btns = opts.map(o => `<button type="button" class="pseg-btn" data-val="${o.v}" onclick="pickPermSeg('${mode}','${key}','${o.v}')"><i class='bx ${o.ic}'></i><span>${o.t}</span></button>`).join('');
+            let opts = [{ v: 'none', ic: 'bx-x', t: 'نەدراوە' }, { v: 'team', ic: 'bx-group', t: 'تیم' }, { v: 'all', ic: 'bx-globe', t: 'هەموان' }];
+            // ⭐ «هەموان» بۆ نا-پاشا هەمیشە هەیە بەڵام شاراوەیە (`pseg-kingval`)
+            //    — تەنها کاتێک دەردەکەوێت کە کلیلی دەستکاریکراو خۆی
+            //    «هەموان»ی هەیە (پاشا دایناوە). پێشتر دوگمەکە بوونی نەبوو،
+            //    بۆیە «هەموان» وەک «تیم» پیشان دەدرا و یەکەم پاشەکەوت
+            //    — تەنانەت بۆ گۆڕینی ناوێک — بێدەنگ دایدەبەزاند بۆ «تیم».
+            let btns = opts.map(o => `<button type="button" class="pseg-btn${(o.v === 'all' && !isKingEditor) ? ' pseg-kingval' : ''}" data-val="${o.v}" onclick="pickPermSeg('${mode}','${key}','${o.v}')"><i class='bx ${o.ic}'></i><span>${o.t}</span></button>`).join('');
             return `<div class="pseg" id="segwrap-${mode}-${key}">${btns}<input type="hidden" id="perm-${mode}-${key}" value="none"></div>`;
         }
 
@@ -5065,26 +5080,176 @@
         const TIER_ORDER = ['off', 'own', 'all'];
 
         function tierCap(key, isKingEditor) {
+            // پاشا سنووری نییە — تۆماری خۆی لەوانەیە سنووری کۆنی تێدا بێت
+            if (isKingEditor) return 2;
             let i = TIER_ORDER.indexOf(tierMode(getMyPerms()[key]));
             if (i < 0) i = 2;
-            if (/_mgr$/.test(key) && !isKingEditor && i > 1) i = 1;
+            if (/_mgr$/.test(key) && i > 1) i = 1;
             return i;
-        }
-
-        function clampTier(key, v) {
-            let cap = tierCap(key, userRole === 'پاشا');
-            let i = TIER_ORDER.indexOf(tierMode(v));
-            if (i < 0) i = 2;
-            return TIER_ORDER[Math.min(i, cap)];
         }
 
         function renderTierSeg(mode, key, isKingEditor) {
             let cap = tierCap(key, isKingEditor);
-            // بە دوو بژاردە، «خۆم» تەنها واتای «بەڵێ» دەدات — بۆیە ئاواش دەنووسرێت
-            let labels = (cap === 1) ? ['✕', 'بەڵێ'] : ['✕', 'خۆم', 'هەموان'];
-            let btns = TIER_ORDER.slice(0, cap + 1).map((v, i) =>
+            // پلەی بەڕێوەبەر بۆ نا-پاشا: لە هەر تیمێکدا یەک بەڕێوەبەر هەیە،
+            // بۆیە «خۆم» و «هەموان» یەکن → ✕ / بەڵێ.
+            // ⚠️ پێشتر ژمارەی دوگمەکان بە **سنووری دروستکەر** دیاری دەکرا
+            //    (`cap + 1`)، بۆیە بەهایەکی سەرووی ئەو هەرگیز نەدەنەخشێنرا و
+            //    «خۆم»ی پلەیەکی ئاسایی دەبووە «بەڵێ». ئێستا هەموو دوگمەکان
+            //    هەن و ئەوانەی دروستکەر نایانبەخشێت `is-nogrant`ـن.
+            let two = /_mgr$/.test(key) && !isKingEditor;
+            let labels = two ? ['✕', 'بەڵێ'] : ['✕', 'خۆم', 'هەموان'];
+            let btns = TIER_ORDER.slice(0, labels.length).map((v, i) =>
                 `<button type="button" class="pseg-btn sm" data-val="${v}" onclick="pickTierSeg('${mode}','${key}','${v}')">${labels[i]}</button>`).join('');
             return `<div class="pseg sm" id="segwrap-${mode}-${key}">${btns}<input type="hidden" id="perm-${mode}-${key}" value="${TIER_ORDER[cap]}"></div>`;
+        }
+
+        // ============ سنووری بەخشین — «ئەوەی خۆت نیتە، نایبەخشیت» ============
+        // خاوەن (٢٠٢٦-١٠-٠٨): «هەر کەسێک کە دەسەڵاتی دروستکردنی کلیلی
+        // پێدرا بەڵام … دەسەڵاتی نەبوو بتوانێ ئۆردەر واسڵ بکات بە گەیشتوو،
+        // ئەوا نەتوانێت ئەو دەسەڵاتە بدات بەو کلیلەی کە دروستی دەکات، ئیتر
+        // لە هەر پلەیەک بێت.»
+        //
+        // ⚠️ پێشتر `sanitizePermsForSave` تەنها دەیزانی **کام کلیل**
+        //    دەستکاری دەکرێت (`PERM_EDITABLE_BY_MANAGER`) و «هەموان»ی
+        //    دەکرد بە «تیم» — بەڵام هەرگیز نەیدەپرسی دروستکەر **خۆی**
+        //    هەیەتی یان نا. بۆیە بەڕێوەبەرێک بێ «گەیشتوو» یان بێ «بینینی
+        //    ئۆردەر» دەیتوانی بیدات بە کلیلی نوێ.
+        //
+        // ⭐ `permGrantable(key)` **تاکە** وەڵامە بۆ «ئەم کەسە چ بەهایەک
+        //    دەتوانێت بۆ ئەم کلیلە دابنێت». ڕووکار (`syncPermGrantUI`) و
+        //    پاشەکەوت (`sanitizePermsForSave`) هەردووکیان لێرەوە دەپرسن —
+        //    دوو یاسای جیا بە کاتدا لێک دوور دەکەونەوە.
+        //      پاشا              → هەموو شت
+        //      کلیلی تەنها-پاشا  → هیچ (mark_print · ed_onway · زۆنی مەترسیدار · جزدان · چاڵنج/کۆگا)
+        //      مەودا             → تا «تیم»، و تەنها ئەگەر خۆی «تیم» یان «هەموان»ی هەبێت
+        //      سویچ              → تەنها ئەگەر خۆی هەیبێت، و مەودا باوکەکەشی
+        //      خانەی قازانج       → تەنها ئەو ئاڕاستانەی خۆی هەیەتی
+        //      سنووری پلە         → تا ئاستی خۆی (`tierCap`)
+        function permKind(key) {
+            if (PERM_SCOPE_KEYS.indexOf(key) >= 0) return 'scope';
+            if (PERM_PROFIT_KEYS.indexOf(key) >= 0) return 'profit';
+            if (PERM_TIER_KEYS.indexOf(key) >= 0) return 'tier';
+            return 'toggle';
+        }
+
+        // بەهای ڕێکخراو — نەناسراو دەبێتە کەمترین (سنووری پلە: نەبوون = 'all'، وەک `tierMode`)
+        function permNormVal(key, v) {
+            let kind = permKind(key);
+            if (kind === 'scope') return (v === 'team' || v === 'all') ? v : 'none';
+            if (kind === 'profit') return (v === 'inc' || v === 'dec' || v === 'both') ? v : 'none';
+            if (kind === 'tier') return tierMode(v);
+            return v === true;
+        }
+
+        // بۆ بەراورد: پلەی بەڕێوەبەر بۆ نا-پاشا «هەموان» == «خۆم» (بڕوانە `renderTierSeg`)
+        function permCanonVal(key, v) {
+            let n = permNormVal(key, v);
+            if (n === 'all' && userRole !== 'پاشا' && /_mgr$/.test(key) && permKind(key) === 'tier') return 'own';
+            return n;
+        }
+
+        // ئەوەی خودی دروستکەر هەیەتی — بە هەمان یاسای فۆڕمەکە:
+        // بێ «بینینی ئۆردەر» دەستکاری/سڕینەوە/حاڵەت هیچ نین.
+        function permHeldScope(key) {
+            let s = permScope(key);
+            SCOPE_DEP_FAMILIES.forEach(f => { if (f.deps.indexOf(key) >= 0 && permScope(f.view) === 'none') s = 'none'; });
+            return s;
+        }
+
+        // سویچی ژێر مەودایەک بەبێ مەوداکە هیچ نییە: `st_*` ← گۆڕینی حاڵەت،
+        // `ed_*` ← دەستکاری. هەمان یاسای `can('mark_delivered')`.
+        const PERM_SUB_PARENT = {};
+        PERM_GROUPS.forEach(g => g.items.forEach(it => (it.subs || []).forEach(s => { PERM_SUB_PARENT[s.key] = it.key; })));
+        function permHeldToggle(key) {
+            if (!permOn(key)) return false;
+            let parent = PERM_SUB_PARENT[key];
+            return !parent || permHeldScope(parent) !== 'none';
+        }
+
+        // inc و dec بەراورد ناکرێن — بۆیە کۆمەڵەیە نەک ڕیزبەندی
+        const PERM_PROFIT_GRANTABLE = { none: ['none'], inc: ['none', 'inc'], dec: ['none', 'dec'], both: ['none', 'inc', 'dec', 'both'] };
+
+        function permGrantable(key) {
+            let kind = permKind(key);
+            if (userRole === 'پاشا') {
+                if (kind === 'scope') return ['none', 'team', 'all'];
+                if (kind === 'profit') return PERM_PROFIT_GRANTABLE.both;
+                if (kind === 'tier') return TIER_ORDER.slice();
+                return [false, true];
+            }
+            let editable = PERM_EDITABLE_BY_MANAGER.indexOf(key) >= 0;
+            if (kind === 'scope') {
+                // «هەموان» تەنها پاشا دەیبەخشێت — تەنانەت ئەگەر دروستکەر خۆی هەیبێت
+                return (editable && permHeldScope(key) !== 'none') ? ['none', 'team'] : ['none'];
+            }
+            if (kind === 'profit') {
+                if (!editable || permHeldScope('distribute') === 'none') return ['none'];
+                return PERM_PROFIT_GRANTABLE[profitMode(key)] || ['none'];
+            }
+            if (kind === 'tier') {
+                if (!editable) return [TIER_ORDER[0]];
+                return TIER_ORDER.slice(0, tierCap(key, false) + 1);
+            }
+            return (editable && permHeldToggle(key)) ? [false, true] : [false];
+        }
+
+        // بەهایەکی داواکراو دادەبەزێت بۆ بەرزترین بەهایەک کە ڕێگەپێدراوە
+        const PERM_GRANT_DOWN = {
+            scope: { all: ['all', 'team', 'none'], team: ['team', 'none'], none: ['none'] },
+            profit: { both: ['both', 'inc', 'dec', 'none'], inc: ['inc', 'none'], dec: ['dec', 'none'], none: ['none'] },
+            tier: { all: ['all', 'own', 'off'], own: ['own', 'off'], off: ['off'] },
+        };
+        function permClampGrant(key, v, okVals) {
+            let kind = permKind(key), n = permNormVal(key, v);
+            okVals = okVals || permGrantable(key);
+            if (kind === 'toggle') return n && okVals.indexOf(true) >= 0;
+            let chain = PERM_GRANT_DOWN[kind][n];
+            for (let i = 0; i < chain.length; i++) if (okVals.indexOf(chain[i]) >= 0) return chain[i];
+            return chain[chain.length - 1];
+        }
+
+        // ئەو بەهایانەی لەم فۆڕمەدا هەڵدەبژێردرێن: ئەوەی دەتوانێت ببەخشێت،
+        // **و** لە چاکسازیدا بەهای ئێستای کلیلەکە. واتا ئەوەی پاشا داویەتی
+        // و دەستکاریکەر نییەتی: دەتوانێت بیهێڵێتەوە یان **دایبەزێنێت**
+        // (بۆ ئەوەی هەیەتی)، بەڵام هەرگیز بەرزتری ناکاتەوە.
+        // ⚠️ بەبێ بەهای ئێستا، خانەکە بە بەهای دابەزێنراو پیشان دەدرا و
+        //    یەکەم پاشەکەوت دەسەڵاتی پاشا-دراوی بێدەنگ لێ دەسەندەوە.
+        // ⚠️ و «قوفڵ» (هیچ گۆڕان) هەڵە بوو: سنووری پلە بۆ هەموو کەس بە
+        //    بنەڕەت «هەموان»ـە، بۆیە بەڕێوەبەرێکی «خۆم» نەیدەتوانی
+        //    ئەندامەکانی خۆی سنووردار بکات. ([[landmines]] ١٦٧)
+        function permAllowed(mode, key) {
+            let okVals = permGrantable(key);
+            if (userRole === 'پاشا' || mode !== 'edit' || !_editOrigPerms) return okVals;
+            let cur = permCanonVal(key, _editOrigPerms[key]);
+            return okVals.indexOf(cur) >= 0 ? okVals : okVals.concat([cur]);
+        }
+
+        // کۆنترۆڵی ئەو بەهایانەی ئەم کەسە ناتوانێت بیانبەخشێت کاڵ دەکرێن.
+        // ⚠️ پۆلێکی جیا (`is-nogrant`)، نەک `is-disabled` — ئەوەیان
+        //    `syncTierDependents` دەینووسێتەوە، و دوو یاسا لەسەر یەک پۆل
+        //    یەکتر دەسڕنەوە.
+        // ⚠️ ئەمە ڕووکارە، پارێزەر نییە — `sanitizePermsForSave` پارێزەرەکەیە.
+        function syncPermGrantUI(mode) {
+            PERM_KEYS_ALL.forEach(k => {
+                let el = document.getElementById(`perm-${mode}-${k}`);
+                if (!el) return;
+                let okVals = permAllowed(mode, k);
+                if (el.type === 'checkbox') {
+                    let off = okVals.indexOf(true) < 0;
+                    el.disabled = off;
+                    let sw = el.closest('.switch');
+                    if (sw) sw.classList.toggle('is-nogrant', off);
+                    return;
+                }
+                let wrap = document.getElementById(`segwrap-${mode}-${k}`);
+                if (wrap) wrap.querySelectorAll('.pseg-btn').forEach(b => {
+                    let can = okVals.indexOf(b.dataset.val) >= 0;
+                    b.classList.toggle('is-nogrant', !can);
+                    // «هەموان»ی شاراوە دەردەکەوێت کاتێک بەهای ئێستای کلیلەکەیە —
+                    // ئەگەرنا دوای دابەزاندن ڕێگای گەڕانەوە نامێنێت
+                    b.classList.toggle('is-avail', can);
+                });
+            });
         }
 
         function renderProfitSeg(mode, key) {
@@ -5148,6 +5313,8 @@
                     ${isKingEditor ? `<button type="button" class="perm-preset-btn" onclick="applyPermPreset('${mode}','full')">هەموو</button>` : ''}
                     <button type="button" class="perm-preset-btn danger" onclick="applyPermPreset('${mode}','none')">هیچ</button>
                 </div>`;
+            // نا-پاشا: ڕوونکردنەوەی کۆنترۆڵە کاڵەکان — ئەگەرنا وەک شکاو دەخوێندرێنەوە
+            if (!isKingEditor) presets += `<div class="perm-grant-note"><i class='bx bx-lock-alt'></i><span>تەنها ئەو دەسەڵاتانە دەتوانیت ببەخشیت کە خۆت هەتە — ئەوانەی کاڵن لە دەستی تۆدا نین.</span></div>`;
 
             let groupsHtml = PERM_GROUPS.map(g => {
                 // زۆنی مەترسیدار و گرووپە تەنها-پاشاکان دەرناکەون.
@@ -5372,28 +5539,30 @@
         // دانانی دۆخی هەموو کۆنترۆڵەکان بەپێی object ـی دەسەڵات
         function setPermToggles(mode, perms) {
             perms = (perms && typeof perms === 'object' && !Array.isArray(perms)) ? perms : {};
-            PERM_TOGGLE_KEYS.forEach(k => { let el = document.getElementById(`perm-${mode}-${k}`); if (el) el.checked = (perms[k] === true); });
-            PERM_TIER_KEYS.forEach(k => pickTierSeg(mode, k, clampTier(k, perms[k])));
-            PERM_SCOPE_KEYS.forEach(k => {
-                let v = (perms[k] === 'team' || perms[k] === 'all') ? perms[k] : 'none';
-                if (userRole !== 'پاشا' && v === 'all') v = 'team'; // بەڕێوەبەر «هەموان» نابینێت
-                pickPermSeg(mode, k, v);
-            });
-            PERM_PROFIT_KEYS.forEach(k => {
-                let v = (perms[k] === 'inc' || perms[k] === 'dec' || perms[k] === 'both') ? perms[k] : 'none';
-                pickProfitSeg(mode, k, v);
-            });
+            // ⭐ هەر بەهایەک بە دەرگای بەخشیندا تێدەپەڕێت (`permAllowed`):
+            //    ئەوەی دروستکەر نایبەخشێت دادەبەزێت، و بەهای ئێستای کلیلەکە
+            //    — ئەگەر لە سەرووی دەستکاریکەریشەوە بێت — وەک خۆی پیشان
+            //    دەدرێت، نەک بە بەهای دابەزێنراو.
+            const shown = (k) => permClampGrant(k, perms[k], permAllowed(mode, k));
+            PERM_TOGGLE_KEYS.forEach(k => { let el = document.getElementById(`perm-${mode}-${k}`); if (el) el.checked = (shown(k) === true); });
+            PERM_TIER_KEYS.forEach(k => pickTierSeg(mode, k, shown(k)));
+            PERM_SCOPE_KEYS.forEach(k => pickPermSeg(mode, k, shown(k)));
+            PERM_PROFIT_KEYS.forEach(k => pickProfitSeg(mode, k, shown(k)));
             // دوای هەموویان — ئەگەرنا لووپی مەوداکان دووبارە لەسەری دەنووسێتەوە
             PERM_TIERS.forEach(x => syncTierDependents(mode, x.t));
             syncViewDependents(mode);
+            syncPermGrantUI(mode);
         }
 
         // کۆکردنەوەی دەسەڵاتەکان لە فۆرمەکە → object ـی نوێ (بۆ خەزنکردن)
         function collectPermToggles(mode) {
             let out = {};
             PERM_TOGGLE_KEYS.forEach(k => { let el = document.getElementById(`perm-${mode}-${k}`); out[k] = !!(el && el.checked); });
-            // سنوورەکە لێرەش جێبەجێ دەبێت — نەک تەنها لە ڕووکاردا
-            PERM_TIER_KEYS.forEach(k => { let el = document.getElementById(`perm-${mode}-${k}`); out[k] = clampTier(k, el ? el.value : 'all'); });
+            // ⚠️ وەک خۆی کۆدەکرێتەوە — سنووری بەخشین `sanitizePermsForSave`ـە.
+            //    پێشتر لێرە بە سنووری **دەستکاریکەر** دەبڕدرا (`clampTier`)،
+            //    بۆیە «هەموان»ی پاشا لەسەر ئەندامێک بە پاشەکەوتکردنی
+            //    بەڕێوەبەرێکی «خۆم» بێدەنگ دەبووە «خۆم». ([[landmines]] ١٦٦)
+            PERM_TIER_KEYS.forEach(k => { let el = document.getElementById(`perm-${mode}-${k}`); out[k] = tierMode(el ? el.value : 'all'); });
             PERM_SCOPE_KEYS.forEach(k => { let el = document.getElementById(`perm-${mode}-${k}`); let v = el ? el.value : 'none'; out[k] = (v === 'team' || v === 'all') ? v : 'none'; });
             PERM_PROFIT_KEYS.forEach(k => { let el = document.getElementById(`perm-${mode}-${k}`); let v = el ? el.value : 'none'; out[k] = (v === 'inc' || v === 'dec' || v === 'both') ? v : 'none'; });
             return applyViewDependency(applyTierViewDependency(out));
@@ -5418,31 +5587,45 @@
         // ============ سنووری دەسەڵاتدان بۆ بەڕێوەبەر (قۆناغ ٣) ============
         // دەسەڵاتی پێشووی کلیلی چاکسازیکراو (بۆ پاراستنی دەسەڵاتە پاشا-دراوەکان کاتێک بەڕێوەبەر چاکسازی دەکات)
         let _editOrigPerms = null;
+        // هی کام کلیلە؟ — `updateCode` پێش نووسین دەیپشکنێت، ئەگەرنا
+        // دەسەڵاتی کلیلێکی تر دەبووە بنەڕەتی ئەم کلیلە
+        let _editOrigCode = null;
+        let _editOrigRole = '';
         // دەسەڵاتانەی بەڕێوەبەر بۆی هەیە بیانداتە کلیلی دروستکراوی خۆی (تیم-scoped، ناـمەترسیدار)
         // سنووری پلەی جزدان (wv_*/wm_*) لێرە نییە — زۆنی مەترسیدارە و
         // تەنها پاشا دەیبەخشێت، بۆیە بەڕێوەبەر بە چاکسازی نایگۆڕێت
         // `mark_print` لێرەدا نییە بە ئەنقەست — وەک `ed_onway` تەنها پاشا دەیبەخشێت.
         // ئۆردەری قوفڵکراو تەنها بە سکان یان بە پاشا دەکرێتەوە، بۆیە نابێت
         // بەڕێوەبەرێک بتوانێت ئەم دەسەڵاتە بە ئارەزووی خۆی بڵاو بکاتەوە.
-        const PERM_EDITABLE_BY_MANAGER = ['create_key', 'delete_key', 'view_orders', 'edit_order', 'delete_order', 'change_status', 'st_delivered', 'st_returned', 'st_del2ret', 'st_ret2del', 'distribute', 'pf_driver', 'pf_manager', 'pf_supervisor', 'pf_consultant', 'pf_member', 'pf_savings', 'view_savings'].concat(PERM_ORDER_TIER_KEYS);
+        // ⚠️ بوون لەم لیستەدا تەنها واتای «دەتوانێت دەستی لێبدات»ـە —
+        //    **چەند** دەیبەخشێت `permGrantable` دیاری دەکات (ئەوەی خۆی هەیەتی).
+        // `ed_prep` زیادکرا (٢٠٢٦-١٠-٠٨): سویچەکەی لە فۆڕمی بەڕێوەبەردا
+        // دەردەکەوت بەڵام پاشەکەوت فڕێی دەدا — دەرگایەکی مردوو.
+        const PERM_EDITABLE_BY_MANAGER = ['create_key', 'delete_key', 'view_orders', 'edit_order', 'ed_prep', 'delete_order', 'change_status', 'st_delivered', 'st_returned', 'st_del2ret', 'st_ret2del', 'distribute', 'pf_driver', 'pf_manager', 'pf_supervisor', 'pf_consultant', 'pf_member', 'pf_savings', 'view_savings'].concat(PERM_ORDER_TIER_KEYS);
 
-        function applyEditableSubset(base, collected) {
-            let out = Object.assign({}, base);
-            PERM_EDITABLE_BY_MANAGER.forEach(k => {
-                let v = collected[k];
-                if (PERM_SCOPE_KEYS.includes(k) && v === 'all') v = 'team'; // «هەموان» ڕێگەپێنەدراوە بۆ بەڕێوەبەر
-                out[k] = v;
-            });
-            return out;
-        }
-
-        // پاککردنەوەی دەسەڵاتەکان پێش خەزنکردن: پاشا هەموو شت؛ بەڕێوەبەر تەنها تیم-scoped و ناـمەترسیدار
+        // پاککردنەوەی دەسەڵاتەکان پێش خەزنکردن — **پارێزەرەکە ئەمەیە**، نەک ڕووکار.
+        //   پاشا         → هەموو شت
+        //   هەر کەسێکی تر → هەر کلیلێک بە `permClampGrant` بۆ `permAllowed`:
+        //                   ئەوەی خۆی هەیەتی، و لە چاکسازیدا بەهای ئێستاش؛
+        //                   کلیلی تەنها-پاشا لە بنەڕەتەوە دێت.
+        // ⚠️ ئاوێنەی `perm_sanitize` (db/114) — `db_guard_test.mjs`
+        //    هەردووکیان لەسەر ٤٠٠ دۆخی هەڕەمەکی بەراورد دەکات.
         function sanitizePermsForSave(mode, collected) {
             if (userRole === 'پاشا') return collected;
+            collected = collected || {};
+            let isEdit = (mode === 'edit' && !!_editOrigPerms);
             // بۆ چاکسازی: بنەڕەت = دەسەڵاتە پێشووەکان (تا مەترسیدارە پاشا-دراوەکان نەسڕدرێنەوە)
             // بۆ دروستکردن: بنەڕەت = هەموو داخراو
-            let base = (mode === 'edit' && _editOrigPerms) ? _editOrigPerms : defaultPermsForRole('ئەندام');
-            return applyEditableSubset(base, collected);
+            let base = isEdit ? _editOrigPerms : defaultPermsForRole('ئەندام');
+            let out = Object.assign({}, base);
+            PERM_EDITABLE_BY_MANAGER.forEach(k => {
+                let want = (k in collected) ? collected[k] : base[k];
+                let v = permClampGrant(k, want, permAllowed(isEdit ? 'edit' : 'create', k));
+                // هەمان بەهای ئێستا → بەهای ڕاستەقینە، نەک وێنە ڕێکخراوەکەی
+                // (پلەی بەڕێوەبەر: «بەڵێ» == «هەموان»)
+                out[k] = (isEdit && v === permCanonVal(k, base[k])) ? base[k] : v;
+            });
+            return applyViewDependency(applyTierViewDependency(out));
         }
 
         // پشکنین ئایە هەڵەکە بەهۆی نەبوونی ستوونی permissions ـە لە داتابەیس (پێش زیادکردنی ستوونەکە)
@@ -6236,13 +6419,12 @@
             btn.disabled = true;
             btn.innerHTML = "<i class='bx bx-loader-alt bx-spin'></i> پشکنین...";
             try {
-                // پاسوۆردەکە لە داتابەیسەوە دەپشکنرێت، نەک لە کاشی ناو ئامێرەکە
-                const { data, error } = await supabase.from('employees')
-                    .select('password').eq('code', currentUser.code).single();
+                // ⭐ db/119: پاسوۆردەکە لە سێرڤەر دەپشکنرێت — براوزەر هەرگیز
+                //    نایبینێت (سنووردار: ١٠ هەڵە لە ١٥ خولەکدا، وەک چوونەژوورەوە)
+                const { data: pwOk, error } = await supabase.rpc('my_password_check', { p_password: cur });
                 if (error) throw error;
 
-                const dbPass = (data && data.password != null) ? String(data.password) : '';
-                if (dbPass !== cur) {
+                if (pwOk !== true) {
                     if (msg) {
                         msg.className = 'pwc-msg err';
                         msg.innerHTML = `<i class='bx bx-error-circle'></i> پاسوۆردی ئێستا هەڵەیە`;
@@ -6265,7 +6447,9 @@
                 console.error('verifyCurrentPassword:', e);
                 if (msg) {
                     msg.className = 'pwc-msg err';
-                    msg.innerHTML = `<i class='bx bx-error-circle'></i> کێشەیەک ڕوویدا — دووبارە هەوڵ بدەوە`;
+                    msg.innerHTML = /TOO_MANY/.test(String((e && e.message) || ''))
+                        ? `<i class='bx bx-time-five'></i> هەوڵی زۆر — 15 خولەک چاوەڕێ بکە`
+                        : `<i class='bx bx-error-circle'></i> کێشەیەک ڕوویدا — دووبارە هەوڵ بدەوە`;
                 }
             } finally {
                 btn.innerHTML = label;
@@ -6366,13 +6550,13 @@
             btn.disabled = true;
             btn.innerHTML = "<i class='bx bx-loader-alt bx-spin'></i> گۆڕین...";
             try {
-                // دووبارە دەپشکنرێت — لەوانەیە لەم ماوەیەدا لە ئامێرێکی تر گۆڕدرابێت
-                const { data, error } = await supabase.from('employees')
-                    .select('password').eq('code', currentUser.code).single();
-                if (error) throw error;
+                // ⭐ db/119: پشکنین و گۆڕین بە یەک بانگ لە سێرڤەر — پاسوۆردی
+                //    ئێستا لەوێ دووبارە دەپشکنرێت (لەوانەیە لەم ماوەیەدا لە
+                //    ئامێرێکی تر گۆڕدرابێت)، نەک لە براوزەر
+                const { data: pwRes, error: upErr } = await supabase.rpc('change_my_password', { p_old: cur, p_new: nw });
+                if (upErr) throw upErr;
 
-                const dbPass = (data && data.password != null) ? String(data.password) : '';
-                if (dbPass !== cur) {
+                if (!pwRes || pwRes.ok !== true) {
                     pwBackToStep1();
                     const m1 = document.getElementById('pwc-msg1');
                     if (m1) {
@@ -6381,10 +6565,6 @@
                     }
                     return;
                 }
-
-                const { error: upErr } = await supabase.from('employees')
-                    .update({ password: nw }).eq('code', currentUser.code);
-                if (upErr) throw upErr;
 
                 // ⭐ db/100: گۆڕینی پاسوۆرد هەموو sessionـەکانی ئەم ئەکاونتە لە
                 //    سێرڤەر دەکوژێت — ئەوەی ئەم ئامێرەش. بە پاسوۆردە نوێکە
@@ -6399,12 +6579,14 @@
                 //    ئامێرە نا — بۆیە ژمارە نوێیەکە لێرەوە دەخوێندرێتەوە.
                 //    بەبێ ئەمە، خاوەنی ئەکاونتەکە خۆی لە ئەپەکە دەردەکرد
                 //    ئەو ساتەی پاسوۆردەکەی دەگۆڕی.
-                let newEpoch = null;
-                try {
-                    const { data: fresh } = await supabase.from('employees')
-                        .select('session_epoch').eq('code', currentUser.code).single();
-                    if (fresh) newEpoch = fresh.session_epoch;
-                } catch (e) { console.warn('epoch refresh:', e); }
+                let newEpoch = (pwRes.session_epoch != null) ? pwRes.session_epoch : null;
+                if (newEpoch == null) {
+                    try {
+                        const { data: fresh } = await supabase.from('employees')
+                            .select('session_epoch').eq('code', currentUser.code).single();
+                        if (fresh) newEpoch = fresh.session_epoch;
+                    } catch (e) { console.warn('epoch refresh:', e); }
+                }
 
                 // ئەکاونتی ناو ئامێرەکە نوێ دەکرێتەوە تا دەرنەچێت
                 currentUser.password = nw;
@@ -6419,7 +6601,9 @@
                 console.error('submitPasswordChange:', e);
                 if (msg) {
                     msg.className = 'pwc-msg err';
-                    msg.innerHTML = `<i class='bx bx-error-circle'></i> کێشەیەک ڕوویدا — دووبارە هەوڵ بدەوە`;
+                    msg.innerHTML = /TOO_MANY/.test(String((e && e.message) || ''))
+                        ? `<i class='bx bx-time-five'></i> هەوڵی زۆر — 15 خولەک چاوەڕێ بکە`
+                        : `<i class='bx bx-error-circle'></i> کێشەیەک ڕوویدا — دووبارە هەوڵ بدەوە`;
                 }
             } finally {
                 btn.innerHTML = "<i class='bx bx-check-shield'></i> گۆڕینی پاسوۆرد";
@@ -20532,7 +20716,7 @@
             { k: 'profit',  i: 'bx-trending-up',    t: 'قازانج',
               ok: (c, role) => role !== 'ئەندام' && canManageUser(c, 'set_profit_rates') },
             { k: 'key',     i: 'bx-id-card',        t: 'کلیل',
-              ok: c => can('manage_employees') && !isSelfAdminLocked(c) },
+              ok: (c, role) => can('manage_employees') && canAdminKey(c, role) },
             { k: 'login',   i: 'bx-log-in-circle',  t: 'چوونەژوورەوە',
               ok: c => can('login_as') && !isSelfAdminLocked(c) }
         ];
@@ -26907,7 +27091,9 @@
             if (newStatus === "گەیشتووە" && o && o.reward_claim_id && o.status !== "گەیشتووە") {
                 showToast("خەریکی نوێکردنەوە...", "loading");
                 try {
-                    await supabase.from('orders').update({ status: newStatus, status_changed_by: userName }).eq('id', orderId);
+                    // ⭐ db/118: سێرڤەر هەمان یاسا دەپشکنێت — ڕەتکردنەوەکەی دەبێت دیار بێت
+                    const { error: stErr } = await supabase.from('orders').update({ status: newStatus, status_changed_by: userName }).eq('id', orderId);
+                    if (stErr) throw stErr;
                     await logOrderAction(o, 'status', {
                         from: o.status, to: newStatus,
                         detail: 'ئۆردەری خەڵات گەیشت — بێ دابەشکردنی قازانج'
@@ -26915,7 +27101,7 @@
                     showToast("حاڵەت گۆڕدرا!", "success");
                     closeModal(null, 'order-details-modal');
                     rtPatchOrders([orderId]);
-                } catch (e) { showToast("هەڵەیەک ڕوویدا", "error"); }
+                } catch (e) { showToast(serverGuardMsg(e) || "هەڵەیەک ڕوویدا", "error"); }
                 return;
             }
 
@@ -26961,7 +27147,8 @@
                         p_description: `بڕین بەهۆی گەڕانەوەی ئۆردەری ${o.order_code}. هۆکار: ${reason}`
                     });
                     if (retErr) throw retErr;
-                    await supabase.from('orders').update({ status: newStatus, return_reason: reason, status_changed_by: userName }).eq('id', orderId);
+                    const { error: stErr } = await supabase.from('orders').update({ status: newStatus, return_reason: reason, status_changed_by: userName }).eq('id', orderId);
+                    if (stErr) throw stErr;
                     const backNote = walletBack > 0
                         ? ` ${Math.round(walletBack).toLocaleString()} د.ع گەڕایەوە جزدانی خاوەنەکەی.`
                         : '';
@@ -26975,7 +27162,7 @@
                     rtPatchOrders([o.id]);
                 } catch (e) {
                     console.error('return order:', e);
-                    showToast("هەڵە لە گەڕانەوەدا ڕوویدا", "error");
+                    showToast(serverGuardMsg(e) || "هەڵە لە گەڕانەوەدا ڕوویدا", "error");
                 }
                 return;
             }
@@ -26984,7 +27171,8 @@
             if (newStatus === "گەڕاوەتەوە" && !reason) { showToast("هۆکار بنووسە!", "error"); return; }
             showToast("خەریکی نوێکردنەوە...", "loading");
             try {
-                await supabase.from('orders').update({ status: newStatus, return_reason: reason, status_changed_by: userName }).eq('id', orderId);
+                const { error: stErr } = await supabase.from('orders').update({ status: newStatus, return_reason: reason, status_changed_by: userName }).eq('id', orderId);
+                if (stErr) throw stErr;
                 await logOrderAction(o, 'status', {
                     from: o ? o.status : null, to: newStatus,
                     detail: `حاڵەتی گۆڕی بۆ «${newStatus}»` + (reason ? ` — هۆکار: ${reason}` : '')
@@ -26992,7 +27180,7 @@
                 showToast("حاڵەت گۆڕدرا!", "success");
                 closeModal(null, 'order-details-modal');
                 rtPatchOrders([orderId]);
-            } catch (e) { showToast("هەڵەیەک ڕوویدا", "error"); }
+            } catch (e) { showToast(serverGuardMsg(e) || "هەڵەیەک ڕوویدا", "error"); }
         }
 
         async function deleteOrder(orderId) {
@@ -30658,7 +30846,8 @@
         // ==========================================
 
         const IMG_BUCKET = "order-images";   // باکێتی Supabase Storage
-        const IMGBB_KEY = "D46aeed04460f87292aa90c209ae88d5"; // تەنها وەک پاشەکەوت
+        // ⚠️ کلیلی ImgBB لێرە لابرا (٢٠٢٦-١٠-٠٨): فەنکشنەکەی هەرگیز بانگ
+        //    نەدەکرا، بەڵام کلیلەکە لەسەر سایتی گشتی دەخوێندرایەوە.
         const IMG_MAX_DIM = 960;         // ئەوپەڕی درێژی لای گەورە (بۆ کەمکردنەوەی قەبارە بەبێ تێکچوونی ڕوونی)
         const IMG_MAX_PIXELS = 12e6;     // سنووری کەنڤاس (iOS بەتاڵ دەیگەڕێنێتەوە ئەگەر تێپەڕێت)
         const IMG_QUALITY = 0.58;        // دابەزاندنی قەبارەی وێنەکان بە ڕێژەی ٤٠٪ بۆ ٥٠٪
@@ -30772,7 +30961,7 @@
         // سەرەکی: Supabase Storage — هەمان دۆمەینی ئەپەکە خۆی، بۆیە لەسەر
         // هەموو هێڵێک (ئاسیاسێل، کۆرەک، زەین...) کاردەکات. ئەگەر ئەپەکە
         // بکرێتەوە، ئەپلۆدیش کاردەکات.
-        // پاشەکەوت: ImgBB — تەنها ئەگەر Supabase شکستی هێنا.
+        // (پێشتر ImgBB وەک پاشەکەوتی سێیەم — لابرا، هەرگیز بانگ نەدەکرا.)
         //
         // supabase-js بەکارنایەت لێرەدا چونکە fetch بەکاردێنێت و سەدی ناردن
         // نادات؛ ڕاستەوخۆ REST + XHR بەکاردێت بۆ پیشاندانی پێشکەوتنی ڕاستەقینە.
@@ -30811,10 +31000,17 @@
         // CF_R2_PUBLIC_URL is already declared as var in config.js — do not redeclare here
 
         async function uploadToCloudflare(blob, filename, onProgress) {
+            // ⭐ وۆرکەرەکە (cloudflare/order-image-uploader/worker.js) تەنها
+            //    sessionـی کارمەند قبوڵ دەکات و کۆدی خاوەن خۆی لە سێرڤەرەوە
+            //    دەهێنێت — `X-User-Code` تەنها بۆ وۆرکەری کۆنە.
+            //    ئەگەر ڕەتی کردەوە، `uploadImage` دەچێتە سەر Supabase Storage.
+            const sess = await staffCurrentSession();
+            if (!sess) throw new Error('session نییە — دووبارە بچۆرەوە ژوورەوە');
             const userCode = (currentUser && currentUser.code) ? String(currentUser.code) : 'u';
             const res = await xhrUpload({
                 url: CF_WORKER_UPLOAD_URL,
                 headers: {
+                    'Authorization': 'Bearer ' + sess.access_token,
                     'Content-Type': blob.type || 'image/jpeg',
                     'X-Filename': encodeURIComponent(filename || 'photo.jpg'),
                     'X-User-Code': encodeURIComponent(userCode)
@@ -30859,21 +31055,6 @@
                 throw new Error(msg);
             }
             return `${SUPABASE_URL}/storage/v1/object/public/${IMG_BUCKET}/${encodeURI(path)}`;
-        }
-
-        async function uploadToImgbb(blob, filename, onProgress) {
-            const fd = new FormData();
-            fd.append('image', blob, filename);
-            fd.append('key', IMGBB_KEY);
-            const res = await xhrUpload({
-                url: 'https://api.imgbb.com/1/upload',
-                body: fd,
-                onProgress: onProgress
-            });
-            let j = null;
-            try { j = JSON.parse(res.text); } catch (e) { }
-            if (j && j.success && j.data && j.data.url) return j.data.url;
-            throw new Error((j && j.error && j.error.message) || ('HTTP ' + res.status));
         }
 
         // Cloudflare R2 (سەرەکی) → ئەگەر شکستی هێنا → Supabase Storage (پاشەکەوت)
@@ -33338,7 +33519,8 @@
                 let query = supabase.from('employees').select(
                     'code, full_name, role, manager, admin, consultant, creator, date,' +
                     ' telegram_status, telegram_id, telegram_username, telegram_name,' +
-                    ' balance, savings, profit_rate, avatar, receipt_name, postal_code, password,' +
+                    // ⚠️ `password` نا — db/119: تەنها `employee_password` (view_passwords)
+                    ' balance, savings, profit_rate, avatar, receipt_name, postal_code,' +
                     // ڕاگرتنی ئەکاونت (db/049) — باجی لیستی کلیلەکان و
                     // دۆخی سویچەکە لێرەوە دێن، بەبێ داواکارییەکی زیادە
                     ' suspended, suspended_at, suspended_by'
@@ -33625,13 +33807,32 @@
             }
 
             wrap.style.display = 'block';
-            const pass = (user && user.password != null) ? String(user.password) : '';
-            input.value = pass;
-            input.setAttribute('data-original', pass);
+            // ⭐ db/119: پاسوۆرد لە لیستەکەدا نییە — تەنها `employee_password`
+            //    (سێرڤەر هەمان دەرگای `canAdminKey` + view_passwords دەپشکنێت).
+            //    خانەکە بەتاڵ دەست پێدەکات تا وەڵام دێت؛ وەڵامێکی درەنگ بۆ
+            //    کلیلێکی تر، یان دوای ئەوەی بەکارهێنەر دەستی کردە نووسین،
+            //    هیچ ناگۆڕێت.
+            const seq = (fillEditPassword._seq = (fillEditPassword._seq || 0) + 1);
+            input.value = '';
+            input.setAttribute('data-original', '');
             // هەمیشە بە شاراوەیی دەست پێدەکات — نەوەک بەهەڵە کەسێک ببینێت
             input.type = 'password';
             if (eye) eye.classList.remove('on');
+            if (hint) { hint.classList.remove('is-open', 'is-warn'); hint.innerHTML = ''; }
+            if (!user || !user.code) return;
+            const code = String(user.code);
+            supabase.rpc('employee_password', { p_code: code }).then(({ data, error }) => {
+                if (error) { console.warn('employee_password:', error); return; }
+                if (seq !== fillEditPassword._seq || _editOrigCode !== code) return;
+                if (input.value !== '' || input.getAttribute('data-original') !== '') return;
+                const pass = (data != null) ? String(data) : '';
+                input.value = pass;
+                input.setAttribute('data-original', pass);
+                fillEditPasswordHint(hint, pass);
+            });
+        }
 
+        function fillEditPasswordHint(hint, pass) {
             if (hint) {
                 // هەر جارێک بە داخراوی دەست پێدەکاتەوە بۆ کلیلی نوێ
                 hint.classList.remove('is-open');
@@ -33917,6 +34118,20 @@
             if (user && isSelfAdminLocked(user.code)) {
                 showToast("ناتوانیت کلیلی خۆت دەستکاری بکەیت!", "error"); return;
             }
+            // ⭐ کۆتا پارێزەری دووەم: بێ دەسەڵاتە ڕاستەقینەکان فۆڕمەکە ناکرێتەوە.
+            //    `loadHierarchyUsers` بە ئەنقەست `permissions` ناهێنێت؛ تەنها
+            //    `openEditFromList` دەیهێنێت. هەر دەرگایەکی تر (بۆ نموونە
+            //    `setupSearchDropdown` ئەگەر زیندوو بکرێتەوە) دەبێت هەمان شت
+            //    بکات — ئەگەرنا `_editOrigPerms` = بنەڕەتی پلە و یەکەم
+            //    پاشەکەوت دەسەڵاتە پاشا-دراوەکان دەسڕێتەوە.
+            if (!user || user.permissions === undefined) {
+                showToast('نەتوانرا دەسەڵاتەکان بهێنرێن — دووبارە هەوڵ بدە', 'error'); return;
+            }
+            // پێش `updateFormByRole` — ئەویش `setPermToggles` بانگ دەکات و
+            // پێویستی بە دەسەڵاتی **ئەم** کلیلەیە، نەک هی کلیلی پێشوو
+            _editOrigPerms = normalizePerms(user.permissions, user.role); // پاراستنی دەسەڵاتە پاشا-دراوەکان
+            _editOrigCode = String(user.code || '');
+            _editOrigRole = normalizeRole(user.role || '');
             let editSection = document.getElementById('edit-section');
 
             let headName = document.getElementById('e-head-name');
@@ -33954,7 +34169,6 @@
             if (postalEdit) postalEdit.value = String(user.postal_code || '');
 
             // بارکردنی دەسەڵاتەکان دوای updateFormByRole (ئەوەی هەیەتی، نەک بنەڕەتی پلە)
-            _editOrigPerms = normalizePerms(user.permissions, user.role); // پاراستنی دەسەڵاتە پاشا-دراوەکان
             setPermToggles('edit', _editOrigPerms);
 
             const getName = (code, arr) => {
@@ -34092,7 +34306,7 @@
                 document.getElementById('admin-loading-spinner').style.display = 'none';
                 document.getElementById('admin-screen-content').style.display = 'flex';
             } catch (err) {
-                showToast("کێشەیەک ڕوویدا لە دروستکردندا", "error");
+                showToast(serverGuardMsg(err) || "کێشەیەک ڕوویدا لە دروستکردندا", "error");
             }
         }
 
@@ -34119,6 +34333,20 @@
             let role = roleRadio.value;
 
             let isKing = (userRole === "پاشا");
+            // ⭐ دەسەڵاتەکانی **ئەم** کلیلە دەبێت لە بەردەستدا بن — ئەگەرنا
+            //    `sanitizePermsForSave` بنەڕەتی ئەندام وەک بنەڕەت بەکاردەهێنێت و
+            //    هەموو دەسەڵاتە پاشا-دراوەکان دەسڕێتەوە
+            if (!_editOrigPerms || _editOrigCode !== String(code)) {
+                showToast('نەتوانرا دەسەڵاتەکان بهێنرێن — کلیلەکە دووبارە بکەرەوە', 'error'); return;
+            }
+            if (!canAdminKey(code, _editOrigRole)) {
+                showToast("دەسەڵاتت نییە بۆ دەستکاریی ئەم کلیلە!", "error"); return;
+            }
+            // پارێزەری نووسین بۆ پلە — وەک `generateCode`: نا-پاشا تەنها
+            // پلەی ئێستای کلیلەکە دەهێڵێتەوە یان پلەیەک کە خۆی دروستی دەکات
+            if (!isKing && normalizeRole(role) !== _editOrigRole && !creatableRoles(userRole).includes(normalizeRole(role))) {
+                showToast("دەسەڵاتت نییە ئەم پلەیە بدەیت!", "error"); return;
+            }
             let managerVal = document.getElementById('e-manager') ? (document.getElementById('e-manager').getAttribute('data-code') || "") : "";
             let adminVal = document.getElementById('e-admin') ? (document.getElementById('e-admin').getAttribute('data-code') || "") : "";
             let consultantVal = document.getElementById('e-consultant') ? (document.getElementById('e-consultant').getAttribute('data-code') || "") : "";
@@ -34212,6 +34440,8 @@
 
                 showToast(passChanged ? "نوێکرایەوە — پاسوۆردیش گۆڕدرا!" : "بە سەرکەوتوویی نوێکرایەوە!", "success");
                 _editingUser = null;
+                // بنەڕەتێکی کۆن نابێت بۆ پاشەکەوتی داهاتوو بمێنێتەوە
+                _editOrigPerms = null; _editOrigCode = null; _editOrigRole = '';
                 document.getElementById('edit-section').style.display = "none";
                 document.getElementById('search-code-input').value = "";
                 document.getElementById('search-code-input').removeAttribute('data-code');
@@ -34228,7 +34458,7 @@
                 let editListScroller = document.getElementById('edit-users-list');
                 if (editListScroller) editListScroller.scrollTop = editListScrollTop;
             } catch (err) {
-                showToast("کێشەیەک لە نوێکردنەوەدا ڕوویدا", "error");
+                showToast(serverGuardMsg(err) || "کێشەیەک لە نوێکردنەوەدا ڕوویدا", "error");
             }
         }
 
@@ -34244,8 +34474,10 @@
             if (userRole !== 'پاشا') {
                 if (!(permOn('create_key') || permOn('manage_all_keys'))) { showToast("دەسەڵاتت نییە بۆ سڕینەوەی کلیل!", "error"); return; }
                 let target = null;
-                try { const { data } = await supabase.from('employees').select('code,creator,password,balance,savings').eq('code', code); target = data && data[0]; } catch (e) { }
+                try { const { data } = await supabase.from('employees').select('code,creator,balance,savings,role').eq('code', code); target = data && data[0]; } catch (e) { }
                 if (!target) { showToast("کلیلەکە نەدۆزرایەوە", "error"); return; }
+                // هەمان دەرگای دەستکاری — سەرووم و هاوئاستم نا (db/114 هەمان شت دەپشکنێت)
+                if (!canAdminKey(code, target.role)) { showToast("دەسەڵاتت نییە بۆ سڕینەوەی ئەم کلیلە!", "error"); return; }
                 // تەنها کلیلی ناو تیمی خۆم (یان دەسەڵاتی کلیلی هەموان)
                 // ⚠️ پێشتر `target.creator === currentUser.code`ـیش لێرە بوو.
                 //    ئەوە دەرگایەکی کۆن بوو: دوای گواستنەوەی ئەندامێک،
@@ -34257,7 +34489,9 @@
                 if (!mineOrAll) { showToast("تەنها کلیلی خۆت دروستکردوو دەسڕێتەوە!", "error"); return; }
                 // ئەگەر دەسەڵاتی سڕینەوەی کلیلی نەبوو → تەنها کلیلی بەکارنەهاتوو (بێ پاسوۆرد، بێ ئۆردەر، بێ پارە)
                 if (!permOn('delete_key') && !permOn('manage_all_keys')) {
-                    let hasPass = target.password && String(target.password).trim() !== "";
+                    // ⭐ db/119: پاسوۆرد ناخوێندرێتەوە — تەنها «هەیەتی/نییەتی»
+                    let hasPass = true;
+                    try { const { data: hp, error: hpErr } = await supabase.rpc('emp_has_password', { p_code: code }); if (!hpErr) hasPass = hp !== false; } catch (e) { }
                     let hasMoney = (parseFloat(target.balance || 0) !== 0) || (parseFloat(target.savings || 0) !== 0);
                     let ordCount = 0;
                     try { const { count } = await supabase.from('orders').select('id', { count: 'exact', head: true }).eq('seller_code', code); ordCount = count || 0; } catch (e) { }
@@ -34318,7 +34552,7 @@
                     document.getElementById('admin-loading-spinner').style.display = 'none';
                     document.getElementById('admin-screen-content').style.display = 'flex';
                 } catch (err) {
-                    showToast("هەڵەیەک ڕوویدا لە سڕینەوەدا", "error");
+                    showToast(serverGuardMsg(err) || "هەڵەیەک ڕوویدا لە سڕینەوەدا", "error");
                 }
             }
         }
@@ -36856,6 +37090,9 @@
             let filtered = allEditableUsers.filter(u => {
                 // ⭐ خۆم لە لیستەکەدا نییە (تەنها پاشا خۆی دەبینێت)
                 if (isSelfAdminLocked(u.code)) return false;
+                // ⭐ تەنها ئەو کلیلانەی بەڕێوەیان دەبەم — نەک سەرووم یان هاوئاستم
+                //    (`allEditableUsers` هەموو تیمەکەیە، بۆ جزدان و قازانجیش)
+                if (!canAdminKey(u.code, u.data.role)) return false;
                 let r = normalizeRole(u.data.role);
                 if (roleFilter && roleFilter !== "all" && r !== roleFilter) return false;
                 if (searchVal && !u.name.toLowerCase().includes(searchVal) && !u.code.toLowerCase().includes(searchVal)) return false;
@@ -36928,6 +37165,9 @@
             if (!u) return;
             if (isSelfAdminLocked(code)) {
                 showToast("ناتوانیت کلیلی خۆت دەستکاری بکەیت!", "error"); return;
+            }
+            if (!canAdminKey(code, u.data && u.data.role)) {
+                showToast("دەسەڵاتت نییە بۆ دەستکاریی ئەم کلیلە!", "error"); return;
             }
 
             // ⚠️ دەسەڵاتەکان لە لیستەکەدا نەهێنراون (بڕوانە
@@ -39409,9 +39649,10 @@
                     if (distErr) {
                         console.error(distErr);
                         const already = String(distErr.message || '').includes('ALREADY_DISTRIBUTED');
+                        // ⭐ db/120: سێرڤەر ڕیزەکان دەپشکنێت (کێ، کۆ، `pf_*`) — هۆکارەکەی خۆی دەنووسێت
                         showToast(already
                             ? "ئەم ئۆردەرە پێشتر پارەی بۆ دابەشکراوە! بۆ دابەشکردنەوە، سەرەتا بیکە بە گەڕاوە."
-                            : "کێشە لە داتابەیس هەیە!", "error");
+                            : (serverGuardMsg(distErr) || "کێشە لە داتابەیس هەیە!"), "error");
                         if (confirmBtn) { confirmBtn.disabled = false; confirmBtn.innerHTML = "<i class='bx bx-check-circle'></i> تەسدیقکردن و تۆمارکردن"; }
                         return;
                     }
@@ -39421,12 +39662,20 @@
                 // تەنها بە کەمکردنەوە لە قازانجی پاشا دەردەهات، بۆیە
                 // جیاوازی نێوان ئەوەی درا و نرخی ڕاستەی سیستەم
                 // شاراوە دەمایەوە (db/022)
-                await supabase.from('orders').update({
+                const { error: stErr } = await supabase.from('orders').update({
                     status: "گەیشتووە",
                     status_changed_by: userName,
                     driver_fee_paid: delivery,
                     driver_fee_system: Number(distData.deliveryCost || 0)
                 }).eq('id', o.id);
+                // پارەکە دابەشکراوە بەڵام حاڵەت نەگۆڕا (db/118 ڕەتی کردەوە) — دیاری بکە
+                if (stErr) {
+                    console.error('distribute status:', stErr);
+                    showToast("پارەکە دابەشکرا، بەڵام حاڵەت نەگۆڕا: " + (serverGuardMsg(stErr) || "کێشە لە داتابەیس هەیە!"), "error");
+                    rtPatchOrders([o.id]);
+                    if (confirmBtn) { confirmBtn.disabled = false; confirmBtn.innerHTML = "<i class='bx bx-check-circle'></i> تەسدیقکردن و تۆمارکردن"; }
+                    return;
+                }
                 await logOrderAction(o, 'distribute', {
                     from: o.status, to: "گەیشتووە",
                     detail: "ئۆردەرەکەی کردە گەیشتوو و قازانجەکانی دابەشکرد"

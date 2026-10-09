@@ -421,12 +421,26 @@ async function staffSignOut() {
 var currentUser = null;
 var CF_R2_PUBLIC_URL = "https://pub-5d1996bbd70b4d5e99499860829c4b46.r2.dev";
 
+// ⚠️ تەنها ئەو وێنانەی Supabase دەگۆڕێت بۆ R2 کە لە گواستنەوەی
+//    2026-09-19دا گواسترانەوە. ئەوەی دوای ئەوە بە پاشەکشەی
+//    `uploadImage` → `uploadToSupabase` ئەپلۆد کراوە **تەنها** لە
+//    Supabaseـدایە: گۆڕینی بۆ R2 = 404 = وێنەی شکاو، بێ هیچ هەڵەیەک.
+//    پێوانە 2026-10-09: 43 فایل لە Supabase، یەکەمیان 1789938287750
+//    (2026-09-20T21:04Z) — R2 404 · Supabase 200. ناوی فایل کاتەکەی
+//    تێدایە (`makeImagePath`: ym/code/<Date.now()>_…)، بۆیە بڕیارەکە
+//    لە خودی ناونیشانەکەوە دەردەچێت.
+//    · Only files migrated on 2026-09-19 are rewritten to R2; later
+//      Supabase-fallback uploads exist only in Supabase.
+var SB_IMG_PUBLIC_PREFIX = "https://kxztaywhqpekjmjoynin.supabase.co/storage/v1/object/public/order-images/";
+var SB_ONLY_SINCE_MS = 1789938287750;
+
 function normalizeMediaUrl(url) {
     if (!url || typeof url !== 'string') return url;
-    if (url.includes('kxztaywhqpekjmjoynin.supabase.co/storage/v1/object/public/order-images/')) {
-        return url.replace('https://kxztaywhqpekjmjoynin.supabase.co/storage/v1/object/public/order-images/', CF_R2_PUBLIC_URL + '/');
-    }
-    return url;
+    var at = url.indexOf(SB_IMG_PUBLIC_PREFIX);
+    if (at === -1) return url;
+    var m = /^\d{4}-\d{2}\/[^\/]+\/(\d{13})_/.exec(url.slice(at + SB_IMG_PUBLIC_PREFIX.length));
+    if (m && Number(m[1]) >= SB_ONLY_SINCE_MS) return url;
+    return url.replace(SB_IMG_PUBLIC_PREFIX, CF_R2_PUBLIC_URL + '/');
 }
 
 try {
