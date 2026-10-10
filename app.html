@@ -628,26 +628,21 @@
                 <label style="font-size:13px; color:#475569; font-weight:700; display:block; margin:8px 0 6px;">شێوازی
                     پارەدان</label>
 
-                <!-- پارەدان لە جزدانی خودی خاوەنی ئۆردەر — تەنها لە پارەی
-                     «ئامادە» (ئەوەی خولی چاوەڕوانی تەواوکردووە) -->
+                <!-- پارەدان لە جزدانی خاوەنی ئۆردەر — تەنها لە پارەی
+                     «ئامادە» (ئەوەی خولی چاوەڕوانی تەواوکردووە). ئۆردەری
+                     نوێ: جزدانی خۆم؛ دەستکاری: جزدانی خاوەنی ئۆردەرەکە، بۆ
+                     هەر کەسێک کە دەتوانێت دەستکاری بکات (db/123) -->
                 <label class="wallet-pay-opt" id="wallet-pay-opt">
                     <input type="radio" name="prepaid_method" value="wallet" onchange="onWalletPaySelected()">
                     <span class="wpo-box">
                         <i class='bx bx-wallet'></i>
                         <span class="wpo-txt">
-                            <b>لە جزدانی خۆم کەم بکرێتەوە</b>
+                            <b id="wallet-pay-title">لە جزدانی خۆم کەم بکرێتەوە</b>
                             <small id="wallet-pay-ready">پارەی ئامادە: —</small>
                         </span>
                         <i class='bx bx-check-circle wpo-tick'></i>
                     </span>
                 </label>
-
-                <!-- کاتێک ئۆردەری کەسێکی تر دەستکاری دەکرێت — جزدانی ئەو
-                     دەستی لێ نادرێت -->
-                <div class="wallet-pay-lock" id="wallet-pay-lock" style="display:none;">
-                    <i class='bx bx-lock-alt'></i>
-                    <span>پارەکە لە جزدانی خاوەنی ئۆردەرەکەوە دراوە — تەنها خۆی دەتوانێت بیگۆڕێت.</span>
-                </div>
 
                 <div class="segmented-control pay-segmented" id="prepaid-method-tabs" style="margin-bottom:14px;">
                     <label><input type="radio" name="prepaid_method" value="fastpay"
@@ -2925,6 +2920,29 @@
         </div>
     </div>
 
+    <!-- ============================================================
+         💸 ناردنی پارە — هەنگاوەکان لە یەک شیتدا (db/125)
+         هەڵبژاردنی وەرگر → بڕ (تەختەی ژمارە) → پێداچوونەوە + ڕاکێشان →
+         وەسڵ. هەروەها «وەسڵ»ی ڕیزێکی مێژوو و «وەرگرتنی پارە» (کۆدەکەم).
+         ⚠️ لە `SHEET_CLOSERS`دا تۆمارکراوە — ئەگەرنا دوگمەی گەڕانەوە
+            تەنها پۆلی `show` لادەبات و دۆخەکە پاک ناکاتەوە.
+         ⚠️ ناوەڕۆکەکە لە JSـەوە دێت (`xferRender`)؛ تەنها پەیکەرە.
+         ============================================================ -->
+    <div id="xfer-sheet" class="fsheet" role="dialog" aria-modal="true" aria-label="ناردنی پارە">
+        <div class="fsheet-scrim" onclick="xferClose()"></div>
+        <div class="fsheet-panel">
+            <div class="fsheet-head">
+                <button type="button" class="fsheet-x" onclick="xferClose()" aria-label="داخستن">
+                    <i class='bx bx-x'></i>
+                </button>
+                <span class="fsheet-title" id="xfer-title">ناردنی پارە</span>
+                <span class="xfer-head-gap" aria-hidden="true"></span>
+            </div>
+            <div class="fsheet-body xfer-body" id="xfer-body"></div>
+            <div class="fsheet-foot xfer-foot" id="xfer-foot" hidden></div>
+        </div>
+    </div>
+
     <div id="sched-sheet" class="fsheet" role="dialog" aria-modal="true" aria-label="کاتی داخیلبوونی ئۆردەر">
         <div class="fsheet-scrim" onclick="closeSchedSheet()"></div>
         <div class="fsheet-panel">
@@ -3759,6 +3777,18 @@
                 <div id="my-sav-split" class="mw-split"></div>
             </div>
             <div id="my-hold-note" class="mw-hold-note"></div>
+            <!-- 💸 ناردن/وەرگرتنی پارە (db/125). «ناردن» بەپێی `sendMoneyOn()`؛
+                 «وەرگرتن» کۆدەکەت پیشان دەدات — هەمیشە هەیە. -->
+            <div id="wx-actions" class="wx-actions">
+                <button type="button" class="wx-act is-send" id="wx-send-btn" onclick="xferOpen()">
+                    <span class="wx-act-ico"><i class='bx bx-send'></i></span>
+                    <span>ناردنی پارە</span>
+                </button>
+                <button type="button" class="wx-act" id="wx-recv-btn" onclick="xferShowMyCode()">
+                    <span class="wx-act-ico"><i class='bx bx-import'></i></span>
+                    <span>وەرگرتنی پارە</span>
+                </button>
+            </div>
         </div>
         <h3
             style="margin-top: 12px; margin-bottom: 6px; font-size: 14px; color:#1e293b; border-bottom: 2px solid #e2e8f0; padding-bottom: 6px;">
@@ -3958,6 +3988,15 @@
                 ]
             },
             {
+                // 💸 db/124 — **تەنها پاشا**: لە `PERM_EDITABLE_BY_MANAGER`دا
+                //    نییە، بۆیە سێرڤەر (`perm_sanitize`) بەهای ئێستا بۆ
+                //    بەڕێوەبەر دەهێڵێتەوە — سویچێکی مردوو نابێت.
+                id: 'transfer', title: 'ناردنی پارە', icon: 'bx-transfer-alt',
+                kingOnly: true, items: [
+                    { key: 'send_money', type: 'toggle', label: 'ناردنی پارە بۆ کارمەندانی تر' },
+                ]
+            },
+            {
                 id: 'danger', title: 'زۆنی مەترسیدار', icon: 'bx-error', danger: true, items: [
                     { key: 'set_profit_rates', type: 'scope', label: 'دیاریکردنی قازانجی ئەندامان (نرخ)' },
                     { key: 'view_wallets', type: 'scope', label: 'بینینی جزدان', tiers: tierSubs('wview') },
@@ -3991,6 +4030,7 @@
             view_passwords: 'بینینی پاسوۆردی ئەو بەکارهێنەرانەی دەیانبینێت، و گۆڕینیان لە بەشی چاکسازی. دەسەڵاتێکی زۆر هەستیارە — تەنها بە کەسی متمانەپێکراو بیدە.',
             use_rewards: 'بەشی چاڵنج و ئاڕپی. بە کوژاندنەوە: ئەو کەسە چاڵنج و ئاڕپی **بە هیچ شێوەیەک نابینێت** و خاڵ و خەڵاتی بۆ ناژمێردرێت — بەڵام کۆگاکەی دەمێنێتەوە و دوگمەکەی دەبێتە 🏪 کۆگا. بە بنەڕەت کراوەیە بۆ هەمووان.',
             use_shop: 'کۆگا: کڕینی ڕازاندنەوە و نەیمپاڵێت و ئێفێکت بە کۆین، و دانانیان لەسەر پڕۆفایل. بە کوژاندنەوە: کۆگا بۆی ناکرێتەوە. ⚠️ ئەگەر چاڵنجیشی نەبێت، دوگمەکەی لە ناڤی خوارەوە **بە تەواوی لادەچێت**. بە بنەڕەت کراوەیە بۆ هەمووان.',
+            send_money: 'ناردنی پارەی **ئامادە**ی جزدان بۆ کارمەندێکی تر لە «جزدانەکەم»ـەوە (پارەی چاوەڕوانی خولی ١٠ ڕۆژە نانێردرێت). بە کوژاندنەوە: دوگمەی «ناردنی پارە» نامێنێت و سێرڤەریش ڕەتی دەکاتەوە — بەڵام هێشتا دەتوانێت پارە وەربگرێت. بە بنەڕەت کراوەیە بۆ هەمووان.',
             login_as: 'لە بەشی چاکسازی دوگمەی «چوونەژوورەوە بەم ئەکاونتە» دەردەکەوێت — بە یەک کلیک دەچێتە ناو ئەکاونتی ئەو کەسە و ئەکاونتەکە بۆ ئاڵوگۆڕی خێرا پاشەکەوت دەکرێت. دەسەڵاتێکی زۆر مەترسیدارە: هەرچی ئەو کەسە بۆی هەیە، ئەمیش دەیکات.',
             // ژێرەکان و خانەکان
             ed_prep: 'ڕێگە دەدات ئۆردەری «ئامادە دەکرێت» دەستکاری بکات.',
@@ -4026,10 +4066,10 @@
             }));
         })();
 
-        const PERM_KEYS_ALL = ['create_key', 'delete_key', 'view_orders', 'edit_order', 'ed_prep', 'ed_onway', 'delete_order', 'mark_print', 'change_status', 'st_delivered', 'st_returned', 'st_del2ret', 'st_ret2del', 'distribute', 'pf_driver', 'pf_manager', 'pf_supervisor', 'pf_consultant', 'pf_member', 'pf_savings', 'view_savings', 'set_profit_rates', 'view_wallets', 'manage_wallets', 'manage_all_keys', 'manage_cities', 'manage_trash', 'view_passwords', 'login_as', 'use_rewards', 'use_shop'];
+        const PERM_KEYS_ALL = ['create_key', 'delete_key', 'view_orders', 'edit_order', 'ed_prep', 'ed_onway', 'delete_order', 'mark_print', 'change_status', 'st_delivered', 'st_returned', 'st_del2ret', 'st_ret2del', 'distribute', 'pf_driver', 'pf_manager', 'pf_supervisor', 'pf_consultant', 'pf_member', 'pf_savings', 'view_savings', 'set_profit_rates', 'view_wallets', 'manage_wallets', 'manage_all_keys', 'manage_cities', 'manage_trash', 'view_passwords', 'login_as', 'use_rewards', 'use_shop', 'send_money'];
         const PERM_SCOPE_KEYS = ['view_orders', 'edit_order', 'delete_order', 'change_status', 'distribute', 'set_profit_rates', 'view_wallets', 'manage_wallets'];
         const PERM_PROFIT_KEYS = ['pf_driver', 'pf_manager', 'pf_supervisor', 'pf_consultant', 'pf_member', 'pf_savings'];
-        const PERM_TOGGLE_KEYS = ['create_key', 'delete_key', 'ed_prep', 'ed_onway', 'mark_print', 'st_delivered', 'st_returned', 'st_del2ret', 'st_ret2del', 'view_savings', 'manage_all_keys', 'manage_cities', 'manage_trash', 'view_passwords', 'login_as', 'use_rewards', 'use_shop'];
+        const PERM_TOGGLE_KEYS = ['create_key', 'delete_key', 'ed_prep', 'ed_onway', 'mark_print', 'st_delivered', 'st_returned', 'st_del2ret', 'st_ret2del', 'view_savings', 'manage_all_keys', 'manage_cities', 'manage_trash', 'view_passwords', 'login_as', 'use_rewards', 'use_shop', 'send_money'];
         PERM_KEYS_ALL.push.apply(PERM_KEYS_ALL, PERM_TIER_KEYS);
 
         // دەسەڵاتی بنەڕەتی هەر پلەیەک (فۆرماتی نوێ) — کلیلە کۆنەکان ئەمە وەردەگرن
@@ -4059,6 +4099,12 @@
             //    ئامادەکە **کوژاوە** دەردەکەوت — و یەکەم پاشەکەوت
             //    `use_shop: false`ی بۆ دەنووسین. [[landmines]] ١٥١
             base.use_shop = true;
+            // 💸 ناردنی پارە (db/124) — بە بنەڕەت **کراوە**، و ئەمەش
+            //    **دەبێت** بێت: `perm_defaults` لە سێرڤەر هەمان شت دەڵێت،
+            //    و FUZZـی db_guard_test هەردووکیان بەراورد دەکات. بەبێ ئەم
+            //    دێڕە چێکبۆکسەکە بۆ هەموو کلیلێک کوژاوە دەردەکەوت و یەکەم
+            //    پاشەکەوت `send_money: false`ی دەنووسی. [[landmines]] ١٥١
+            base.send_money = true;
             let allOn = (obj) => Object.assign(base, obj);
             let fullProfit = { pf_driver: 'both', pf_manager: 'both', pf_supervisor: 'both', pf_consultant: 'both', pf_member: 'both', pf_savings: 'both' };
             let allStatus = { st_delivered: true, st_returned: true, st_del2ret: true, st_ret2del: true };
@@ -4068,7 +4114,7 @@
                     change_status: 'all', distribute: 'all', view_savings: true,
                     set_profit_rates: 'all', view_wallets: 'all', manage_wallets: 'all', manage_all_keys: true, manage_cities: true,
                     manage_trash: true, view_passwords: true, login_as: true, ed_prep: true, ed_onway: true,
-                    mark_print: true, use_rewards: true, use_shop: true
+                    mark_print: true, use_rewards: true, use_shop: true, send_money: true
                 }, allStatus, fullProfit));
             }
             if (role === 'بەڕێوەبەر') {
@@ -4163,6 +4209,21 @@
             if (!p || typeof p !== 'object') return true;
             if (!(Object.prototype.hasOwnProperty.call(p, 'use_shop'))) return true;
             return p.use_shop !== false;
+        }
+
+        // 💸 ناردنی پارە (db/124) — **ڕێک** هەمان یاسای `transfer_can_use`
+        //    لە سێرڤەر: پاشا هەمیشە؛ دەسەڵاتی نەبوو یان نا-object = بەڵێ؛
+        //    تەنها `false` (یان دەقی `'false'`) دایدەخات. ⚠️ لە
+        //    `currentUser.permissions`ـی **خاو** دەخوێنرێتەوە، نەک لە
+        //    `getMyPerms()` — `normalizePerms` فۆرماتی کۆن بە بنەڕەتی
+        //    پلە دەگۆڕێت و ئەوسا لەگەڵ سێرڤەر یەک ناگرنەوە.
+        // ⚠️ ئەمە **پەیامە نەک پارێزەر** — سێرڤەر `NO_PERM_SEND` دەدات.
+        function sendMoneyOn() {
+            if (userRole === 'پاشا') return true;
+            const p = currentUser ? currentUser.permissions : null;
+            if (!p || typeof p !== 'object' || Array.isArray(p)) return true;
+            const v = p.send_money;
+            return !(v === false || v === 'false');
         }
 
         // ⭐ **یەک وەڵام بۆ «ئەم شاشەیە چییە بۆ ئەم کەسە».**
@@ -5035,7 +5096,8 @@
         function serverGuardMsg(err) {
             let m = String((err && (err.message || err)) || '');
             // db/114 (کلیل) · db/116–118 (ناسنامە، خشتە، ئۆردەر) · db/119 (پاسوۆرد) · db/120 (دابەشکردن)
-            let x = /\b(?:NOT_STAFF|IDENTITY_LOCKED|SELF_LOCKED|COLUMN_LOCKED|NO_PERM_KEY|NO_PERM_CREATE|NO_PERM_PASSWORD|NO_PERM_DELETE|ONLY_NEW_KEYS|ROLE_NOT_ALLOWED|CHAIN_NOT_ALLOWED|NOT_ALLOWED|NO_PERM_WALLET|NO_PERM_TRASH|ORDER_LOCKED|PRINT_LOCKED|ORDER_SCHEDULED_PENDING|NO_PERM_STATUS|NO_PERM_EDIT|NO_PERM_PRINT|NO_PERM_DISTRIBUTE|BAD_DATE|TOO_MANY|DIST_ROWS|DIST_OVER_TOTAL|DIST_PERM):\s*([^\n]+)/.exec(m);
+            // · db/123 (پارەدان لە جزدانی خاوەنی ئۆردەر) · db/125 (ناردنی پارە)
+            let x = /\b(?:NO_PERM_SEND|BAD_AMOUNT|NOTE_TOO_LONG|NO_RECIPIENT|SELF_TRANSFER|TO_SUSPENDED|KEY_REUSED|BAD_KEY|NOT_STAFF|IDENTITY_LOCKED|SELF_LOCKED|COLUMN_LOCKED|NO_PERM_KEY|NO_PERM_CREATE|NO_PERM_PASSWORD|NO_PERM_DELETE|ONLY_NEW_KEYS|ROLE_NOT_ALLOWED|CHAIN_NOT_ALLOWED|NOT_ALLOWED|NO_PERM_WALLET|NO_PERM_TRASH|ORDER_LOCKED|PRINT_LOCKED|ORDER_SCHEDULED_PENDING|NO_PERM_STATUS|NO_PERM_EDIT|NO_PERM_PRINT|NO_PERM_DISTRIBUTE|BAD_DATE|TOO_MANY|DIST_ROWS|DIST_OVER_TOTAL|DIST_PERM|NO_PERM_ORDER|ORDER_NOT_FOUND|WALLET_NOT_OWNER|WALLET_NOT_ON_ORDER|OVER_READY):\s*([^\n]+)/.exec(m);
             return x ? x[1].trim() : '';
         }
 
@@ -9907,7 +9969,8 @@
         function resetOrderForm() {
             editingOrderId = null;
             editingOrderWalletPaid = 0;
-            walletPayLocked = false;
+            // ئۆردەری نوێ = جزدانی خۆم؛ ژمارەی ئۆردەری پێشوو بەکارنایەت
+            walletReadyState.loaded = false;
             // ⚠️ کاتی داخیلبوون دەبێت لێرە پاک بکرێتەوە — ئەگەرنا
             //    ئۆردەری دواتریش بێدەنگ کاتدار دەکرێت
             pendingSchedule = null;
@@ -10180,6 +10243,10 @@
                 walletReadyState.loaded = false;
                 isWalletDataLoaded = false;
             }
+            // جزدانی خاوەنی ئۆردەرێکی تر (db/123) — ژمارەی فۆڕمەکەش کۆنە
+            if (String(walletReadyState.code || '').split('|')[0] === String(code)) {
+                walletReadyState.loaded = false;
+            }
         }
 
         // ============================================================
@@ -10189,9 +10256,10 @@
         // پارەی لە چاوەڕوانیدا ڕەنگە ئۆردەرەکانی بگەڕێنەوە و باڵانس
         // بکەوێتە ژێر سفرەوە، بۆیە خەرج ناکرێت.
         // ============================================================
-        let walletReadyState = { code: null, amount: 0, loaded: false, loading: false };
+        // `code` = «جزدانی کێ|کام ئۆردەر» (walletPayKey) — ژمارەیەک کە بۆ
+        // ئۆردەرێکی تر هێنرابێت، بۆ ئەم ئۆردەرە ڕاست نییە
+        let walletReadyState = { code: null, amount: 0, loaded: false, loading: false, name: '' };
         let editingOrderWalletPaid = 0;   // ئەوەی پێشتر لەم ئۆردەرەدا دراوە
-        let walletPayLocked = false;      // ئۆردەری کەسێکی ترە — دەستی لێ نادرێت
 
         // ⭐ db/112: باڵانس و خولەکە لە یەک بانگی سێرڤەرەوەن (`wallet_hold`)
         //    — نەک ١,٠٠٠ ڕیزی یەکەمی جووڵەکان.
@@ -10200,20 +10268,66 @@
             return Math.max(0, Math.round(h.split.bal.ready));
         }
 
+        // ⭐ جزدانی کێ؟ — هەمیشە خاوەنی ئۆردەرەکە، نەک ئەوەی فۆڕمەکە پڕ
+        //    دەکاتەوە. ئۆردەری نوێ = هی خۆم؛ دەستکاری = خاوەنی ئۆردەرەکە.
+        //    خاوەن ٢٠٢٦-١٠-١٠: «پاشا یان بەڕێوبەران، هەر کەسێک کە دەسەڵاتی
+        //    دەستکاریکردنی ئۆردەری هەیە، بتوانێت بیخاتە سەر جزدانی ئەو
+        //    کەسە». پێشتر تەنها خاوەن دەیتوانی و بۆ ئەوانی تر قوفڵ بوو.
+        //    سێرڤەر (db/123) جزدانەکە لە ڕیزی ئۆردەرەکەوە دەهێنێت.
+        function walletPayOwnerCode() {
+            if (editingOrderId) {
+                const o = allGlobalOrdersData[editingOrderId];
+                return o ? String(o.seller_code || '') : '';
+            }
+            return currentUser ? String(currentUser.code) : '';
+        }
+        function walletPayIsMine() {
+            return !!currentUser && walletPayOwnerCode() === String(currentUser.code);
+        }
+        function walletPayKey() {
+            return walletPayOwnerCode() + '|' + (editingOrderId || '');
+        }
+        function walletReadyFresh() {
+            return walletReadyState.loaded && walletReadyState.code === walletPayKey();
+        }
+        // ناوی خاوەنی جزدان — لە سێرڤەرەوە (`order_wallet_info`)، پاشەکشە
+        // ناوی سەر ئۆردەرەکە. FSI: ناوی لاتینی ڕیزبەندیی ڕستەکە نەگۆڕێت.
+        function walletPayOwnerLabel() {
+            const o = editingOrderId ? allGlobalOrdersData[editingOrderId] : null;
+            const n = (walletReadyFresh() && walletReadyState.name)
+                || (o && o.seller_name) || walletPayOwnerCode();
+            return FD_FSI + String(n || '') + FD_PDI;
+        }
+
+        // پارەی ئامادەی خاوەنی جزدان. ئۆردەرێکی ئامادە: لە سێرڤەرەوە
+        // (`order_wallet_info`, db/123 — هەر کەسێک کە دەتوانێت ئۆردەرەکە
+        // دەستکاری بکات، بەبێ دەسەڵاتی بینینی جزدان). ئۆردەری نوێ: جزدانی خۆم.
+        async function fetchFormWalletReady() {
+            if (editingOrderId) {
+                const { data, error } = await supabase.rpc('order_wallet_info', { p_order_id: String(editingOrderId) });
+                if (error) throw error;
+                return {
+                    ready: Math.max(0, Math.round(parseFloat(data && data.ready) || 0)),
+                    name: (data && data.name) ? String(data.name) : ''
+                };
+            }
+            return { ready: await fetchWalletReady(currentUser.code), name: '' };
+        }
+
         async function ensureWalletReady(force) {
-            const code = currentUser && currentUser.code;
-            if (!code) return 0;
-            if (!force && walletReadyState.loaded && walletReadyState.code === code) return walletReadyState.amount;
+            const key = walletPayKey();
+            if (!currentUser || !walletPayOwnerCode()) return 0;
+            if (!force && walletReadyFresh()) return walletReadyState.amount;
             if (walletReadyState.loading) return walletReadyState.amount;
 
             walletReadyState.loading = true;
             renderWalletPayOption();
             try {
-                const ready = await fetchWalletReady(code);
-                walletReadyState = { code: code, amount: ready, loaded: true, loading: false };
+                const r = await fetchFormWalletReady();
+                walletReadyState = { code: key, amount: r.ready, loaded: true, loading: false, name: r.name };
             } catch (e) {
-                console.warn('fetchWalletReady:', e);
-                walletReadyState = { code: code, amount: 0, loaded: false, loading: false, failed: true };
+                console.warn('fetchFormWalletReady:', e);
+                walletReadyState = { code: key, amount: 0, loaded: false, loading: false, failed: true, name: '' };
             }
             renderWalletPayOption();
             updateCartUI();
@@ -10234,41 +10348,32 @@
             return Math.max(0, walletReadyState.amount) + Math.max(0, editingOrderWalletPaid);
         }
 
-        // ئایا ئەم بەکارهێنەرە بۆی هەیە لە جزدانی خۆی بدات؟
-        // تەنها بۆ ئۆردەری خۆی — نە هی کەسانی تر
+        // ئایا بژاردەی جزدان دەردەکەوێت؟ ئۆردەری نوێ: جزدانی خۆم. دەستکاری:
+        // جزدانی خاوەنی ئۆردەرەکە — هەر کەسێک گەیشتە فۆڕمی دەستکاری
+        // (`canActOnOrder(o,'edit')` + `canEditInStatus`) بۆی هەیە، و سێرڤەر
+        // خۆی دووبارە دەیپشکنێت (`wallet_pay_order`, db/123).
         function walletPayAllowed() {
-            if (!currentUser) return false;
-            if (!editingOrderId) return true;
-            const o = allGlobalOrdersData[editingOrderId];
-            return !o || String(o.seller_code || '') === String(currentUser.code);
+            return !!currentUser && !!walletPayOwnerCode();
         }
 
         // نوێکردنەوەی دیمەنی بژاردەی جزدان لە فۆرمەکەدا
         function renderWalletPayOption() {
             const opt = document.getElementById('wallet-pay-opt');
-            const lock = document.getElementById('wallet-pay-lock');
             const info = document.getElementById('wallet-pay-ready');
+            const title = document.getElementById('wallet-pay-title');
             if (!opt) return;
 
             const allowed = walletPayAllowed();
             opt.style.display = allowed ? 'block' : 'none';
-            if (lock) lock.style.display = walletPayLocked ? 'flex' : 'none';
-
-            // ئۆردەری کەسێکی تر کە لە جزدانەوە پارەی دراوە: هیچ بەشێکی
-            // پارەدانەکە دەستکاری ناکرێت، ئەگەرنا جزدانی ئەو تێک دەچێت
-            const amtInp = document.getElementById('prepaid-amount');
-            const allBtn = document.getElementById('prepaid-all-btn');
-            const tabs = document.getElementById('prepaid-method-tabs');
-            const swPre = document.getElementById('switch-prepaid');
-            if (amtInp) amtInp.disabled = walletPayLocked;
-            if (allBtn) allBtn.disabled = walletPayLocked;
-            if (swPre) swPre.disabled = walletPayLocked;
-            if (tabs) {
-                tabs.style.pointerEvents = walletPayLocked ? 'none' : '';
-                tabs.style.opacity = walletPayLocked ? '0.55' : '';
-            }
-
             if (!allowed || !info) return;
+
+            const mine = walletPayIsMine();
+            if (title) {
+                title.textContent = mine
+                    ? 'لە جزدانی خۆم کەم بکرێتەوە'
+                    : 'لە جزدانی ' + walletPayOwnerLabel() + ' کەم بکرێتەوە';
+            }
+            const readyWord = mine ? 'پارەی ئامادە: ' : 'پارەی ئامادەی خاوەن: ';
 
             const limit = walletPayLimit();
             if (walletReadyState.loading) {
@@ -10277,12 +10382,12 @@
             } else if (walletReadyState.failed) {
                 info.innerText = 'نەتوانرا پارەی ئامادە حیساب بکرێت';
                 info.classList.add('is-low');
-            } else if (!walletReadyState.loaded) {
-                // ⚠️ هێشتا نەهێنراوە — «٠ د.ع» درۆیە
+            } else if (!walletReadyFresh()) {
+                // ⚠️ هێشتا نەهێنراوە (یان هی ئۆردەرێکی ترە) — «٠ د.ع» درۆیە
                 info.innerText = 'حیسابکردنی پارەی ئامادە...';
                 info.classList.remove('is-low');
             } else {
-                info.innerText = 'پارەی ئامادە: ' + limit.toLocaleString() + ' د.ع';
+                info.innerText = readyWord + limit.toLocaleString() + ' د.ع';
                 info.classList.toggle('is-low', limit <= 0);
             }
             // ⭐ **تەنها ئەو کاتە دابخرێت کە بزانین بڕەکە سفرە.**
@@ -10295,7 +10400,7 @@
             //    ژمارەکەیان دەهێنا، تەنها کاتێک کاریان دەکرد کە
             //    جزدان **هەڵبژێردرابێت**. هیچ کەس نەیدەتوانی
             //    هەڵیبژێرێت، بۆیە هەرگیز نەدەهێنرا.
-            opt.classList.toggle('is-off', walletReadyState.loaded && limit <= 0);
+            opt.classList.toggle('is-off', walletReadyFresh() && limit <= 0);
         }
 
         function paymentMethodLabel(v) {
@@ -14070,8 +14175,11 @@
                 const open = more > 0 && _notifOpenGrp.has(g.key);
                 // 🎨 کۆتا کۆمێنت دەستەواژەیەکی خێرای ڕەنگدار بوو → ڕەنگی کاڵی ئەو
                 const qc = notifQuickColorOf(g.all);
+                // 💸 ئاگاداریی جزدانی **خۆم** (بێ ئۆردەر — ناردن/وەرگرتنی پارە،
+                //    مووچە، زیادکردنی دەستی) → «جزدانەکەم»، کە جووڵەکەی تێدایە
+                const wgo = !oid && n.kind === 'wallet' && n.scope === 'own';
                 const cls = 'notif-row' + (unread ? ' is-unread' : '')
-                    + (oid ? ' is-clickable' : '') + (open ? ' is-open' : '')
+                    + ((oid || wgo) ? ' is-clickable' : '') + (open ? ' is-open' : '')
                     + (qc ? ' has-qc' : '');
                 const qcStyle = qc ? ` style="--qc:${qc}; --qcb:${notifTint(qc)};"` : '';
                 // ⚠️ یەک پەنجەدانان = **هەموو** گروپەکە خوێندراو، بۆیە
@@ -14108,7 +14216,7 @@
                             </div>`;
                     }).join('')}</div>`
                     : '';
-                return `<div class="${cls}"${qcStyle}${click}${more > 0 ? ` data-grp="${histEsc(g.key)}"` : ''}>
+                return `<div class="${cls}"${qcStyle}${click}${wgo ? ' data-wgo="1"' : ''}${more > 0 ? ` data-grp="${histEsc(g.key)}"` : ''}>
                         <span class="notif-dot" style="background:${meta.color}1f; color:${meta.color};"><i class='bx ${meta.icon}'></i>${badge}</span>
                         <div class="notif-body">
                             <div class="notif-top"><b>${title}</b></div>
@@ -25370,6 +25478,14 @@
         function notifRowClick(id, oid, el) {
             markOneNotifRead(id, el);
             if (oid) openNotifOrder(oid, el);
+            else if (el && el.getAttribute && el.getAttribute('data-wgo') === '1') notifOpenMyWallet();
+        }
+
+        // 💸 ئاگاداریی جزدانی خۆم → «جزدانەکەم» (پانێڵی ئاگادارییەکان دادەخرێت —
+        //    شاشەیەکی تر دەکرێتەوە، نەک مۆداڵێک لەسەری)
+        function notifOpenMyWallet() {
+            try { closeModal(null, 'notif-modal'); } catch (e) { }
+            switchScreen('wallet-screen', document.getElementById('nav-wallet'));
         }
 
         // پەنجە لە ئایکۆنێکی کارتی ئۆردەر — تەنها ئەو جۆرە خوێندراو
@@ -27317,11 +27433,14 @@
             editingOrderId = orderId;
 
             // پارەی جزدان: ئەوەی پێشتر لەم ئۆردەرەدا بڕدراوە دەکرێت
-            // دووبارە دابەش بکرێت، بەڵام تەنها لەلایەن خودی خاوەنەکەیەوە.
-            // بۆ کەسانی تر قوفڵ دەکرێت — جزدانی کەسێکی تر دەستی لێ نادرێت
+            // دووبارە دابەش بکرێت. ⭐ هەر کەسێک کە بۆی هەیە ئەم ئۆردەرە
+            // دەستکاری بکات (پاشا، بەڕێوەبەر، `edit_order`) دەتوانێت
+            // پارەکە لە جزدانی **خاوەنی ئۆردەرەکە** بدات یان بیگۆڕێت —
+            // خاوەن ٢٠٢٦-١٠-١٠. پێشتر بۆ کەسانی تر قوفڵ بوو. سێرڤەر
+            // (db/123) جزدانەکە لە ڕیزی ئۆردەرەکەوە دەهێنێت و تەنها لە
+            // پارەی ئامادەی خاوەن دەبڕێت.
             editingOrderWalletPaid = orderWalletPaid(o);
-            walletPayLocked = editingOrderWalletPaid > 0
-                && String(o.seller_code || '') !== String(currentUser.code);
+            walletReadyState.loaded = false;
 
             // خەزنکردنی شاشە و شوێنی سکرۆڵی سەرەتا بۆ گەڕانەوە دوای دەستکاری.
             // هەر شاشەیەک بێت — سەرەکی، تیم، جزدان، یان ئەدمین
@@ -28165,13 +28284,18 @@
             // ⚠️ پێشتر تەنها دەقێکی سوور لە `updateCartUI`دا دەردەکەوت —
             //    **ناردن ڕانەدەگیرا**، بۆیە جزدان دەچووە قەرزەوە.
             // ⚠️ هەمان نۆدی هەڵەی `paymethod` بەکاردێت، نەک نۆدێکی نوێ.
+            // ⚠️ تەنها کاتێک ژمارەکە هی ئەم جزدان و ئەم ئۆردەرەیە — ئەگەرنا
+            //    ناردنەکە خۆی ژمارەیەکی تازە دەهێنێت و دەیپشکنێت.
             if (formPaymentMethod() === 'wallet') {
                 const wLim = walletPayLimit();
-                if (formPrepaidAmount() > wLim) {
+                const wMine = walletPayIsMine();
+                if (walletReadyFresh() && formPrepaidAmount() > wLim) {
                     problems.push({
                         k: 'paymethod', m: wLim > 0
-                            ? `لە پارەی ئامادەی جزدانت زیاترە — زۆرترین ${wLim.toLocaleString()} د.ع.`
-                            : 'پارەی ئامادەت لە جزداندا نییە — شێوازێکی تری پارەدان هەڵبژێرە.'
+                            ? (wMine ? `لە پارەی ئامادەی جزدانت زیاترە — زۆرترین ${wLim.toLocaleString()} د.ع.`
+                                : `لە پارەی ئامادەی جزدانی خاوەنی ئۆردەرەکە زیاترە — زۆرترین ${wLim.toLocaleString()} د.ع.`)
+                            : (wMine ? 'پارەی ئامادەت لە جزداندا نییە — شێوازێکی تری پارەدان هەڵبژێرە.'
+                                : 'خاوەنی ئۆردەرەکە پارەی ئامادەی لە جزداندا نییە — شێوازێکی تری پارەدان هەڵبژێرە.')
                     });
                 }
             }
@@ -28302,22 +28426,17 @@
             let prepaidAmount = prepaidOn ? readMoneyInput('prepaid-amount') : 0;
             let paymentMethod = prepaidOn ? formPaymentMethod() : '';
 
-            // ئۆردەری کەسێکی تر کە لە جزدانەوە پارەی دراوە: پارەدانەکەی
-            // وەک خۆی دەمێنێتەوە، دەستی لێ نادرێت
             const editedOrder = editingOrderId ? allGlobalOrdersData[editingOrderId] : null;
-            if (walletPayLocked && editedOrder) {
-                prepaidAmount = orderPrepaid(editedOrder);
-                paymentMethod = 'wallet';
-            }
 
             const isWalletPay = prepaidOn && paymentMethod === 'wallet';
             // خاوەنی جزدانەکە — هەمیشە خاوەنی ئۆردەرەکەیە، نەک ئەوەی
-            // دەستکاری دەکات
+            // دەستکاری دەکات (پاشا / بەڕێوەبەر جزدانی ئەندامەکە دەبڕن،
+            // نەک هی خۆیان — db/123)
             const walletOwnerCode = editedOrder
                 ? String(editedOrder.seller_code || '')
                 : String(currentUser.code);
 
-            if (prepaidOn && !walletPayLocked) {
+            if (prepaidOn) {
                 if (prepaidAmount <= 0) {
                     showToast("تکایە بڕی پارەی پێشوەخت دراو بنووسە!", "error");
                     return;
@@ -28333,31 +28452,36 @@
                     // پارەدان لە جزدان: بەڵگە پێویست نییە (خودی جووڵەکە
                     // بەڵگەکەیە)، بەڵام دەبێت پارەکە بەڕاستی ئامادە بێت.
                     // باڵانسەکە **لەم ساتەدا** دووبارە دەپشکنرێت — لەوانەیە
-                    // لەکاتی پڕکردنەوەی فۆرمەکەدا گۆڕابێت
-                    if (walletOwnerCode !== String(currentUser.code)) {
-                        showToast("تەنها خاوەنی ئۆردەرەکە دەتوانێت لە جزدانی خۆی بدات!", "error");
-                        return;
-                    }
+                    // لەکاتی پڕکردنەوەی فۆرمەکەدا گۆڕابێت. جزدانەکە هی
+                    // خاوەنی ئۆردەرەکەیە (`order_wallet_info` بۆ ئۆردەری ئامادە)
+                    const wMine = walletOwnerCode === String(currentUser.code);
                     showToast("پشکنینی جزدان...", "loading");
-                    let freshReady = 0;
+                    let fresh = null;
                     try {
-                        freshReady = await fetchWalletReady(currentUser.code);
+                        fresh = await fetchFormWalletReady();
                     } catch (e) {
-                        showToast("نەتوانرا باڵانسی جزدانت بپشکنرێت — دووبارە هەوڵبدە", "error");
+                        showToast(serverGuardMsg(e) || (wMine
+                            ? "نەتوانرا باڵانسی جزدانت بپشکنرێت — دووبارە هەوڵبدە"
+                            : "نەتوانرا باڵانسی جزدانی خاوەنی ئۆردەرەکە بپشکنرێت — دووبارە هەوڵبدە"), "error");
                         return;
                     }
-                    walletReadyState = { code: currentUser.code, amount: freshReady, loaded: true, loading: false };
+                    const freshReady = fresh.ready;
+                    walletReadyState = { code: walletPayKey(), amount: freshReady, loaded: true, loading: false, name: fresh.name };
                     renderWalletPayOption();
 
                     // ئەوەی پێشتر لەم ئۆردەرەدا بڕدراوە دەگەڕێتەوە ناو
                     // بەردەستەکە، چونکە پێشتر لە باڵانسەکە دەرچووە
                     const limit = freshReady + Math.max(0, editingOrderWalletPaid);
                     if (limit <= 0) {
-                        showToast("⚠️ پارەی ئامادەت لە جزداندا نییە — ناتوانیت لە جزدانەوە بیدەیت.", "error");
+                        showToast(wMine
+                            ? "⚠️ پارەی ئامادەت لە جزداندا نییە — ناتوانیت لە جزدانەوە بیدەیت."
+                            : "⚠️ خاوەنی ئۆردەرەکە پارەی ئامادەی لە جزداندا نییە — شێوازێکی تری پارەدان هەڵبژێرە.", "error");
                         return;
                     }
                     if (prepaidAmount > limit) {
-                        showToast(`⚠️ لە جزدانت تەنها ${limit.toLocaleString()} د.ع ئامادەیە! ئەوەی ماوە دەبێت بە دەست بدرێت بە شۆفێر.`, "error");
+                        showToast(wMine
+                            ? `⚠️ لە جزدانت تەنها ${limit.toLocaleString()} د.ع ئامادەیە! ئەوەی ماوە دەبێت بە دەست بدرێت بە شۆفێر.`
+                            : `⚠️ لە جزدانی خاوەنی ئۆردەرەکە تەنها ${limit.toLocaleString()} د.ع ئامادەیە! ئەوەی ماوە دەبێت بە دەست بدرێت بە شۆفێر.`, "error");
                         return;
                     }
                 } else {
@@ -28468,7 +28592,7 @@
                     // ڕێکخستنەوەی پارەی جزدان: ئەگەر بڕەکە گۆڕابێت جیاوازییەکە
                     // دەبڕدرێت، و ئەگەر شێوازەکە لە جزدانەوە گۆڕدرابێت،
                     // هەموو پارەکە دەگەڕێتەوە
-                    if (!walletPayLocked && (isWalletPay || editingOrderWalletPaid > 0)) {
+                    if (isWalletPay || editingOrderWalletPaid > 0) {
                         try {
                             await syncOrderWalletPayment(
                                 editingOrderId,
@@ -28479,7 +28603,28 @@
                             editingOrderWalletPaid = isWalletPay ? prepaidAmount : 0;
                         } catch (e) {
                             console.error('syncOrderWalletPayment (edit):', e);
-                            showToast("⚠️ ئۆردەرەکە نوێکرایەوە، بەڵام پارەی جزدان ڕێک نەخرا — تکایە دووبارە پاشەکەوتی بکە!", "error");
+                            // ⭐ ڕیزەکە دەبێت هەمان شت بڵێت کە جزدانەکە: ئەگەر
+                            //    بڕینەکە شکستی هێنا (`OVER_READY`…)، زانیاریی
+                            //    پارەدانەکە دەگەڕێتەوە بۆ پێش دەستکاری — ئەگەرنا
+                            //    ئۆردەرێک دەمێنێتەوە کە دەڵێت «لە جزدانەوە
+                            //    دراوە» و هیچ نەبڕدراوە، و شۆفێر کەمتر وەردەگرێت.
+                            //    (هەمان ڕێگای ئۆردەری نوێ.)
+                            let reverted = false;
+                            if (beforeEdit) {
+                                try {
+                                    const { error: rvErr } = await supabase.from('orders').update({
+                                        prepaid_amount: beforeEdit.prepaid_amount,
+                                        payment_method: beforeEdit.payment_method,
+                                        payment_proof_url: beforeEdit.payment_proof_url
+                                    }).eq('id', editingOrderId);
+                                    reverted = !rvErr;
+                                } catch (e2) { console.error(e2); }
+                            }
+                            const why = serverGuardMsg(e);
+                            showToast((reverted
+                                ? "⚠️ ئۆردەرەکە نوێکرایەوە، بەڵام پارەکە لە جزدان نەبڕدرا — پارەدانەکە وەک پێشوو مایەوە."
+                                : "⚠️ ئۆردەرەکە نوێکرایەوە، بەڵام پارەی جزدان ڕێک نەخرا — تکایە دووبارە پاشەکەوتی بکە!")
+                                + (why ? ' ' + why : ''), "error");
                             return;
                         }
                     }
@@ -28591,7 +28736,9 @@
                                     .update({ prepaid_amount: 0, payment_method: null, payment_proof_url: null })
                                     .eq('id', newRow.id);
                             } catch (e2) { console.error(e2); }
-                            showToast("⚠️ ئۆردەرەکە تۆمار کرا، بەڵام پارەکە لە جزدان نەبڕدرا — وەک پارە نەدراو تۆمار کرا.", "error");
+                            const whyC = serverGuardMsg(e);
+                            showToast("⚠️ ئۆردەرەکە تۆمار کرا، بەڵام پارەکە لە جزدان نەبڕدرا — وەک پارە نەدراو تۆمار کرا."
+                                + (whyC ? ' ' + whyC : ''), "error");
                         }
                     }
 
@@ -29135,7 +29282,8 @@
             'rw-create-sheet': () => rwCloseCreateSheet(),
             'cos-edit-sheet': () => cosCloseSheet(),
             'rw-cospick-sheet': () => rwCosPickClose(),
-            'whold-sheet': () => closeWholdSheet()
+            'whold-sheet': () => closeWholdSheet(),
+            'xfer-sheet': () => xferClose()
         };
 
         function navWatchOverlays() {
@@ -30681,10 +30829,14 @@
                 // ئەمە خانەکانی وەک مۆبایل دەگرێتەوە کە `updateCartUI`
                 // بانگ ناکەن
                 updateOrderProgress();
-                if (!t || !t.id) return;
+                if (!t) return;
+                // هەڵبژاردنی شێوازی پارەدان، یان گۆڕینی بڕەکە (هەڵەی «لە
+                // ئامادە زیاترە») — ⚠️ پێش پشکنینی `id`: دوگمە ڕادیۆکان
+                // `id`یان نییە، بۆیە پێشتر ئەم دێڕە هەرگیز نەدەگەیشت و
+                // هەڵەکە دوای چاککردنی بڕەکەش دەمایەوە.
+                if (t.name === 'prepaid_method' || t.id === 'prepaid-amount') clearOrderErr('paymethod');
+                if (!t.id) return;
                 if (byInput[t.id]) clearOrderErr(byInput[t.id]);
-                // هەڵبژاردنی شێوازی پارەدان
-                if (t.name === 'prepaid_method') clearOrderErr('paymethod');
             };
             scr.addEventListener('input', onEdit, true);
             scr.addEventListener('change', onEdit, true);
@@ -30804,7 +30956,9 @@
                 const prepLbl = prepRow.querySelector('span');
                 if (prepLbl) {
                     prepLbl.innerHTML = isWalletPay
-                        ? `<i class='bx bx-wallet'></i> لە جزدانی خۆم دەبڕدرێت:`
+                        ? (walletPayIsMine()
+                            ? `<i class='bx bx-wallet'></i> لە جزدانی خۆم دەبڕدرێت:`
+                            : `<i class='bx bx-wallet'></i> لە جزدانی خاوەنی ئۆردەر دەبڕدرێت:`)
                         : `<i class='bx bx-check-shield'></i> پارەی پێشوەخت دراو:`;
                 }
             }
@@ -30827,10 +30981,14 @@
             const pe = document.getElementById('prepaid-err');
             let pmsg = '';
             if (prepaid > grandTotal) pmsg = `لە کۆی گشتی زیاترە (زۆرترین ${grandTotal.toLocaleString()})`;
-            else if (isWalletPay && prepaid > walletPayLimit()) {
+            // ⚠️ تەنها کاتێک ژمارەی ئەم جزدانە هاتووە — ئەگەرنا ٠ی کۆن
+            //    هەڵەیەکی درۆ پیشان دەدات تا وەڵامەکە دێت
+            else if (isWalletPay && walletReadyFresh() && prepaid > walletPayLimit()) {
+                const pMine = walletPayIsMine();
                 pmsg = walletPayLimit() > 0
-                    ? `لە پارەی ئامادەی جزدانت زیاترە (زۆرترین ${walletPayLimit().toLocaleString()})`
-                    : 'پارەی ئامادەت لە جزداندا نییە';
+                    ? (pMine ? `لە پارەی ئامادەی جزدانت زیاترە (زۆرترین ${walletPayLimit().toLocaleString()})`
+                        : `لە پارەی ئامادەی جزدانی خاوەن زیاترە (زۆرترین ${walletPayLimit().toLocaleString()})`)
+                    : (pMine ? 'پارەی ئامادەت لە جزداندا نییە' : 'خاوەنی ئۆردەر پارەی ئامادەی لە جزداندا نییە');
             }
             if (pf) pf.classList.toggle('is-over', !!pmsg);
             if (pe) pe.innerText = pmsg;
@@ -35718,6 +35876,9 @@
         // لەناو window.onload ـی خۆتدا پێویستە ئەمە زیاد بکەیت: loadDBCities(); 
 
         async function loadMyWalletData() {
+            // 💸 دوگمەی «ناردنی پارە» بەپێی `send_money` — پێش هەر داواکارییەک،
+            //    بۆیە تۆڕی خراپیش هەر ڕاستی دەکاتەوە
+            xferSyncActions();
             let list = document.getElementById('my-transactions-list');
             if (!isWalletDataLoaded) {
                 list.innerHTML = loadingSpinnerHTML;
@@ -35985,6 +36146,7 @@
                 fromOrders: n(s.fromOrders),
                 bonus: n(s.bonus),
                 cut: n(s.cut),
+                xfer: n(s.xfer),        // 💸 db/125 — ناردن (−) و وەرگرتن (+)
                 fix: n(s.fix),
                 items: (Array.isArray(s.items) ? s.items : []).map(it => ({
                     oid: String(it.oid), net: n(it.net), start: n(it.start), due: n(it.due), sav: !!it.sav
@@ -36414,7 +36576,17 @@
                 cursorStyle = "cursor: pointer;";
                 orderBadge = `<span style="font-size:9px; color:#2481cc; background:rgba(36,129,204,0.08); padding:1px 5px; border-radius:4px; margin-top:4px; display:inline-block;"><i class='bx bx-show-alt'></i> زانیاری ئۆردەر</span>`;
             }
-            return `<div class="transaction-item ${iconClass}" ${clickAttr} style="${cursorStyle}"><div class="tx-info"><div class="tx-icon ${iconClass}">${iconSign}</div><div class="tx-details"><h4>${tx.type}</h4><p>${tx.description} ${orderBadge}<br><i class='bx bx-calendar'></i> ${dateStr}</p></div></div><div class="tx-amount ${amountClass}">${amountSign}${Number(tx.amount).toLocaleString()}</div></div>`;
+            // 💸 db/125: ناردن/وەرگرتنی پارە — ئایکۆنی خۆی، و پەنجەدانان وەسڵەکە
+            //    دەکاتەوە. ناسنامەکە لە `data-xtx`دایە، نەک لەناو `onclick`.
+            if (xferIsTxType(tx.type)) {
+                iconSign = isPlus ? "<i class='bx bx-import'></i>" : "<i class='bx bx-send'></i>";
+                clickAttr = `data-xtx="${histEsc(String(tx.id || ''))}" onclick="xferOpenReceiptFromTx(this, event)"`;
+                cursorStyle = "cursor: pointer;";
+                orderBadge = `<span class="tx-xbadge"><i class='bx bx-receipt'></i> وەسڵ</span>`;
+            }
+            // ⚠️ `type` و `description` دەقن نەک HTML — تێبینیی ناردنی پارە لە
+            //    بەکارهێنەرەوە دێت (db/125)، بۆیە هەمیشە `histEsc`.
+            return `<div class="transaction-item ${iconClass}" ${clickAttr} style="${cursorStyle}"><div class="tx-info"><div class="tx-icon ${iconClass}">${iconSign}</div><div class="tx-details"><h4>${histEsc(tx.type)}</h4><p>${histEsc(tx.description)} ${orderBadge}<br><i class='bx bx-calendar'></i> ${dateStr}</p></div></div><div class="tx-amount ${amountClass}">${amountSign}${Number(tx.amount).toLocaleString()}</div></div>`;
         }
 
         // دۆخی پەڕەکردن بۆ جزدانی هەر کەسێک
@@ -36550,10 +36722,13 @@
             const ord = r(s.bal.fromOrders) + r(s.sav.fromOrders);
             const bon = r(s.bal.bonus) + r(s.sav.bonus);
             const cut = r(s.bal.cut) + r(s.sav.cut);
-            if (bon >= 1 || cut <= -1) {
+            // 💸 db/125: ناردن/وەرگرتنی پارە جیایە — پێشتر وەک «پاداشت» دەخوێندرایەوە
+            const xf = r(s.bal.xfer || 0) + r(s.sav.xfer || 0);
+            if (bon >= 1 || cut <= -1 || Math.abs(xf) >= 1) {
                 const bits = [`ئۆردەر ${ord.toLocaleString()}`];
                 if (bon >= 1) bits.push(`<b class="is-plus">پاداشت +${bon.toLocaleString()}</b>`);
                 if (cut <= -1) bits.push(`<b class="is-minus">بڕین/مووچە ${cut.toLocaleString()}</b>`);
+                if (Math.abs(xf) >= 1) bits.push(`<b class="${xf > 0 ? 'is-plus' : 'is-minus'}">ناردن/وەرگرتن ${xf > 0 ? '+' : ''}${xf.toLocaleString()}</b>`);
                 html += `<div class="whold-note-row"><i class='bx bx-gift'></i> پێکهاتەی ئامادە: ${bits.join(' · ')}</div>`;
             }
 
@@ -36736,6 +36911,772 @@
                 if (sav) sav.innerHTML = '';
                 note.innerHTML = `<div class="mw-hold-row"><i class='bx bx-error-circle'></i> نەتوانرا پارەی ئامادە حیساب بکرێت</div>`;
             }
+        }
+
+        // ============================================================
+        // 💸 ناردنی پارە لە نێوان ئەندامان (db/124 · db/125)
+        // ------------------------------------------------------------
+        // خاوەن (٢٠٢٦-١٠-١٠): «ئەندامەکان بتوانن پارە بە ئاسانی بۆ یەکتری
+        // بنێرن… وەک ئەپە بانکییەکان… تەنها ئەو پارەیەی بەردەستە یان
+        // پارەی مووچەیە — نەک ئەگەر تەنها پارەی چاوەڕوانیان هەبوو.»
+        // بڕیارەکانی خاوەن: هەموو کارمەندێک دەدۆزرێتەوە · ڕاکێشان بۆ
+        // ناردن · ئاگاداری بۆ هەردوولا و سەرەوەکانیان · بێ سنووری تر.
+        //
+        // ⭐ هەموو یاساکانی پارە لە سێرڤەرن (`wallet_transfer_send`):
+        //    نێرەر = دانیشتن، تەنها ئامادە (بە قوفڵ)، یەکجار بە کلیل.
+        //    ئەم بەشە ڕووکار و پەیامە — هەرگیز پارێزەر نییە.
+        // ⭐ چوار قوفڵ (یاسای پڕۆژە):
+        //    ① `xferState.busy` پێش هەر `await`
+        //    ② `guardSubmit('xfer-send')`
+        //    ③ ڕاکێشەرەکە `is-busy` → `pointer-events: none`
+        //    ④ کلیلی ناردن (`p_key`) — هەمان کلیل بۆ هەموو هەوڵدانەوەیەک،
+        //       بۆیە تۆڕی خراپ و دوو پەنجە هەرگیز نابنە دوو ناردن.
+        // ⚠️ تەختەی ژمارە، خانەی گەڕان و تێبینی **پاتچ** دەکرێن، هەرگیز
+        //    نەخشاندنەوەی تەواو نا — فۆکەس و نووسینەکە دەفەوتێن.
+        // ============================================================
+        const XFER_MIN = 250;
+        const XFER_MAX = 1000000000;
+        const XFER_NOTE_MAX = 140;
+        let xferState = null;
+        let xferHomeCache = null;      // { code, at, data } — کردنەوەی دووەم یەکسەر ژمارەکان پیشان دەدات
+
+        // ⚠️ فەنکشن نەک `const` — `buildTxItemHtml` لە سەرەوەی ئەم بەشەیە
+        function xferIsTxType(t) { return t === 'ناردنی پارە' || t === 'وەرگرتنی پارە'; }
+        function xferMoney(n) { return Math.round(Number(n) || 0).toLocaleString('en-US'); }
+        function xferFirstName(n) { return String(n || '').trim().split(/\s+/)[0] || ''; }
+
+        function xferNewKey() {
+            try { if (window.crypto && typeof crypto.randomUUID === 'function') return crypto.randomUUID(); } catch (e) { }
+            const b = new Uint8Array(16);
+            crypto.getRandomValues(b);
+            b[6] = (b[6] & 15) | 64; b[8] = (b[8] & 63) | 128;
+            const h = Array.from(b, x => (x < 16 ? '0' : '') + x.toString(16)).join('');
+            return h.slice(0, 8) + '-' + h.slice(8, 12) + '-' + h.slice(12, 16) + '-' + h.slice(16, 20) + '-' + h.slice(20);
+        }
+
+        function xferHaptic(kind) {
+            try {
+                const tg = window.Telegram && window.Telegram.WebApp;
+                if (!tg || !tg.HapticFeedback) return;
+                if (kind === 'select') tg.HapticFeedback.selectionChanged();
+                else if (kind === 'success' || kind === 'error' || kind === 'warning') tg.HapticFeedback.notificationOccurred(kind);
+                else tg.HapticFeedback.impactOccurred(kind || 'light');
+            } catch (e) { }
+        }
+
+        // دوگمەی «ناردنی پارە» لە جزدانەکەم — بەپێی `send_money`
+        function xferSyncActions() {
+            const box = document.getElementById('wx-actions');
+            const send = document.getElementById('wx-send-btn');
+            if (!box || !send) return;
+            const on = sendMoneyOn();
+            send.hidden = !on;
+            box.classList.toggle('is-solo', !on);
+        }
+
+        // ---------------- کردنەوە / داخستن ----------------
+        function xferShow() {
+            const sh = document.getElementById('xfer-sheet');
+            if (!sh) return;
+            xferRender();
+            sh.classList.add('show');
+            document.body.classList.add('fsheet-open');
+        }
+
+        function xferOpen() {
+            if (!currentUser) return;
+            if (!sendMoneyOn()) { showToast('ناردنی پارە بۆ ئەکاونتەکەت داخراوە', 'error'); return; }
+            const cached = (xferHomeCache && xferHomeCache.code === currentUser.code) ? xferHomeCache.data : null;
+            xferState = {
+                step: 'pick', home: cached, homeErr: false, homeTok: 0,
+                to: null, amt: '', note: '', key: null, busy: false, err: '',
+                q: '', seq: 0, results: null, searching: false, searchErr: false, result: null
+            };
+            xferShow();
+            xferLoadHome();
+        }
+
+        function xferShowMyCode() {
+            if (!currentUser) return;
+            xferState = { step: 'mycode' };
+            xferShow();
+        }
+
+        // ⚠️ ناردنێکی لەڕێدا ناوەستێت — سێرڤەر تەواوی دەکات. دۆخەکە تەنها لە
+        //    ڕووکار پاک دەبێتەوە؛ `xferSend` بە `xferState !== s` دەیزانێت و
+        //    هێشتا جزدانەکە نوێ دەکاتەوە.
+        function xferClose() {
+            const sh = document.getElementById('xfer-sheet');
+            if (sh) sh.classList.remove('show');
+            document.body.classList.remove('fsheet-open');
+            navDrop('xfer:review');
+            navDrop('xfer:amount');
+            xferState = null;
+        }
+
+        // ---------------- ئامادە + دوایین کەسەکان (یەک بانگ) ----------------
+        async function xferLoadHome() {
+            const s = xferState;
+            if (!s || !currentUser || !('homeTok' in s)) return;
+            const me = currentUser.code;
+            const tok = ++s.homeTok;                         // کلیلی پێشبڕکێ **پێش** await
+            try {
+                const { data, error } = await supabase.rpc('wallet_transfer_home');
+                if (error) throw error;
+                if (xferState !== s || s.homeTok !== tok) return;
+                s.home = data || {};
+                s.homeErr = false;
+                xferHomeCache = { code: me, at: Date.now(), data: s.home };
+            } catch (e) {
+                console.warn('wallet_transfer_home:', e);
+                if (xferState !== s || s.homeTok !== tok) return;
+                // ژمارەی کاشکراو دەمێنێتەوە — هەڵە تەنها کاتێک هیچمان نییە
+                if (!s.home) s.homeErr = true;
+            }
+            xferPatchHome();
+        }
+
+        function xferReady() {
+            const h = xferState && xferState.home;
+            if (!h) return null;
+            return Math.max(0, Math.floor(Number(h.ready) || 0));
+        }
+
+        function xferPatchHome() {
+            const s = xferState;
+            if (!s) return;
+            if (s.step === 'pick') {
+                const b = document.getElementById('xfer-ready-banner');
+                if (b) { const html = xferReadyBannerHtml(); if (b._last !== html) { b._last = html; b.innerHTML = html; } }
+                xferPatchResults();
+            } else if (s.step === 'amount') xferPatchAmount();
+        }
+
+        // «X د.ع لە خولی ١٠ ڕۆژەدایە» — بۆچی ناتوانیت بینێریت
+        function xferPendNoteHtml(h) {
+            const pend = Math.max(0, Math.round(Number(h.pending) || 0));
+            const due = Number(h.due) || 0;
+            return `<div class="xfer-pend"><i class='bx bx-time-five'></i><span><b>${xferMoney(pend)} د.ع</b> لە خولی ${fmtNum(PAYOUT_HOLD_DAYS)} ڕۆژەدایە — دوای تەواوبوونی دەتوانیت بینێریت${due ? ' · نزیکترین: ' + histEsc(wholdLeftText(due)) : ''}</span></div>`;
+        }
+
+        function xferReadyBannerHtml() {
+            const s = xferState, h = s && s.home;
+            if (!h) {
+                return s && s.homeErr
+                    ? `<div class="xfer-banner is-bad"><i class='bx bx-error-circle'></i><span>نەتوانرا پارەی ئامادە بهێنرێت</span><button type="button" class="xfer-retry" onclick="xferLoadHome()">دووبارە</button></div>`
+                    : `<div class="xfer-banner is-load"><i class='bx bx-loader-alt bx-spin'></i><span>حیسابکردنی پارەی ئامادە…</span></div>`;
+            }
+            if (h.can_send === false) {
+                return `<div class="xfer-banner is-bad"><i class='bx bx-lock-alt'></i><span>ناردنی پارە بۆ ئەکاونتەکەت داخراوە</span></div>`;
+            }
+            const ready = xferReady();
+            let html = `<div class="xfer-banner"><i class='bx bx-check-shield'></i><span>پارەی ئامادە بۆ ناردن</span><b>${xferMoney(ready)} د.ع</b></div>`;
+            if (ready < XFER_MIN && Number(h.pending) > 0) html += xferPendNoteHtml(h);
+            return html;
+        }
+
+        // ---------------- هەنگاوی ١: وەرگر ----------------
+        function xferPersonAttrs(p) {
+            return ` data-code="${histEsc(p.code)}" data-name="${histEsc(p.name || p.code)}"`
+                + ` data-avatar="${histEsc(p.avatar || '')}" data-role="${histEsc(p.role || '')}" onclick="xferPickEl(this)"`;
+        }
+
+        function xferPersonHtml(p) {
+            const role = p.role ? histEsc(p.role) + ' · ' : '';
+            return `<button type="button" class="xfer-person"${xferPersonAttrs(p)}>
+                        ${avatarHtml(p.avatar, p.name || p.code, 40)}
+                        <span class="xfer-person-txt"><b><bdi>${histEsc(p.name || p.code)}</bdi></b><small>${role}<bdi dir="ltr">${histEsc(p.code)}</bdi></small></span>
+                        <i class='bx bx-chevron-left'></i>
+                    </button>`;
+        }
+
+        function xferRecentHtml(p) {
+            return `<button type="button" class="xfer-rc"${xferPersonAttrs(p)}>${avatarHtml(p.avatar, p.name || p.code, 48)}<span><bdi>${histEsc(xferFirstName(p.name || p.code))}</bdi></span></button>`;
+        }
+
+        function xferResultsHtml() {
+            const s = xferState;
+            if (!s) return '';
+            const h = s.home;
+            if (h && h.can_send === false) return '';
+            if (s.q.length >= 2) {
+                if (s.searching) return `<div class="xfer-empty is-load"><i class='bx bx-loader-alt bx-spin'></i><b>گەڕان…</b></div>`;
+                if (s.searchErr) return `<div class="xfer-empty"><i class='bx bx-wifi-off'></i><b>پەیوەندی نەبوو</b><small>دووبارە بنووسە</small></div>`;
+                const list = s.results || [];
+                if (!list.length) {
+                    return `<div class="xfer-empty"><i class='bx bx-search-alt'></i><b>کەس نەدۆزرایەوە</b><small>ناو یان کۆدی تەواوی کەسەکە بنووسە — هەندێک کەس تەنها بە کۆد دەدۆزرێنەوە</small></div>`;
+                }
+                return `<div class="xfer-list">${list.map(xferPersonHtml).join('')}</div>`;
+            }
+            if (!h) return '';
+            const recent = Array.isArray(h.recent) ? h.recent : [];
+            const team = (Array.isArray(h.team) ? h.team : []).filter(p => !recent.some(r => r.code === p.code));
+            let html = '';
+            if (recent.length) html += `<div class="xfer-sec">دوایین کەسەکان</div><div class="xfer-recent">${recent.map(xferRecentHtml).join('')}</div>`;
+            if (team.length) html += `<div class="xfer-sec">تیمەکەم</div><div class="xfer-list">${team.map(xferPersonHtml).join('')}</div>`;
+            if (!html) html = `<div class="xfer-empty"><i class='bx bx-user-circle'></i><b>بۆ کێ دەنێریت؟</b><small>ناو یان کۆدی کەسەکە لە سەرەوە بنووسە</small></div>`;
+            return html;
+        }
+
+        function xferPatchResults() {
+            const el = document.getElementById('xfer-results');
+            if (!el) return;
+            const html = xferResultsHtml();
+            if (el._last !== html) { el._last = html; el.innerHTML = html; }
+        }
+
+        function xferPickHtml() {
+            const s = xferState;
+            return `<div id="xfer-ready-banner">${xferReadyBannerHtml()}</div>
+                    <label class="xfer-search">
+                        <i class='bx bx-search'></i>
+                        <input type="search" id="xfer-q" enterkeyhint="search" autocomplete="off" maxlength="60"
+                               placeholder="ناو یان کۆدی کەسەکە…" aria-label="گەڕان بۆ وەرگر" value="${histEsc(s.q)}">
+                    </label>
+                    <div id="xfer-results" class="xfer-results">${xferResultsHtml()}</div>`;
+        }
+
+        function xferBindPick() {
+            const q = document.getElementById('xfer-q');
+            const res = document.getElementById('xfer-results');
+            // هەمان دەقەی `xferPickHtml` نووسیویەتی — پاتچی دواتر لە سەر ئەمە بەراورد دەکات
+            if (res) res._last = xferResultsHtml();
+            const b = document.getElementById('xfer-ready-banner');
+            if (b) b._last = xferReadyBannerHtml();
+            if (!q) return;
+            q.addEventListener('input', () => {
+                const s = xferState;
+                if (!s || s.step !== 'pick') return;
+                s.q = q.value.replace(/\s+/g, ' ').trim();
+                clearTimeout(s.qTimer);
+                const tok = ++s.seq;                         // کلیلی پێشبڕکێ پێش هەر await
+                s.searchErr = false;
+                if (s.q.length < 2) { s.results = null; s.searching = false; xferPatchResults(); return; }
+                s.searching = true;
+                xferPatchResults();
+                s.qTimer = setTimeout(() => xferSearch(s.q, tok), 220);
+            });
+            q.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); q.blur(); } });
+        }
+
+        async function xferSearch(q, tok) {
+            const s = xferState;
+            if (!s || s.seq !== tok) return;
+            try {
+                const { data, error } = await supabase.rpc('wallet_transfer_find', { p_q: q });
+                if (error) throw error;
+                if (xferState !== s || s.seq !== tok) return;
+                s.results = Array.isArray(data) ? data : [];
+                s.searchErr = false;
+            } catch (e) {
+                console.warn('wallet_transfer_find:', e);
+                if (xferState !== s || s.seq !== tok) return;
+                s.results = null;
+                s.searchErr = true;
+            }
+            s.searching = false;
+            xferPatchResults();
+        }
+
+        function xferPickEl(el) {
+            if (!el) return;
+            xferChoose({
+                code: el.getAttribute('data-code') || '',
+                name: el.getAttribute('data-name') || '',
+                avatar: el.getAttribute('data-avatar') || '',
+                role: el.getAttribute('data-role') || ''
+            });
+        }
+
+        function xferChoose(p) {
+            const s = xferState;
+            if (!s || s.step !== 'pick' || !p || !p.code) return;
+            if (s.home && s.home.can_send === false) return;
+            if (currentUser && p.code === currentUser.code) { showToast('ناتوانیت پارە بۆ خۆت بنێریت', 'error'); return; }
+            s.to = p;
+            s.key = null;
+            xferHaptic('select');
+            xferGo('amount');
+        }
+
+        // ---------------- جووڵە لە نێوان هەنگاوەکان ----------------
+        // ⭐ هەر هەنگاوێک هەنگاوی گەڕانەوەی خۆی هەیە (`navPush`) — دوگمەی
+        //    گەڕانەوەی تلیگرام هەنگاوێک دەگەڕێتەوە، نەک هەموو شیتەکە دابخات.
+        //    گەڕانەوە بە دوگمەی ناو شیتەکە → `navDrop` (یاسای پڕۆژە).
+        function xferGo(step, fromNav) {
+            const s = xferState;
+            if (!s || s.busy || step === s.step) return;
+            const prev = s.step;
+            if (step === 'amount' && prev === 'pick') {
+                navPush('xfer:amount', () => xferGo('pick', true));
+            } else if (step === 'review' && prev === 'amount') {
+                const chk = xferAmountCheck();
+                if (!chk.ok) { xferShake(); return; }
+                navPush('xfer:review', () => xferGo('amount', true));
+                if (!s.key) s.key = xferNewKey();
+            } else if (step === 'amount' && prev === 'review') {
+                if (!fromNav) navDrop('xfer:review');
+                s.key = null;                               // بڕ/وەرگر دەگۆڕێت → ناردنێکی نوێ
+            } else if (step === 'pick' && prev === 'amount') {
+                if (!fromNav) navDrop('xfer:amount');
+            } else return;
+            s.step = step;
+            s.err = '';
+            xferRender();
+        }
+
+        // ---------------- هەنگاوی ٢: بڕ (تەختەی ژمارە) ----------------
+        function xferAmountCheck() {
+            const s = xferState;
+            const n = Number(s && s.amt) || 0;
+            const ready = xferReady();
+            if (!n) return { ok: false, bad: false, msg: ready == null && s && s.homeErr ? 'پارەی ئامادە نەزانراوە' : '' };
+            if (n < XFER_MIN) return { ok: false, bad: true, msg: 'کەمترین بڕ ' + xferMoney(XFER_MIN) + ' د.ع' };
+            if (ready == null) return { ok: false, bad: false, msg: s.homeErr ? 'پارەی ئامادە نەزانراوە' : 'حیسابکردنی پارەی ئامادە…' };
+            if (s.home && s.home.can_send === false) return { ok: false, bad: true, msg: 'ناردنی پارە بۆ ئەکاونتەکەت داخراوە' };
+            if (n > ready) {
+                return { ok: false, bad: true, msg: ready >= XFER_MIN
+                    ? 'لە پارەی ئامادەت زیاترە — زۆرترین ' + xferMoney(ready) + ' د.ع'
+                    : 'هێشتا پارەی ئامادەت نییە بۆ ناردن' };
+            }
+            return { ok: true, bad: false, msg: 'دوای ناردن ' + xferMoney(ready - n) + ' د.ع ئامادەت دەمێنێت' };
+        }
+
+        function xferAmtReadyHtml() {
+            const s = xferState, h = s && s.home;
+            if (!h) {
+                return s && s.homeErr
+                    ? `<div class="xfer-ready is-bad"><span>نەتوانرا پارەی ئامادە بهێنرێت</span><button type="button" class="xfer-retry" onclick="xferLoadHome()">دووبارە</button></div>`
+                    : `<div class="xfer-ready is-load"><i class='bx bx-loader-alt bx-spin'></i> حیسابکردنی پارەی ئامادە…</div>`;
+            }
+            const ready = xferReady();
+            let html = `<div class="xfer-ready"><span>پارەی ئامادە:</span> <b>${xferMoney(ready)} د.ع</b></div>`;
+            if (ready < XFER_MIN && Number(h.pending) > 0) html += xferPendNoteHtml(h);
+            return html;
+        }
+
+        function xferAmountHtml() {
+            const p = xferState.to;
+            const keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '000', '0', 'del'];
+            const chips = [10000, 25000, 50000];
+            return `<div class="xfer-to">
+                        ${avatarHtml(p.avatar, p.name || p.code, 40)}
+                        <span class="xfer-to-txt"><small>بۆ</small><b><bdi>${histEsc(p.name || p.code)}</bdi></b><small><bdi dir="ltr">${histEsc(p.code)}</bdi></small></span>
+                        <button type="button" class="xfer-change" onclick="xferGo('pick')">گۆڕین</button>
+                    </div>
+                    <div class="xfer-amt-wrap">
+                        <div class="xfer-amt is-empty" id="xfer-amt" aria-live="polite"><span id="xfer-amt-n" dir="ltr">0</span><span class="cur">د.ع</span></div>
+                        <div class="xfer-hint" id="xfer-hint"></div>
+                    </div>
+                    <div id="xfer-amt-ready"></div>
+                    <div class="xfer-chips">${chips.map(v => `<button type="button" class="xfer-chip" data-v="${v}" onclick="xferChip(this)">${xferMoney(v)}</button>`).join('')}<button type="button" class="xfer-chip is-all" data-v="all" onclick="xferChip(this)">هەمووی</button></div>
+                    <div class="xfer-keys" role="group" aria-label="تەختەی ژمارە">${keys.map(k =>
+                        `<button type="button" class="xfer-key${k === 'del' || k === '000' ? ' is-fn' : ''}" onclick="xferKey('${k}')" aria-label="${k === 'del' ? 'سڕینەوە' : k}">${k === 'del' ? "<i class='bx bx-arrow-back'></i>" : k}</button>`).join('')}</div>`;
+        }
+
+        function xferPatchAmount() {
+            const s = xferState;
+            if (!s || s.step !== 'amount') return;
+            const chk = xferAmountCheck();
+            const n = document.getElementById('xfer-amt-n');
+            const box = document.getElementById('xfer-amt');
+            const hint = document.getElementById('xfer-hint');
+            const btn = document.getElementById('xfer-next');
+            const rd = document.getElementById('xfer-amt-ready');
+            if (n) n.textContent = s.amt ? xferMoney(s.amt) : '0';
+            if (box) { box.classList.toggle('is-empty', !s.amt); box.classList.toggle('is-bad', chk.bad); }
+            if (hint) { hint.textContent = chk.msg; hint.classList.toggle('is-bad', chk.bad); hint.classList.toggle('is-ok', chk.ok); }
+            if (btn) btn.disabled = !chk.ok;
+            if (rd) { const html = xferAmtReadyHtml(); if (rd._last !== html) { rd._last = html; rd.innerHTML = html; } }
+            const ready = xferReady();
+            document.querySelectorAll('#xfer-body .xfer-chip').forEach(c => {
+                const v = c.getAttribute('data-v');
+                const val = v === 'all' ? ready : Number(v);
+                c.classList.toggle('is-on', !!s.amt && val != null && Number(s.amt) === val);
+            });
+        }
+
+        function xferKey(k) {
+            const s = xferState;
+            if (!s || s.step !== 'amount') return;
+            let a = s.amt || '';
+            if (k === 'del') a = a.slice(0, -1);
+            else if (k === '000') { if (!a) { xferShake(); return; } a += '000'; }
+            else if (/^[0-9]$/.test(k)) a += k;
+            else return;
+            a = a.replace(/^0+/, '');
+            if (a.length > 10 || Number(a) > XFER_MAX) { xferShake(); return; }
+            s.amt = a;
+            xferPatchAmount();
+            xferHaptic('select');
+        }
+
+        function xferChip(el) {
+            const s = xferState;
+            if (!s || s.step !== 'amount' || !el) return;
+            const v = el.getAttribute('data-v');
+            const val = v === 'all' ? xferReady() : Number(v);
+            if (!val) { xferShake(); return; }             // «هەمووی» بە ئامادەی سفر یان نەزانراو
+            s.amt = String(Math.min(val, XFER_MAX));
+            xferPatchAmount();
+            xferHaptic('select');
+        }
+
+        function xferShake() {
+            const box = document.getElementById('xfer-amt');
+            if (box) { box.classList.remove('shake'); void box.offsetWidth; box.classList.add('shake'); }
+            xferHaptic('error');
+        }
+
+        // ⌨️ کیبۆردی کۆمپیوتەر لە هەنگاوی بڕ — ژمارە (کوردیش)، Backspace، Enter
+        document.addEventListener('keydown', (e) => {
+            const s = xferState;
+            if (!s || s.step !== 'amount' || e.ctrlKey || e.metaKey || e.altKey) return;
+            const sh = document.getElementById('xfer-sheet');
+            if (!sh || !sh.classList.contains('show')) return;
+            const t = e.target;
+            if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
+            const d = toEnglishDigits(e.key);
+            if (/^[0-9]$/.test(d)) { e.preventDefault(); xferKey(d); }
+            else if (e.key === 'Backspace') { e.preventDefault(); xferKey('del'); }
+            else if (e.key === 'Enter') { e.preventDefault(); xferGo('review'); }
+        });
+
+        // ---------------- هەنگاوی ٣: پێداچوونەوە + ڕاکێشان ----------------
+        function xferReviewHtml() {
+            const s = xferState, p = s.to;
+            const me = currentUser || {};
+            const ready = xferReady();
+            const after = ready == null ? '—' : xferMoney(ready - Number(s.amt)) + ' د.ع';
+            return `<div class="xfer-card">
+                        <div class="xfer-pair">
+                            <div class="xfer-pair-side">${avatarHtml(me.avatar, userName, 48)}<b>تۆ</b></div>
+                            <i class='bx bx-left-arrow-alt xfer-pair-arrow' aria-hidden="true"></i>
+                            <div class="xfer-pair-side">${avatarHtml(p.avatar, p.name || p.code, 48)}<b><bdi>${histEsc(xferFirstName(p.name || p.code))}</bdi></b></div>
+                        </div>
+                        <div class="xfer-big"><span dir="ltr">${xferMoney(s.amt)}</span><small>د.ع</small></div>
+                        <div class="xfer-rows">
+                            <div class="xfer-row"><span>وەرگر</span><b><bdi>${histEsc(p.name || p.code)}</bdi> · <bdi dir="ltr">${histEsc(p.code)}</bdi></b></div>
+                            <div class="xfer-row"><span>لە</span><b>پارەی ئامادەی جزدانەکەت</b></div>
+                            <div class="xfer-row"><span>دوای ناردن ئامادەت</span><b>${after}</b></div>
+                        </div>
+                    </div>
+                    <label class="xfer-note-wrap">
+                        <span class="xfer-note-l">تێبینی <small>(ئارەزوومەندانە — وەرگر دەیبینێت)</small></span>
+                        <textarea id="xfer-note" class="xfer-note" rows="2" maxlength="${XFER_NOTE_MAX}" placeholder="بۆ نموونە: قەرزەکەت">${histEsc(s.note)}</textarea>
+                        <span class="xfer-note-c" id="xfer-note-c">${fmtNum(String(s.note || '').length)}/${fmtNum(XFER_NOTE_MAX)}</span>
+                    </label>
+                    <div id="xfer-err"></div>
+                    <button type="button" class="xfer-edit" onclick="xferGo('amount')"><i class='bx bx-edit-alt'></i> گۆڕینی بڕ</button>`;
+        }
+
+        function xferSlideHtml() {
+            return `<div class="xfer-slide" id="xfer-slide" role="group" aria-label="ڕایبکێشە بۆ ناردن">
+                        <span class="xfer-slide-fill" aria-hidden="true"></span>
+                        <span class="xfer-slide-label">ڕایبکێشە بۆ ناردنی ${xferMoney(xferState.amt)} د.ع</span>
+                        <button type="button" class="xfer-slide-knob" aria-label="ناردن — ڕایبکێشە یان Enter"><i class='bx bxs-send'></i></button>
+                    </div>`;
+        }
+
+        function xferBindReview() {
+            const t = document.getElementById('xfer-note');
+            const c = document.getElementById('xfer-note-c');
+            if (t) {
+                t.addEventListener('input', () => {
+                    if (!xferState || xferState.step !== 'review') return;
+                    xferState.note = t.value;
+                    if (c) c.textContent = fmtNum(t.value.length) + '/' + fmtNum(XFER_NOTE_MAX);
+                });
+            }
+            xferBindSlider();
+            xferPatchErr();
+        }
+
+        function xferPatchErr() {
+            const el = document.getElementById('xfer-err');
+            if (!el || !xferState) return;
+            const html = xferState.err
+                ? `<div class="xfer-err" role="alert"><i class='bx bx-error-circle'></i><span>${histEsc(xferState.err)}</span></div>` : '';
+            if (el._last !== html) { el._last = html; el.innerHTML = html; }
+        }
+
+        function xferPatchSlider() {
+            const tr = document.getElementById('xfer-slide');
+            if (!tr || !xferState) return;
+            const busy = !!xferState.busy;
+            tr.classList.toggle('is-busy', busy);
+            tr.setAttribute('aria-busy', busy ? 'true' : 'false');
+            const kb = tr.querySelector('.xfer-slide-knob');
+            if (kb) kb.innerHTML = busy ? "<i class='bx bx-loader-alt bx-spin'></i>" : "<i class='bx bxs-send'></i>";
+            const lb = tr.querySelector('.xfer-slide-label');
+            if (lb) lb.textContent = busy ? 'دەنێردرێت…' : 'ڕایبکێشە بۆ ناردنی ' + xferMoney(xferState.amt) + ' د.ع';
+            if (!busy) xferSlideSet(tr, 0, true);
+        }
+
+        // شوێنی دوگمەکە: `--d` = چەند px ڕۆیشتووە، `--p` = ڕێژە (٠–١)
+        function xferSlideSet(tr, px, animate) {
+            const kb = tr.querySelector('.xfer-slide-knob');
+            const max = Math.max(1, tr.clientWidth - (kb ? kb.offsetWidth : 48) - 8);
+            const d = Math.min(max, Math.max(0, px));
+            const rtl = getComputedStyle(tr).direction === 'rtl';
+            tr.classList.toggle('is-back', !!animate);
+            tr.style.setProperty('--d', d + 'px');
+            tr.style.setProperty('--dx', (rtl ? -d : d) + 'px');
+            tr.style.setProperty('--p', (d / max).toFixed(3));
+            return d / max;
+        }
+
+        // ⭐ Pointer Events — یەک ڕێڕەو بۆ پەنجە و ماوس. `touch-action: none`
+        //    لە CSSـدایە، ئەگەرنا لەسەر مۆبایل پەڕەکە سکڕۆڵ دەکات.
+        //    ٨٨٪ = ناردن؛ کەمتر → دەگەڕێتەوە. Enter/Space لەسەر دوگمەکە
+        //    ڕێگای کیبۆرد و خوێنەری شاشەیە.
+        function xferBindSlider() {
+            const tr = document.getElementById('xfer-slide');
+            const kb = tr && tr.querySelector('.xfer-slide-knob');
+            if (!tr || !kb) return;
+            let drag = null;
+            const dirSign = () => (getComputedStyle(tr).direction === 'rtl' ? -1 : 1);
+            // ماوس: `pointerdown`ـی پێشگیراو هەڵبژاردنی دەق ناوەستێنێت
+            kb.addEventListener('mousedown', (e) => e.preventDefault());
+            kb.addEventListener('pointerdown', (e) => {
+                if (!xferState || xferState.busy || xferState.step !== 'review') return;
+                drag = { id: e.pointerId, x0: e.clientX };
+                try { kb.setPointerCapture(e.pointerId); } catch (err) { }
+                xferSlideSet(tr, 0, false);
+                e.preventDefault();
+            });
+            kb.addEventListener('pointermove', (e) => {
+                if (!drag || e.pointerId !== drag.id) return;
+                xferSlideSet(tr, (e.clientX - drag.x0) * dirSign(), false);
+            });
+            const end = (e, cancel) => {
+                if (!drag || e.pointerId !== drag.id) return;
+                const p = cancel ? 0 : xferSlideSet(tr, (e.clientX - drag.x0) * dirSign(), false);
+                drag = null;
+                if (p >= 0.88) { xferSlideSet(tr, 1e6, false); xferSend(); }
+                else xferSlideSet(tr, 0, true);
+            };
+            kb.addEventListener('pointerup', (e) => end(e, false));
+            kb.addEventListener('pointercancel', (e) => end(e, true));
+            kb.addEventListener('lostpointercapture', (e) => { if (drag && e.pointerId === drag.id) end(e, true); });
+            kb.addEventListener('keydown', (e) => {
+                if (e.key !== 'Enter' && e.key !== ' ') return;
+                e.preventDefault();
+                if (!xferState || xferState.busy) return;
+                xferSlideSet(tr, 1e6, true);
+                xferSend();
+            });
+        }
+
+        async function xferSend() {
+            const s = xferState;
+            if (!s || s.busy || s.step !== 'review' || !s.to || !s.key) return;
+            const chk = xferAmountCheck();
+            if (!chk.ok) { s.err = chk.msg; xferPatchErr(); xferPatchSlider(); return; }
+            s.busy = true;                                  // ① پێش هەر await
+            s.err = '';
+            const noteEl = document.getElementById('xfer-note');
+            if (noteEl) s.note = noteEl.value;
+            xferPatchErr();
+            xferPatchSlider();                              // ③ is-busy
+            let done = false;
+            await guardSubmit('xfer-send', null, async () => {          // ②
+                try {
+                    if (!await ensureAccountActive()) return;
+                    const { data, error } = await supabase.rpc('wallet_transfer_send', {
+                        p_to: s.to.code,
+                        p_amount: Number(s.amt),
+                        p_note: String(s.note || '').trim() || null,
+                        p_key: s.key                        // ④ هەمان کلیل بۆ هەموو هەوڵدانەوەیەک
+                    });
+                    if (error) throw error;
+                    done = true;
+                    xferAfterSend(s, data);
+                } catch (e) {
+                    console.error('wallet_transfer_send:', e);
+                    const raw = String((e && (e.message || e)) || '');
+                    s.err = serverGuardMsg(e) || 'پەیوەندی نەبوو. دووبارە ڕایبکێشە — پارەکە دوو جار نانێردرێت.';
+                    if (/OVER_READY/.test(raw)) xferLoadHome();
+                    if (/KEY_REUSED/.test(raw)) s.key = xferNewKey();
+                    xferHaptic('error');
+                }
+            });
+            if (!done && xferState === s) {
+                s.busy = false;
+                xferPatchSlider();
+                xferPatchErr();
+            }
+        }
+
+        function xferAfterSend(s, r) {
+            // ⭐ ژمارەی کۆن نامێنێتەوە: کاش + جزدانەکەم یەکسەر نوێ دەبنەوە
+            xferHomeCache = null;
+            try {
+                if (currentUser) { delete walletHoldCache[currentUser.code]; delete walletTxCache[currentUser.code]; }
+            } catch (e) { }
+            if (activeScreenId() === 'wallet-screen') loadMyWalletData();
+            else isWalletDataLoaded = false;
+            xferHaptic('success');
+            if (xferState !== s) {                          // شیتەکە لە کاتی ناردندا داخرا
+                showToast('نێردرا: ' + xferMoney(r && r.amount) + ' د.ع', 'success');
+                return;
+            }
+            navDrop('xfer:review');
+            navDrop('xfer:amount');
+            s.result = r || null;
+            s.busy = false;
+            s.step = 'done';
+            xferRender();
+        }
+
+        // ---------------- هەنگاوی ٤: وەسڵ ----------------
+        function xferReceiptCardHtml(r, viewer) {
+            if (!r || !r.ref) return '';
+            const f = r.from || {}, t = r.to || {};
+            const rows = [
+                ['ژمارەی پسوولە', `<bdi dir="ltr">${histEsc(r.ref)}</bdi>${odCopyBtn(r.ref, 'کۆپیکردنی ژمارەی پسوولە')}`],
+                ['کات', histEsc(formatDateTimeKurdish(r.at))],
+                ['لە', `<bdi>${histEsc(f.name || f.code)}</bdi> · <bdi dir="ltr">${histEsc(f.code)}</bdi>`],
+                ['بۆ', `<bdi>${histEsc(t.name || t.code)}</bdi> · <bdi dir="ltr">${histEsc(t.code)}</bdi>`]
+            ];
+            if (r.note) rows.push(['تێبینی', `<bdi>${histEsc(r.note)}</bdi>`]);
+            if (r.ready_after != null && viewer && f.code === viewer) rows.push(['ئامادەت ئێستا', xferMoney(r.ready_after) + ' د.ع']);
+            return `<div class="xfer-receipt">${rows.map(x => `<div class="xfer-row"><span>${x[0]}</span><b>${x[1]}</b></div>`).join('')}</div>`;
+        }
+
+        function xferDoneHtml() {
+            const s = xferState, r = s.result || {};
+            const to = r.to || s.to || {};
+            return `<div class="xfer-done">
+                        <div class="xfer-tick"><i class='bx bx-check'></i></div>
+                        <div class="xfer-done-amt"><span dir="ltr">${xferMoney(r.amount || s.amt)}</span><small>د.ع</small></div>
+                        <div class="xfer-done-to">نێردرا بۆ <b><bdi>${histEsc(to.name || to.code || '')}</bdi></b></div>
+                    </div>
+                    ${xferReceiptCardHtml(r, currentUser ? currentUser.code : null)}`;
+        }
+
+        function xferReceiptHtml() {
+            const s = xferState;
+            if (s.loading) return `<div class="xfer-empty is-load"><i class='bx bx-loader-alt bx-spin'></i><b>هێنانی وەسڵ…</b></div>`;
+            const r = s.receipt;
+            if (!r) return `<div class="xfer-empty"><i class='bx bx-error-circle'></i><b>وەسڵەکە نەدۆزرایەوە</b><small>${histEsc(s.err || '')}</small></div>`;
+            const out = r.dir === 'out';
+            const other = (out ? r.to : r.from) || {};
+            return `<div class="xfer-done is-receipt">
+                        ${avatarHtml(other.avatar, other.name || other.code, 64)}
+                        <div class="xfer-done-amt ${out ? 'is-out' : 'is-in'}"><span dir="ltr">${out ? '-' : '+'}${xferMoney(r.amount)}</span><small>د.ع</small></div>
+                        <div class="xfer-done-to">${out ? 'نێردرا بۆ' : 'وەرگیرا لە'} <b><bdi>${histEsc(other.name || other.code || '')}</bdi></b></div>
+                    </div>
+                    ${xferReceiptCardHtml(r, null)}`;
+        }
+
+        function xferDoneFootHtml(closeLabel) {
+            return `<div class="xfer-foot-row">
+                        <button type="button" class="xfer-btn2" onclick="xferCopyReceipt(this)"><i class='bx bx-copy'></i> کۆپیکردنی وەسڵ</button>
+                        <button type="button" class="fsheet-apply" onclick="xferClose()">${closeLabel || 'تەواو'}</button>
+                    </div>`;
+        }
+
+        async function xferCopyReceipt(btn) {
+            const s = xferState;
+            const r = s && (s.result || s.receipt);
+            if (!r || !r.ref) return;
+            const f = r.from || {}, t = r.to || {};
+            const L = [
+                'وەسڵی ناردنی پارە',
+                'بڕ: ' + xferMoney(r.amount) + ' د.ع',
+                'لە: ' + (f.name || f.code) + ' (' + f.code + ')',
+                'بۆ: ' + (t.name || t.code) + ' (' + t.code + ')',
+                'کات: ' + formatDateTimeKurdish(r.at),
+                'ژمارەی پسوولە: ' + r.ref
+            ];
+            if (r.note) L.push('تێبینی: ' + r.note);
+            const ok = await copyTextToClipboard(L.join('\n'));
+            showToast(ok ? 'وەسڵەکە کۆپی کرا' : 'کۆپی نەکرا', ok ? 'success' : 'error');
+            if (ok) flashCopied(btn);
+        }
+
+        // وەسڵی ڕیزێکی مێژوو — جزدانەکەم یان جزدانی کەسێکی تر (هەمان
+        // دەسەڵاتی `wallet_tx_page` لە سێرڤەر)
+        async function xferOpenReceiptFromTx(el, ev) {
+            if (ev) { ev.stopPropagation(); ev.preventDefault(); }
+            const id = el && el.getAttribute('data-xtx');
+            if (!id || !currentUser) return;
+            const s = xferState = { step: 'receipt', txId: id, loading: true, receipt: null, err: '' };
+            xferShow();
+            try {
+                const { data, error } = await supabase.rpc('wallet_transfer_info', { p_tx_ids: [id] });
+                if (error) throw error;
+                if (xferState !== s) return;
+                s.receipt = (Array.isArray(data) ? data : []).find(x => String(x.tx_id) === String(id)) || null;
+                if (!s.receipt) s.err = 'دەسەڵاتی بینینی ئەم وەسڵەت نییە';
+            } catch (e) {
+                console.warn('wallet_transfer_info:', e);
+                if (xferState !== s) return;
+                s.err = serverGuardMsg(e) || 'پەیوەندی نەبوو — دووبارە هەوڵبدەرەوە';
+            }
+            s.loading = false;
+            xferRender();
+        }
+
+        // ---------------- وەرگرتنی پارە (کۆدەکەم) ----------------
+        function xferMyCodeHtml() {
+            const me = currentUser || {};
+            return `<div class="xfer-mycode">
+                        ${avatarHtml(me.avatar, userName, 72)}
+                        <b class="xfer-mycode-name"><bdi>${histEsc(userName)}</bdi></b>
+                        <div class="xfer-mycode-code" dir="ltr">${histEsc(me.code)}</div>
+                        <p>ئەم کۆدە بدە بەو کەسەی دەیەوێت پارەت بۆ بنێرێت — لە «ناردنی پارە» کۆدەکەت دەنووسێت و ناوەکەت دەبینێت. پارەکە یەکسەر دەچێتە <b>پارەی ئامادە</b>ی جزدانەکەت.</p>
+                    </div>`;
+        }
+
+        async function xferCopyCode(btn) {
+            const t = (btn && btn.getAttribute('data-copy')) || '';
+            if (!t) return;
+            const ok = await copyTextToClipboard(t);
+            showToast(ok ? 'کۆدەکەت کۆپی کرا: ' + t : 'کۆپی نەکرا', ok ? 'success' : 'error');
+            if (ok) flashCopied(btn);
+        }
+
+        // ---------------- نەخشاندنی هەنگاو ----------------
+        // ⚠️ تەنها لە گۆڕینی هەنگاودا — ناوەوەی هەنگاوێک بە پاتچ نوێ دەبێتەوە
+        function xferRender() {
+            const s = xferState;
+            if (!s) return;
+            const body = document.getElementById('xfer-body');
+            const foot = document.getElementById('xfer-foot');
+            const ttl = document.getElementById('xfer-title');
+            const sh = document.getElementById('xfer-sheet');
+            if (!body || !foot || !sh) return;
+            const T = { pick: 'ناردنی پارە', amount: 'چەند دەنێریت؟', review: 'پێداچوونەوە', done: 'نێردرا', mycode: 'وەرگرتنی پارە' };
+            let title = T[s.step] || 'ناردنی پارە';
+            if (s.step === 'receipt') title = s.receipt ? (s.receipt.dir === 'in' ? 'وەسڵی وەرگرتن' : 'وەسڵی ناردن') : 'وەسڵ';
+            if (ttl) ttl.textContent = title;
+            sh.setAttribute('data-step', s.step);
+            let b = '', f = '';
+            if (s.step === 'pick') b = xferPickHtml();
+            else if (s.step === 'amount') {
+                b = xferAmountHtml();
+                f = `<button type="button" class="fsheet-apply" id="xfer-next" onclick="xferGo('review')" disabled>بەردەوامبوون</button>`;
+            } else if (s.step === 'review') { b = xferReviewHtml(); f = xferSlideHtml(); }
+            else if (s.step === 'done') { b = xferDoneHtml(); f = xferDoneFootHtml(); }
+            else if (s.step === 'receipt') { b = xferReceiptHtml(); f = s.receipt ? xferDoneFootHtml('داخستن') : ''; }
+            else if (s.step === 'mycode') {
+                b = xferMyCodeHtml();
+                f = `<button type="button" class="fsheet-apply" data-copy="${histEsc(currentUser ? currentUser.code : '')}" onclick="xferCopyCode(this)"><i class='bx bx-copy'></i> کۆپیکردنی کۆدەکەم</button>`;
+            }
+            // هەڵبژاردنێکی کۆن (ڕاکێشان بە ماوس) بەسەر هەنگاوی نوێدا نامێنێتەوە
+            try {
+                const sel = window.getSelection();
+                if (sel && sel.rangeCount && sh.contains(sel.anchorNode)) sel.removeAllRanges();
+            } catch (e) { }
+            body.innerHTML = b;
+            foot.innerHTML = f;
+            foot.hidden = !f;
+            body.scrollTop = 0;
+            if (s.step === 'pick') xferBindPick();
+            else if (s.step === 'amount') xferPatchAmount();
+            else if (s.step === 'review') xferBindReview();
         }
 
         async function loadWalletHoldSplit(code, force) {

@@ -5290,27 +5290,6 @@ h2 i,
   pointer-events: none;
 }
 
-/* تێبینی کاتێک ئۆردەری کەسێکی تر دەستکاری دەکرێت */
-.wallet-pay-lock {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-bottom: 10px;
-  padding: 9px 11px;
-  border: 1px solid rgba(245, 158, 11, 0.35);
-  border-radius: 10px;
-  background: rgba(245, 158, 11, 0.08);
-  color: #b45309;
-  font-size: 11.5px;
-  font-weight: 700;
-  line-height: 1.6;
-}
-
-.wallet-pay-lock i {
-  font-size: 16px;
-  flex-shrink: 0;
-}
-
 /* ============================================================
    زیادکردنی شار — پێشنیار و ئاگادارکردنەوەی دووبارەبوونەوە
    ============================================================ */
@@ -26436,6 +26415,978 @@ body.sx-wide {
 @media (prefers-reduced-motion: reduce) {
   .bkm-yr-btn { transition: none; }
   #section-backup .bkv-pick { transition: none; }
+}
+
+/* ============================================================
+   💸 ناردنی پارە لە نێوان ئەندامان (db/125)
+   ------------------------------------------------------------
+   دوگمەکانی «ناردن / وەرگرتن» لە جزدانەکەم، و شیتێکی هەنگاو-بە-هەنگاو:
+   وەرگر → بڕ (تەختەی ژمارە) → پێداچوونەوە + ڕاکێشان → وەسڵ.
+   ⚠️ لێرەیە، **پێش** بلۆکی ویندۆی پانی کۆتایی فایل — ئەو بلۆکە تا
+      کۆتایی تەنها `min-width`ی ٧٢٠/١١٠٠ قبوڵ دەکات ([[landmines]] ١٣٥).
+      ⚠️ ناونیشانی ئەو بلۆکە لێرە مەنووسە: `check.mjs` بە یەکەم
+      دەرکەوتنی ئەو ناونیشانە دەست پێدەکات ([[landmines]] ٧٠).
+   ⚠️ ئەنیمەیشن تەنها `opacity` و `transform`.
+   ============================================================ */
+.wx-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin: 8px 0 2px;
+}
+
+.wx-actions.is-solo {
+  grid-template-columns: 1fr;
+}
+
+.wx-act {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-width: 0;
+  height: 44px;
+  padding: 0 10px;
+  border: 1px solid #dbe7f3;
+  border-radius: var(--r-md);
+  background: #fff;
+  color: var(--text-main);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, .04);
+  -webkit-tap-highlight-color: transparent;
+  transition: transform .15s ease;
+}
+
+.wx-act[hidden] {
+  display: none;
+}
+
+.wx-act:active {
+  transform: scale(.97);
+}
+
+.wx-act.is-send {
+  border-color: transparent;
+  background: linear-gradient(135deg, #1d6fa5, #2481cc);
+  color: #fff;
+  box-shadow: 0 6px 14px rgba(36, 129, 204, .24);
+}
+
+.wx-act-ico {
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: rgba(36, 129, 204, .1);
+  color: var(--primary);
+  font-size: 15px;
+}
+
+.wx-act.is-send .wx-act-ico {
+  background: rgba(255, 255, 255, .2);
+  color: #fff;
+}
+
+/* ڕیزی مێژوو — «وەسڵ» */
+.tx-xbadge {
+  display: inline-block;
+  margin-top: 4px;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: rgba(36, 129, 204, .08);
+  color: #2481cc;
+  font-size: 9px;
+}
+
+/* ---------------- شیتەکە ---------------- */
+/* بەرزییەکی جێگیر — هەنگاوەکان لە بەرزیی جیاوازدان و شیتێک کە لە هەر
+   هەنگاوێکدا بەرزی دەگۆڕێت «دەبازێت» (یاسای پڕۆژە) */
+#xfer-sheet .fsheet-panel {
+  height: min(88vh, 680px);
+}
+
+#xfer-sheet[data-step="mycode"] .fsheet-panel,
+#xfer-sheet[data-step="receipt"] .fsheet-panel,
+#xfer-sheet[data-step="done"] .fsheet-panel {
+  height: auto;
+  max-height: 88vh;
+}
+
+#xfer-sheet .xfer-body {
+  flex: 1 1 auto;
+  gap: 12px;
+}
+
+/* ڕاکێشان بە ماوس (تلیگرامی کۆمپیوتەر) دەقی شیتەکە هەڵنەبژێرێت —
+   خانەکانی نووسین و کۆدەکەم وەک خۆیان دەمێننەوە */
+#xfer-sheet .fsheet-panel {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+#xfer-sheet input,
+#xfer-sheet textarea {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+.xfer-head-gap {
+  width: 36px;
+  flex-shrink: 0;
+}
+
+.xfer-foot[hidden] {
+  display: none;
+}
+
+.xfer-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: var(--r-md);
+  background: #ecfdf5;
+  color: #065f46;
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.xfer-banner i {
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.xfer-banner span {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.xfer-banner b {
+  font-size: 14px;
+  font-weight: 800;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.xfer-banner.is-load {
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.xfer-banner.is-bad {
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+.xfer-retry {
+  flex-shrink: 0;
+  height: 30px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: #fff;
+  color: #b91c1c;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.xfer-pend {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin-top: 6px;
+  padding: 9px 11px;
+  border-radius: var(--r-md);
+  background: #fffbeb;
+  color: #92400e;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.xfer-pend i {
+  margin-top: 2px;
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.xfer-search {
+  position: relative;
+  display: block;
+}
+
+/* ⚠️ ڕێسای گشتیی `input[type="search"]` ئاراستەکەی دەکاتە `ltr` و دەقەکە
+   بە ڕاستدا دەبات — بۆیە `padding-inline` لێرە پێچەوانەیە و دەقەکە دەچووە
+   ژێر ئایکۆنەکەوە. پەدینگی فیزیکی: ئایکۆن لە ڕاستە. */
+.xfer-search input {
+  width: 100%;
+  height: 46px;
+  box-sizing: border-box;
+  padding: 0 40px 0 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: var(--r-md);
+  background: #f8fafc;
+  color: var(--text-main);
+  font: inherit;
+  font-size: 14px;
+}
+
+.xfer-search input:focus {
+  outline: none;
+  border-color: var(--primary);
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(36, 129, 204, .12);
+}
+
+.xfer-search i {
+  position: absolute;
+  top: 50%;
+  right: 12px;
+  transform: translateY(-50%);
+  color: #94a3b8;
+  font-size: 19px;
+  pointer-events: none;
+}
+
+.xfer-results {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.xfer-sec {
+  margin: 2px 2px -2px;
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.xfer-recent {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  padding: 2px 2px 4px;
+  scrollbar-width: none;
+}
+
+.xfer-recent::-webkit-scrollbar {
+  display: none;
+}
+
+.xfer-rc {
+  flex: 0 0 64px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.xfer-rc span {
+  width: 64px;
+  overflow: hidden;
+  color: var(--text-main);
+  font-size: 11px;
+  font-weight: 600;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.xfer-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.xfer-person {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid #eef2f5;
+  border-radius: var(--r-md);
+  background: #fff;
+  color: var(--text-main);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.xfer-person:active {
+  background: #f8fafc;
+}
+
+.xfer-person-txt {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.xfer-person-txt b {
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+
+.xfer-person-txt small {
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+
+.xfer-person > .bx-chevron-left {
+  flex-shrink: 0;
+  color: #cbd5e1;
+  font-size: 20px;
+}
+
+.xfer-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 28px 12px;
+  color: var(--text-secondary);
+  text-align: center;
+}
+
+.xfer-empty i {
+  margin-bottom: 4px;
+  color: #94a3b8;
+  font-size: 34px;
+}
+
+.xfer-empty b {
+  color: var(--text-main);
+  font-size: 14px;
+}
+
+.xfer-empty small {
+  max-width: 280px;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.xfer-empty.is-load i {
+  font-size: 26px;
+}
+
+/* ---------------- بڕ ---------------- */
+.xfer-to {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 1px solid #eef2f5;
+  border-radius: var(--r-md);
+  background: #f8fafc;
+}
+
+.xfer-to-txt {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  line-height: 1.35;
+}
+
+.xfer-to-txt b {
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+
+.xfer-to-txt small {
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+
+.xfer-change {
+  flex-shrink: 0;
+  height: 34px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: #e8f2fb;
+  color: var(--primary);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.xfer-amt-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding-top: 4px;
+}
+
+.xfer-amt {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 6px;
+  color: var(--text-main);
+  font-size: 40px;
+  font-weight: 800;
+  line-height: 1.15;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -.5px;
+}
+
+.xfer-amt .cur {
+  color: #64748b;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0;
+}
+
+.xfer-amt.is-empty {
+  color: #cbd5e1;
+}
+
+.xfer-amt.is-bad {
+  color: #dc2626;
+}
+
+.xfer-amt.shake {
+  animation: xfer-shake .32s ease;
+}
+
+@keyframes xfer-shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-6px); }
+  50% { transform: translateX(5px); }
+  75% { transform: translateX(-3px); }
+}
+
+.xfer-hint {
+  min-height: 19px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  text-align: center;
+}
+
+.xfer-hint.is-bad {
+  color: #dc2626;
+  font-weight: 700;
+}
+
+.xfer-hint.is-ok {
+  color: #059669;
+}
+
+.xfer-ready {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  color: #475569;
+  font-size: 12.5px;
+}
+
+.xfer-ready b {
+  color: #059669;
+  font-variant-numeric: tabular-nums;
+}
+
+.xfer-ready.is-bad {
+  color: #b91c1c;
+}
+
+.xfer-chips {
+  display: flex;
+  gap: 6px;
+}
+
+.xfer-chip {
+  flex: 1 1 0;
+  min-width: 0;
+  height: 34px;
+  padding: 0 4px;
+  border: 1px solid #dbe7f3;
+  border-radius: var(--r-full);
+  background: #fff;
+  color: #1d6fa5;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+
+.xfer-chip.is-all {
+  background: #f0f7fd;
+}
+
+.xfer-chip.is-on {
+  border-color: var(--primary);
+  background: #e8f2fb;
+}
+
+/* ⚠️ `direction: ltr` — تەختەی ژمارە لە هەموو جیهاندا ١ ٢ ٣ لە چەپەوەیە؛
+   لە پەڕەی ڕاست-بۆ-چەپدا گریدەکە بە پێچەوانە دەکەوت (٣ ٢ ١) */
+.xfer-keys {
+  direction: ltr;
+  flex: 1 1 auto;
+  min-height: 176px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-auto-rows: minmax(40px, 1fr);
+  gap: 6px;
+}
+
+.xfer-key {
+  border: 0;
+  border-radius: var(--r-md);
+  background: #f1f5f9;
+  color: var(--text-main);
+  font: inherit;
+  font-size: 22px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+.xfer-key:active {
+  background: #e2e8f0;
+}
+
+.xfer-key.is-fn {
+  background: transparent;
+  color: #475569;
+  font-size: 16px;
+}
+
+.xfer-key.is-fn i {
+  font-size: 24px;
+}
+
+/* ---------------- پێداچوونەوە ---------------- */
+.xfer-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid #dbe7f3;
+  border-radius: var(--r-lg);
+  background: linear-gradient(160deg, #f0f7fd, #fff 62%);
+}
+
+.xfer-pair {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.xfer-pair-side {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.xfer-pair-side b {
+  font-size: 12px;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+.xfer-pair-arrow {
+  flex-shrink: 0;
+  color: var(--primary);
+  font-size: 24px;
+}
+
+.xfer-big,
+.xfer-done-amt {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 6px;
+  color: var(--text-main);
+  font-size: 30px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.xfer-big small,
+.xfer-done-amt small {
+  color: #64748b;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.xfer-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  font-size: 12.5px;
+}
+
+.xfer-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.xfer-row > span {
+  flex-shrink: 0;
+  color: var(--text-secondary);
+}
+
+.xfer-row > b {
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 4px;
+  color: var(--text-main);
+  font-weight: 700;
+  text-align: end;
+  overflow-wrap: anywhere;
+}
+
+.xfer-note-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.xfer-note-l {
+  color: var(--text-main);
+  font-size: 12.5px;
+  font-weight: 700;
+}
+
+.xfer-note-l small {
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.xfer-note {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: var(--r-md);
+  background: #f8fafc;
+  color: var(--text-main);
+  font: inherit;
+  font-size: 13px;
+  resize: none;
+}
+
+.xfer-note:focus {
+  outline: none;
+  border-color: var(--primary);
+  background: #fff;
+}
+
+.xfer-note-c {
+  margin-top: -4px;
+  color: #94a3b8;
+  font-size: 10.5px;
+  text-align: end;
+}
+
+.xfer-err {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 10px 12px;
+  border-radius: var(--r-md);
+  background: #fef2f2;
+  color: #b91c1c;
+  font-size: 12.5px;
+  font-weight: 700;
+  line-height: 1.6;
+}
+
+.xfer-err i {
+  margin-top: 2px;
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.xfer-edit {
+  align-self: center;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 34px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: none;
+  color: var(--primary);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+/* ---------------- ڕاکێشان بۆ ناردن ---------------- */
+/* ⚠️ `touch-action: none` لەسەر هەموو ڕووەکە — بەبێ ئەو لەسەر مۆبایل
+   پەڕەکە سکڕۆڵ دەکات و ڕاکێشانەکە تەواو نابێت. */
+.xfer-slide {
+  --d: 0px;
+  --dx: 0px;
+  --p: 0;
+  position: relative;
+  height: 56px;
+  overflow: hidden;
+  border-radius: var(--r-full);
+  background: linear-gradient(135deg, #1d6fa5, #2481cc);
+  box-shadow: 0 8px 18px rgba(36, 129, 204, .28);
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.xfer-slide-fill {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 0;
+  width: 100%;
+  background: rgba(255, 255, 255, .16);
+  transform-origin: right center;
+  transform: scaleX(var(--p));
+  pointer-events: none;
+}
+
+[dir="ltr"] .xfer-slide-fill {
+  transform-origin: left center;
+}
+
+.xfer-slide-label {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-inline: 60px 14px;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  opacity: calc(1 - var(--p) * 1.6);
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.xfer-slide-knob {
+  position: absolute;
+  top: 4px;
+  inset-inline-start: 4px;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: #fff;
+  color: var(--primary);
+  font-size: 22px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, .18);
+  transform: translateX(var(--dx));
+  touch-action: none;
+  cursor: grab;
+}
+
+.xfer-slide-knob:active {
+  cursor: grabbing;
+}
+
+/* فڕۆکەی ئایکۆنەکە بەرەو ئەو لایە بێت کە ڕایدەکێشیت (چەپ) */
+.xfer-slide-knob .bxs-send {
+  transform: scaleX(-1);
+}
+
+.xfer-slide.is-back .xfer-slide-knob,
+.xfer-slide.is-back .xfer-slide-fill {
+  transition: transform .25s cubic-bezier(.3, .7, .4, 1);
+}
+
+/* قوفڵی ③ — هەرچی ڕوو بدات، دووەم ڕاکێشان نییە */
+.xfer-slide.is-busy {
+  pointer-events: none;
+}
+
+.xfer-slide.is-busy .xfer-slide-label {
+  opacity: 1;
+}
+
+/* ---------------- وەسڵ ---------------- */
+.xfer-done {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0 2px;
+  text-align: center;
+}
+
+.xfer-tick {
+  width: 76px;
+  height: 76px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: #10b981;
+  color: #fff;
+  font-size: 46px;
+  box-shadow: 0 0 0 10px rgba(16, 185, 129, .14);
+  animation: xfer-pop .45s cubic-bezier(.2, 1.4, .4, 1) both;
+}
+
+@keyframes xfer-pop {
+  from { transform: scale(.4); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+.xfer-done-amt.is-out span {
+  color: #dc2626;
+}
+
+.xfer-done-amt.is-in span {
+  color: #059669;
+}
+
+.xfer-done-to {
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.xfer-done-to b {
+  color: var(--text-main);
+}
+
+.xfer-receipt {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  padding: 12px;
+  border: 1px dashed #cbd5e1;
+  border-radius: var(--r-lg);
+  background: #fff;
+  font-size: 12.5px;
+}
+
+.xfer-receipt .od-cp {
+  margin-inline-start: 2px;
+}
+
+.xfer-foot-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.xfer-btn2 {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: var(--btn-h);
+  border: 1px solid #dbe7f3;
+  border-radius: var(--r-md);
+  background: #fff;
+  color: var(--primary);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.xfer-btn2.copied {
+  border-color: #10b981;
+  color: #059669;
+}
+
+.xfer-foot .fsheet-apply:disabled {
+  opacity: .45;
+  cursor: not-allowed;
+}
+
+/* ---------------- وەرگرتنی پارە (کۆدەکەم) ---------------- */
+.xfer-mycode {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 4px;
+  text-align: center;
+}
+
+.xfer-mycode-name {
+  font-size: 15px;
+}
+
+.xfer-mycode-code {
+  padding: 8px 18px;
+  border: 1px dashed #93c5fd;
+  border-radius: var(--r-md);
+  background: #f0f7fd;
+  color: #1d6fa5;
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  user-select: all;
+}
+
+.xfer-mycode p {
+  max-width: 320px;
+  margin: 2px 0 0;
+  color: var(--text-secondary);
+  font-size: 12.5px;
+  line-height: 1.7;
+}
+
+/* لەسەر شاشەی پان شیتەکە پەنجەرەیەکی ناوەڕاستی تەسکە (نەک ٩٠٠px) */
+@media (min-width: 640px) {
+  #xfer-sheet .fsheet-panel {
+    max-width: 460px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .xfer-tick,
+  .xfer-amt.shake {
+    animation: none;
+  }
+
+  .xfer-slide.is-back .xfer-slide-knob,
+  .xfer-slide.is-back .xfer-slide-fill,
+  .wx-act {
+    transition: none;
+  }
 }
 
 
