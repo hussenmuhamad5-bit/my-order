@@ -27369,6 +27369,35 @@ body.sx-wide {
   line-height: 1.7;
 }
 
+/* ---------------- 🔒 پارەی پشتەوەی شیتەکە لێڵە ----------------
+   تا شیتی ناردن کراوەیە (`body.xfer-veil` — `xferShow` / `xferClose`)
+   ژمارەکانی پارەی پشتەوەی لێڵن، بۆ ئەوەی سکرینشۆتی وەسڵ یان کۆدەکەم
+   باڵانسی کەس نیشان نەدات (خاوەن ٢٠٢٦-١٠-١١).
+   ⭐ تەنها **ژمارەکان**، نەک `backdrop-filter`ی تەواوی شاشە — ئەوە لە
+      `.modal-overlay` لابراوە چونکە لە کاتی کردنەوەدا پرتەی دروست
+      دەکرد. ئەمانە توخمی بچووکن، بۆیە گواستنەوەکە هەرزانە.
+   ⚠️ گواستنەوە تەنها لە **چوونە ناو**ەوەدایە: لابردنی پۆلەکە یەکسەر
+      ڕوونی دەکاتەوە و هیچ گواستنەوەیەکی تری ئەو توخمانە ناگۆڕێت.
+   ⚠️ ژمارەیەکی نوێی پارە لە جزدانەکەم یان لە لیستی مێژوو؟ لێرەش زیادی
+      بکە — `check.mjs` ئەم لیستە دەپشکنێت. */
+body.xfer-veil #my-wallet-balance,
+body.xfer-veil #my-wallet-savings,
+body.xfer-veil #w-balance-display,
+body.xfer-veil #w-savings-display {
+  filter: blur(8px);
+  transition: filter .2s ease-out;
+}
+
+body.xfer-veil .mw-split-row b,
+body.xfer-veil .wsplit-row b,
+body.xfer-veil .tx-amount,
+body.xfer-veil .tx-day-sum,
+body.xfer-veil #w-hold-note,
+body.xfer-veil #w-audit {
+  filter: blur(5px);
+  transition: filter .2s ease-out;
+}
+
 /* لەسەر شاشەی پان شیتەکە پەنجەرەیەکی ناوەڕاستی تەسکە (نەک ٩٠٠px) */
 @media (min-width: 640px) {
   #xfer-sheet .fsheet-panel {
@@ -27387,7 +27416,443 @@ body.sx-wide {
   .wx-act {
     transition: none;
   }
+
+  /* لێڵکردن دەمێنێت — تەنها گواستنەوەکەی نا */
+  body.xfer-veil #my-wallet-balance,
+  body.xfer-veil #my-wallet-savings,
+  body.xfer-veil #w-balance-display,
+  body.xfer-veil #w-savings-display,
+  body.xfer-veil .mw-split-row b,
+  body.xfer-veil .wsplit-row b,
+  body.xfer-veil .tx-amount,
+  body.xfer-veil .tx-day-sum,
+  body.xfer-veil #w-hold-note,
+  body.xfer-veil #w-audit {
+    transition: none;
+  }
 }
+
+
+/* ==================================================================
+   🔌 API ـی کۆمپانیای گەیاندن — تابی پاشا (db/127)
+   ------------------------------------------------------------------
+   هەمان زمانی دیزاینی باکئەپ (`.bkv-*`): کارتی سپی، بۆردەری ناسک،
+   شریتی دۆخ. ⚠️ بێ پەدینگی تەنیشتی — `#admin-screen` پێشتر ٢٠px
+   دادەنێت، بۆیە کارتەکان ٢٠→٣٤٠ن وەک کارتی ئۆردەر ([[landmines]] ١٤٤).
+   ⚠️ ئەم بلۆکە دەبێت **پێش** نیشانەی «لەیئاوتی کۆمپیوتەر» بێت
+   ([[landmines]] ١٣٥). هیچ ڕێسایەکی کۆمپیوتەری تێدا نییە.
+   ================================================================== */
+#section-api {
+  flex: 1;
+  display: none;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  /* ⚠️ بێ پەدینگی تەنیشتی — بڕوانە سەرەوە */
+  padding: 0 0 calc(180px + var(--safe-bottom, 0px));
+  font-family: "AppleEmoji", "Noto Kufi Arabic", sans-serif;
+  -webkit-tap-highlight-color: transparent;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+
+  --ink: #0f172a;
+  --muted: #64748b;
+  --soft: #94a3b8;
+  --line: #e8edf6;
+  --wash: #f6f8fc;
+  --brand: #4f46e5;
+}
+#section-api::-webkit-scrollbar { display: none; }
+#section-api * { box-sizing: border-box; }
+#section-api .capi-wrap {
+  width: 100%;
+  max-width: 600px;
+  margin: 0 auto;
+  padding-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* ---------- شریتی دۆخ ---------- */
+#section-api .capi-status {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 12px;
+  border-radius: 14px;
+  background: #fff;
+  border: 1px solid var(--line);
+  box-shadow: 0 3px 12px -8px rgba(15, 23, 42, 0.5);
+}
+#section-api .capi-status-ico {
+  width: 34px; height: 34px; flex: none;
+  border-radius: 11px;
+  display: grid; place-items: center;
+  font-size: 19px; color: #fff;
+  background: linear-gradient(135deg, #0ea5e9, #4f46e5);
+}
+#section-api .capi-status-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+#section-api .capi-status-title { font-size: 12.5px; font-weight: 800; color: var(--ink); line-height: 1.3; }
+#section-api .capi-status-sub { font-size: 10px; font-weight: 600; color: var(--soft); line-height: 1.4; }
+#section-api .capi-add {
+  flex: none;
+  display: inline-flex; align-items: center; gap: 4px;
+  min-height: 36px; padding: 0 12px;
+  border: none; border-radius: 11px;
+  background: var(--brand); color: #fff;
+  font-family: inherit; font-size: 11.5px; font-weight: 800;
+  cursor: pointer;
+  transition: transform 0.14s;
+}
+#section-api .capi-add i { font-size: 16px; }
+#section-api .capi-add:active { transform: scale(0.95); }
+
+#section-api .capi-note {
+  display: flex; align-items: flex-start; gap: 7px;
+  padding: 8px 10px;
+  border-radius: 11px;
+  background: #ecfdf5;
+  color: #047857;
+  font-size: 10.5px; font-weight: 700; line-height: 1.6;
+}
+#section-api .capi-note i { flex: none; font-size: 15px; margin-top: 2px; }
+
+#section-api .capi-list { display: flex; flex-direction: column; gap: 10px; }
+#section-api .capi-empty {
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  padding: 22px 16px;
+  border-radius: 14px;
+  background: #fff;
+  border: 1px dashed #cfd8e8;
+  color: var(--muted);
+  font-size: 11px; font-weight: 700; line-height: 1.7; text-align: center;
+}
+#section-api .capi-empty i { font-size: 26px; color: var(--soft); }
+
+/* ---------- کارتی هەر API ـێک ---------- */
+#section-api .capi-card {
+  display: flex; flex-direction: column; gap: 9px;
+  padding: 12px;
+  border-radius: 14px;
+  background: #fff;
+  border: 1px solid var(--line);
+  box-shadow: 0 3px 12px -9px rgba(15, 23, 42, 0.5);
+}
+#section-api .capi-card.is-off { background: #fbfcfe; }
+#section-api .capi-card-h { display: flex; align-items: center; gap: 8px; }
+#section-api .capi-card-ico {
+  width: 30px; height: 30px; flex: none;
+  border-radius: 10px;
+  display: grid; place-items: center;
+  font-size: 16px; color: #fff;
+  background: linear-gradient(135deg, #f59e0b, #ea580c);
+}
+#section-api .capi-card.is-off .capi-card-ico { background: #e2e8f0; color: var(--soft); }
+#section-api .capi-card-name {
+  flex: 1; min-width: 0;
+  font-size: 13px; font-weight: 800; color: var(--ink);
+  overflow-wrap: anywhere;
+}
+#section-api .capi-badge { flex: none; padding: 3px 9px; border-radius: 999px; font-size: 9.5px; font-weight: 800; }
+#section-api .capi-badge.is-on { background: #ecfdf5; color: #059669; }
+#section-api .capi-badge.is-off { background: #fef2f2; color: #dc2626; }
+#section-api .capi-icon {
+  flex: none;
+  width: 36px; height: 36px;
+  border: 1px solid var(--line); border-radius: 10px;
+  background: var(--wash); color: var(--muted);
+  font-size: 17px;
+  display: grid; place-items: center;
+  cursor: pointer;
+  transition: transform 0.14s;
+}
+#section-api .capi-icon:active { transform: scale(0.94); }
+
+#section-api .capi-types { display: flex; flex-direction: column; gap: 5px; }
+#section-api .capi-type {
+  display: flex; align-items: center; gap: 6px;
+  min-height: 32px; padding: 4px 9px;
+  border-radius: 9px;
+  background: var(--wash);
+  font-size: 10.5px; font-weight: 600; color: var(--muted); line-height: 1.5;
+}
+#section-api .capi-type i { flex: none; font-size: 15px; color: var(--brand); }
+#section-api .capi-type b { flex: none; font-weight: 800; color: var(--ink); }
+#section-api .capi-type span { min-width: 0; overflow-wrap: anywhere; }
+/* چوار خانە ÷ دوو ستوون = دوو ڕیزی تەواو */
+#section-api .capi-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5px; }
+#section-api .capi-f {
+  padding: 4px 8px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: #fff;
+  font-size: 10px; font-weight: 700; color: #b6c2d3; text-align: center;
+  text-decoration: line-through;
+}
+#section-api .capi-f.is-on { color: #4338ca; background: #eef2ff; border-color: #e0e7ff; text-decoration: none; }
+#section-api .capi-preview { display: flex; align-items: center; gap: 6px; font-size: 10.5px; font-weight: 600; color: var(--muted); }
+#section-api .capi-preview i { flex: none; font-size: 14px; color: var(--soft); }
+#section-api .capi-preview b,
+#section-api .capi-usage b { color: var(--ink); font-weight: 800; }
+#section-api .capi-usage { display: flex; justify-content: space-between; gap: 8px; font-size: 10px; font-weight: 600; color: var(--soft); }
+
+#section-api .capi-keys { display: flex; flex-direction: column; gap: 5px; }
+#section-api .capi-key {
+  display: flex; align-items: center; gap: 8px;
+  min-height: 44px; padding: 5px 8px;
+  border-radius: 10px;
+  background: var(--wash);
+  border: 1px solid var(--line);
+}
+#section-api .capi-key.is-off { background: #fff7ed; border-color: #fed7aa; }
+#section-api .capi-key-ico {
+  width: 26px; height: 26px; flex: none;
+  border-radius: 8px;
+  display: grid; place-items: center;
+  font-size: 15px;
+  background: #eef2ff; color: var(--brand);
+}
+#section-api .capi-key.is-off .capi-key-ico { background: #ffedd5; color: #c2410c; }
+#section-api .capi-key-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+#section-api .capi-key-hint {
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 11px; font-weight: 700; color: var(--ink); text-align: left;
+}
+#section-api .capi-key-sub { font-size: 9.5px; font-weight: 600; color: var(--soft); line-height: 1.5; }
+#section-api .capi-revoke {
+  flex: none;
+  min-height: 34px; padding: 0 10px;
+  border-radius: 9px;
+  border: 1px solid #fecaca;
+  background: #fff; color: #dc2626;
+  font-family: inherit; font-size: 10.5px; font-weight: 800;
+  cursor: pointer;
+}
+#section-api .capi-revoke:active { transform: scale(0.95); }
+#section-api .capi-revoke:disabled { opacity: 0.5; pointer-events: none; }
+#section-api .capi-muted,
+.capi-body .capi-muted { font-size: 10px; font-weight: 600; color: #94a3b8; line-height: 1.6; }
+#section-api .capi-acts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; }
+#section-api .capi-logall {
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  min-height: 42px;
+  border-radius: 12px;
+  border: 1px dashed #cfd8e8;
+  background: transparent; color: var(--muted);
+  font-family: inherit; font-size: 11px; font-weight: 800;
+  cursor: pointer;
+}
+#section-api .capi-logall i { font-size: 16px; }
+
+/* ---------- دوگمەی هاوبەش (بەش + شیتەکان) ---------- */
+.capi-btn {
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  min-height: 42px; padding: 0 10px;
+  border-radius: 11px;
+  border: 1px solid #e0e7ff;
+  background: #eef2ff; color: #4f46e5;
+  font-family: inherit; font-size: 11.5px; font-weight: 800;
+  cursor: pointer;
+  transition: transform 0.14s, opacity 0.18s;
+}
+.capi-btn i { font-size: 16px; }
+.capi-btn:active { transform: scale(0.96); }
+.capi-btn:disabled { opacity: 0.5; pointer-events: none; }
+.capi-btn.is-key { border-color: transparent; background: linear-gradient(135deg, #6366f1, #7c3aed); color: #fff; }
+.capi-btn.is-wide { width: 100%; }
+.capi-btn.copied { background: #059669; color: #fff; }
+
+/* ---------- شیتەکان ---------- */
+.capi-head-gap { width: 36px; flex: none; }
+.capi-body { gap: 12px; background: #f6f8fc; font-family: "AppleEmoji", "Noto Kufi Arabic", sans-serif; }
+.capi-sec {
+  display: flex; flex-direction: column; gap: 8px;
+  padding: 12px;
+  border-radius: 14px;
+  background: #fff;
+  border: 1px solid #e8edf6;
+}
+.capi-lbl { font-size: 10.5px; font-weight: 800; color: #64748b; }
+.capi-input {
+  width: 100%; min-height: 44px;
+  padding: 8px 11px;
+  border-radius: 11px;
+  border: 1.5px solid #dbe3f0;
+  background: #fff;
+  font-family: inherit; font-size: 13px; font-weight: 700; color: #0f172a;
+  outline: none;
+  box-sizing: border-box;
+}
+.capi-input:focus { border-color: #6366f1; }
+.capi-input.is-note { min-height: 64px; resize: vertical; font-size: 12px; font-weight: 600; line-height: 1.6; }
+.capi-row { display: flex; align-items: center; gap: 9px; min-height: 44px; }
+.capi-row-ico {
+  width: 30px; height: 30px; flex: none;
+  border-radius: 9px;
+  display: grid; place-items: center;
+  font-size: 16px;
+  background: #eef2ff; color: #4f46e5;
+}
+.capi-row-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.capi-row-txt b { font-size: 12px; font-weight: 800; color: #0f172a; }
+.capi-row-txt small { font-size: 9.5px; font-weight: 600; color: #64748b; line-height: 1.55; }
+/* ⚠️ سویچی ئەپەکە — تەنها ڕەنگ و ڕیزکردن، هەرگیز کۆپییەکی دووەم ([[landmines]] ١٤٥) */
+.capi-row .switch { flex: none; line-height: 0; margin: 0; --switch-checked-bg: #6366f1; }
+/* ⚠️ ژمارەی چیپ دەبێت بەسەر ستوونەکاندا دابەش ببێت: ٤ ÷ ٤ · ٦ ÷ ٣ */
+.capi-chips { display: grid; gap: 6px; }
+.capi-chips.is-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.capi-chips.is-6 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.capi-chip {
+  min-height: 38px; padding: 0 4px;
+  border-radius: 10px;
+  border: 1px solid #e8edf6;
+  background: #f6f8fc; color: #64748b;
+  font-family: inherit; font-size: 11px; font-weight: 700;
+  cursor: pointer;
+}
+.capi-chip.is-on {
+  background: #fff; border-color: #4f46e5; color: #4f46e5; font-weight: 800;
+  box-shadow: 0 2px 8px -3px rgba(79, 70, 229, 0.7);
+}
+.capi-seg {
+  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px;
+  padding: 4px;
+  border-radius: 12px;
+  background: #e9eef7;
+}
+.capi-seg-btn {
+  min-height: 38px;
+  border: none; border-radius: 9px;
+  background: transparent; color: #64748b;
+  font-family: inherit; font-size: 11px; font-weight: 700;
+  cursor: pointer;
+}
+.capi-seg-btn.is-on { background: #fff; color: #4f46e5; font-weight: 800; box-shadow: 0 2px 7px -2px rgba(15, 23, 42, 0.22); }
+.capi-drvs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+.capi-drv {
+  min-width: 0;
+  display: flex; flex-direction: column; align-items: flex-start; gap: 1px;
+  min-height: 46px; padding: 6px 10px;
+  border-radius: 11px;
+  border: 1.5px solid #e8edf6;
+  background: #f6f8fc;
+  font-family: inherit; text-align: right;
+  cursor: pointer;
+}
+.capi-drv b { font-size: 12px; font-weight: 800; color: #334155; overflow-wrap: anywhere; }
+.capi-drv small { font-size: 9.5px; font-weight: 600; color: #94a3b8; }
+.capi-drv.is-on { border-color: #4f46e5; background: #eef2ff; }
+.capi-drv.is-on b { color: #4338ca; }
+.capi-drv.is-taken { opacity: 0.55; cursor: not-allowed; }
+.capi-time { display: flex; align-items: center; gap: 6px; }
+.capi-time-pick {
+  flex: 1; min-width: 0;
+  display: flex; align-items: center; gap: 8px;
+  min-height: 44px; padding: 0 11px;
+  border-radius: 11px;
+  border: 1.5px solid #dbe3f0;
+  background: #fff;
+  font-family: inherit; font-size: 13px; font-weight: 800; color: #0f172a;
+  cursor: pointer;
+}
+.capi-time-pick i { flex: none; font-size: 17px; color: #4f46e5; }
+.capi-time-x {
+  flex: none;
+  width: 44px; height: 44px;
+  border-radius: 11px;
+  border: 1px solid #fecaca;
+  background: #fff; color: #dc2626;
+  font-size: 18px;
+  display: grid; place-items: center;
+  cursor: pointer;
+}
+.capi-time-add {
+  display: flex; align-items: center; justify-content: center; gap: 5px;
+  min-height: 42px;
+  border-radius: 11px;
+  border: 1.5px dashed #c7d2fe;
+  background: transparent; color: #4f46e5;
+  font-family: inherit; font-size: 11.5px; font-weight: 800;
+  cursor: pointer;
+}
+.capi-hint { font-size: 9.5px; font-weight: 600; line-height: 1.7; color: #94a3b8; }
+.capi-foot {
+  flex: none;
+  padding: 10px 14px calc(10px + env(safe-area-inset-bottom, 0px));
+  border-top: 1px solid #eef2f5;
+  background: #fff;
+}
+.capi-save {
+  width: 100%;
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  min-height: 48px;
+  border: none; border-radius: 13px;
+  background: linear-gradient(135deg, #6366f1, #7c3aed); color: #fff;
+  font-family: inherit; font-size: 13px; font-weight: 800;
+  cursor: pointer;
+}
+.capi-save:disabled { opacity: 0.55; pointer-events: none; }
+
+/* شیتی کلیل */
+.capi-warn {
+  display: flex; gap: 8px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  color: #92400e;
+  font-size: 11px; font-weight: 700; line-height: 1.7;
+}
+.capi-warn i { flex: none; font-size: 18px; margin-top: 2px; }
+.capi-keybox {
+  padding: 12px;
+  border-radius: 12px;
+  background: #0f172a; color: #e2e8f0;
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 12.5px; font-weight: 600; line-height: 1.6;
+  word-break: break-all;
+  text-align: left;
+  user-select: all; -webkit-user-select: all;
+}
+.capi-kv { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 10.5px; font-weight: 700; color: #64748b; }
+.capi-kv code {
+  flex: 1; min-width: 0;
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 10.5px; color: #0f172a;
+  word-break: break-all; text-align: left;
+}
+.capi-rules {
+  margin: 0; padding-inline-start: 18px;
+  display: flex; flex-direction: column; gap: 4px;
+  font-size: 10.5px; font-weight: 600; color: #475569; line-height: 1.7;
+}
+.capi-rules code {
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 10px;
+  background: #f1f5f9;
+  padding: 1px 4px;
+  border-radius: 4px;
+}
+
+/* شیتی تۆمار */
+.capi-log-sum { font-size: 10.5px; font-weight: 700; color: #64748b; }
+.capi-log-row {
+  display: flex; align-items: center; gap: 8px;
+  min-height: 46px; padding: 6px 10px;
+  border-radius: 10px;
+  background: #fff;
+  border: 1px solid #e8edf6;
+}
+.capi-log-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.capi-log-main b { font-size: 11.5px; font-weight: 800; color: #0f172a; overflow-wrap: anywhere; }
+.capi-log-main small { font-size: 9.5px; font-weight: 600; color: #94a3b8; overflow-wrap: anywhere; }
+.capi-log-st { flex: none; padding: 3px 8px; border-radius: 999px; font-size: 9.5px; font-weight: 800; }
+.capi-log-st.is-ok { background: #ecfdf5; color: #059669; }
+.capi-log-st.is-warn { background: #fffbeb; color: #b45309; }
+.capi-log-st.is-bad { background: #fef2f2; color: #dc2626; }
+.capi-log-st.is-wait { background: #f1f5f9; color: #64748b; }
+.capi-log-wait { display: grid; place-items: center; padding: 12px; font-size: 22px; color: #94a3b8; }
 
 
 /* ============================================================
