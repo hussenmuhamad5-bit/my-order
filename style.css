@@ -29281,6 +29281,690 @@ button.fund-row { cursor: pointer; }
 .rpf-preview.has-frame .mcard-bg,
 .rpf-preview.has-frame .mcard-stick { border-radius: 18px 18px 0 0; }
 
+/* ---- چینی «پشت» لە پشتی کارتەکەیە (٢٠٢٦-١٠-١٣) ----
+   پاکێتی دیسکۆرد `z < 0`ـی هەیە بۆ ئەو چینانەی دەکەونە **پشت** کارتەکە (بۆ نموونە
+   تیشکی پشتی مۆمەکان): تەنها ئەو بەشەی لە دەرەوەی کارتەکەیە دەبینرێت. بۆکسی «پشت»
+   `z-index: -1`ـە و ڕووی سپیی کارتەکە (`::after`) دوای ئەو دێت لە هەمان چیندا، بۆیە
+   ڕوو بەسەریدا دەنەخشێت. ⚠️ خانەخوێ دەبێت چینی جیای هەبێت (`isolation`) — ئەگەرنا
+   `-1` دەچێتە پشتی پەردەی شیت/مۆداڵەکە و هەرگیز نابینرێت. */
+.cos-frame.is-bk { z-index: -1; }
+.modal-content.is-mcard.has-frame,
+.cos-prev-card.is-frame.has-frame,
+.rpf-preview.has-frame {
+  isolation: isolate;
+  background: transparent;
+}
+.modal-content.is-mcard.has-frame::after,
+.cos-prev-card.is-frame.has-frame::after,
+.rpf-preview.has-frame::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: #fff;
+  pointer-events: none;
+}
+
+/* ---- وێنەی پڕۆفایل هەمیشە لە سەرووی چوارچێوەیە ----
+   چوارچێوەی «ناوەوە» بەسەر وێنەکەدا دەڕوات؛ هەر چینێکی «پێش» لە شوێنی وێنەکەدا کون
+   دەکرێت (`cosFrameHoles` شوێن و تیرەکەی دەپێوێت). ⚠️ لەسەر چینەکە، نەک بۆکسەکە —
+   ماسک هەموو شتێکی دەرەوەی بۆکسی خۆی دەبڕێت (مۆمەکانی «دەرەوە» ون دەبوون). */
+.cos-frame > i.has-hole {
+  -webkit-mask-image: radial-gradient(circle at var(--fh-x) var(--fh-y), transparent var(--fh-r), #000 calc(var(--fh-r) + 1px));
+          mask-image: radial-gradient(circle at var(--fh-x) var(--fh-y), transparent var(--fh-r), #000 calc(var(--fh-r) + 1px));
+}
+
+/* ---- «ناوەوە»: هیچ شتێک دەرناچێت، بۆیە گۆشە خڕەکانی کارتەکە چوارچێوەکەش دەبڕن ---- */
+.has-frame.fr-in > .cos-frame.is-top { clip-path: inset(0 round var(--fr-rad, 22px) var(--fr-rad, 22px) 0 0); }
+.has-frame.fr-in > .cos-frame.is-bot { clip-path: inset(0 round 0 0 var(--fr-rad, 22px) var(--fr-rad, 22px)); }
+.cos-prev-card.is-frame { --fr-rad: var(--r-md, 12px); }
+.rpf-preview { --fr-rad: 18px; }
+
+/* ============================================================
+   🎛️ ستۆدیۆی دانە (٢٠٢٦-١٠-١٣) — فۆڕمی پاشا بۆ زیادکردن و دەستکاریی کۆگا
+   ------------------------------------------------------------
+   پێشاندانی زیندوو (`.cst-side`) و چوار هەنگاو (`.cst-steps-w`) لە سەرەوە
+   دەچەسپێن؛ هەنگاوەکە (`.cst-body`) لە ژێریانەوە سکڕۆڵ دەکات. `cosStageFit`
+   ناوەڕۆکی پێشاندانەکە بە `transform` بچووک دەکاتەوە و بەرزییەکەی دادەنێت.
+   لە پەنجەرەی پاندا (≥ ٦٤٠px — شیتەکە دەبێتە پەنجەرەیەکی ناوەڕاست) دوو ستوون.
+   ⚠️ ڕێسای پان تەنها لەناو `@media (min-width)`. ⚠️ تەنها `transform`/`opacity`
+   دەجوڵێن — نە بەرزی، نە پانی.
+   ============================================================ */
+#cos-edit-body { padding-top: 0; gap: 0; }
+.cst { min-width: 0; }
+.cst-side {
+  position: sticky;
+  top: 0;
+  z-index: 7;
+  margin: 0 -14px;
+  padding: 10px 14px 8px;
+  background: #fff;
+}
+.cst-main { min-width: 0; }
+.cst-steps-w {
+  position: sticky;
+  top: var(--cst-sh, 0px);
+  z-index: 6;
+  margin: 0 -14px;
+  padding: 0 14px;
+  background: #fff;
+  box-shadow: 0 1px 0 #e9eef5;
+}
+
+/* ---- سەکۆی پێشاندان ---- */
+.cst-stage {
+  position: relative;
+  overflow: hidden;
+  border-radius: 18px;
+  background:
+    radial-gradient(90% 70% at 50% 0%, rgba(255, 255, 255, .9), transparent 70%),
+    linear-gradient(160deg, #eef2ff, #e2e8f0 55%, #f1f5f9);
+  box-shadow: inset 0 0 0 1px rgba(15, 23, 42, .06);
+}
+.cst-view {
+  position: relative;
+  height: 220px;
+  overflow: hidden;
+}
+.cst-fit {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: var(--cst-w, 100%);
+  box-sizing: border-box;
+  display: flow-root;
+  padding: 14px 0 12px;
+  transform: translateX(-50%) scale(var(--cst-k, 1));
+  transform-origin: 50% 0;
+}
+.cst-stage[data-kind='plate'] .cst-fit { padding: 44px 12px 12px; }
+.cst-fit .cos-prev-card {
+  border-radius: 22px;
+  box-shadow: 0 18px 40px -18px rgba(15, 23, 42, .45), 0 0 0 1px rgba(15, 23, 42, .06);
+  --fr-rad: 22px;
+}
+.cst-fit .cos-prev-card.is-fx,
+.cst-fit .cos-prev-card.is-frame { min-height: 0; max-height: none; }
+/* هەمان ئەندازەی کارتی ڕاستەقینە (کەڤەر ٣:١، وێنە −٤٦px) — ئەگەرنا شوێنی چوارچێوە
+   بەرامبەر وێنەی پڕۆفایل لە پێشاندانەکەدا درۆ دەبێت */
+.cst-fit .cos-prev-card .mcard-top { min-height: 104px; aspect-ratio: 3 / 1; }
+.cst-fit .cos-prev-card .mcard-av { bottom: -46px; }
+.cst-fit .cos-prev-card .mcard-id { padding-top: 60px; padding-bottom: 16px; }
+.cst-fit .cos-prev-card .mcard-id.has-deco { padding-top: 72px; }
+.cst-fit .cos-prev-row { margin: 14px 12px 0; }
+.cst-fit .cos-prev-rows { margin-top: 0; }
+.cst-kind {
+  position: absolute;
+  top: 10px;
+  inset-inline-start: 10px;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .88);
+  color: #334155;
+  font-size: 11px;
+  font-weight: 800;
+  box-shadow: 0 2px 8px -4px rgba(15, 23, 42, .3);
+  pointer-events: none;
+}
+.cst-kind i { font-size: 14px; color: var(--primary); }
+.cst-size {
+  position: absolute;
+  top: 8px;
+  inset-inline-end: 8px;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(15, 23, 42, .55);
+  color: #fff;
+  font-size: 18px;
+  cursor: pointer;
+}
+.cst-meta { display: none; }
+.cst-stage.is-mini {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px;
+  border-radius: 16px;
+}
+.cst-stage.is-mini .cst-view {
+  flex: 0 0 64px;
+  width: 64px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, .72);
+}
+.cst-stage.is-mini .cst-kind { display: none; }
+.cst-stage.is-mini .cst-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.cst-meta b { color: #0f172a; font-size: 13.5px; font-weight: 800; overflow-wrap: anywhere; }
+.cst-meta span {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  color: #64748b;
+  font-size: 11.5px;
+  font-weight: 700;
+}
+.cst-meta i { font-size: 14px; color: var(--primary); }
+.cst-stage.is-mini .cst-size {
+  position: static;
+  flex: 0 0 auto;
+  background: #fff;
+  color: #475569;
+  box-shadow: 0 1px 4px rgba(15, 23, 42, .14);
+}
+
+/* 🔍 پێشاندانی پڕ — پەنجەیەک لەسەر پێشاندانەکە (تەنها تەلەفۆن؛ لە پەنجەرەی پاندا
+   پێشاندان ستوونی خۆی هەیە). کۆنترۆڵەکان دەشاردرێنەوە، کارتەکە لە ناوەڕاستدا. */
+.cst-view { -webkit-tap-highlight-color: transparent; }
+.cst-stage.can-zoom .cst-view { cursor: zoom-in; }
+.cst-stage.is-mini .cst-view { cursor: pointer; }
+.cst-zoom {
+  position: absolute;
+  bottom: 8px;
+  inset-inline-end: 8px;
+  z-index: 2;
+  display: none;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(15, 23, 42, .55);
+  color: #fff;
+  font-size: 18px;
+  cursor: pointer;
+}
+.cst-stage.can-zoom .cst-zoom { display: grid; }
+.cst-stage.is-mini .cst-zoom { display: none; }
+/* نەیمپاڵێت: ڕیزەکان تا خوارەوە دەڕۆن، بۆیە دوگمەکە دەچێتە سەرەوە (بۆشایی ٤٤px ـی سەرەوە) */
+.cst-stage[data-kind='plate'] .cst-zoom { top: 8px; bottom: auto; inset-inline-end: 46px; }
+.cst.is-zoom .cst-main,
+.cst.is-zoom .cst-size,
+.cst.is-zoom .cst-kind { display: none; }
+.cst.is-zoom .cst-view { cursor: zoom-out; }
+.cst.is-zoom .cst-fit {
+  top: 50%;
+  transform: translate(-50%, -50%) scale(var(--cst-k, 1));
+  transform-origin: 50% 50%;
+}
+
+/* ---- چوار هەنگاو: ٤ ÷ ٤ ---- */
+.cst-steps { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 2px; }
+.cst-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+  padding: 5px 2px 6px;
+  border: 0;
+  border-bottom: 2.5px solid transparent;
+  background: transparent;
+  color: #64748b;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.cst-n {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #f1f5f9;
+  color: #475569;
+  font-size: 16px;
+}
+.cst-t { max-width: 100%; overflow-wrap: anywhere; line-height: 1.25; text-align: center; }
+.cst-step.on { color: var(--primary); border-bottom-color: var(--primary); }
+.cst-step.on .cst-n { background: var(--primary); color: #fff; box-shadow: 0 6px 14px -6px var(--primary); }
+.cst-step.is-warn .cst-n { background: #fee2e2; color: #dc2626; }
+.cst-step.is-todo .cst-n { position: relative; }
+.cst-step.is-todo .cst-n::after {
+  content: '';
+  position: absolute;
+  top: -1px;
+  inset-inline-end: -1px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #f59e0b;
+  box-shadow: 0 0 0 2px #fff;
+}
+.cst-step.is-warn.on .cst-n { background: #dc2626; color: #fff; }
+.cst-step:active .cst-n { transform: scale(.94); }
+
+/* ---- هەنگاوەکە ---- */
+.cst-body { padding: 14px 0 8px; }
+.cst-sec { margin-bottom: 18px; }
+.cst-h {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 8px;
+  color: #0f172a;
+  font-size: 13.5px;
+  font-weight: 800;
+}
+.cst-h > i { font-size: 18px; color: var(--primary); }
+.cst-h > small {
+  margin-inline-start: auto;
+  color: #94a3b8;
+  font-size: 11px;
+  font-weight: 600;
+  text-align: end;
+}
+.cst-h > small.is-lock { color: #b45309; }
+.cst-h > .cos-posx { margin-inline-start: auto; }
+.cst-h > .cst-frx[hidden] { display: none; }
+.cst-l { margin: 4px 0 6px; font-size: 12.5px; }
+
+/* پاکێت */
+.cst-drop.cos-zip {
+  gap: 6px;
+  margin: 0;
+  padding: 18px 14px 16px;
+  border: 2px dashed #c7d2fe;
+  border-radius: 18px;
+  background: linear-gradient(180deg, #eef2ff, #f8fafc);
+  text-align: center;
+}
+.cst-drop-ic {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  margin-bottom: 2px;
+  border-radius: 16px;
+  background: #fff;
+  color: var(--primary);
+  font-size: 28px;
+  box-shadow: 0 8px 18px -10px rgba(37, 99, 235, .55);
+}
+.cst-drop > b { color: #0f172a; font-size: 14px; font-weight: 800; }
+.cst-drop > span:not(.cst-drop-ic) { color: #64748b; font-size: 11.5px; font-weight: 700; }
+.cst-pack {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  background: #fff;
+}
+.cst-pack.is-busy {
+  justify-content: center;
+  gap: 8px;
+  min-height: 72px;
+  color: #64748b;
+  font-size: 12.5px;
+  font-weight: 700;
+}
+.cst-pack.is-busy i { font-size: 20px; color: var(--primary); }
+.cst-pack-p {
+  flex: 0 0 56px;
+  height: 56px;
+  border-radius: 12px;
+  background: #f1f5f9 center / contain no-repeat;
+}
+.cst-pack-m { display: flex; flex-direction: column; gap: 2px; flex: 1 1 auto; min-width: 0; }
+.cst-pack-m > b { color: #0f172a; font-size: 13.5px; font-weight: 800; overflow-wrap: anywhere; }
+.cst-pack-m > span {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  color: #64748b;
+  font-size: 11.5px;
+  font-weight: 700;
+}
+.cst-pack-m > span i { font-size: 14px; color: var(--primary); }
+.cst-pick {
+  position: relative;
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 7px 11px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #eff6ff;
+  color: var(--primary);
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.cst-pick input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.cst-pick.is-ghost { background: #f1f5f9; color: #334155; }
+.cst-more {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  min-height: 42px;
+  margin-top: 8px;
+  padding: 8px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #f8fafc;
+  color: #334155;
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 800;
+  text-align: start;
+  cursor: pointer;
+}
+.cst-more > i:first-child { font-size: 17px; color: var(--primary); }
+.cst-more > small { color: #94a3b8; font-size: 11px; font-weight: 600; }
+.cst-more > i:last-child { margin-inline-start: auto; color: #94a3b8; font-size: 18px; transition: transform .2s; }
+.cst-more.is-open > i:last-child { transform: rotate(180deg); }
+.cos-zl.is-bare { margin-top: 8px; }
+.cst-guide .cos-spec { margin-top: 8px; }
+
+/* وێنەکان — تایل: ١ · ٢ · ٣ · ٤ (هەمیشە بەسەر ستوونەکاندا دابەش دەبێت) */
+.cst-tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.cst-tiles.is-1 { grid-template-columns: minmax(0, 1fr); }
+.cst-tiles.is-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.cst-tile {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  background: #fff;
+}
+.cst-tile.is-empty { border-style: dashed; border-color: #cbd5e1; background: #f8fafc; }
+.cst-tile-p {
+  display: grid;
+  place-items: center;
+  height: 84px;
+  background: #f1f5f9 center / contain no-repeat;
+  color: #94a3b8;
+  font-size: 24px;
+}
+.cst-tiles.is-1 .cst-tile-p { height: 96px; }
+.cst-tile-m { display: flex; flex-direction: column; gap: 1px; min-width: 0; padding: 7px 9px 4px; }
+.cst-tile-m > b { color: #0f172a; font-size: 12.5px; font-weight: 800; }
+.cst-tile-m > b em { color: #dc2626; font-size: 11px; font-style: normal; }
+.cst-tile-m > small { color: #94a3b8; font-size: 10.5px; font-weight: 600; line-height: 1.4; }
+.cst-tile-a { display: flex; align-items: center; gap: 6px; padding: 4px 8px 9px; }
+.cst-tile-a .cst-pick { padding: 6px 10px; font-size: 11.5px; }
+.cst-x {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  margin-inline-start: auto;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(225, 29, 72, .08);
+  color: #e11d48;
+  font-size: 16px;
+  cursor: pointer;
+}
+.cst-q { display: flex; flex-direction: column; gap: 6px; margin-top: 12px; }
+.cst-q > span { color: #475569; font-size: 12px; font-weight: 800; }
+.cst-q .rw-choice.cos-q { grid-template-columns: repeat(4, minmax(0, 1fr)); margin: 0; }
+
+/* زانیاری: پلە · پارەدان · نرخ */
+.cst-body .cos-rar button { gap: 6px; }
+.cst-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--rc, #94a3b8);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--rc, #94a3b8) 22%, transparent);
+}
+.cos-rar .is-common { --rc: #94a3b8; }
+.cos-rar .is-rare   { --rc: #3b82f6; }
+.cos-rar .is-epic   { --rc: #a855f7; }
+.cos-rar .is-legend { --rc: #f59e0b; }
+.cst-body .rw-choice.cos-pay { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.cst-body .cos-pay button {
+  flex-direction: column;
+  gap: 2px;
+  min-height: 80px;
+  padding: 10px 4px;
+  border-width: 1.5px;
+  border-radius: 14px;
+  background: #fff;
+}
+.cst-body .cos-pay button i { font-size: 22px; }
+.cst-body .cos-pay button b { font-size: 12.5px; font-weight: 800; }
+.cst-body .cos-pay button small { font-size: 10.5px; font-weight: 600; opacity: .75; }
+.cst-body .cos-pay button.on.is-coins { border-color: #f59e0b; background: #fffbeb; color: #92400e; }
+.cst-body .cos-pay button.on.is-money { border-color: #10b981; background: #ecfdf5; color: #065f46; }
+.cst-body .cos-pay button.on.is-free  { border-color: #8b5cf6; background: #f5f3ff; color: #5b21b6; }
+.cst-price {
+  display: flex;
+  align-items: stretch;
+  overflow: hidden;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 14px;
+  background: #fff;
+}
+.cst-price:focus-within { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(37, 99, 235, .12); }
+.cst-price input {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 10px 14px;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: #0f172a;
+  font-family: inherit;
+  font-size: 20px;
+  font-weight: 800;
+  text-align: center;
+}
+.cst-price > span {
+  display: grid;
+  place-items: center;
+  padding: 0 16px;
+  background: #f1f5f9;
+  color: #475569;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+/* ڕووکاری چوارچێوە: دوو شێواز + بەرز/نزم */
+.cst-place { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.cst-pl {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  padding: 14px 8px 12px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 16px;
+  background: #fff;
+  color: #94a3b8;
+  font-family: inherit;
+  text-align: center;
+  cursor: pointer;
+}
+.cst-pl.on {
+  border-color: var(--primary);
+  background: #eff6ff;
+  color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, .12);
+}
+.cst-pl-ic { width: 46px; height: 60px; }
+.cst-pl-ic .c { fill: #fff; stroke: #94a3b8; stroke-width: 1.5; }
+.cst-pl-ic .b { fill: currentColor; }
+.cst-pl b { color: #0f172a; font-size: 13px; font-weight: 800; }
+.cst-pl small { color: #64748b; font-size: 11px; font-weight: 600; line-height: 1.5; }
+.cst-auto {
+  position: absolute;
+  top: 8px;
+  inset-inline-start: 8px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: #dcfce7;
+  color: #166534;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 800;
+}
+.cst-off .cos-zoom-n,
+.cst-sz .cos-zoom-n { min-width: 54px; justify-content: center; }
+.cst-off .cos-zoom-n > b,
+.cst-sz .cos-zoom-n > b { opacity: 1; color: #0f172a; font-size: 12.5px; }
+/* ↔ قەبارە و شوێنی هەر بەشێکی چوارچێوە — خانەیەک بۆ هەر بەش */
+.cst-part {
+  margin: 0 0 10px;
+  padding: 10px 12px 4px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 14px;
+  background: #fff;
+}
+.cst-part-t { margin: 0 0 2px; color: #0f172a; font-size: 12.5px; font-weight: 800; }
+.cst-sz-a { color: #16a34a; font-weight: 800; }
+
+.cst-wait {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 90px;
+  color: #64748b;
+  font-size: 12.5px;
+  font-weight: 700;
+}
+.cst-wait i { font-size: 20px; color: var(--primary); }
+.cst-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 14px;
+  padding: 22px 12px;
+  border: 1.5px dashed #cbd5e1;
+  border-radius: 16px;
+  color: #64748b;
+  text-align: center;
+}
+.cst-empty > i { color: #94a3b8; font-size: 30px; }
+.cst-empty > b { color: #0f172a; font-size: 13.5px; }
+.cst-empty > span { font-size: 12px; }
+
+/* بڵاوکردنەوە */
+.cst-sw {
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  background: #fff;
+}
+.cst-sw > label:first-child { color: #0f172a; font-size: 13.5px; font-weight: 800; }
+.cst-sw .switch { margin-top: 0; }
+.cst-check { display: grid; gap: 6px; }
+.cst-ck {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 42px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  background: #f0fdf4;
+  color: #166534;
+  font-size: 12.5px;
+  font-weight: 700;
+}
+.cst-ck > i { flex: 0 0 auto; font-size: 18px; }
+.cst-ck > span { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
+.cst-ck.is-bad { background: #fef2f2; color: #b91c1c; }
+.cst-ck.is-wait { background: #f8fafc; color: #475569; }
+.cst-ck > button {
+  flex: 0 0 auto;
+  padding: 6px 12px;
+  border: 0;
+  border-radius: 999px;
+  background: #fff;
+  color: #b91c1c;
+  font-family: inherit;
+  font-size: 11.5px;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(185, 28, 28, .2);
+}
+.cst-danger { padding-top: 4px; border-top: 1px dashed #fecdd3; }
+
+.cst-next {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  min-height: 46px;
+  margin: 4px 0 2px;
+  border: 0;
+  border-radius: 14px;
+  background: #eff6ff;
+  color: var(--primary);
+  font-family: inherit;
+  font-size: 13.5px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.cst-next i { font-size: 20px; }
+.cst-empty .cst-next { width: auto; margin-top: 6px; padding: 0 18px; }
+#cos-edit-sheet .fsheet-foot { display: flex; align-items: center; gap: 10px; }
+#cos-edit-sheet .fsheet-sum {
+  flex: 1 1 auto;
+  min-width: 0;
+  justify-content: flex-start;
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.4;
+  text-align: start;
+  overflow-wrap: anywhere;
+}
+#cos-edit-sheet .fsheet-apply { flex: 0 0 auto; width: auto; padding: 0 22px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .cst-more > i:last-child { transition: none; }
+  .cst-step:active .cst-n { transform: none; }
+}
+
+/* پەنجەرەی پان: پێشاندان لە لایەک، هەنگاوەکان لە لایەکی تر */
+@media (min-width: 640px) {
+  .cst {
+    display: grid;
+    grid-template-columns: minmax(280px, 40%) minmax(0, 1fr);
+    align-items: start;
+    gap: 20px;
+  }
+  .cst-side { margin: 0; padding: 14px 0; }
+  .cst-steps-w { top: 0; margin: 0; padding: 14px 0 0; }
+  .cst-stage.can-zoom .cst-zoom { display: none; }
+  .cst-view { cursor: default; }
+}
+
 
 /* ============================================================
    لەیئاوتی کۆمپیوتەر — ویندۆی پان (٢٠٢٦-٠٨-٢٥)
