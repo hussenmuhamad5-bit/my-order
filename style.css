@@ -30045,6 +30045,119 @@ button.fund-row { cursor: pointer; }
   .cst-view { cursor: default; }
 }
 
+/* ============================================================
+   ⚡ کردنەوەی یەکسەر (٢٠٢٦-١٠-١٦) — شێوەی ئەپ پێش وەڵامی سێرڤەر
+   ------------------------------------------------------------
+   `bootShellPaint` (app.html) داشبۆرد بە ناو و وێنەی خۆت لە ساتی
+   DOMContentLoaded دەکاتەوە، پێش هەر داواکارییەک.
+   • `boot-wait` — تا ناسنامە پشتڕاست دەبێتەوە هیچ شتێک پەنجەی
+     لێنادرێت، و هێڵێکی تەنک لە سەرەوە دەجووڵێت.
+   • `boot-skel` — شوێنی ژمارەکان و کارتەکان تا داتا دێت (نەک «0»).
+   • `net-wait` — هەمان هێڵ کاتێک کردارێک چاوەڕێی پشکنینی ئەکاونت
+     دەکات: ڕاستی پیشان دەدرێت، نەک سەرکەوتنێکی پێشوەخت.
+   ⚠️ تەنها `opacity` و `transform` ئەنیمەیت دەکرێن.
+   ============================================================ */
+body.boot-wait #dashboard-screen,
+body.boot-wait #bottom-nav,
+body.boot-wait #main-fab {
+  pointer-events: none;
+}
+
+body.boot-wait::after,
+body.net-wait::after {
+  content: '';
+  position: fixed;
+  top: var(--safe-top, 0px);
+  left: 0;
+  right: 0;
+  height: 3px;
+  z-index: 6000;
+  pointer-events: none;
+  background: linear-gradient(90deg, transparent 0%, var(--primary) 50%, transparent 100%);
+  animation: bootBar 1.1s ease-in-out infinite;
+}
+
+/* پشکنینێکی خێرا هیچ پرتەیەک دروست ناکات — هێڵەکە تەنها دوای ٢٥٠ms دەردەکەوێت */
+body.net-wait:not(.boot-wait)::after {
+  opacity: 0;
+  animation: bootBarIn 0.12s linear 0.25s forwards, bootBar 1.1s ease-in-out 0.25s infinite;
+}
+
+@keyframes bootBar {
+  0% { transform: translateX(100%); }
+  100% { transform: translateX(-100%); }
+}
+
+@keyframes bootBarIn {
+  to { opacity: 1; }
+}
+
+body.boot-skel #count-preparing,
+body.boot-skel #count-onway,
+body.boot-skel #count-delivered,
+body.boot-skel #count-returned,
+body.boot-skel #sbar-preparing,
+body.boot-skel #sbar-onway,
+body.boot-skel #sbar-delivered,
+body.boot-skel #sbar-returned {
+  display: inline-block;
+  min-width: 1.7em;
+  border-radius: 6px;
+  background: currentColor;
+  -webkit-text-fill-color: transparent;
+  opacity: 0.28;
+  animation: bskNum 1.2s ease-in-out infinite;
+}
+
+.boot-skel-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  margin-bottom: 7px;
+  border-radius: var(--r-md, 14px);
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+}
+
+.boot-skel-card .bsk {
+  display: block;
+  height: 11px;
+  border-radius: 6px;
+  background: #e5e7eb;
+  animation: bskPulse 1.2s ease-in-out infinite;
+}
+
+.boot-skel-card .bsk-a { width: 52%; height: 14px; }
+.boot-skel-card .bsk-s { width: 64px; height: 20px; border-radius: 10px; }
+.boot-skel-card .bsk-b { width: 62%; }
+.boot-skel-card .bsk-p { width: 72px; height: 16px; }
+.boot-skel-card .bsk-c { grid-column: 1 / -1; width: 92%; height: 20px; border-radius: 10px; }
+.boot-skel-card .bsk-d { width: 30%; height: 12px; }
+.boot-skel-card .bsk-e { width: 28px; height: 28px; border-radius: 8px; }
+
+@keyframes bskPulse {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
+}
+
+@keyframes bskNum {
+  0%, 100% { opacity: 0.2; }
+  50% { opacity: 0.38; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .boot-skel-card .bsk,
+  body.boot-skel #count-preparing, body.boot-skel #count-onway,
+  body.boot-skel #count-delivered, body.boot-skel #count-returned,
+  body.boot-skel #sbar-preparing, body.boot-skel #sbar-onway,
+  body.boot-skel #sbar-delivered, body.boot-skel #sbar-returned { animation: none; }
+  body.boot-wait::after,
+  body.net-wait::after,
+  body.net-wait:not(.boot-wait)::after { animation: none; opacity: 0.7; }
+}
+
 
 /* ============================================================
    لەیئاوتی کۆمپیوتەر — ویندۆی پان (٢٠٢٦-٠٨-٢٥)

@@ -4436,17 +4436,38 @@
         //    بانگ دەکەن — ئەوان ئەم ژمارەیە نوێ دەکەنەوە.
         let _acctOkAt = 0;
         const ACCT_FRESH_MS = 60000;
+        // ⚡ (٢٠٢٦-١٠-١٦) پشکنینێکی تەواو کە ئێستا لە ڕێگادایە (بارکردن، پشکنینی ٦٠ چرکە، گەڕانەوە بۆ ئەپ).
+        //    کردارێک لەو ساتەدا چاوەڕێی **هەمان** پشکنین دەکات، نەک دووەمێک بنێرێت — ئەمە لە ئەنجامێکی ٦٠ چرکە
+        //    کۆن تازەترە. ⚠️ تەنها ڕێڕەوی کردار بەکاری دەهێنێت: بارکردن، پشکنینی ٦٠ چرکە، `visibilitychange` و
+        //    ڕووداوی `account` هەمیشە `ensureAccountActive()`ی نوێ دەنێرن، بۆیە ڕووداوێکی «پاسوۆرد گۆڕا» هەرگیز بە
+        //    وەڵامێکی پێش خۆی دانانرێت.
+        let _acctInFlight = null;
         async function ensureAccountActiveFresh() {
             if (_accountLockedOut) return false;
             if (_acctOkAt && Date.now() - _acctOkAt < ACCT_FRESH_MS && currentUser && currentUser.code) return true;
-            return ensureAccountActive();
+            // چاوەڕوانییەکی ڕاستەقینە → هێڵی پێشکەوتن لە سەرەوە (ڕاستی پیشان دەدرێت، نەک سەرکەوتنێکی پێشوەخت)
+            return netWait(_acctInFlight || ensureAccountActive());
         }
 
-        async function ensureAccountActive() {
+        function ensureAccountActive(pre) {
+            const p = _accountCheck(pre);
+            _acctInFlight = p;
+            const clear = () => { if (_acctInFlight === p) _acctInFlight = null; };
+            p.then(clear, clear);
+            return p;
+        }
+
+        // `pre` تەنها لە بارکردندا: وەڵامی هەمان `select *` کە لەگەڵ پشکنینی session پێکەوە نێردرا
+        // (`bootPrefetch`). هەر **دوای** سەرکەوتنی `ensureStaffSession` دەخوێندرێتەوە، وەک پێشتر.
+        async function _accountCheck(pre) {
             if (_accountLockedOut) return false;
             if (!currentUser || !currentUser.code) { forceLogout("ئەم ئەکاونتە نەماوە."); return false; }
             try {
-                const { data, error } = await supabase.from('employees').select('*').eq('code', currentUser.code);
+                const { data, error } = pre ? await pre
+                    : await supabase.from('employees').select('*').eq('code', currentUser.code);
+                // پشکنینێکی تر لە کاتی چاوەڕوانیدا دەریکرد (بۆ نموونە ڕووداوی «پاسوۆرد گۆڕا») — ئەم وەڵامە
+                // کۆنترە و نابێت `myAppUser` دووبارە بنووسێتەوە
+                if (_accountLockedOut) return false;
                 if (error) {
                     // ⭐ db/100: ڕاگیراو بە 403ـی `not_staff` ڕەت دەکرێتەوە، و
                     //    بێ session هیچ دەسەڵاتێک نییە (42501 / PGRST30x).
@@ -5219,8 +5240,8 @@
         function serverGuardMsg(err) {
             let m = String((err && (err.message || err)) || '');
             // db/114 (کلیل) · db/116–118 (ناسنامە، خشتە، ئۆردەر) · db/119 (پاسوۆرد) · db/120 (دابەشکردن)
-            // · db/123 (پارەدان لە جزدانی خاوەنی ئۆردەر) · db/125 (ناردنی پارە) · db/127 (API ـی گەیاندن)
-            let x = /\b(?:NOT_KING|BAD_FIELD|BAD_NAME|BAD_NOTE|BAD_MODE|BAD_TIMES|BAD_DELAY|BAD_WINDOW|BAD_RATE|BAD_CAP|BAD_DRIVERS|BAD_LABEL|NAME_TAKEN|DRIVER_TAKEN|NO_API|NO_KEY|TOO_MANY_KEYS|NO_PERM_SEND|BAD_AMOUNT|NOTE_TOO_LONG|NO_RECIPIENT|SELF_TRANSFER|TO_SUSPENDED|KEY_REUSED|BAD_KEY|NOT_STAFF|IDENTITY_LOCKED|SELF_LOCKED|COLUMN_LOCKED|NO_PERM_KEY|NO_PERM_CREATE|NO_PERM_PASSWORD|NO_PERM_DELETE|ONLY_NEW_KEYS|ROLE_NOT_ALLOWED|CHAIN_NOT_ALLOWED|NOT_ALLOWED|NO_PERM_WALLET|NO_PERM_TRASH|ORDER_LOCKED|PRINT_LOCKED|ORDER_SCHEDULED_PENDING|NO_PERM_STATUS|NO_PERM_EDIT|NO_PERM_PRINT|NO_PERM_DISTRIBUTE|BAD_DATE|TOO_MANY|DIST_ROWS|DIST_OVER_TOTAL|DIST_PERM|NO_PERM_ORDER|ORDER_NOT_FOUND|BAD_REASON|WALLET_NOT_OWNER|WALLET_NOT_ON_ORDER|OVER_READY):\s*([^\n]+)/.exec(m);
+            // · db/123 (پارەدان لە جزدانی خاوەنی ئۆردەر) · db/125 (ناردنی پارە) · db/127 (API ـی گەیاندن) · db/135 (حاڵەت)
+            let x = /\b(?:NOT_KING|BAD_FIELD|BAD_NAME|BAD_NOTE|BAD_MODE|BAD_TIMES|BAD_DELAY|BAD_WINDOW|BAD_RATE|BAD_CAP|BAD_DRIVERS|BAD_LABEL|NAME_TAKEN|DRIVER_TAKEN|NO_API|NO_KEY|TOO_MANY_KEYS|NO_PERM_SEND|BAD_AMOUNT|NOTE_TOO_LONG|NO_RECIPIENT|SELF_TRANSFER|TO_SUSPENDED|KEY_REUSED|BAD_KEY|NOT_STAFF|IDENTITY_LOCKED|SELF_LOCKED|COLUMN_LOCKED|NO_PERM_KEY|NO_PERM_CREATE|NO_PERM_PASSWORD|NO_PERM_DELETE|ONLY_NEW_KEYS|ROLE_NOT_ALLOWED|CHAIN_NOT_ALLOWED|NOT_ALLOWED|NO_PERM_WALLET|NO_PERM_TRASH|ORDER_LOCKED|PRINT_LOCKED|ORDER_SCHEDULED_PENDING|NO_PERM_STATUS|NO_PERM_EDIT|NO_PERM_PRINT|NO_PERM_DISTRIBUTE|BAD_DATE|TOO_MANY|DIST_ROWS|DIST_OVER_TOTAL|DIST_PERM|NO_PERM_ORDER|ORDER_NOT_FOUND|BAD_REASON|BAD_STATUS|WALLET_NOT_OWNER|WALLET_NOT_ON_ORDER|OVER_READY):\s*([^\n]+)/.exec(m);
             return x ? x[1].trim() : '';
         }
 
@@ -5826,6 +5847,104 @@
         let availableConsultants = [];
         let globalKingCode = null;
 
+        // ============================================================
+        // ⚡ کردنەوەی یەکسەر — شێوەی ئەپ پێش تۆڕ (٢٠٢٦-١٠-١٦)
+        // ------------------------------------------------------------
+        // خاوەن (ڤیدیۆی «app load 10× faster»): «ئەوەی لەسەر تەلەفۆنە
+        // بەکاربهێنە». پێشتر تا سێ گەڕانەوەی سێرڤەر (session ← ئەکاونت ←
+        // ئۆردەرەکان) شاشەکە بەتاڵ بوو. ئێستا لە ساتی DOMContentLoaded:
+        //   • داشبۆرد + ناو و وێنەی **خۆت** — لە `myAppUser`ـی ئامێرەکەوە،
+        //     هەمان ئەوەی کارتی «ئەکاونتی پاشەکەوتکراو» پیشانی دەدات
+        //   • شوێنی ژمارەکان و کارتەکان وەک سکێلێتۆن (نەک «0» کە درۆیە)
+        // ⛔ هیچ داتایەکی سێرڤەر — کۆن یان نوێ — پێش پشکنینی ناسنامە
+        //    نانەخشێنرێت، و `boot-wait` هەموو پەنجەدانانێک ڕادەگرێت تا
+        //    `ensureStaffSession` + `ensureAccountActive` سەرکەوتوو دەبن.
+        // ⛔ ئۆردەرەکان لەسەر ئامێر پاشەکەوت **ناکرێن** (ناوی کڕیار) —
+        //    بیرۆکەی «snapshot»ی ڤیدیۆکە بە ئەنقەست وەرنەگیرا.
+        // ============================================================
+        function bootSkeletonHtml(n) {
+            let h = '';
+            for (let i = 0; i < n; i++) {
+                // هەمان ڕیزەکانی `buildDashOrderCard`: ناو + حاڵەت · کاڵا + نرخ · چیپەکان · کۆد + کۆپی —
+                // بۆیە کاتێک کارتە ڕاستەقینەکان دێن شاشەکە بازنادات
+                h += `<div class="boot-skel-card" aria-hidden="true">
+                        <span class="bsk bsk-a"></span><span class="bsk bsk-s"></span>
+                        <span class="bsk bsk-b"></span><span class="bsk bsk-p"></span>
+                        <span class="bsk bsk-c"></span>
+                        <span class="bsk bsk-d"></span><span class="bsk bsk-e"></span>
+                    </div>`;
+            }
+            return h;
+        }
+
+        function bootShellPaint() {
+            if (!currentUser || !currentUser.code) return;
+            if (document.querySelector('.screen.active')) return;   // شاشەیەک پێشتر کراوەتەوە
+            document.body.classList.add('boot-wait', 'boot-skel');
+            try {
+                document.getElementById('dashboard-screen').classList.add('active');
+                const nav = document.getElementById('bottom-nav');
+                if (nav) nav.style.display = 'flex';
+                const fab = document.getElementById('main-fab');
+                if (fab) fab.style.display = 'flex';
+                const navDash = document.getElementById('nav-dashboard');
+                if (navDash) navDash.classList.add('active');
+                const list = document.getElementById('orders-list');
+                if (list) { list.innerHTML = bootSkeletonHtml(4); list.setAttribute('aria-busy', 'true'); }
+            } catch (e) { }
+            // تەنها زانیاریی ئامێرەکە: وێنەی خۆم و دوگمەکانی ناڤ بە دەسەڵاتی پاشەکەوتکراو —
+            // دوای پشکنینی ئەکاونت دووبارە بە دەسەڵاتی سێرڤەر دادەنرێنەوە
+            try { applyOwnAvatar(); } catch (e) { }
+            try { applyUserPermissions(); } catch (e) { }
+        }
+        document.addEventListener('DOMContentLoaded', bootShellPaint);
+
+        // سکێلێتۆن لادەبرێت کاتێک یەکەم داتای داشبۆرد هات (یان هەڵەی پەیوەندی)
+        function bootSkelDone() {
+            if (!document.body.classList.contains('boot-skel')) return;
+            document.body.classList.remove('boot-skel');
+            const list = document.getElementById('orders-list');
+            if (list) list.removeAttribute('aria-busy');
+        }
+
+        // داشبۆرد: هەمان سێ داواکاری لە هەردوو ڕێڕەوەکەدا (بارکردن و `fetchOrders`)
+        function dashParams(code) {
+            return { p_sellers: [code], p_status: null, p_date_from: null, p_date_to: null, p_search: null };
+        }
+        function dashFetch(code) {
+            const params = dashParams(code);
+            return Promise.all([
+                rpc('orders_status_counts', params),
+                rpc('orders_day_counts', params),
+                fetchOrdersPage(params, null, UI_PAGE)
+            ]);
+        }
+
+        // پێشهێنانی بارکردن — لە هەمان هەنگاوی پشکنینی session. ئەنجامەکان تەنها دوای پشکنین
+        // بەکاردێن: `ensureAccountActive(pre)` و یەکەم `fetchOrders()` (یەک جار، و تەنها بۆ هەمان کۆد).
+        let _bootDash = null;     // { code, p }
+        function bootPrefetch() {
+            const code = String((currentUser && currentUser.code) || '').trim();
+            _bootDash = { code, p: dashFetch(code) };
+            _bootDash.p.catch(() => { });          // هەڵەکە لە `fetchOrders` پیشان دەدرێت
+            return supabase.from('employees').select('*').eq('code', code)
+                .then(r => r, e => ({ data: null, error: e }));
+        }
+
+        // هێڵی پێشکەوتن بۆ چاوەڕوانییەکی ڕاستەقینە (ڤیدیۆی خاوەن: «show the truth, even if the
+        // truth is a spinner») — هەرگیز سەرکەوتن پێش وەڵامی سێرڤەر پیشان نادات
+        let _netWaitN = 0;
+        function netWait(p) {
+            _netWaitN++;
+            document.body.classList.add('net-wait');
+            const end = () => {
+                _netWaitN = Math.max(0, _netWaitN - 1);
+                if (!_netWaitN) document.body.classList.remove('net-wait');
+            };
+            Promise.resolve(p).then(end, end);
+            return p;
+        }
+
         // single async onload that waits for Supabase client to be ready
         window.onload = async function () {
             if (!currentUser) return;
@@ -5843,15 +5962,25 @@
 
             // پشکنینی ئاسایش: ئایا کلیلی ئەم ئەکاونتە هێشتا هەیە؟ ئەگەر سڕابێتەوە → دەرچوون
             // sessionـی چوونەژوورەوە — بەبێ ئەوە هیچ داتایەک نایەت (db/100)
+            //
+            // ⚡ (٢٠٢٦-١٠-١٦) هەموو داواکارییە سەربەخۆکان لە **یەک** هەنگاودا (ڤیدیۆی خاوەن: «parallel»): پشکنینی
+            //    session (`current_emp_code`) · ڕیزی ئەکاونت · کۆدی پاشا · شارەکان · ئامار + ڕۆژ + یەکەم پەڕەی ئۆردەرەکانم.
+            //    پێشتر سێ هەنگاوی یەک لە دوای یەک بوون (session ← ئەکاونت ← ئۆردەر).
+            // ⛔ ڕیزبەندیی **بڕیار** نەگۆڕاوە: هیچ داتایەکی سێرڤەر نانەخشێنرێت و هیچ پەنجەدانانێک ڕێگەی پێنادرێت
+            //    (`boot-wait`) تا `ensureStaffSession` و پاشان `ensureAccountActive` سەرکەوتوو دەبن. ئەگەر یەکێکیان
+            //    ڕەتی کردەوە (ڕاگیراو، سڕاوە، پاسوۆرد گۆڕاو، sessionـی ئەکاونتێکی تر)، وەڵامە پێشوەختەکان فڕێ دەدرێن.
+            //    پێشهێنان تەنها کاتێک sessionـێک هەیە — بێ session (چوونەژوورەوەی تلیگرام) هەموو شتێک وەک پێشتر.
+            const _bootSess = await staffCurrentSession();
+            const _bootEmp = _bootSess ? bootPrefetch() : null;
+            let _bootKing = _bootSess ? fetchKingCode() : null;
+            let _bootCities = _bootSess ? loadDBCities() : null;
+
             if (!await ensureStaffSession()) return;
+            if (!_bootKing) { _bootKing = fetchKingCode(); _bootCities = loadDBCities(); }
 
-            // ⚡ (٢٠٢٦-١٠-١٥) کۆدی پاشا و شارەکان **لەگەڵ** پشکنینی ئەکاونتدا دەست پێدەکەن. پێشتر چوار گەڕانەوەی
-            //    یەک لە دوای یەک بوون پێش ئەوەی داشبۆرد دەست پێبکات (ئەکاونت → تلیگرام → پاشا → شار، ~٢–٤ چرکە لە
-            //    تەلەفۆن بە preflight ـەوە). ئێستا یەک چاوەڕوانی. ⚠️ پشکنینی ئەکاونت هێشتا **پێش** پیشاندانی هەر شتێکە.
-            const _bootKing = fetchKingCode();
-            const _bootCities = loadDBCities();
-
-            if (!await ensureAccountActive()) return;
+            if (!await ensureAccountActive(_bootEmp)) return;
+            // ناسنامە پشتڕاستکرایەوە — ئێستا پەنجەدانان ڕێگەپێدراوە
+            document.body.classList.remove('boot-wait');
 
             // ناسنامەی تلیگرام — بەبێی هیچ ئاگادارکردنەوەیەک ناگات.
             // ⚡ تەنها تۆمارکردنە (Edge Function، ~٨٣٠ms ناوەند) — هیچ شتێک چاوەڕێی ناکات
@@ -8491,23 +8620,24 @@
         async function fetchOrders() {
             let list = document.getElementById('orders-list');
 
-            if (!isDashboardDataLoaded) {
+            // ⚡ (٢٠٢٦-١٠-١٦) لە کاتی بارکردندا سکێلێتۆنی `bootShellPaint` دەمێنێتەوە، نەک خولاوە
+            if (!isDashboardDataLoaded && !document.body.classList.contains('boot-skel')) {
                 list.innerHTML = loadingSpinnerHTML; // پیشاندانی ئایکۆنەکە
             }
 
             try {
                 // مەودا: تەنها ئۆردەرەکانی خودی بەکارهێنەر
                 const myCode = String(currentUser.code || '').trim();
-                const params = { p_sellers: [myCode], p_status: null, p_date_from: null, p_date_to: null, p_search: null };
+                const params = dashParams(myCode);
 
                 // ئامارەکانی سەرەوە + بەیجی ڕۆژ + یەکەم پەڕەی ئۆردەر — پێکەوە
                 // لە سێرڤەرەوە. ئامار و بەیج بە فەنکشنی ژماردن دێن (ورد، بێ
                 // هێنانی هەموو ئۆردەر)، بۆیە کاتی کردنەوە جێگیرە.
-                let [statRows, dayRows, first] = await Promise.all([
-                    rpc('orders_status_counts', params),
-                    rpc('orders_day_counts', params),
-                    fetchOrdersPage(params, null, UI_PAGE)
-                ]);
+                // ⚡ لە بارکردندا ئەمانە پێشتر لەگەڵ پشکنینی ناسنامەدا نێردراون (`bootPrefetch`) — یەک جار
+                //    بەکاردێن و تەنها بۆ هەمان ئەکاونت؛ هەر بانگێکی تر (نوێکردنەوە، ڕاکێشان) داواکاریی نوێ دەنێرێت.
+                const pre = (_bootDash && _bootDash.code === myCode) ? _bootDash.p : null;
+                _bootDash = null;
+                let [statRows, dayRows, first] = await (pre || dashFetch(myCode));
 
                 dashDayCounts = buildDayCountsMap(dayRows);
                 let sc = (statRows && statRows[0]) || { prep: 0, onway: 0, deliv: 0, ret: 0 };
@@ -8558,6 +8688,8 @@
                 if (!isDashboardDataLoaded) {
                     list.innerHTML = connErrorHtml('fetchOrders()');
                 }
+            } finally {
+                bootSkelDone();
             }
         }
 
@@ -9518,6 +9650,24 @@
             return out.length ? out : null;
         }
 
+        // ⚡ (٢٠٢٦-١٠-١٦) یەکەم کردنەوەی شاشەکە: تابی «داواکارییەکانم» تەنها کۆدی خۆمی دەوێت، نەک لیستی
+        //    کارمەندان — بۆیە ئۆردەرەکانی لەگەڵ ئەو لیستە **پێکەوە** دەچن (یەک هەنگاو لەبری دوو). `reloadMgmt`
+        //    تەنها کاتێک وەریدەگرێت کە هەمان کلیل بێت (تاب، فلتەر، گەڕان، ڕیزبەندی)، تەنها یەک جار، و هەرگیز
+        //    بە `force`. سێرڤەر هەمان مەودا دەپشکنێت؛ هیچ شتێک لەسەر ئامێر هەڵناگیرێت.
+        let _mgmtPre = null;
+        function mgmtPrefetchMine(myCode) {
+            _mgmtPre = null;
+            if (currentOrdersTab !== 'my' || !myCode) return;
+            const params = orderFilterParams([myCode]);
+            const sort = ordersSortVal();
+            const p = Promise.all([
+                rpc('orders_day_counts', params),
+                fetchOrdersPage(params, null, UI_PAGE, 0, sort)
+            ]);
+            p.catch(() => { });
+            _mgmtPre = { key: mgmtCacheKey(params, sort, false), p: p };
+        }
+
         // بارکردنەوەی داتای بەڕێوەبردن بەپێی دۆخی ئێستا — فلتەر لە سێرڤەر،
         // پاشان ڕەندەری کلاینت. هەر تاب/فلتەر/گەڕانێک ئەمە بانگ دەکات.
         async function reloadMgmt(force) {
@@ -9559,10 +9709,14 @@
                     }), params, sort, membersView);
                     applyOrderFilters();
                 } else {
-                    let [dayRows, first] = await Promise.all([
+                    // پێشهێنانی یەکەم کردنەوە (`mgmtPrefetchMine`): هەمان کلیل، یەک جار؛ ئەگەر شکستی هێنابوو → داواکاریی نوێ
+                    const pre = (!force && _mgmtPre && _mgmtPre.key === key) ? _mgmtPre.p : null;
+                    _mgmtPre = null;
+                    const fetchBoth = () => Promise.all([
                         rpc('orders_day_counts', params),
                         fetchOrdersPage(params, null, UI_PAGE, 0, sort)
                     ]);
+                    let [dayRows, first] = await (pre ? pre.catch(fetchBoth) : fetchBoth());
                     clearTimeout(spinT);
                     if (reqId !== _mgmtReqId) return;
                     mgmtRestoreCached(mgmtCacheSet(key, {
@@ -9842,6 +9996,9 @@
                 list.innerHTML = loadingSpinnerHTML;
             }
 
+            // ⚡ ئۆردەرەکانی «داواکارییەکانم» لەگەڵ لیستی کارمەندان پێکەوە
+            mgmtPrefetchMine(myCode);
+
             try {
                 let allowedCodes = [myCode];
                 teamMembersData = [];
@@ -9917,6 +10074,7 @@
                 mgmtWarmSiblings();
             } catch (err) {
                 console.log(err);
+                _mgmtPre = null;   // پێشهێنانێکی بەکارنەهاتوو هەرگیز لە بارکردنێکی دواتردا بەکارنایەت
                 if (!isManagementDataLoaded) {
                     list.innerHTML = connErrorHtml('reloadMgmt(true)');
                 }
@@ -13777,7 +13935,6 @@
         }
 
         async function postOrderCommentImpl() {
-            if (!await ensureAccountActiveFresh()) return;
             const input = document.getElementById('ocmt-input');
             const oid = _reviewOpenId;
             const body = (input ? input.value : '').trim();
@@ -13792,6 +13949,16 @@
             input.value = '';
             ocmtGrow(input);
             if (editing) hideEditBar(); else ocmtAddPending(body);
+
+            // ⚡ (٢٠٢٦-١٠-١٦) پشکنینی ئەکاونت **ژێر** حەبابی «دەنێردرێت…» دەڕوات، نەک پێشی: پێشتر ئەگەر
+            //    پشکنینی ٦٠ چرکە بەسەرچووبوو، یەک گەڕانەوەی تەواو هیچ شتێک دەرنەدەکەوت. حەبابەکە **چاوەڕوانە**
+            //    نەک «نێردرا» — تەنها سێرڤەر پشتڕاستی دەکاتەوە، و ڕەتکردنەوە دەقەکە دەگەڕێنێتەوە بۆ بۆکسەکە.
+            if (!await ensureAccountActiveFresh()) {
+                ocmtRemovePending();
+                if (input && !input.value.trim()) { input.value = body; ocmtGrow(input); }
+                if (editing) { _ocmtEditId = editing; showEditBar(_ocmtEditOrig); }
+                return;
+            }
 
             try {
                 if (editing) {
@@ -30385,6 +30552,28 @@
                 || /Could not find the function/i.test(String(err.message || ''));
         }
 
+        // ⚡ (٢٠٢٦-١٠-١٦، db/135) گۆڕینی حاڵەتی بێ پارە («لە ڕێگایە» · «گەیشتووە»ـی ئۆردەری خەڵات) + تۆمار بە **یەک**
+        //    بانگ و یەک تڕانزاکشن. پێشتر PATCH (URLـی نوێ بۆ هەر ئۆردەرێک → preflight هەموو جارێک) و پاشان POSTـی
+        //    تۆمار؛ ئەگەر تۆمار شکستی هێنابا، حاڵەت دەگۆڕا بێ تۆمار. `reason`: `null` = دەستی لێنادرێت (ئۆردەری
+        //    خەڵات). سێرڤەر وەک بەکارهێنەرەکە دەینووسێت (`orders_guard`). ⚠️ فەنکشن نییە (PGRST202) → هەمان دوو
+        //    داواکاریی کۆن.
+        async function orderSetStatus(o, newStatus, reason, detail) {
+            const { error: setErr } = await supabase.rpc('order_set_status', {
+                p_order_id: String(o.id),
+                p_status: newStatus,
+                p_reason: reason,
+                p_created_by: userName,
+                p_detail: detail
+            });
+            if (setErr && !rpcMissing(setErr)) throw setErr;
+            if (!setErr) { orderLogBust(o); return; }
+            const patch = { status: newStatus, status_changed_by: userName };
+            if (reason != null) patch.return_reason = reason;
+            const { error: stErr } = await supabase.from('orders').update(patch).eq('id', o.id);
+            if (stErr) throw stErr;
+            await logOrderAction(o, 'status', { from: o.status, to: newStatus, detail: detail });
+        }
+
         async function logOrderAction(order, action, opts) {
             try {
                 opts = opts || {};
@@ -30533,13 +30722,8 @@
             if (newStatus === "گەیشتووە" && o && o.reward_claim_id && o.status !== "گەیشتووە") {
                 showToast("خەریکی نوێکردنەوە...", "loading");
                 try {
-                    // ⭐ db/118: سێرڤەر هەمان یاسا دەپشکنێت — ڕەتکردنەوەکەی دەبێت دیار بێت
-                    const { error: stErr } = await supabase.from('orders').update({ status: newStatus, status_changed_by: userName }).eq('id', orderId);
-                    if (stErr) throw stErr;
-                    await logOrderAction(o, 'status', {
-                        from: o.status, to: newStatus,
-                        detail: 'ئۆردەری خەڵات گەیشت — بێ دابەشکردنی قازانج'
-                    });
+                    // ⭐ db/118: سێرڤەر هەمان یاسا دەپشکنێت — ڕەتکردنەوەکەی دەبێت دیار بێت. ⚡ db/135: یەک بانگ
+                    await orderSetStatus(o, newStatus, null, 'ئۆردەری خەڵات گەیشت — بێ دابەشکردنی قازانج');
                     showToast("حاڵەت گۆڕدرا!", "success");
                     closeModal(null, 'order-details-modal');
                     rtPatchOrders([orderId]);
@@ -30630,12 +30814,9 @@
             if (newStatus === "گەڕاوەتەوە" && !reason) { showToast("هۆکار بنووسە!", "error"); return; }
             showToast("خەریکی نوێکردنەوە...", "loading");
             try {
-                const { error: stErr } = await supabase.from('orders').update({ status: newStatus, return_reason: reason, status_changed_by: userName }).eq('id', orderId);
-                if (stErr) throw stErr;
-                await logOrderAction(o, 'status', {
-                    from: o ? o.status : null, to: newStatus,
-                    detail: `حاڵەتی گۆڕی بۆ «${newStatus}»` + (reason ? ` — هۆکار: ${reason}` : '')
-                });
+                // ⚡ db/135: حاڵەت + تۆمار بە یەک بانگ
+                await orderSetStatus(o, newStatus, reason,
+                    `حاڵەتی گۆڕی بۆ «${newStatus}»` + (reason ? ` — هۆکار: ${reason}` : ''));
                 showToast("حاڵەت گۆڕدرا!", "success");
                 closeModal(null, 'order-details-modal');
                 rtPatchOrders([orderId]);
