@@ -30158,6 +30158,219 @@ body.boot-skel #sbar-returned {
   body.net-wait:not(.boot-wait)::after { animation: none; opacity: 0.7; }
 }
 
+/* ============================================================
+   ✨ سکێلێتۆنی هاوبەش — هەمان شێوەی داشبۆرد بۆ هەموو شوێنێک (٢٠٢٦-١٠-١٦)
+   ------------------------------------------------------------
+   خاوەن: «ئەم لۆدینگە بۆ هەموو بەشەکان دانێ، لۆدینگە کۆنەکان لابدە… بەکارهێنەر هەست ناکات
+   کە زانیارییەکان ونن». هەمان ڕەنگ (#e5e7eb) و هەمان لێدانی نەرمی `boot-skel-card`
+   (`bskPulse`، تەنها opacity):
+   • `skelHtml(kind, n)` (app.html) شێوەی هەر لیستێک دروست دەکات، بە هەمان پۆلی ڕیزە
+     ڕاستەقینەکان (`sk-shim`) — بۆیە پەدینگ و بەرزی یەکن و کاتێک داتا دێت هیچ بازنادات.
+   • `.sk` = پارچەیەک: دێڕ · `sk-t` سەردێڕ · `sk-s` دێڕی بچووک · `sk-num` ژمارە ·
+     `sk-pill` چیپ · `sk-ava` وێنەی کەس · `sk-ic` ئایکۆن · `sk-box` وێنە/چارت.
+   • ئایکۆنی کۆنی خولاوە (`bx-loader-alt bx-spin`) لە هەموو شوێنێک — دوگمە، تۆست، نیشانە —
+     دەبێتە سێ خاڵی نەرم بە هەمان لێدان؛ دەقی دوگمەکە هێشتا دەڵێت چی دەکرێت.
+   • سکێلێتۆنە کۆنەکان (`olog-skel` · `olog-bar`) هەمان ڕەنگ و لێدان وەردەگرن.
+   ⚠️ تەنها شێوەیە، هەرگیز داتا. تەنها `opacity` ئەنیمەیت دەکرێت؛ reduced-motion = بێ جووڵە.
+   ============================================================ */
+.sk {
+  display: block;
+  height: 11px;
+  max-width: 100%;
+  border-radius: 6px;
+  background: #e5e7eb;
+  animation: bskPulse 1.2s ease-in-out infinite;
+}
+
+.sk.sk-t { height: 14px; }
+.sk.sk-s { height: 9px; }
+.sk.sk-num { height: 22px; border-radius: 8px; }
+.sk.sk-pill { height: 20px; border-radius: 10px; }
+.sk.sk-ava { flex: 0 0 auto; width: 40px; height: 40px; border-radius: 50%; }
+.sk.sk-ic { flex: 0 0 auto; width: 36px; height: 36px; border-radius: 50%; }
+.sk.sk-box { border-radius: 12px; }
+.sk.sk-inl { display: inline-block; vertical-align: middle; }
+.sk.sk-on-dark { background: rgba(255, 255, 255, 0.34); }   /* لەسەر کارتی ڕەنگاوڕەنگ (جزدان) */
+
+/* ژمارەیەکی گەورە (باڵانس) کە هێشتا نەهاتووە — هەمان پیلی ژمارەکانی داشبۆرد (`boot-skel`)، نەک «0» */
+.sk-n-wait {
+  display: inline-block;
+  min-width: 5.5em;
+  border-radius: 10px;
+  background: currentColor;
+  -webkit-text-fill-color: transparent;
+  opacity: 0.28;
+  animation: bskNum 1.2s ease-in-out infinite;
+}
+
+/* لیستی سکێلێتۆن — لەناو باوکێکی flex/grid (بۆ نموونە دۆخی بەتاڵی ناوەڕاستکراو) بچووک نابێتەوە.
+   ⚠️ `display` دانانرێت: `opt.wrap` پۆلی لیستە ڕاستەقینەکە (flex + gap) دەخاتە سەر هەمان توخم */
+.sk-list {
+  width: 100%;
+  align-self: stretch;
+}
+
+/* ڕیزێکی ڕاستەقینە (هەمان پۆل) کە سکێلێتۆنی تێدایە — نە پەنجەی لێدەدرێت، نە دەگۆڕێت */
+.sk-shim {
+  pointer-events: none;
+  cursor: default;
+  user-select: none;
+}
+
+.sk-shim:hover,
+.sk-shim:active { transform: none; }
+
+/* جووڵەی جزدان: ڕیزە ڕاستەقینەکان ڕەنگی سەوز/سوور وەردەگرن (`plus`/`minus`) — سکێلێتۆن هەمان قاڵب بە ڕەنگی بێلایەن.
+   ⚠️ بێ `min-height`: ناوەڕۆکەکەی هەمان h4 · p ـی ڕیزی ڕاستەقینەیە (دەقی ڕوون، `sk-w`)، بۆیە بەرزییەکەی خۆی
+   لەگەڵ ڕیزی ڕاستەقینە یەکە لە هەر پانییەک (٩٧px لە ٣٦٠–٤١٢ بە وەسفی بەرهەم) — ژمارەیەکی جێگیر لێرە هەڵە دەبوو */
+.transaction-item.sk-shim {
+  background: #fff;
+  border: 1px solid #eef2f7;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+/* دەقی نموونەی سکێلێتۆن (`skelHtml('tx')`): پیتەکان ڕوونن و تەنها شێوەکەیان دەمێنێت — پیلی لێدەر بە درێژیی
+   دەقێکی ڕاستەقینە، و هەر پارچەیەکی دێڕ قەوسی خۆی هەیە (`box-decoration-break`) */
+.sk-w,
+.sk-w i {
+  color: transparent;
+}
+
+.sk-w {
+  background: #e5e7eb;
+  border-radius: 6px;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+  animation: bskPulse 1.2s ease-in-out infinite;
+}
+
+/* کارتی بەڕێوەبردنی ئۆردەر (`skelHtml('order', n, { compact: true })`): خودی کارتی `buildMgmtOrderCard` بە دەقی
+   ڕوون — هەمان پەدینگ، بۆشایی و شکاندنی دێڕ، بۆیە لە هەر پانییەک بەقەد کارتی ڕاستەقینەیە (٤ ڕیز لە تەلەفۆن، ٣ لە
+   کۆمپیوتەری پان). ڕەنگی حاڵەت نییە: پاشبنەمای سپی + هێڵی ١px وەک کارتی ڕاستەقینە */
+.modern-order-card.sk-moc {
+  background: #fff;
+  border: 1px solid #eef2f7;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+}
+
+.sk-moc *,
+.sk-moc i {
+  color: transparent;
+}
+
+.sk-moc .mocc-cust i {
+  background: #e5e7eb;
+  animation: bskPulse 1.2s ease-in-out infinite;
+}
+
+.sk-moc .card-copy.sk-w {
+  border-color: transparent;
+  border-radius: 8px;
+}
+
+.sk-moc .moc-status.sk-w {
+  border-radius: var(--r-full);
+}
+
+.sk-col {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.sk-end {
+  flex: 0 0 auto;
+  display: grid;
+  gap: 8px;
+  justify-items: end;
+}
+
+.sk-card {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  margin-bottom: 10px;
+  border-radius: var(--r-md, 14px);
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+}
+
+.sk-line-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.sk-tiles {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.sk-tiles > .sk-card { margin: 0; }
+
+.sk-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+/* سێ خاڵی چاوەڕوانی — جێی ئایکۆنی خولاوە لە هەموو شوێنێک (دوگمە، تۆست، نیشانە) */
+i.bx.bx-loader-alt.bx-spin {
+  display: inline-block;          /* index.html فۆنتی boxicons بار ناکات — خاڵەکان بە باکگراوەندن، نەک گلیف */
+  width: 1.5em;
+  height: 0.36em;
+  vertical-align: middle;
+  background:
+    radial-gradient(circle closest-side, currentColor 90%, transparent 100%) 0 50% / 0.36em 0.36em no-repeat,
+    radial-gradient(circle closest-side, currentColor 90%, transparent 100%) 50% 50% / 0.36em 0.36em no-repeat,
+    radial-gradient(circle closest-side, currentColor 90%, transparent 100%) 100% 50% / 0.36em 0.36em no-repeat;
+  animation: bskPulse 1.2s ease-in-out infinite;
+}
+
+i.bx.bx-loader-alt.bx-spin::before { content: none; }
+
+/* بڵقی «ڕاکێشان بۆ نوێکردنەوە»: هەمان سێ خاڵ بە ڕەنگی سەرەکی؛ تەنها لە کاتی نوێکردنەوەدا (`spinning`) لێدەدات */
+.ptr-dots {
+  display: block;
+  width: 24px;
+  height: 7px;
+  color: var(--primary);
+  background:
+    radial-gradient(circle closest-side, currentColor 90%, transparent 100%) 0 50% / 7px 7px no-repeat,
+    radial-gradient(circle closest-side, currentColor 90%, transparent 100%) 50% 50% / 7px 7px no-repeat,
+    radial-gradient(circle closest-side, currentColor 90%, transparent 100%) 100% 50% / 7px 7px no-repeat;
+}
+
+.ptr-dots.spinning { animation: bskPulse 1.2s ease-in-out infinite; }
+
+/* سکێلێتۆنە کۆنەکان (مێژوو · کۆمێنت · ئاگاداری · کارتی پڕۆفایل · جزدانی ئەندامان): هەمان ڕەنگ و لێدان —
+   پێشتر سێ شێوەی جیاواز بوون (خۆڵەمێشیی وەستاو، درەوشانەوەی `mcard-sk`، لێدانی داشبۆرد) */
+.olog-bar,
+.olog-skel.olog-dot,
+.olog-skel .olog-dot,
+.olog-skel .notif-dot,
+.mcard-sk {
+  background: #e5e7eb;
+  animation: bskPulse 1.2s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sk,
+  .sk-n-wait,
+  .sk-w,
+  .sk-moc .mocc-cust i,
+  .ptr-dots.spinning,
+  i.bx.bx-loader-alt.bx-spin,
+  .olog-bar,
+  .olog-skel.olog-dot,
+  .olog-skel .olog-dot,
+  .olog-skel .notif-dot,
+  .mcard-sk { animation: none; }
+}
+
 
 /* ============================================================
    لەیئاوتی کۆمپیوتەر — ویندۆی پان (٢٠٢٦-٠٨-٢٥)
@@ -30267,6 +30480,26 @@ body.boot-skel #sbar-returned {
   #trash-list > .win-sentinel,
   #trash-list > p {
     grid-column: 1 / -1;
+  }
+
+  /* ✨ سکێلێتۆن (`skelHtml`) لەناو ئەم گریدانەدا: پێچەرەکەی (`.sk-list`) بۆکسی نییە، بۆیە ڕیزە شێوەییەکان وەک ڕیزی
+     ڕاستەقینە بە ستوونەکاندا بڵاو دەبنەوە — نەک هەمووی لە یەک خانەدا (پێوانەکراو لە ١٢٨٠: یەک ستوون لە سێ، دوو لەسەر
+     سێی شاشە بەتاڵ). ⚠️ تەنها ئەم لیستانە — `opt.wrap` لەوێدا بەکارنایەت ([[landmines]] ٢٧٧ · ٢٨٢). */
+  #management-orders-list > .sk-list,
+  #my-transactions-list > .sk-list,
+  #edit-users-list > .sk-list,
+  #profit-users-list > .sk-list,
+  #wallet-users-list > .sk-list,
+  #admin-cities-list > .sk-list,
+  #trash-list > .sk-list {
+    display: contents;
+  }
+
+  /* «زیاتر»ی بەڕێوەبردن (`.win-sentinel`) بە درێژایی ڕیزە — دوو کارتی سکێلێتۆنی ناوی هەمان دوو ستوونی لیستەکە */
+  #management-orders-list > .win-sentinel > .sk-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0 16px;
   }
 
   /* ============================================================
