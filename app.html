@@ -9248,13 +9248,6 @@
                     items: shortItemNames(o.item_names),
                     code: o.order_code || o.id || "00",
                     name: o.customer_name || "بێ ناو",
-                    // یەک سترینگ بۆ گەڕان لەجیاتی ٤ سترینگی نوێ بۆ هەر پیتێک.
-                    // `` لە کیبۆردەوە نانووسرێت، بۆیە گەڕان هەرگیز
-                    // ناتوانێت بەسەر دوو خانەدا بڕوات — واتا هەمان مانای پێشوو.
-                    blob: (String(o.order_code || o.id || "") + '' +
-                           String(o.phone1 || "") + '' +
-                           String(o.phone2 || "") + '' +
-                           String(o.customer_name || "")).toLowerCase(),
                     rel: "",
                     _t: 0
                 };
@@ -9659,6 +9652,9 @@
             let dateFrom = document.getElementById('filter-date-from').value;
             let dateTo = document.getElementById('filter-date-to').value;
             let searchVal = document.getElementById('orders-search-input').value.trim().toLowerCase();
+            // 🔎 db/139: هەمان یاسا و هەمان ٨ خانەی سێرڤەر (`order_search_ids`) — ئەگەر لێرە تەسکتر بێت،
+            //    ئۆردەرێک کە سێرڤەر دەیهێنێت و ژمارەکانی ڕۆژ دەیژمێرن لێرە لادەبرێت
+            let searchQry = searchVal ? searchQ(searchVal) : null;
             let roleFilterEl = document.querySelector('input[name="orders_role_filter"]:checked');
             let roleFilter = roleFilterEl ? roleFilterEl.value : "all";
             let myCode = String(currentUser ? currentUser.code : "").trim().toLowerCase();
@@ -9696,20 +9692,20 @@
                     if (dateFrom && dk < dateFrom) return false;
                     if (dateTo && dk > dateTo) return false;
                 }
-                if (searchVal) {
-                    let sName = "";
-                    if (currentOrdersTab === "team") {
-                        let member = teamMemberOf(sellerCode);
-                        if (member) sName = String(member.full_name || "").toLowerCase();
-                        else sName = String(o.seller_name || "").toLowerCase();
-                    }
-                    let matchOrder = cardFmt(o).blob.includes(searchVal);
-                    let matchMember = sName.includes(searchVal) || sellerCode.includes(searchVal);
-                    if (currentOrdersTab === "team") { if (!matchOrder && !matchMember) return false; }
-                    else { if (!matchOrder) return false; }
+                if (searchQry) {
+                    let matchOrder = searchScore(searchKeysFor(o, orderSearchParts), searchQry) > 0;
+                    // تابی تیم: ناوی ئێستای ئەندامەکەش (ناوی سەر ئۆردەرەکە لەوانەیە کۆن بێت)
+                    let member = (!matchOrder && currentOrdersTab === "team") ? teamMemberOf(sellerCode) : null;
+                    let matchMember = !!member && searchScore(searchKeysFor(member, m => [m.full_name, m.code]), searchQry) > 0;
+                    if (!matchOrder && !matchMember) return false;
                 }
                 return true;
             };
+        }
+
+        // 🔎 ٨ خانەی گەڕانی ئۆردەر — ڕێک هەمان ڕیزبەندیی `order_search_text` ـی db/139
+        function orderSearchParts(o) {
+            return [o.order_code, o.customer_name, o.phone1, o.phone2, o.seller_code, o.seller_name, o.city, o.address];
         }
 
         // ئۆردەرەکان → توخمی پلان (سەردێڕی ڕۆژ + کارت)، گرووپی ڕۆژ بەردەوام
@@ -18374,7 +18370,7 @@
                     //    خۆی دەیەوێت، بۆیە خۆی زیاد دەکرێت ئەگەر ناوەکەی گونجا.
                     const me = currentUser && String(currentUser.code);
                     const mn = String((currentUser && currentUser.full_name) || '');
-                    if (me && (me.toLowerCase().indexOf(term.toLowerCase()) === 0 || mn.indexOf(term) !== -1)
+                    if (me && (me.toLowerCase().indexOf(term.toLowerCase()) === 0 || searchHit([mn], term) > 0)
                         && !s.res.some(p => String(p.code) === me)) s.res.unshift({ code: me, name: mn || me });
                 } catch (e) { console.warn('wallet_transfer_find:', e); s.res = []; }
                 fundPaintRes();
@@ -25262,10 +25258,8 @@
             if (!box) return;
             const all = sxwRows();
             const q = _sxw.q;
-            const rows = q
-                ? all.filter(r => String(r.name || '').toLowerCase().includes(q)
-                               || String(r.code || '').toLowerCase().includes(q))
-                : all;
+            // 🔎 کوردی · عەرەبی · لاتینی (db/139) — باشترین گونجان یەکەم
+            const rows = q ? searchRank(all, q, r => [r.name, r.code]) : all;
 
             const isDebt = _sxw.view === 'debt';
             const d = _sxw.data || {};
@@ -33667,7 +33661,7 @@
             const show = () => {
                 const q = input.value.trim();
                 const rows = histLoad(cfg.kind)
-                    .filter(e => !q || String(e.q).toLowerCase().includes(q.toLowerCase()))
+                    .filter(e => !q || searchHit(String(e.q), q) > 0)
                     .filter(e => String(e.q).toLowerCase() !== q.toLowerCase())
                     .slice(0, HIST_SHOW_SEARCH)
                     .map(e => ({ value: String(e.q), label: histMark(String(e.q), q) }));
@@ -33726,7 +33720,7 @@
             const show = () => {
                 const q = input.value.trim();
                 const rows = histLoad(KIND)
-                    .filter(e => !q || String(e.n).toLowerCase().includes(q.toLowerCase()))
+                    .filter(e => !q || searchHit(String(e.n), q) > 0)
                     .filter(e => String(e.n).toLowerCase() !== q.toLowerCase())
                     .slice(0, HIST_SHOW_ITEMS)
                     .map(e => ({
@@ -33762,6 +33756,236 @@
                 if (e.key === 'Escape') closeAllHistPanels();
             });
         }
+
+        // ===== SEARCH-KEYS: سەرەتا =====
+        // ============================================================
+        // 🔎 گەڕانی فرە-کیبۆرد: کوردی · عەرەبی · لاتینی (خاوەن ٢٠٢٦-١٠-١٧)
+        // ------------------------------------------------------------
+        // خاوەن: «ناوی ئەندامێک بە کیبۆردی عەرەبی نووسراوە، ئێمە بە کیبۆردە کوردییەکە
+        // گەڕان دەکەین. هیچ ئەنجامێکمان دەست ناکەوێت… بە لاتینیش… ئەندامی هەنار بهێنێت».
+        // هەر دەقێک دوو کلیلی هەیە، و هەمان یاسا لە داتابەیسدایە (db/139: `search_k1` ·
+        // `search_kl` · `search_qv`). `tests/security/db_search_test.mjs` ئەم کۆدە و ئەو SQL ـە
+        // لەسەر هەزاران دەقی هەڕەمەکی بەراورد دەکات — نابێت لێک جیا بن.
+        //   k1 — کیبۆرد: ي ى ێ → ی · ك گ → ک · ە ة ھ → ه · ڕ → ر · ڵ → ل · ۆ ؤ → و · ڤ → ف ·
+        //        پ → ب · چ → ج · ژ → ز · أ إ آ ئ → ا · ء لادەبرێت؛ ـ و حەرەکات و نیشانە
+        //        نەبینراوەکان لادەبرێن؛ «ه + ZWNJ» = ە؛ ژمارەی کوردی → 0-9. گەڕان = بەشێک لە
+        //        دەق، وەک پێشوو — هەرچی پێشتر دەدۆزرایەوە هێشتا دەدۆزرێتەوە.
+        //   kl — دەنگ: پیتی کوردی و لاتینی دەبنە یەک پیتی لاتینی بۆ هەر دەنگێک
+        //        («هەنار» = «hanar» = «henar»؛ sh · ch · kh · gh · zh)؛ بزوێنەکان سێ کۆمەڵن:
+        //        a (ا ە ێ · a e ê) · i (ی · i î y) · u (و ۆ · u o w). گەڕان = سەرەتای وشە.
+        //   kv — بزوێنی نەنووسراو («محمد» = «محەمەد» = «mohammed» · «كركوك» = «کەرکوک» ·
+        //        «گەڕەک» = «گەڕەکی»): هەمان نەبزوێنەکان بە هەمان ڕیز، وشەی تەواو. بزوێنی پرسیار
+        //        دەتوانێت نەنووسرابێت؛ لە شوێنێکی بێ بزوێن: سەرەتای وشە ە · ناو وشە ە یان و ·
+        //        کۆتایی وشە ـە ـی ـو. تەنها کاتێک پرسیارەکە ≥ ٣ نەبزوێنی هەیە.
+        //        (پێوانەی بەرهەم ٢٠٢٦-١٠-١٨: «سەرەتای وشە» «گەڕەک» ـی دەکرد بە «کەرکوک» × ١,٠٩٠ ·
+        //        هەموو بزوێنێک «محمد» ـی دەکرد بە «مەحموود» و «عمر» بە «ئەمیر» · دوو نەبزوێن
+        //        «شوان» ـی دەکرد بە «شنۆ».)
+        // ⭐ ڕیزبەندی (`searchScore`): ١ k1 لە سەرەتای وشە · ٢ k1 لەناو وشە · ٣ kl · ٤ kv ·
+        //    ٠ = نەگونجا. 📞 پرسیاری تەنها ژمارە: بۆشایی و «-» لادەبرێن، +964 → 0.
+        // ⚠️ هەر گۆڕانێک لێرە = هەمان گۆڕان لە SQL ـی db/139 + دووبارە دروستکردنی کلیلە
+        //    پاشەکەوتکراوەکان (`order_search` · `employee_search` · `trash_search`) — ئەگەرنا ئەپ
+        //    و سێرڤەر جیاواز دەگەڕێن و ئۆردەرێک کە سێرڤەر دەیهێنێت، ئەپ لای دەبات.
+        // ⚠️ هیچ نووسینێکی backslash-u لێرە نییە (Edit دەیکاتە پیتی ڕاستەقینە) — هەموو پیتە
+        //    تایبەتەکان بە `String.fromCharCode` دروست دەکرێن.
+        // ============================================================
+        function srchT() {
+            if (srchT.t) return srchT.t;
+            const C = (...cps) => String.fromCharCode(...cps);
+            const R = (a, b) => C(a) + '-' + C(b);            // مەودا لەناو [...]
+            const tbl = (pairs) => {
+                const m = new Map();
+                pairs.forEach(([from, to]) => { for (const ch of from) { if (m.has(ch)) throw new Error('srch: twice ' + ch); m.set(ch, to); } });
+                return m;
+            };
+            const AR = R(0x600, 0x6FF);                       // بلۆکی عەرەبی
+            const ALEF = C(0x627), AE = C(0x6D5), HEH = C(0x647), AYN = C(0x639), TEH_M = C(0x629);
+            // بزوێنە کوردی/عەرەبییەکان — بۆ «ع پێش بزوێن»
+            const VOW = C(0x627, 0x622, 0x623, 0x625, 0x671, 0x672, 0x673, 0x6D5, 0x6CE, 0x6D0,
+                          0x6CC, 0x64A, 0x649, 0x6CD, 0x6D2, 0x6D3,
+                          0x648, 0x6C6, 0x624, 0x6C7, 0x6C9, 0x6CB, 0x6CA, 0x6CF, 0x6C8, 0x6C5);
+            // پیتی گەورەی لاتینی بە نیشانە → هەمان پیتی بچووک (نیشانەکە دەمێنێت). ASCII بە جیا،
+            // نەک `toLowerCase` — SQL ـیش بە خشتەی ڕاشکاو دەیکات، بێ پشتبەستن بە locale
+            const UP = 'ÀÁÂÃÄÅĀÈÉÊËĒÌÍÎÏĪİÒÓÔÕÖŌÙÚÛÜŪÝŸÇČŞŠŽŁŘŔĞÑ' + C(0x1E26, 0x1E24, 0x1E8C, 0x1E58);
+            const LO = 'àáâãäåāèéêëēìíîïīiòóôõöōùúûüūýÿçčşšžłřŕğñ' + C(0x1E27, 0x1E25, 0x1E8D, 0x1E59);
+            if ([...UP].length !== [...LO].length) throw new Error('srch: UP/LO');
+            const t = {
+                up: UP, lo: LO,
+                // پیتی گەورە · بۆشاییەکان · ژمارەی کوردی/فارسی
+                pre: tbl([
+                    ...[...UP].map((ch, i) => [ch, [...LO][i]]),
+                    [C(9, 10, 11, 12, 13, 0x85, 0x1680, 0x2028, 0x2029), ' '],
+                    ...[0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map(d => [C(0x660 + d, 0x6F0 + d), String(d)])
+                ]),
+                hZwnj: HEH + C(0x200C),
+                ae: AE,
+                // ـ · حەرەکات · نیشانەی قورئان · ZWSP/ZWNJ/ZWJ/LRM/RLM · بیدی · BOM · soft hyphen · ALM
+                delRe: new RegExp('[' + C(0x640, 0x670, 0x61C, 0xAD, 0xFEFF, 0x6E7, 0x6E8) + R(0x64B, 0x65F)
+                    + R(0x6D6, 0x6DC) + R(0x6DF, 0x6E4) + R(0x6EA, 0x6ED) + R(0x200B, 0x200F)
+                    + R(0x202A, 0x202E) + R(0x2060, 0x2064) + R(0x2066, 0x2069) + ']', 'g'),
+                // k1 — هەمان پیت بۆ هەموو کیبۆردەکان
+                k1: tbl([
+                    [C(0x64A, 0x649, 0x6CE, 0x6D0, 0x6CD, 0x6D2, 0x6D3), C(0x6CC)],     // ي ى ێ … → ی
+                    [C(0x643, 0x6AB, 0x6AF, 0x6AA), C(0x6A9)],                          // ك ګ گ ڪ → ک
+                    [C(0x6D5, 0x629, 0x6BE, 0x6C0, 0x6C1, 0x6C2, 0x6C3), HEH],            // ە ة ھ ۀ … → ه
+                    [C(0x695, 0x693), C(0x631)],                                        // ڕ ړ → ر
+                    [C(0x6B5, 0x6B7), C(0x644)],                                        // ڵ ڷ → ل
+                    [C(0x6C6, 0x624, 0x6C7, 0x6C9, 0x6CB, 0x6CA, 0x6CF, 0x6C8, 0x6C5), C(0x648)], // ۆ ؤ … → و
+                    [C(0x6A4, 0x6A5), C(0x641)],                                        // ڤ → ف
+                    [C(0x67E), C(0x628)],                                               // پ → ب
+                    [C(0x686, 0x687), C(0x62C)],                                        // چ → ج
+                    [C(0x698), C(0x632)],                                               // ژ → ز
+                    [C(0x623, 0x625, 0x622, 0x671, 0x626, 0x672, 0x673), ALEF],          // أ إ آ ٱ ئ → ا
+                    [C(0x621), '']                                                      // ء
+                ]),
+                tehM: TEH_M,
+                finalHehRe: new RegExp(HEH + '(?=[^' + AR + ']|$)', 'g'),
+                aynVowRe: new RegExp(AYN + '(?=[' + VOW + '])', 'g'),
+                ayn: AYN,
+                alef: ALEF,
+                // kl — هەر دەنگێک یەک پیتی لاتینی (لاتینی و کوردی هەردووکیان)
+                kl: tbl([
+                    ['aeâàáäãåāêéèëē', 'a'], ['iîïìíīyýÿı', 'i'], ['ouwûüùúūôöòóõō', 'u'],
+                    ['bp', 'b'], ['cçčj', 'j'], ['d', 'd'], ['fv', 'f'], ['gk', 'k'],
+                    ['h' + C(0x1E27, 0x1E25), 'h'], ['lł', 'l'], ['m', 'm'], ['nñ', 'n'], ['q', 'q'],
+                    ['rřŕ' + C(0x1E59), 'r'], ['s', 's'], ['şš', 'S'], ['t', 't'], ['x', 'x'],
+                    ['ğ' + C(0x1E8D), 'G'], ['zž', 'z'],
+                    ["'`" + C(0x2018, 0x2019, 0x2BC), ''],
+                    [C(0x627, 0x622, 0x623, 0x625, 0x671, 0x672, 0x673, 0x6D5, 0x6CE, 0x6D0, 0x629), 'a'],
+                    [C(0x6CC, 0x64A, 0x649, 0x6CD, 0x6D2, 0x6D3), 'i'],
+                    [C(0x648, 0x6C6, 0x624, 0x6C7, 0x6C9, 0x6CB, 0x6CA, 0x6CF, 0x6C8, 0x6C5), 'u'],
+                    [C(0x628, 0x67E), 'b'], [C(0x62A, 0x637), 't'], [C(0x62B, 0x633, 0x635), 's'],
+                    [C(0x62C, 0x686, 0x687), 'j'], [C(0x62D, 0x647, 0x6BE, 0x6C0, 0x6C1, 0x6C2, 0x6C3), 'h'],
+                    [C(0x62E), 'x'], [C(0x62F), 'd'], [C(0x630, 0x632, 0x636, 0x638, 0x698), 'z'],
+                    [C(0x631, 0x695, 0x693), 'r'], [C(0x634), 'S'], [C(0x63A), 'G'],
+                    [C(0x641, 0x6A4, 0x6A5), 'f'], [C(0x642), 'q'], [C(0x6A9, 0x643, 0x6AF, 0x6AB, 0x6AA), 'k'],
+                    [C(0x644, 0x6B5, 0x6B7), 'l'], [C(0x645), 'm'], [C(0x646, 0x6BC), 'n'],
+                    [C(0x626, 0x621), '']                                               // ئ ء
+                ]),
+                // kv — نەبزوێنەکانی kl (بێ ژمارە) · بزوێن لە شوێنی بێ بزوێن: سەرەتا · ناو · کۆتایی
+                kvC: 'bdfhjklmnqrstxzSG',
+                kvStart: 'a?', kvMid: '[au]?', kvEnd: '[aiu]?'
+            };
+            return (srchT.t = t);
+        }
+
+        function srchTr(s, m) {
+            let o = '';
+            for (const ch of s) { const v = m.get(ch); o += (v === undefined ? ch : v); }
+            return o;
+        }
+
+        // قۆناغی هاوبەش: NFKC · پیتی بچووک · ژمارە · «ه + ZWNJ» = ە · نیشانەکان لادەبرێن · بۆشایی
+        function srchPre(s) {
+            const T = srchT();
+            s = String(s == null ? '' : s).normalize('NFKC');
+            s = s.replace(/[A-Z]/g, c => String.fromCharCode(c.charCodeAt(0) + 32));
+            s = srchTr(s, T.pre);
+            s = s.split(T.hZwnj).join(T.ae);
+            s = s.replace(T.delRe, '');
+            return s.replace(/ {2,}/g, ' ').replace(/^ +| +$/g, '');
+        }
+
+        // k1 — کیبۆرد (بەشێک لە دەق)
+        function searchK1(s) {
+            return srchTr(srchPre(s), srchT().k1);
+        }
+
+        // kl — دەنگ (سەرەتای وشە)
+        function searchKL(s) {
+            const T = srchT();
+            s = srchPre(s).split(T.tehM).join(T.ae);
+            s = s.replace(T.finalHehRe, T.ae);                 // «کاوه» = «کاوە»
+            s = s.replace(T.aynVowRe, '').split(T.ayn).join(T.alef);   // «عەلی» = «علي» = «ali»
+            s = s.replace(/sh/g, 'S').replace(/ch/g, 'j').replace(/kh/g, 'x')
+                 .replace(/gh/g, 'G').replace(/zh/g, 'z').replace(/ph/g, 'f');
+            s = srchTr(s, T.kl);
+            s = s.replace(/[^abcdefghijklmnopqrstuvwxyz0123456789SG]+/g, ' ');
+            s = s.replace(/([abcdefghijklmnopqrstuvwxyzSG])\1+/g, '$1');
+            return s.replace(/^ +| +$/g, '');
+        }
+
+        // kv — دەقی RegExp ـی بزوێنی نەنووسراو (لە kl ـی پرسیارەوە)؛ '' = ئەم پلەیە نییە
+        // (کەمتر لە ٣ نەبزوێن). وشەی تەواو: «(^| )» … «( |$)».
+        function searchQV(kl) {
+            const T = srchT(), C = T.kvC;
+            kl = String(kl == null ? '' : kl);
+            if (kl.replace(new RegExp('[^' + C + ']', 'g'), '').length < 3) return '';
+            return '(^| )' + kl.replace(/([aiu])/g, '$1?')
+                .replace(new RegExp('([' + C + '])(?=[' + C + '])', 'g'), '$1' + T.kvMid)
+                .replace(new RegExp('(^| )(?=[' + C + '])', 'g'), '$1' + T.kvStart)
+                .replace(new RegExp('([' + C + '])(?= |$)', 'g'), '$1' + T.kvEnd) + '( |$)';
+        }
+
+        // 📞 پرسیاری تەنها ژمارە: «0750 123 4567» · «+964 750…» → «0750…» (مۆبایلەکان بێ
+        //    بۆشایی تۆمار کراون). دەقەکەی خۆی (k1) هێشتا تاقی دەکرێتەوە — «10523-1» کۆدی
+        //    ئۆردەرە، نەک ژمارەی «105231»
+        function searchQD(q) {
+            const pre = srchPre(q);
+            if (!/[0-9]/.test(pre) || !/^[-0-9 +()./]+$/.test(pre)) return '';
+            let d = pre.replace(/[^0-9]/g, '');
+            if (d.indexOf('00964') === 0) d = '0' + d.slice(5);
+            else if (d.indexOf('964') === 0 && d.length >= 12) d = '0' + d.slice(3);
+            return d;
+        }
+
+        // کلیلەکانی پرسیار — یەک جار بۆ هەر گەڕانێک (هەمان یاسا بۆ لیستی ئۆردەر و ئەندامان)
+        function searchQ(q) {
+            const kl = searchKL(q), qv = searchQV(kl);
+            const letters = kl.replace(/[^abcdefghijklmnopqrstuvwxyzSG]/g, '').length;
+            return { k1: searchK1(q), kd: searchQD(q), kl: letters >= 2 ? kl : '', kv: qv ? new RegExp(qv) : null };
+        }
+
+        // کلیلەکانی دەق — `parts` = دەق یان لیستێکی خانە (هەر خانەیەک جیا، گەڕان بەسەر
+        // دوو خانەدا ناڕوات)
+        const SRCH_SEP = ' ' + String.fromCharCode(1) + ' ';
+        function searchKeys(parts) {
+            const s = Array.isArray(parts) ? parts.map(x => (x == null ? '' : String(x))).join(SRCH_SEP) : String(parts == null ? '' : parts);
+            return { k1: searchK1(s), kl: ' ' + searchKL(s) };
+        }
+
+        // کلیل بۆ هەر شتێک یەک جار — دەقەکە بگۆڕێت، کلیلەکە نوێ دەبێتەوە
+        function searchKeysFor(obj, partsOf) {
+            const c = searchKeysFor.c || (searchKeysFor.c = new WeakMap());
+            const parts = partsOf(obj);
+            const raw = Array.isArray(parts) ? parts.join(SRCH_SEP) : String(parts == null ? '' : parts);
+            let e = (obj && typeof obj === 'object') ? c.get(obj) : null;
+            if (!e || e.raw !== raw) {
+                e = { raw, keys: searchKeys(parts) };
+                if (obj && typeof obj === 'object') c.set(obj, e);
+            }
+            return e.keys;
+        }
+
+        // ١ k1 سەرەتای وشە · ٢ k1 لەناو وشە · ٣ دەنگ · ٤ بزوێنی نەنووسراو · ٠ نەگونجا
+        // (خانەکان بە SRCH_SEP جیا کراونەتەوە، بۆیە سەرەتای هەر خانەیەک بۆشایی لە پێشە)
+        function searchScore(keys, Q) {
+            if (!Q || !keys) return 0;
+            if (!Q.k1 && !Q.kd && !Q.kl && !Q.kv) return 1;
+            const w = ' ' + keys.k1;
+            for (const k of [Q.k1, Q.kd]) if (k && w.indexOf(' ' + k) >= 0) return 1;
+            for (const k of [Q.k1, Q.kd]) if (k && keys.k1.indexOf(k) >= 0) return 2;
+            if (Q.kl && keys.kl.indexOf(' ' + Q.kl) >= 0) return 3;
+            if (Q.kv && Q.kv.test(keys.kl)) return 4;
+            return 0;
+        }
+
+        // دەقێک لەگەڵ پرسیارێک — بۆ شوێنە بچووکەکان (مێژووی گەڕان، شار)
+        function searchHit(text, q) {
+            return searchScore(searchKeys(text), typeof q === 'string' ? searchQ(q) : q);
+        }
+
+        // لیستێک: تەنها ئەوانەی دەگونجێن، باشترین یەکەم (ڕیزبەندی ناوخۆیی وەک خۆی)
+        function searchRank(list, q, partsOf) {
+            const Q = typeof q === 'string' ? searchQ(q) : q;
+            const out = [];
+            (list || []).forEach((it, i) => {
+                const sc = searchScore(searchKeysFor(it, partsOf), Q);
+                if (sc) out.push([sc, i, it]);
+            });
+            out.sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+            return out.map(x => x[2]);
+        }
+        // ===== SEARCH-KEYS: کۆتایی =====
 
         function toEnglishDigits(str) {
             if (str === null || str === undefined) return '';
@@ -37996,10 +38220,8 @@
                     suggBox.innerHTML = '';
                     if (!val) { suggBox.style.display = 'none'; return; }
 
-                    let matches = dataArray.filter(item =>
-                        item.name.toLowerCase().includes(val) ||
-                        item.code.toLowerCase().includes(val)
-                    );
+                    // 🔎 کوردی · عەرەبی · لاتینی (db/139) — باشترین گونجان یەکەم
+                    let matches = searchRank(dataArray, val, item => [item.name, item.code]);
 
                     if (matches.length === 0) {
                         suggBox.innerHTML = '<div style="padding:15px; text-align:center; color:#94a3b8; font-size:14px;">هیچ ئەنجامێک نەدۆزرایەوە</div>';
@@ -39017,7 +39239,8 @@
 
         function filterCities() {
             let val = document.getElementById('city-input').value.trim();
-            let filtered = mainCitiesList.filter(c => c.includes(val));
+            // 🔎 «هەولير» · «hawler» · «هه‌ولێر» → هەولێر (db/139)
+            let filtered = val ? searchRank(mainCitiesList, val, c => [c]) : mainCitiesList.slice();
             renderCityDropdown(filtered);
         }
 
@@ -40230,9 +40453,20 @@
             }
         }
 
+        // 🔎 ئەندامێک لە لیستەکانی ئەدمین (ناو + کۆد) — ١ باشترین … ٤ نەبزوێن، ٠ نەگونجا
+        function memberSearchTier(u, Q) {
+            return Q ? searchScore(searchKeysFor(u, x => [x.name, x.code]), Q) : 1;
+        }
+        // ڕیزبەندیی لیستەکە وەک خۆی، بەڵام لە کاتی گەڕاندا گونجانی باشتر یەکەم
+        function memberSearchSort(cmp, Q) {
+            if (!Q) return cmp;
+            return (a, b) => (memberSearchTier(a, Q) - memberSearchTier(b, Q)) || cmp(a, b);
+        }
+
         function filterWalletUsers() {
             let roleFilter = document.querySelector('input[name="wallet_role_filter"]:checked').value;
             let searchVal = document.getElementById('search-wallet-input').value.trim().toLowerCase();
+            let wQ = searchVal ? searchQ(searchVal) : null;
             let sortVal = sortValOf('wallet');
             let listContainer = document.getElementById('wallet-users-list');
             let editSection = document.getElementById('wallet-edit-section');
@@ -40247,16 +40481,11 @@
                 // مەودا + سنووری پلەی «بینینی جزدان» — ئەوەی نایبینێت، لە لیستەکەدا نییە
                 if (!canViewWallet(u.code)) return false;
                 if (roleFilter !== "all" && u.data.role !== roleFilter) return false;
-                if (searchVal) {
-                    if (!u.name.toLowerCase().includes(searchVal) && !u.code.toLowerCase().includes(searchVal)) {
-                        return false;
-                    }
-                }
-                return true;
+                return !searchVal || memberSearchTier(u, wQ) > 0;
             });
 
-            // 💫 ڕیزبەندکردنی جزدانەکان بەپێی هەڵبژاردنی بەکارهێنەر
-            filteredUsers.sort(walletComparator(sortVal));
+            // 💫 ڕیزبەندکردنی جزدانەکان بەپێی هەڵبژاردنی بەکارهێنەر — لە کاتی گەڕاندا باشترین گونجان یەکەم
+            filteredUsers.sort(memberSearchSort(walletComparator(sortVal), wQ));
             markSortActive('wallet');
 
             if (filteredUsers.length === 0) {
@@ -41302,6 +41531,93 @@
             return a;
         }
 
+        // ➖ ➕ هەر پەنجەیەک 1,000 د.ع — خاوەن (٢٠٢٦-١٠-١٧): «لە تەنیشت بڕە پارەکەت دوو دوگمەی کەم و کۆ…
+        //    کاتێک کەمەکە لێدەدەین هەزار کەم بێت و… کۆیەکە… هەزار زیاد بێت». ناردن · مووچە · پاداشت · سزا.
+        // بڕی دوای − / + — یان `null` واتا ڕەتکرایەوە (لەرزین): لە سفر کەمتر و لە `max` زیاتر نابێت؛
+        // ئەگەر +1,000 لە `max` تێدەپەڕێت، ڕێک لەسەر `max` دەوەستێت (نەک ڕەت بکرێتەوە)
+        const MONEY_STEP = 1000;
+        function moneyStepNext(a, dir, max) {
+            const cur = Math.max(0, Math.floor(Number(a) || 0));
+            const cap = Math.max(0, Math.floor(Number(max) || 0));
+            if (dir < 0) {
+                if (cur <= 0) return null;
+                const n = Math.max(0, cur - MONEY_STEP);
+                return n ? String(n) : '';
+            }
+            if (cur >= cap) return null;
+            return String(Math.min(cap, cur + MONEY_STEP));
+        }
+
+        // دوو دوگمەکە لە تەنیشت بڕەکە. «+» یەکەم لە DOM ـدا = لای ڕاست لە RTL، وەک `.qty-input-group`ـی
+        // فۆڕمی ئۆردەر و ڕێژەی قازانج (`adjustProfitRate(1000)`). `fn` = فەنکشنی هەنگاوی ئەو شیتە.
+        function moneyStepRowHtml(fn, amtHtml) {
+            const b = (dir) => `<button type="button" class="xfer-step ${dir > 0 ? 'is-plus' : 'is-minus'}" data-dir="${dir}"
+                        aria-label="${dir > 0 ? 'زیادکردنی 1,000 د.ع' : 'کەمکردنەوەی 1,000 د.ع'}"
+                        onpointerdown="moneyStepPress(event, '${fn}', ${dir})" onpointerup="moneyStepUp(this)"
+                        onpointercancel="moneyStepStop()" onlostpointercapture="moneyStepStop()"
+                        onclick="moneyStepClick(event, '${fn}', ${dir})" oncontextmenu="return false">${dir > 0 ? RW_PLUS_SVG : RW_MINUS_SVG}</button>`;
+            return `<div class="xfer-amt-row">${b(1)}${amtHtml}${b(-1)}</div>`;
+        }
+
+        // ⏱️ ڕاگرتن = بەردەوام: 420ms دواتر، پاشان هەر 110ms (دوای 10 جار 60ms)؛ لە سنووردا دەوەستێت.
+        // ⚠️ کلیکی دوای پەنجەدانانێک (هەمان دوگمە، ≤ 600ms لە `pointerup`ـەوە) دەخورێت — ئەگەرنا هەنگاوێکی
+        //    زیادە؛ کلیکی کیبۆرد (Enter / Space) هیچ pointer ـێکی نییە، بۆیە یەک هەنگاو دەکات. ئاڵاکە لەسەر
+        //    خودی دوگمەکەیە و بەسەردەچێت (یاسای «کلیکی دواتر بخۆ»).
+        let _mstep = null;
+        function moneyStepPress(e, fn, dir) {
+            if (e.button != null && e.button !== 0) return;
+            const btn = e.currentTarget, f = window[fn];
+            if (!btn || typeof f !== 'function') return;
+            e.preventDefault();
+            moneyStepStop();
+            btn._stepUp = 0;
+            try { btn.setPointerCapture(e.pointerId); } catch (x) { }
+            if (f(dir) === false) return;
+            let n = 0;
+            const st = { btn, t: 0 };
+            const tick = () => {
+                if (_mstep !== st || !btn.isConnected) { moneyStepStop(); return; }
+                if (f(dir) === false) { moneyStepStop(); return; }
+                n++;
+                st.t = setTimeout(tick, n > 10 ? 60 : 110);
+            };
+            st.t = setTimeout(tick, 420);
+            _mstep = st;
+        }
+        function moneyStepUp(btn) { if (btn) btn._stepUp = Date.now(); moneyStepStop(); }
+        function moneyStepStop() { if (_mstep) { clearTimeout(_mstep.t); _mstep = null; } }
+        function moneyStepClick(e, fn, dir) {
+            const btn = e.currentTarget;
+            if (btn && btn._stepUp && Date.now() - btn._stepUp < 600) { btn._stepUp = 0; return; }
+            const f = window[fn];
+            if (typeof f === 'function') f(dir);
+        }
+
+        // دوگمەی «+» لە سنووردا و «−» لە سفردا کاڵ دەبنەوە (هێشتا پەنجە وەردەگرن — دەلەرزێت)
+        function moneyStepSync(box, cur, max) {
+            const row = box && box.closest('.xfer-amt-row');
+            if (!row) return;
+            const v = Math.floor(Number(cur) || 0);
+            const plus = row.querySelector('.xfer-step.is-plus'), minus = row.querySelector('.xfer-step.is-minus');
+            if (plus) plus.classList.toggle('is-off', v >= max);
+            if (minus) minus.classList.toggle('is-off', v <= 0);
+        }
+
+        // 🔠 ژمارەی درێژ بچووک دەبێتەوە تا لە نێوان دوو دوگمەکەدا جێی ببێتەوە — نەک بڕدرێت
+        function moneyFitAmt(box) {
+            if (!box) return;
+            box.style.fontSize = '';
+            const w = box.clientWidth;
+            if (!w || box.scrollWidth <= w) return;
+            const base = parseFloat(getComputedStyle(box).fontSize) || 40;
+            let fs = Math.max(20, Math.floor(base * w / box.scrollWidth));
+            box.style.fontSize = fs + 'px';
+            for (let i = 0; i < 6 && box.scrollWidth > box.clientWidth && fs > 20; i++) {
+                fs -= 2;
+                box.style.fontSize = fs + 'px';
+            }
+        }
+
         // دوگمەی «ناردنی پارە» لە جزدانەکەم — بەپێی `send_money`
         function xferSyncActions() {
             const box = document.getElementById('wx-actions');
@@ -41612,7 +41928,7 @@
                         <button type="button" class="xfer-change" onclick="xferGo('pick')">گۆڕین</button>
                     </div>
                     <div class="xfer-amt-wrap">
-                        <div class="xfer-amt is-empty" id="xfer-amt" aria-live="polite"><span id="xfer-amt-n" dir="ltr">0</span><span class="cur">د.ع</span></div>
+                        ${moneyStepRowHtml('xferStep', `<div class="xfer-amt is-empty" id="xfer-amt" aria-live="polite"><span id="xfer-amt-n" dir="ltr">0</span><span class="cur">د.ع</span></div>`)}
                         <div class="xfer-hint" id="xfer-hint"></div>
                     </div>
                     <div id="xfer-amt-ready"></div>
@@ -41631,6 +41947,8 @@
             const rd = document.getElementById('xfer-amt-ready');
             if (n) n.textContent = s.amt ? xferMoney(s.amt) : '0';
             if (box) { box.classList.toggle('is-empty', !s.amt); box.classList.toggle('is-bad', chk.bad); }
+            moneyFitAmt(box);
+            moneyStepSync(box, s.amt, xferStepMax());
             if (hint) { hint.textContent = chk.msg; hint.classList.toggle('is-bad', chk.bad); hint.classList.toggle('is-ok', chk.ok); }
             if (btn) btn.disabled = !chk.ok;
             if (rd) { const html = xferAmtReadyHtml(); if (rd._last !== html) { rd._last = html; rd.innerHTML = html; } }
@@ -41650,6 +41968,22 @@
             s.amt = a;
             xferPatchAmount();
             xferHaptic('select');
+        }
+
+        // ➖ ➕ — سنوور: پارەی ئامادەی جزدانەکەت (ئەگەر زانراوە)، ئەگەرنا سنووری گشتی
+        function xferStepMax() {
+            const ready = xferReady();
+            return ready == null ? XFER_MAX : Math.min(ready, XFER_MAX);
+        }
+        function xferStep(dir) {
+            const s = xferState;
+            if (!s || s.step !== 'amount') return false;
+            const a = moneyStepNext(s.amt, dir, xferStepMax());
+            if (a === null) { xferShake(); return false; }
+            s.amt = a;
+            xferPatchAmount();
+            xferHaptic('select');
+            return true;
         }
 
         function xferChip(el) {
@@ -41681,6 +42015,8 @@
             if (/^[0-9]$/.test(d)) { e.preventDefault(); xferKey(d); }
             else if (e.key === 'Backspace') { e.preventDefault(); xferKey('del'); }
             else if (e.key === 'Enter') { e.preventDefault(); xferGo('review'); }
+            else if (e.key === '+' || e.key === 'ArrowUp') { e.preventDefault(); xferStep(1); }
+            else if (e.key === '-' || e.key === 'ArrowDown') { e.preventDefault(); xferStep(-1); }
         });
 
         // ---------------- هەنگاوی ٣: پێداچوونەوە + ڕاکێشان ----------------
@@ -42261,7 +42597,7 @@
                         <span class="xfer-to-txt"><small>${m.who}</small><b><bdi>${histEsc(p.name)}</bdi></b><small>${p.role ? histEsc(p.role) + ' · ' : ''}<bdi dir="ltr">${histEsc(p.code)}</bdi></small></span>
                     </div>
                     <div class="xfer-amt-wrap">
-                        <div class="xfer-amt is-empty" id="sal-amt" aria-live="polite"><span id="sal-amt-n" dir="ltr">0</span><span class="cur">د.ع</span></div>
+                        ${moneyStepRowHtml('salStep', `<div class="xfer-amt is-empty" id="sal-amt" aria-live="polite"><span id="sal-amt-n" dir="ltr">0</span><span class="cur">د.ع</span></div>`)}
                         <div class="xfer-hint" id="sal-hint"></div>
                     </div>
                     ${middle}
@@ -42280,6 +42616,8 @@
             const btn = document.getElementById('sal-next');
             if (n) n.textContent = xferMoney(total);
             if (box) { box.classList.toggle('is-empty', total < 1); box.classList.toggle('is-bad', chk.bad); }
+            moneyFitAmt(box);
+            moneyStepSync(box, salAmt(s.src), salStepMax());
             if (hint) {
                 hint.textContent = chk.msg;
                 hint.classList.toggle('is-bad', chk.bad);
@@ -42317,6 +42655,23 @@
             s.amt[s.src] = a;
             salPatchAmount();
             xferHaptic('select');
+        }
+
+        // ➖ ➕ — گیرفانی چالاک. مووچە: تا ئامادەی ئەو گیرفانە · پاداشت / بڕین: تا سنووری گشتی
+        //    (بڕینێک کە لە ئامادە زیاترە دەبێتە قەرز — ئاگادار دەکرێتەوە، ڕاناگیرێت، وەک تەختەی ژمارە)
+        function salStepMax() {
+            const s = salState;
+            return (s && s.mode === 'salary' && s.ready) ? Math.min(s.ready[s.src], XFER_MAX) : XFER_MAX;
+        }
+        function salStep(dir) {
+            const s = salState;
+            if (!s || s.step !== 'amount') return false;
+            const a = moneyStepNext(s.amt[s.src], dir, salStepMax());
+            if (a === null) { salShake(s.mode === 'salary' ? 'sal-pk-' + s.src : 'sal-amt'); return false; }
+            s.amt[s.src] = a;
+            salPatchAmount();
+            xferHaptic('select');
+            return true;
         }
 
         // ⭐ «هەمووی» گیرفانی چالاک پڕ دەکات، پاشان دەچێتە سەر ئەوی تر ئەگەر
@@ -42364,6 +42719,8 @@
             if (/^[0-9]$/.test(d)) { e.preventDefault(); salKey(d); }
             else if (e.key === 'Backspace') { e.preventDefault(); salKey('del'); }
             else if (e.key === 'Enter') { e.preventDefault(); salGo('review'); }
+            else if (e.key === '+' || e.key === 'ArrowUp') { e.preventDefault(); salStep(1); }
+            else if (e.key === '-' || e.key === 'ArrowDown') { e.preventDefault(); salStep(-1); }
         });
 
         // ---------------- هەنگاوی ٢: پێداچوونەوە + هۆکار + ڕاکێشان ----------------
@@ -42907,6 +43264,7 @@
         function filterProfitUsers() {
             let roleFilter = document.querySelector('input[name="profit_role_filter"]:checked').value;
             let searchVal = document.getElementById('search-profit-input').value.trim().toLowerCase();
+            let pQ = searchVal ? searchQ(searchVal) : null;
             let sortVal = sortValOf('profit');
             let listContainer = document.getElementById('profit-users-list');
             let editSection = document.getElementById('profit-edit-section');
@@ -42921,16 +43279,11 @@
                 // ⭐ ڕێژەی قازانجی خۆم لێرە نییە
                 if (isSelfAdminLocked(u.code)) return false;
                 if (roleFilter !== "all" && u.data.role !== roleFilter) return false;
-                if (searchVal) {
-                    if (!u.name.toLowerCase().includes(searchVal) && !u.code.toLowerCase().includes(searchVal)) {
-                        return false;
-                    }
-                }
-                return true;
+                return !searchVal || memberSearchTier(u, pQ) > 0;
             });
 
-            // ڕیزبەندی بەپێی هەڵبژاردنی بەکارهێنەر
-            filteredUsers.sort(profitComparator(sortVal));
+            // ڕیزبەندی بەپێی هەڵبژاردنی بەکارهێنەر — لە کاتی گەڕاندا باشترین گونجان یەکەم
+            filteredUsers.sort(memberSearchSort(profitComparator(sortVal), pQ));
             markSortActive('profit');
 
             // دروستکردنی دیزاینی لیستەکە
@@ -43018,6 +43371,7 @@
             let roleFilter = roleEl ? roleEl.value : "";
             let searchEl = document.getElementById('edit-list-search');
             let searchVal = searchEl ? searchEl.value.trim().toLowerCase() : "";
+            let eQ = searchVal ? searchQ(searchVal) : null;
             let sortVal = sortValOf('edit');
             let listContainer = document.getElementById('edit-users-list');
             if (!listContainer) return;
@@ -43030,11 +43384,11 @@
                 if (!canAdminKey(u.code, u.data.role)) return false;
                 let r = normalizeRole(u.data.role);
                 if (roleFilter && roleFilter !== "all" && r !== roleFilter) return false;
-                if (searchVal && !u.name.toLowerCase().includes(searchVal) && !u.code.toLowerCase().includes(searchVal)) return false;
+                if (searchVal && !(memberSearchTier(u, eQ) > 0)) return false;
                 return true;
             });
 
-            filtered.sort(editComparator(sortVal));
+            filtered.sort(memberSearchSort(editComparator(sortVal), eQ));
             markSortActive('edit');
 
             if (filtered.length === 0) {
@@ -43296,7 +43650,7 @@
             // بانەری سوور هەمان زانیاری بە ڕوونتر دەڵێت و لیستەکە
             // دەیشارێتەوە
             const matches = exact ? [] : (l
-                ? dbCitiesList.filter(c => looseCityName(c.name).includes(l))
+                ? searchRank(dbCitiesList, raw, c => [c.name])   // 🔎 کوردی · عەرەبی · لاتینی (db/139)
                 : dbCitiesList.slice());
             if (!matches.length) {
                 box.style.display = 'none';
