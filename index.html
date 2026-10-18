@@ -185,7 +185,7 @@
     </div>
 
     <!-- ?v= — config.jsـی نوێ لەگەڵ HTMLـی نوێ؛ هەر کاتێک config.js بە شێوەیەک گۆڕا کە HTMLـی کۆن لەگەڵی کار نەکات، ژمارەکە بگۆڕە (cacheـی وێبگەڕ ١٠ خولەکە) -->
-    <script src="config.js?v=20261009a"></script>
+    <script src="config.js?v=20261018a"></script>
     <script>
         async function ensureSupabaseLoaded() {
             try {
@@ -286,6 +286,8 @@
         function avatarHtml(avatarUrl, name, size) {
             size = size || 40;
             let clean = avatarUrl ? String(avatarUrl).trim() : "";
+            // ⚠️ هەمان گۆڕینی `avatarHtml`ـی app.html: وێنەی پێش گواستنەوە لە Supabase نەماوە (400)
+            if (typeof normalizeMediaUrl === 'function') clean = normalizeMediaUrl(clean);
             if (clean && clean !== "null" && clean !== "undefined") {
                 return `<div style="width:${size}px; height:${size}px; border-radius:50%; overflow:hidden; flex-shrink:0; background:#e2e8f0;"><img src="${clean}" loading="lazy" style="width:100%; height:100%; object-fit:cover; display:block;"></div>`;
             }

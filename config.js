@@ -425,14 +425,19 @@ var CF_R2_PUBLIC_URL = "https://pub-5d1996bbd70b4d5e99499860829c4b46.r2.dev";
 //    2026-09-19دا گواسترانەوە. ئەوەی دوای ئەوە بە پاشەکشەی
 //    `uploadImage` → `uploadToSupabase` ئەپلۆد کراوە **تەنها** لە
 //    Supabaseـدایە: گۆڕینی بۆ R2 = 404 = وێنەی شکاو، بێ هیچ هەڵەیەک.
-//    پێوانە 2026-10-09: 43 فایل لە Supabase، یەکەمیان 1789938287750
-//    (2026-09-20T21:04Z) — R2 404 · Supabase 200. ناوی فایل کاتەکەی
-//    تێدایە (`makeImagePath`: ym/code/<Date.now()>_…)، بۆیە بڕیارەکە
-//    لە خودی ناونیشانەکەوە دەردەچێت.
+//    پێوانە 2026-10-09: 43 فایل لە Supabase — R2 404 · Supabase 200. ناوی
+//    فایل کاتەکەی تێدایە (`makeImagePath`: ym/code/<Date.now()>_…)، بۆیە
+//    بڕیارەکە لە خودی ناونیشانەکەوە دەردەچێت.
+//    ⚠️ سنوورەکە **کەمترین کاتی ناوەکانە**، نەک ناوی یەکەم فایل بە
+//    `created_at`: دوو وێنەی هەمان ئۆردەر (2026-09-20 21:04:47) بە هاوکاتی
+//    نێردران و ئەوەی بە …613 ناونرابوو 0.24 چرکە دواتر گەیشت، بۆیە
+//    1789938287750 هەڵبژێردرا و ئەو وێنەیە بۆ R2 دەنێردرا (404). پێوانە
+//    2026-10-18: کەمترینی 95 فایلی `storage.objects` = 1789938287613.
 //    · Only files migrated on 2026-09-19 are rewritten to R2; later
-//      Supabase-fallback uploads exist only in Supabase.
+//      Supabase-fallback uploads exist only in Supabase. The cut-off is the
+//      lowest timestamp in the remaining file NAMES, not the first by upload time.
 var SB_IMG_PUBLIC_PREFIX = "https://kxztaywhqpekjmjoynin.supabase.co/storage/v1/object/public/order-images/";
-var SB_ONLY_SINCE_MS = 1789938287750;
+var SB_ONLY_SINCE_MS = 1789938287613;
 
 function normalizeMediaUrl(url) {
     if (!url || typeof url !== 'string') return url;
@@ -472,8 +477,13 @@ try {
     localStorage.removeItem('myAppUser');
 }
 
+// ⚠️ ئەکاونتە پاشەکەوتکراوەکان لە `savedAccounts`ـدان (`getSavedAccounts` لە هەردوو پەڕە) — ئەم
+//    بلۆکە پێشتر `accountList`ـی دەخوێندەوە، کلیلێک کە هیچ شوێنێک نایخوێنێتەوە و نایدەنووسێت، بۆیە
+//    وێنەی ئەو ئەکاونتانەی پێش گواستنەوەی 2026-09-19 پاشەکەوت کرابوون هەر بەستەری Supabase ـیان مایەوە
+//    (فایلەکان لەوێ سڕاونەتەوە → 400 لە پەڕەی چوونەژوورەوە و لە پێشبارکردنی هەر کردنەوەیەک).
+//    · Saved accounts live under `savedAccounts`; the old block normalised a dead key.
 try {
-    var accStr = localStorage.getItem('accountList');
+    var accStr = localStorage.getItem('savedAccounts');
     if (accStr && accStr !== 'undefined') {
         var accList = JSON.parse(accStr);
         if (Array.isArray(accList)) {
@@ -485,7 +495,7 @@ try {
                 }
             });
             if (accsChanged) {
-                localStorage.setItem('accountList', JSON.stringify(accList));
+                localStorage.setItem('savedAccounts', JSON.stringify(accList));
             }
         }
     }
