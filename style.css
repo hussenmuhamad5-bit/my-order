@@ -20836,14 +20836,26 @@ body.sx-wide {
       **لەناو** کارتەکەدا سکڕۆڵ دەبێت، نەک کارتەکە درێژ بکات. */
 /* ⭐ `--mc-r` = قەوسی گۆشەکان — یەک ژمارە بۆ کارت، ئێفێکت، جەستە و خوارەوە؛ لەگەڵ
    چوارچێوەی «دەرەوە» بچووک دەبێتەوە (بڕوانە بەشی چوارچێوە). */
+/* ⭐ **هەمیشە ڕێک ٤٥٠:٨٨٠** (خاوەن ٢٠٢٦-١٠-١٨، سێ سکرینشۆت: «پانترە و درێژی کەمترە»). پێشتر
+   بەرزییەکە بە `--modal-h` دەبڕدرا و پانییەکە وەک خۆی دەمایەوە، بۆیە لە شاشەی کورت، فوڵسکرین
+   و بە چوارچێوەوە کارتەکە پانتر لە ئێفێکتەکە دەبوو: ٣٥٣×٥٧١ (0.619) لە تەلەفۆنی خاوەن بە
+   مۆمەکانەوە، و ئێفێکتی `contain` ٣٠.٦px بۆشایی لە هەر لایەک دەهێشت (لێوارەکانی چینەکە لەسەر
+   کەڤەرەکە دیار بوون). ئێستا ئەگەر بەرزی بەس نەبوو **پانی** کەم دەبێتەوە (`--mcw`)، و بەرزی هەمیشە
+   پانی × ٨٨٠/٤٥٠ ـە — ئێفێکت ڕێک کارتەکە پڕ دەکاتەوە، نە بۆشایی نە بڕین.
+   ⚠️ `--mc-avail` = بەرزیی بەردەست؛ لە کۆمپیوتەر `max-height`ـی مۆداڵ ٨٦vh ـە، بۆیە لەوێ کەمترە. */
 .modal-content.is-mcard {
   --mc-r: 22px;
-  width: 92%;
-  max-width: 380px;
-  height: min(var(--modal-h), calc(min(92vw, 380px) * 880 / 450));
   padding: 0;
   overflow: hidden;
   border-radius: var(--mc-r);
+  --mc-avail: var(--modal-h);
+  --mcw: min(92vw, 380px, calc(var(--mc-avail) * 450 / 880));
+  width: var(--mcw);
+  max-width: none;
+  height: calc(var(--mcw) * 880 / 450);
+}
+@media (min-width: 720px) {
+  .modal-content.is-mcard { --mc-avail: min(86vh, var(--modal-h)); }
 }
 
 /* 🛍️ ئێفێکتی پڕۆفایل — لەسەر **تەواوی کارتەکە**، نەک تەنها
@@ -21172,13 +21184,16 @@ body.sx-wide {
    ⭐ خاوەن: «با زۆر گەورە نەبێ… لاواز». پێشتر چوار خانەی `sxTile`ی ٦٠px (٢×٢) +
    سندوقی ئاست + شریتی «ئەم مانگە» ≈ ٢٢٠px؛ ئێستا یەک ڕیزی خانە (٣ یان ٤) و شریتی
    ئاست لە ژێریان، لەناو یەک پانێڵدا ≈ ٩٠px. «ئەم مانگە» ڕیزێکە لە خوارەوە.
-   ⚠️ `minmax(0, 1fr)` — خانەیەکی گرید بە سفر بچووک نابێتەوە ([[landmines]] ١٣٧). */
+   ⚠️ `minmax(0, 1fr)` — خانەیەکی گرید بە سفر بچووک نابێتەوە ([[landmines]] ١٣٧).
+   ⭐ کارتی شێوە-دیسکۆرد (٢٠٢٦-١٠-١٨) لە شاشەی کورتدا تەسکە (٢١٤–٢٩٠px لەبری ٢٩٤–٣٨٠)،
+   بۆیە ژمارەکان بە پانیی **ئەم پانێڵە** دەپێورێن (`cqi`)، نەک بە شاشەکە ([[landmines]] ٣٠٨). */
 .mcard-sum {
   margin: 12px 14px 0;
   border: 1px solid #edf1f6;
   border-radius: 14px;
   background: #fafbfd;
   overflow: hidden;
+  container-type: inline-size;
 }
 
 .mcard-cells {
@@ -21198,6 +21213,7 @@ body.sx-wide {
   gap: 2px;
   min-width: 0;
   padding: 9px 4px 8px;
+  padding-inline: clamp(2px, 1.25cqi, 4px);
   text-align: center;
 }
 
@@ -21205,14 +21221,23 @@ body.sx-wide {
   border-inline-start: 1px solid #edf1f6;
 }
 
+/* ⭐ ١٤px تا خانەکە جێی نەبێت، پاشان بەقەد خانەکە (کەمترین ١٠px): «4.8M د.ع» = ٤.٠ × قەبارە،
+   «-965K د.ع» = ٤.٤، بۆیە `(خانە − پەدینگ − هێڵ) ÷ ٤.٤`. ⚠️ ئەگەر ١٠pxـیش جێی نەبێت، «د.ع»
+   دەچێتە دێڕی دووەم — هەرگیز نابڕدرێت. ⚠️ وێبگەڕی کۆن (`cqi` نازانێت) دێڕی دووەم فڕێدەدات و
+   ١٤px دەمێنێتەوە. */
 .mcard-c > b {
   display: block;
   max-width: 100%;
   font-size: 14px;
+  font-size: clamp(10px, calc((33.333cqi - 2 * clamp(2px, 1.25cqi, 4px) - 1px) / 4.4), 14px);
   font-weight: 800;
   line-height: 1.25;
   color: var(--text-main);
-  white-space: nowrap;
+  white-space: normal;
+}
+
+.mcard-sum.is-4 .mcard-c > b {
+  font-size: clamp(10px, calc((25cqi - 2 * clamp(2px, 1.25cqi, 4px) - 1px) / 4.4), 14px);
 }
 
 .mcard-c > span {
@@ -21616,6 +21641,25 @@ body.sx-wide {
 .rpf-preview .mcard-id {
   padding-bottom: 14px;
 }
+
+/* ✨ **بە ئێفێکتەوە = کارتی دیسکۆرد** (٢٠٢٦-١٠-١٨، `rpFxId` → `is-fx`): هەمان شێوەی کارتی ڕاستەقینە
+   و ستۆدیۆ (٤٥٠:٨٨٠)، ئێفێکت لەسەر هەموو کارتەکە و بەشی خوارەوە (`cos-prev-fill`) شوێنی ئێفێکتەکەیە.
+   پێشتر ئێفێکتەکە لەناو کەڤەرەکەدا بوو (٣٠٦×١٠٤) و ٥٣px پان دەنەخشێنرا — لە پشتی وێنەکەدا ون بوو.
+   ⚠️ پانی `--rpw`ـە (نەک `max-height`): مارجنی چوارچێوە (`.has-frame.is-fx`) هەمان ژمارە بەکاردێنێت،
+   و `100%` لە هەردووکیاندا پانیی باوانە — بۆیە بۆشاییەکە ڕێک بەقەد بەشە دەرچووەکەی چوارچێوەیە. */
+.rpf-preview.is-fx {
+  --rpw: min(100%, calc(62vh * 450 / 880));
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: var(--rpw);
+  aspect-ratio: 450 / 880;
+  margin-inline: auto;
+  /* ⚠️ بۆردەری ١px ناوەوەی بچووک دەکرد (ئێفێکت ١–٢px بۆشایی لە لێوارەکان) — بازنەیەکی دەرەوە لە جیاتی */
+  border: 0;
+  box-shadow: 0 0 0 1px #e9edf3;
+}
+.rpf-preview.is-fx > .cos-fx { z-index: 5; border-radius: inherit; }
 
 .rpf-sec {
   display: flex;
@@ -29341,14 +29385,16 @@ button.fund-row { cursor: pointer; }
 /* ---- کارتی پڕۆفایل ----
    ⚠️ `overflow: visible` تەنها لەگەڵ چوارچێوە: لە جیاتی بڕینی کارتەکە، جەستەی
    سکڕۆڵ و ئێفێکت خۆیان قەوسدار دەبڕن (ئێفێکت `overflow: hidden` + قەوسی خۆی
-   هەیە). مارجنەکان بە پانیی کارتن (`min(92vw, 380px)` — هەمان پانیی ڕێسای
-   بەرزی)، و ناوەڕاستکردنی فلێکسی پەردەکە **کارت + مارجن** ناوەڕاست دەکات. */
+   هەیە). مارجنەکان بە پانیی کارتن (`--mcw` — هەمان پانیی ڕێسای بەرزی)، و
+   ناوەڕاستکردنی فلێکسی پەردەکە **کارت + مارجن** ناوەڕاست دەکات. */
+/* ⭐ کارت + ئەوەی چوارچێوە لە سەرەوە و خوارەوە دەردەچێت = بەرزیی بەردەست، و کارتەکە هەر ٤٥٠:٨٨٠ ـە
+   (٢٠٢٦-١٠-١٨): پانی = بەردەست ÷ (٨٨٠/٤٥٠ + frt + frb) — `--frt`/`--frb` بەشێکن لە پانی
+   (`cosFrameDress`). بەرزییەکە لە ڕێسای سەرەوەیە (پانی × ٨٨٠/٤٥٠). */
 .modal-content.is-mcard.has-frame {
+  --mcw: min(92vw, 380px, calc(var(--mc-avail) / (880 / 450 + var(--frt, 0) + var(--frb, 0))));
   overflow: visible;
-  margin-top: calc(min(92vw, 380px) * var(--frt, 0));
-  margin-bottom: calc(min(92vw, 380px) * var(--frb, 0));
-  height: min(calc(var(--modal-h) - min(92vw, 380px) * (var(--frt, 0) + var(--frb, 0))),
-              calc(min(92vw, 380px) * 880 / 450));
+  margin-top: calc(var(--mcw) * var(--frt, 0));
+  margin-bottom: calc(var(--mcw) * var(--frb, 0));
 }
 /* ⭐ دوگمەی خوارەوە (`#mcard-foot`) لە سەرووی ئەو بەشەی چوارچێوە دەوەستێت کە دەچێتە
    ناو کارتەکە — `--frame-pad` لە ئەلفای وێنەکانەوە دەپێورێت (`mcardFramePad`، ٢٠٢٦-١٠-١٣)؛
@@ -29407,6 +29453,11 @@ button.fund-row { cursor: pointer; }
   overflow: visible;
   margin-top: calc(14px + 100% * var(--frt, 0));
   margin-bottom: calc(14px + 100% * var(--frb, 0));
+}
+/* کارتی دیسکۆرد-شێوە باریکترە لە باوانەکەی — بۆشایی چوارچێوە بە پانیی خۆی (`--rpw`) */
+.rpf-preview.has-frame.is-fx {
+  margin-top: calc(14px + var(--rpw) * var(--frt, 0));
+  margin-bottom: calc(14px + var(--rpw) * var(--frb, 0));
 }
 .rpf-preview.has-frame .mcard-stick { position: relative; }
 .rpf-preview.has-frame .mcard-bg,
@@ -30654,6 +30705,10 @@ body.boot-skel #sbar-returned {
 .mk-sheet-art.is-legend { --mk-t1: #fffbeb; --mk-t2: #fcd34d; }
 .mk-sheet-art.is-frame { --spf-hh: 230; }
 .mk-sheet-art .shop-prev-plate { font-size: 17px; }
+/* 🏷️ نەیمپاڵێت لە شیتدا = ڕیزێکی تابلۆی پلەکان (`shopPlateRowHtml`، ٢٠٢٦-١٠-١٨) — هەمان `sx-rrow
+   has-plate`، بۆیە هەمان بەرزی، قەوس، پەردە و ڕەنگی نووسینی تابلۆکەیە */
+.mk-plate-demo { width: 100%; padding: 0 14px; }
+.mk-plate-demo > .sx-rrow { box-shadow: 0 12px 24px -16px rgba(15, 23, 42, .6); }
 .mk-sheet-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
 .mk-tag {
   display: inline-flex;

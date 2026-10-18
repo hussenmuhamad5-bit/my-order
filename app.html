@@ -17688,8 +17688,30 @@
         //    (پێشاندان → وەستاو)؛ CSSـی دانە ئامادەکان (بێ وێنە) خۆیان دەجوڵێن.
         function shopPrevHtml(it, mode) {
             if (it.kind === 'effect') return shopFxMiniHtml(it, mode);
+            // 🏷️ نەیمپاڵێت لە شیتی دانەدا = ڕیزێکی تابلۆی پلەکان بە ناو و وێنەی خۆت (٢٠٢٦-١٠-١٨) — ئەوە ئەو
+            //    شوێنەیە کە دەردەکەوێت (لەسەر کارتی پڕۆفایل نییە، بە ئەنقەست). پێشتر پیلێکی ٨٠×٢٨ بوو لە
+            //    ناوەڕاستی بۆکسێکی ٣٥٦×٢٣٠ـدا. کارتەکانی لیست وەک خۆیان (پیل، وێنەی وەستاو).
+            if (it.kind === 'plate' && mode === 'sheet') return shopPlateRowHtml(it);
             const px = mode === 'sheet' ? 132 : mode === 'hero' ? 100 : 70;
             return cosPreviewHtml(it, it.kind === 'deco' ? px : undefined);
+        }
+
+        // هەمان ڕیزی `rankRowHtml` (`sx-rrow has-plate` + `cos-rowplate`)، بە `is-live` تا جوڵاو بێت —
+        // تەنها لێرە، تەنها کاتێک شیتی ئەو دانەیە کراوەیە. ⚠️ وێنەی خۆم بێ ڕازاندنەوە (هیچ داواکارییەکی
+        // ڕازاندنەوە لە `avatarHtml` — ژمارەی ئەو داواکارییانە پێنراوە، [[landmines]] ١٣٨).
+        function shopPlateRowHtml(it) {
+            const a = cosAttrs(it.id, '');
+            const st = cosPlateStyle(it.id);
+            const me = currentUser || {};
+            const pts = Number(((_statsCacheT['me'] || {}).alltime || {}).points) || 0;
+            return '<div class="mk-plate-demo">'
+                + '<div class="sx-rrow has-plate is-live"' + (st ? ' style="' + st + '"' : '') + '>'
+                + '<span class="cos-plate cos-rowplate' + a.cls + '"' + a.attr + (a.style ? ' style="' + a.style + '"' : '') + '></span>'
+                + '<span class="sx-rn">4</span>'
+                + avatarHtml(me.avatar || '', shopMyName(), 30, me.code || '', { noTap: true })
+                + '<div class="sx-rmid"><b><span class="cos-nm">' + histEsc(shopMyName()) + '</span></b>'
+                + '<span class="sx-rsub" dir="rtl">' + rankValueHtml(pts, 'points') + '</span></div>'
+                + '</div></div>';
         }
         // 🎬 ئێفێکت لەسەر کارتێکی بچووکی پڕۆفایل — دیسکۆرد ئێفێکت بۆ **هەموو** کارتی
         //    پڕۆفایل دیزاین دەکات (٤٥٠×٨٨٠)، نەک بۆ شریتێکی ٦٨px.
@@ -24975,7 +24997,9 @@
             // ⭐ خاوەن: «با زۆر گەورە نەبێ… نووسینەکان زۆر بە گەورەی پیشان نەدا… لاواز».
             //    پێشتر چوار خانەی ٦٠px (٢×٢) + سندوقی ئاست + شریتی مانگ؛ ئێستا یەک ڕیزی خانە و
             //    شریتی ئاست لە ژێریان، لەناو یەک پانێڵدا. «ئەم مانگە» چووە ناو ڕیزەکانی خوارەوە.
-            // ⚠️ ناوی خانەکان یەک وشەن — چوار خانە لە کارتی ٢٩٤px (تەلەفۆنی ٣٢٠) دەگونجێن.
+            // ⚠️ ناوی خانەکان یەک وشەن. ⭐ کارتی شێوە-دیسکۆرد (٢٠٢٦-١٠-١٨) لە شاشەی کورتدا تا ٢١٤px
+            //    تەسک دەبێت، بۆیە ژمارەکان بە پانیی پانێڵەکە بچووک دەبنەوە (١٤ → ١٠px، `cqi` لە style.css)
+            //    و «د.ع» لە کۆتاییدا دەچێتە دێڕی دووەم — هەرگیز نابڕدرێن ([[landmines]] ٣٠٨).
             const cell = (v, l) => '<div class="mcard-c"><b>' + v + '</b><span>' + l + '</span></div>';
             const n = v => '<bdi dir="ltr">' + (Number(v) || 0).toLocaleString('en-US') + '</bdi>';
             if (_mcard.busy && !hasStats) {
@@ -27181,7 +27205,11 @@
             const role = normalizeRole(userRole || '') || 'ئەندام';
             const pts = Number(((_statsCacheT['me'] || {}).alltime || {}).points) || 0;
             const lv = statsLevelOf(pts);
-            return mcardHeadHtml({
+            // ✨ ئێفێکت لەسەر **هەموو** پێشاندانەکە (منداڵی `#rp-preview`، وەک ستۆدیۆ و کارتی ڕاستەقینە)،
+            //    نەک لەناو کەڤەرەکە — و بەشی خوارەوەی کارتەکە (`cos-prev-fill`) شوێنی ئێفێکتەکەیە
+            const fxId = rpFxId();
+            return (fxId ? cosFxHtml(fxId, '', { loopUrl: '' }) : '') + mcardHeadHtml({
+                noFx: !!fxId,
                 code: currentUser && currentUser.code,
                 name: nm,
                 sub: (real && real !== nm) ? real : '',
@@ -27199,7 +27227,7 @@
                 chips: '<span class="mcard-role" style="--rc:' + mcardTone(role) + ';">'
                     + '<i class="bx bx-shield-quarter"></i>' + histEsc(role) + '</span>'
                     + rankLevelChip(pts)
-            }) + rpFrameHtml();
+            }) + (fxId ? '<div class="cos-prev-fill"></div>' : '') + rpFrameHtml();
         }
 
         // 🖼️ چوارچێوەی خۆت لە پێشاندانی پلەکانیش (٢٠٢٦-١٠-١٢) — هەمان دوو بەشی کارتی
@@ -27223,8 +27251,18 @@
 
         function rpSyncPreview() {
             const box = document.getElementById('rp-preview');
-            if (box) box.innerHTML = rpPreviewHtml();
+            if (box) {
+                box.classList.toggle('is-fx', !!rpFxId());
+                box.innerHTML = rpPreviewHtml();
+            }
             rpFrameSync();
+        }
+
+        // ✨ ئێفێکتی دانراوی خۆم — پێشاندانی پلەکان بەو هۆیەوە دەبێتە کارتێکی دیسکۆرد-شێوە (٤٥٠:٨٨٠،
+        //    `is-fx`)، وەک کارتی ڕاستەقینە و ستۆدیۆ (٢٠٢٦-١٠-١٨). پێشتر ئێفێکتەکە لەناو کەڤەرەکەدا بوو
+        //    (٣٠٦×١٠٤) و ٥٣px پان دەنەخشێنرا، لە پشتی وێنەکەدا — هەر دیار نەبوو.
+        function rpFxId() {
+            try { return String((currentUser && cosOf(currentUser.code).effect) || ''); } catch (e) { return ''; }
         }
 
         function renderRankPrefs() {
@@ -27237,7 +27275,7 @@
             const mode = p.dname ? 'custom' : p.name;
 
             box.innerHTML = `
-                <div class="rpf-preview" id="rp-preview">${rpPreviewHtml()}</div>
+                <div class="rpf-preview${rpFxId() ? ' is-fx' : ''}" id="rp-preview">${rpPreviewHtml()}</div>
 
                 <div class="rpf-under" id="rp-under"></div>
 
