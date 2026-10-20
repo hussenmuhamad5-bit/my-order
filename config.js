@@ -137,10 +137,16 @@ function initializeSupabase() {
 //  یەکەم سەرچاوە **هەمان سەرچاوەی ئەپەکەیە** (`vendor/`). ئەگەر
 //  پەڕەکە خۆی هاتبێت، ئەم فایلەش دێت — بۆیە هیچ لایەنێکی سێیەم
 //  ناتوانێت ڕێگری بکات. CDNــەکان تەنها وەک پاشەکەوت ماونەتەوە.
+//  ⚠️ (٢٠٢٦-١٠-٢٠) `vendor/` هەرگیز بڵاو نەکرابووەوە: هەر کردنەوەیەک 404ـێکی دەدا و پاشان jsDelivr ـی
+//     `@2` بار دەبوو — واتا هەر وەشانێکی نوێی 2.x بێ تاقیکردنەوە (ئەو ڕۆژە 2.118.0؛ تاقیکردنەوەکان 2.117.2) —
+//     و unpkg ـی `.min.js` هەمیشە 404 بوو (unpkg بچووکی ناکاتەوە). ئێستا هەر سێ سەرچاوە **هەمان وەشانی
+//     جێگیرن**، هی `tests/security` (`dist/umd/supabase.js`). نوێکردنەوە: دوای `npm test`ـی سەوز لە
+//     node_modules کۆپی بکە بۆ vendor/، هەر سێ URL + سەردێڕی فایلەکە بگۆڕە، و `?v=` بەرز بکەرەوە
+//     (`check.mjs` یەکسانییەکەیان دەپشکنێت). بڕوانە [[vendor-assets]].
 var SUPABASE_CDNS = [
     'vendor/supabase.min.js',
-    'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js',
-    'https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.min.js'
+    'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.js',
+    'https://unpkg.com/@supabase/supabase-js@2.117.2/dist/umd/supabase.js'
 ];
 
 // ⚠️ `var supabase` لە ئاستی سەرەوەیە، واتا هەر خۆی

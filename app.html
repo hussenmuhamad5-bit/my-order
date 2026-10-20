@@ -3879,7 +3879,7 @@
     </div>
 
     <!-- ?v= — config.jsـی نوێ لەگەڵ HTMLـی نوێ؛ هەر کاتێک config.js بە شێوەیەک گۆڕا کە HTMLـی کۆن لەگەڵی کار نەکات، ژمارەکە بگۆڕە (cacheـی وێبگەڕ ١٠ خولەکە) -->
-    <script src="config.js?v=20261018a"></script>
+    <script src="config.js?v=20261020a"></script>
     <script>
 
         // Load Supabase script dynamically
@@ -13309,6 +13309,19 @@
             }
         }
 
+        // 🔢 ژمارەکانی ناو کۆمێنت ڕەنگی خۆیان هەیە (خاوەن ٢٠٢٦-١٠-٢٠: «با ڕەنگی لە نووسینەکە جیاواز بێت…
+        //    لە دوورەوە هەستی پێ بکرێت ئەمە ژمارەیە»). کوردی · فارسی · ئینگلیزی (`\p{Nd}`)، و جیاکەرەوەی
+        //    ناو ژمارە یەک پارچەیە: «25,000» · «3:30» · «2026-10-20» · «2.5» · «٢٥٬٠٠٠».
+        // ⚠️ دەق **پێش** escape لەت دەکرێت: دوای `histEsc` «'» دەبێتە «&#39;» و ڕیگەکسێک دوای escape
+        //    «39»ی ناو ئینتیتییەکە دەگرت و HTML ـەکەی دەشکاند. ژمارە خۆی هیچ پیتێکی تایبەتی HTML نییە.
+        // ⚠️ هەردوو دروستکەری حەباب بەکاری دێنن (`ocmtRowHtml` · `ocmtAddPending`) — [[landmines]] ١٤٨.
+        const OCMT_NUM_RE = /(\p{Nd}+(?:[.,:\/٫٬-]\p{Nd}+)*)/u;
+        function ocmtNumHtml(text) {
+            return String(text || '').split(OCMT_NUM_RE)
+                .map((p, i) => (i % 2) ? '<span class="ocmt-num">' + p + '</span>' : histEsc(p))
+                .join('');
+        }
+
         function ocmtRowHtml(c) {
             const mine = String(c.user_code) === String(currentUser.code);
             const name = String(c.user_name || c.user_code || 'بێ ناو');
@@ -13321,7 +13334,7 @@
 
             const body = del
                 ? `<div class="ocmt-body is-deleted"><i class='bx bx-block'></i> ئەم پەیامە سڕایەوە</div>`
-                : `<div class="ocmt-body">${histEsc(String(c.body || ''))}</div>`;
+                : `<div class="ocmt-body">${ocmtNumHtml(c.body)}</div>`;
 
             // دەستکاری و سڕینەوە تەنها بۆ پەیامی خۆت (یان پاشا)
             const canEdit = !del && (mine || userRole === 'پاشا');
@@ -13519,7 +13532,7 @@
                 `<div class="ocmt-row is-mine is-pending" data-cid="pending">
                     <div class="ocmt-avatar">${avatarHtml(currentUser.avatar, userName, 28, currentUser.code, { noTap: true })}</div>
                     <div class="ocmt-bubble${qc ? ' is-qc' : ''}"${qc ? ` style="--qc:${qc};"` : ''}>
-                        <div class="ocmt-body">${histEsc(body)}</div>
+                        <div class="ocmt-body">${ocmtNumHtml(body)}</div>
                         <div class="ocmt-foot"><span><i class='bx bx-time-five'></i> دەنێردرێت…</span></div>
                     </div>
                 </div>`);
@@ -38978,7 +38991,7 @@
 
                         let shortName = item.name.split(' ').slice(0, 2).join(' ');
 
-                        div.innerHTML = `<span style="font-weight:bold; color:#334155; font-size:14px;">${shortName}</span> <span style="background:#e0f2fe; color:#0369a1; padding:4px 8px; border-radius:6px; font-size:12px; font-family:monospace; font-weight:bold;">${item.code}</span>`;
+                        div.innerHTML = `<span style="font-weight:bold; color:#334155; font-size:14px;">${shortName}</span> <span style="background:#e0f2fe; color:#0369a1; padding:4px 8px; border-radius:6px; font-size:12px; font-family:'MSO Digits',monospace; font-weight:bold;">${item.code}</span>`;
 
                         div.onmouseover = () => div.style.background = '#f8fafc';
                         div.onmouseout = () => div.style.background = '#fff';
@@ -39083,7 +39096,7 @@
 
                     let shortName = item.name.split(' ').slice(0, 3).join(' ');
 
-                    div.innerHTML = `<span style="font-weight:bold; color:#334155; font-size:14px;">${shortName}</span> <span style="background:#e0f2fe; color:#0369a1; padding:4px 8px; border-radius:6px; font-size:12px; font-family:monospace; font-weight:bold;">${item.code}</span>`;
+                    div.innerHTML = `<span style="font-weight:bold; color:#334155; font-size:14px;">${shortName}</span> <span style="background:#e0f2fe; color:#0369a1; padding:4px 8px; border-radius:6px; font-size:12px; font-family:'MSO Digits',monospace; font-weight:bold;">${item.code}</span>`;
 
                     div.onmouseover = () => div.style.background = '#f8fafc';
                     div.onmouseout = () => div.style.background = '#fff';
@@ -44044,7 +44057,7 @@
                             ${avatarHtml(u.data.avatar, u.name, 40, u.code)}
                             <div style="min-width:0;">
                                 <strong style="color:#1e293b; font-size:14px;">${u.name}</strong><br>
-                                <span style="font-size:11px; color:#64748b; font-family:monospace;">${u.code}</span>
+                                <span style="font-size:11px; color:#64748b; font-family:'MSO Digits',monospace;">${u.code}</span>
                             </div>
                         </div>
                         <div style="text-align:left;">
@@ -44159,7 +44172,7 @@
                             ${avatarHtml(u.data.avatar, u.name, 40, u.code)}
                             <div style="min-width:0;">
                                 <strong style="color:#1e293b; font-size:14px;">${u.name}</strong>${held ? ` <span class="held-badge"><i class='bx bx-shield-x'></i>ڕاگیراو</span>` : ''}<br>
-                                <span style="font-size:11px; color:#64748b; font-family:monospace;">${u.code}</span>
+                                <span style="font-size:11px; color:#64748b; font-family:'MSO Digits',monospace;">${u.code}</span>
                             </div>
                         </div>
                         <div style="display:flex; align-items:center; gap:10px; flex-shrink:0;">
