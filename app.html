@@ -397,6 +397,7 @@
                 <div class="ex-sec-t">2) چ کاڵایەک لە کڕیار وەردەگیرێتەوە؟</div>
                 <div id="ex-chips-box"></div>
                 <ul id="ex-ret-list" class="cart-list ex-ret-list"></ul>
+                <div class="field-err" id="err-exret" role="alert"><i class='bx bx-error-circle'></i><span></span></div>
             </div>
 
             <div id="ex-new-block" style="display:none;">
@@ -2512,16 +2513,28 @@
                 <span class="fsheet-title">وەرگرتنی خەڵات</span>
             </div>
             <div class="fsheet-body">
+                <!-- 🚚 db/142 (خاوەن ٢٠٢٦-١٠-٢١): کرێی گەیاندن لەسەر ئەندامە — دەقی `rw-cl-hint` و بۆکسی
+                     `rw-cl-fee` لە `rwClFeePaint()`ـەوە دێن. ⚠️ ئەگەر سێرڤەر هێشتا db/142ـی نییە (PGRST202)،
+                     دەقە کۆنەکە («بەخۆڕایی») دەمێنێتەوە، چونکە ئەوسا بەڕاستی هیچ ناکەوێتە سەر ئەندام. -->
                 <div class="sched-hint">
                     <i class='bx bx-gift'></i>
-                    <span>خەڵاتەکەت: <b id="rw-cl-product">—</b>. ناونیشانەکەت بنووسە با وەک
-                        ئۆردەرێک بۆت بنێردرێت — بەخۆڕایی، هیچ پارەیەک نادەیت.</span>
+                    <span>خەڵاتەکەت: <b id="rw-cl-product">—</b>. <span id="rw-cl-hint">ناونیشانەکەت بنووسە با وەک
+                        ئۆردەرێک بۆت بنێردرێت.</span></span>
                 </div>
                 <div class="fsec">
                     <label for="rw-cl-name">ناوی سیانی</label>
                     <input type="text" id="rw-cl-name" class="rw-input" placeholder="ناوت..." autocomplete="off">
                     <label for="rw-cl-city">شار</label>
-                    <input type="text" id="rw-cl-city" class="rw-input" placeholder="بۆ نموونە: هەولێر" autocomplete="off">
+                    <div class="rw-city" id="rw-cl-city-wrap">
+                        <input type="text" id="rw-cl-city" class="rw-input" placeholder="شارێک هەڵبژێرە یان بنووسە..."
+                            autocomplete="off" oninput="rwClCityInput()" onfocus="rwClCityInput()" onblur="rwClCityBlur()">
+                        <div class="city-suggest" id="rw-cl-city-sug" role="listbox"></div>
+                    </div>
+                    <div class="rw-fee" id="rw-cl-fee" hidden>
+                        <div class="rw-fee-row"><span><i class='bx bxs-truck'></i> کرێی گەیاندن — لەسەر خۆتە</span><b id="rw-cl-fee-amt">—</b></div>
+                        <div class="rw-fee-row is-sub"><span><i class='bx bx-wallet'></i> پارەی ئامادەی جزدانەکەت</span><b id="rw-cl-ready">—</b></div>
+                        <div class="rw-fee-note" id="rw-cl-fee-note"></div>
+                    </div>
                     <label for="rw-cl-addr">وردەکاری ناونیشان</label>
                     <input type="text" id="rw-cl-addr" class="rw-input" placeholder="گەڕەک، کۆڵان، نزیکترین شوێن...">
                     <label for="rw-cl-phone">ژمارەی مۆبایل</label>
@@ -2537,8 +2550,8 @@
             </div>
             <div class="fsheet-foot">
                 <div class="fsheet-sum" id="rw-cl-sum">دوای ناردن، ئۆردەرەکە ئامادە دەکرێت و بۆت دەگات</div>
-                <button type="button" class="btn fsheet-apply" onclick="rwSubmitClaimSheet(this)">
-                    <i class='bx bx-gift'></i> ناردنی خەڵاتەکەم
+                <button type="button" class="btn fsheet-apply" id="rw-cl-go" onclick="rwSubmitClaimSheet(this)">
+                    <i class='bx bx-gift'></i> <span id="rw-cl-go-t">ناردنی خەڵاتەکەم</span>
                 </button>
             </div>
         </div>
@@ -5218,7 +5231,8 @@
             let m = String((err && (err.message || err)) || '');
             // db/114 (کلیل) · db/116–118 (ناسنامە، خشتە، ئۆردەر) · db/119 (پاسوۆرد) · db/120 (دابەشکردن)
             // · db/123 (پارەدان لە جزدانی خاوەنی ئۆردەر) · db/125 (ناردنی پارە) · db/127 (API ـی گەیاندن) · db/135 (حاڵەت)
-            let x = /\b(?:NOT_KING|BAD_FIELD|BAD_NAME|BAD_NOTE|BAD_MODE|BAD_TIMES|BAD_DELAY|BAD_WINDOW|BAD_RATE|BAD_CAP|BAD_DRIVERS|BAD_LABEL|NAME_TAKEN|DRIVER_TAKEN|NO_API|NO_KEY|TOO_MANY_KEYS|NO_PERM_SEND|BAD_AMOUNT|NOTE_TOO_LONG|NO_RECIPIENT|SELF_TRANSFER|TO_SUSPENDED|KEY_REUSED|BAD_KEY|NOT_STAFF|IDENTITY_LOCKED|SELF_LOCKED|COLUMN_LOCKED|NO_PERM_KEY|NO_PERM_CREATE|NO_PERM_PASSWORD|NO_PERM_DELETE|ONLY_NEW_KEYS|ROLE_NOT_ALLOWED|CHAIN_NOT_ALLOWED|NOT_ALLOWED|NO_PERM_WALLET|NO_PERM_TRASH|ORDER_LOCKED|PRINT_LOCKED|ORDER_SCHEDULED_PENDING|NO_PERM_STATUS|NO_PERM_EDIT|NO_PERM_PRINT|NO_PERM_DISTRIBUTE|BAD_DATE|TOO_MANY|DIST_ROWS|DIST_OVER_TOTAL|DIST_PERM|NO_PERM_ORDER|ORDER_NOT_FOUND|BAD_REASON|BAD_STATUS|WALLET_NOT_OWNER|WALLET_NOT_ON_ORDER|OVER_READY):\s*([^\n]+)/.exec(m);
+            // · db/142 (گۆڕین هەردوو سەبەتەکەی دەوێت)
+            let x = /\b(?:EXCHANGE_ITEMS|NOT_KING|BAD_FIELD|BAD_NAME|BAD_NOTE|BAD_MODE|BAD_TIMES|BAD_DELAY|BAD_WINDOW|BAD_RATE|BAD_CAP|BAD_DRIVERS|BAD_LABEL|NAME_TAKEN|DRIVER_TAKEN|NO_API|NO_KEY|TOO_MANY_KEYS|NO_PERM_SEND|BAD_AMOUNT|NOTE_TOO_LONG|NO_RECIPIENT|SELF_TRANSFER|TO_SUSPENDED|KEY_REUSED|BAD_KEY|NOT_STAFF|IDENTITY_LOCKED|SELF_LOCKED|COLUMN_LOCKED|NO_PERM_KEY|NO_PERM_CREATE|NO_PERM_PASSWORD|NO_PERM_DELETE|ONLY_NEW_KEYS|ROLE_NOT_ALLOWED|CHAIN_NOT_ALLOWED|NOT_ALLOWED|NO_PERM_WALLET|NO_PERM_TRASH|ORDER_LOCKED|PRINT_LOCKED|ORDER_SCHEDULED_PENDING|NO_PERM_STATUS|NO_PERM_EDIT|NO_PERM_PRINT|NO_PERM_DISTRIBUTE|BAD_DATE|TOO_MANY|DIST_ROWS|DIST_OVER_TOTAL|DIST_PERM|NO_PERM_ORDER|ORDER_NOT_FOUND|BAD_REASON|BAD_STATUS|WALLET_NOT_OWNER|WALLET_NOT_ON_ORDER|OVER_READY):\s*([^\n]+)/.exec(m);
             return x ? x[1].trim() : '';
         }
 
@@ -16134,6 +16148,10 @@
             if (m.indexOf('ALREADY_CLAIMED') !== -1) showToast('ئەم خەڵاتە پێشتر وەرگیراوە', 'error');
             else if (m.indexOf('BAD_PHONE') !== -1) showToast('ژمارەی مۆبایل تەواو نییە', 'error');
             else if (m.indexOf('BAD_CITY') !== -1) showToast('شار پێویستە', 'error');
+            // 🚚 db/142 — کرێی گەیاندنی دیاری
+            else if (m.indexOf('NO_MONEY') !== -1) showToast('پارەی ئامادەت بەس نییە بۆ کرێی گەیاندن — دیارییەکەت بۆت دەمێنێتەوە', 'error');
+            else if (m.indexOf('FEE_CHANGED') !== -1) showToast('کرێی گەیاندن گۆڕا — ژمارە نوێیەکە ببینە و دووبارە بنێرە', 'error');
+            else if (m.indexOf('NEED_UPDATE') !== -1) showToast('ئەپەکە نوێ بکەرەوە (کاشی تلیگرام پاک بکەرەوە) — کرێی گەیاندنی دیاری ئێستا لەسەر خۆتە', 'error');
             else if (m.indexOf('NOT_ALLOWED') !== -1) showToast('ڕێگە نەدرا', 'error');
             else showToast('هەڵە ڕوویدا — دووبارە هەوڵ بدەرەوە', 'error');
             console.error('claim_reward:', error);
@@ -16282,7 +16300,7 @@
             if (claim && claim.status === 'claimed') {
                 actHtml = c.reward_kind === 'money'
                     ? `<div class="rw-done"><i class='bx bx-check-circle'></i> خەڵاتەکە وەرگیرا — چووە سەر جزدانەکەت</div>`
-                    : `<div class="rw-done"><i class='bx bx-check-circle'></i> وەرگیرا — ئۆردەر: <bdi dir="ltr">${rwEsc(claim.order_code || '—')}</bdi> · ${rwEsc(claim.order_status || 'ئامادە دەکرێت')}</div>`;
+                    : `<div class="rw-done"><i class='bx bx-check-circle'></i> وەرگیرا — ئۆردەر: <bdi dir="ltr">${rwEsc(claim.order_code || '—')}</bdi> · ${rwEsc(claim.order_status || 'ئامادە دەکرێت')}</div>${rwFeeLineHtml(claim)}`;
             } else if (claim && claim.status === 'earned') {
                 actHtml = `<button type="button" class="rw-claim-btn" onclick="rwClaim('${claim.id}')"><i class='bx bx-gift'></i> وەرگرتنی خەڵاتەکەم</button>`;
             }
@@ -16901,6 +16919,16 @@
             </div>`;
         }
 
+        // 🚚 کرێی گەیاندنی دیاری (db/142) — تەنها کاتێک کرێیەک بڕاوە. ئۆردەری گەڕاوە یان سڕاوە
+        //    (`order_code` نییە) = کرێکە گەڕاوەتەوە بۆ جزدان (`reward_fee_sync`).
+        function rwFeeLineHtml(cl) {
+            const fee = Number(cl && cl.delivery_fee) || 0;
+            if (!fee || !cl || cl.status !== 'claimed') return '';
+            const back = !cl.order_code || String(cl.order_status || '').indexOf('گەڕاوە') !== -1;
+            return '<div class="rw-feeline' + (back ? ' is-back' : '') + '"><i class=\'bx ' + (back ? 'bx-undo' : 'bxs-truck') + '\'></i> '
+                + 'کرێی گەیاندن ' + xferMoney(fee) + ' د.ع ' + (back ? 'گەڕایەوە بۆ جزدانەکەت' : 'لە جزدانەکەت دراوە') + '</div>';
+        }
+
         function rwOldClaimHtml(cl) {
             let st;
             if (cl.status === 'revoked') {
@@ -16914,7 +16942,7 @@
             }
             return `<div class="rw-card rw-old"><div class="rw-card-top">
                 <div><h3 class="rw-title">${rwEsc(cl.reward_title || 'خەڵات')}</h3>
-                <p class="rw-desc">${cl.reward_kind === 'money' ? sxMoney(cl.reward_amount) : rwEsc(rwRewardName(cl))}</p></div>
+                <p class="rw-desc">${cl.reward_kind === 'money' ? sxMoney(cl.reward_amount) : rwEsc(rwRewardName(cl))}</p>${rwFeeLineHtml(cl)}</div>
                 ${st}</div></div>`;
         }
 
@@ -17041,6 +17069,175 @@
             });
         }
 
+        // ============================================================
+        // 🚚 کرێی گەیاندنی دیاری — لەسەر ئەندامە (db/142، خاوەن ٢٠٢٦-١٠-٢١)
+        // ------------------------------------------------------------
+        // «گەیاندن لەسەر خۆیانە… پارەی گەیاندن لە جزدانەکەیان کەم دەکرێت». کرێ = نرخی لای ئەندامی
+        // شارەکە (هەمان `getFormDeliveryPrice`، شاری نەناسراو 5,000)، لە کاتی ناردن و تەنها لە پارەی
+        // ئامادە (بڕیاری خاوەن). ژمارەکان هەموویان لە سێرڤەرەوەن (`reward_delivery_quote`)، و ناردن
+        // **ئەوەی بینراوە** دەنێرێت (`p_customer.fee`) — سێرڤەر خۆی دەیژمێرێتەوە و دەیبڕێت:
+        // جیاواز → FEE_CHANGED · کەم → NO_MONEY · کڵاینتی کۆن (بێ `fee`) → NEED_UPDATE.
+        // ⚠️ سێ دۆخ: `fee` (db/142 هەیە) · `legacy` (فەنکشنەکە نییە — `rpcMissing` — وەک پێشوو
+        //    بەخۆڕایی، چونکە ئەوسا بەڕاستی هیچ ناکەوێتە سەر ئەندام) · `unknown` (هێشتا وەڵام نەهاتووە
+        //    یان هەڵە بوو). لە `unknown` و کاتی حیسابکردندا ناردن ڕادەگیرێت — هەرگیز کرێیەکی نەبینراو.
+        // ⚠️ کلیلی پێشبڕکێ (`seq`) پێش `await` — وەڵامی شارێکی کۆن بەسەر شارێکی نوێدا نانووسێت.
+        // ⚠️ لیستی شارەکان: `dbCitiesList` (لە بارکردندا دێت)، بە `searchRank` (db/139)، و ناوەکە بە
+        //    ژمارەی ڕیز دەچێتە پەنجەدانان نەک لەناو `onclick` (ناوی شار لەوانەیە کۆتەی تێدا بێت).
+        // ============================================================
+        const _rwFee = { mode: 'unknown', seq: 0, city: null, fee: null, ready: null, known: true,
+                         enough: false, busy: false, err: false, sug: [], t: 0 };
+
+        function rwClCityVal() {
+            const el = document.getElementById('rw-cl-city');
+            return el ? (el.value || '').trim() : '';
+        }
+
+        function rwClSugHide() {
+            const box = document.getElementById('rw-cl-city-sug');
+            if (box) { box.style.display = 'none'; box.innerHTML = ''; }
+        }
+
+        function rwClCityInput() {
+            const box = document.getElementById('rw-cl-city-sug');
+            if (box) {
+                const raw = rwClCityVal();
+                const list = (typeof dbCitiesList !== 'undefined' && Array.isArray(dbCitiesList)) ? dbCitiesList : [];
+                _rwFee.sug = raw ? searchRank(list, raw, c => [c.name]) : list.slice();
+                if (!_rwFee.sug.length) { rwClSugHide(); }
+                else {
+                    box.innerHTML = _rwFee.sug.map((c, i) => '<div class="city-suggest-item" role="option"'
+                        + ' onmousedown="event.preventDefault(); rwClPickCity(' + i + ')"><i class=\'bx bx-map\'></i>'
+                        + '<span class="csi-name">' + histEsc(c.name || '') + '</span>'
+                        + '<span class="csi-price">' + xferMoney(c.display_price) + ' د.ع</span></div>').join('');
+                    box.style.display = 'block';
+                }
+            }
+            // ژمارەکان هەتا وەڵامی نوێ دێت پیلی سکێلێتۆنن — نەک کرێی شارێکی تر
+            rwClFeePaint();
+            clearTimeout(_rwFee.t);
+            _rwFee.t = setTimeout(() => rwClQuote(), 450);
+        }
+
+        function rwClPickCity(i) {
+            const c = _rwFee.sug[i];
+            const el = document.getElementById('rw-cl-city');
+            if (!c || !el) return;
+            el.value = c.name || '';
+            rwClSugHide();
+            clearTimeout(_rwFee.t);
+            rwClQuote();
+        }
+
+        function rwClCityBlur() {
+            setTimeout(rwClSugHide, 120);
+            if (_rwFee.mode !== 'legacy' && rwClCityVal() !== _rwFee.city) {
+                clearTimeout(_rwFee.t);
+                rwClQuote();
+            }
+        }
+
+        async function rwClQuote() {
+            const claimId = _rw.claimId;
+            const city = rwClCityVal();
+            const seq = ++_rwFee.seq;                    // ⭐ پێش await
+            if (_rwFee.mode === 'legacy' || !claimId) { rwClFeePaint(); return; }
+            _rwFee.busy = true;
+            _rwFee.err = false;
+            rwClFeePaint();
+            let res;
+            try { res = await supabase.rpc('reward_delivery_quote', { p_claim_id: claimId, p_city: city }); }
+            catch (e) { res = { error: e }; }
+            if (seq !== _rwFee.seq) return;              // شارەکە یان شیتەکە گۆڕاوە
+            _rwFee.busy = false;
+            if (res.error) {
+                if (rpcMissing(res.error)) _rwFee.mode = 'legacy';
+                else _rwFee.err = true;
+                rwClFeePaint();
+                return;
+            }
+            const j = res.data || {};
+            _rwFee.mode = 'fee';
+            _rwFee.city = city;
+            _rwFee.fee = Math.max(0, Number(j.fee) || 0);
+            _rwFee.ready = Math.max(0, Number(j.ready) || 0);
+            _rwFee.known = j.known !== false;
+            _rwFee.enough = !!j.enough;
+            rwClFeePaint();
+        }
+
+        function rwClFeePaint() {
+            const box = document.getElementById('rw-cl-fee');
+            const hint = document.getElementById('rw-cl-hint');
+            const sum = document.getElementById('rw-cl-sum');
+            const go = document.getElementById('rw-cl-go');
+            const goT = document.getElementById('rw-cl-go-t');
+            const amt = document.getElementById('rw-cl-fee-amt');
+            const rdy = document.getElementById('rw-cl-ready');
+            const note = document.getElementById('rw-cl-fee-note');
+            if (!box || !go || !goT) return;
+            const setGo = (label, disabled) => {
+                if (goT.textContent !== label) goT.textContent = label;
+                go.disabled = !!disabled;
+            };
+            if (_rwFee.mode === 'legacy') {
+                // سێرڤەر هێشتا db/142ـی نییە → وەک پێشوو: هیچ پارەیەک ناکەوێتە سەر ئەندام
+                if (hint) hint.textContent = 'ناونیشانەکەت بنووسە با وەک ئۆردەرێک بۆت بنێردرێت — بەخۆڕایی، هیچ پارەیەک نادەیت.';
+                box.hidden = true;
+                if (sum) sum.textContent = 'دوای ناردن، ئۆردەرەکە ئامادە دەکرێت و بۆت دەگات';
+                setGo('ناردنی خەڵاتەکەم', false);
+                return;
+            }
+            if (hint) hint.textContent = 'ناونیشانەکەت بنووسە با وەک ئۆردەرێک بۆت بنێردرێت. کرێی گەیاندن لەسەر خۆتە'
+                + ' و لە پارەی ئامادەی جزدانەکەت کەم دەکرێتەوە.';
+            box.hidden = false;
+            const city = rwClCityVal();
+            const waiting = _rwFee.mode === 'unknown' || _rwFee.busy || _rwFee.city !== city;
+            box.classList.remove('is-short');
+            if (_rwFee.err && !_rwFee.busy) {
+                amt.textContent = '—';
+                rdy.textContent = '—';
+                note.textContent = 'کرێی گەیاندن نەزانرا — هێڵی ئینتەرنێتەکەت بپشکنە.';
+                if (sum) sum.textContent = 'پێش ناردن، کرێی گەیاندن دەبێت دیار بێت';
+                setGo('کرێی گەیاندن نەزانرا — دووبارە هەوڵ بدەرەوە', false);
+                return;
+            }
+            if (!city) {
+                amt.textContent = '—';
+                rdy.textContent = _rwFee.ready == null ? '—' : xferMoney(_rwFee.ready) + ' د.ع';
+                note.textContent = 'شارەکەت هەڵبژێرە تا کرێی گەیاندن دیار بێت.';
+                if (sum) sum.textContent = 'دوای ناردن، ئۆردەرەکە ئامادە دەکرێت و بۆت دەگات';
+                setGo('شار هەڵبژێرە', true);
+                return;
+            }
+            if (waiting) {
+                // ⭐ پیلی ژمارە (`skelInline`، یاسای سکێلێتۆن) — هەرگیز کرێی شارێکی تر یان «0» پێش وەڵام
+                amt.innerHTML = skelInline(72);
+                if (_rwFee.ready == null) rdy.innerHTML = skelInline(72);
+                note.textContent = '';
+                setGo('کرێی گەیاندن حیساب دەکرێت…', true);
+                return;
+            }
+            const fee = _rwFee.fee;
+            amt.textContent = fee > 0 ? xferMoney(fee) + ' د.ع' : 'بەخۆڕایی';
+            rdy.textContent = xferMoney(_rwFee.ready) + ' د.ع';
+            if (!_rwFee.enough) {
+                box.classList.add('is-short');
+                note.textContent = 'پارەی ئامادەت بەس نییە — ' + xferMoney(fee) + ' د.ع پێویستە. پارەی چاوەڕوانی (خولی 10 ڕۆژە)'
+                    + ' ناژمێردرێت. دیارییەکەت بۆت دەمێنێتەوە و دواتر دەتوانیت بینێریت.';
+                if (sum) sum.textContent = 'کاتێک پارەی ئامادەت بەس بوو، دیارییەکەت بنێرە';
+                setGo('پارەی ئامادەت بەس نییە', true);
+                return;
+            }
+            note.textContent = (_rwFee.known ? '' : 'ئەم شارە لە لیستی شارەکاندا نییە — کرێی گەیاندنی ئاسایی دادەنرێت. ')
+                + (fee > 0
+                    ? 'ئەگەر ئۆردەرەکە گەڕایەوە یان سڕایەوە، کرێکە دەگەڕێتەوە بۆ جزدانەکەت.'
+                    : 'گەیاندن بۆ ئەم شارە هیچ پارەیەکی ناوێت.');
+            if (sum) sum.textContent = fee > 0
+                ? xferMoney(fee) + ' د.ع لە جزدانەکەت کەم دەکرێتەوە، پاشان ئۆردەرەکە ئامادە دەکرێت'
+                : 'دوای ناردن، ئۆردەرەکە ئامادە دەکرێت و بۆت دەگات';
+            setGo(fee > 0 ? 'ناردنی خەڵاتەکەم · ' + xferMoney(fee) + ' د.ع' : 'ناردنی خەڵاتەکەم', false);
+        }
+
         function rwOpenClaimSheet(claimId) {
             _rw.claimId = claimId;
             const cl = rwFindClaim(claimId);
@@ -17048,10 +17245,20 @@
             if (p) p.textContent = (cl && cl.reward_product) || 'کاڵا';
             const nm = document.getElementById('rw-cl-name');
             if (nm && !nm.value) nm.value = (currentUser && currentUser.full_name) || '';
+            // هەر کردنەوەیەک لە نوێوە دەپرسێت — پارەی ئامادە لە نێوان دوو کردنەوەدا دەگۆڕێت
+            clearTimeout(_rwFee.t);
+            Object.assign(_rwFee, { mode: 'unknown', city: null, fee: null, ready: null, known: true,
+                                    enough: false, busy: false, err: false, sug: [] });
+            rwClSugHide();
+            rwClFeePaint();
             document.getElementById('rw-claim-sheet').classList.add('show');
             document.body.classList.add('fsheet-open');
+            rwClQuote();
         }
         function rwCloseClaimSheet() {
+            clearTimeout(_rwFee.t);
+            _rwFee.seq++;                                // وەڵامێکی درەنگ هیچ نانووسێت
+            rwClSugHide();
             document.getElementById('rw-claim-sheet').classList.remove('show');
             document.body.classList.remove('fsheet-open');
         }
@@ -17061,22 +17268,52 @@
             if (!cl) { rwCloseClaimSheet(); return; }
             const name = (document.getElementById('rw-cl-name').value || '').trim();
             const phone = (document.getElementById('rw-cl-phone').value || '').replace(/\D/g, '');
-            const city = (document.getElementById('rw-cl-city').value || '').trim();
+            const city = rwClCityVal();
             const addr = (document.getElementById('rw-cl-addr').value || '').trim();
             if (!name) { showToast('ناوت بنووسە', 'error'); return; }
             if (!city) { showToast('شار بنووسە', 'error'); return; }
             if (phone.length < 10) { showToast('ژمارەی مۆبایل تەواو نییە', 'error'); return; }
+            // ⭐ هەرگیز بێ ئەو کرێیەی ئەندام بینیویەتی ناردن نابێت (db/142)
+            if (_rwFee.mode !== 'legacy') {
+                if (_rwFee.err || _rwFee.mode === 'unknown' || _rwFee.busy || _rwFee.city !== city) {
+                    clearTimeout(_rwFee.t);
+                    await rwClQuote();
+                    return;
+                }
+                if (!_rwFee.enough) {
+                    showToast('پارەی ئامادەت بەس نییە — ' + xferMoney(_rwFee.fee) + ' د.ع پێویستە بۆ کرێی گەیاندن', 'error');
+                    return;
+                }
+            }
+            const fee = _rwFee.mode === 'fee' ? _rwFee.fee : null;
+            const customer = { name: name, phone: phone, city: city, address: addr };
+            if (fee !== null) customer.fee = fee;
+            let requote = false;
             await guardSubmit('rw-claim-sheet', btn, async () => {
                 showToast('خەریکی تۆمارکردن...', 'loading');
                 const { error } = await supabase.rpc('claim_reward', {
                     p_claim_id: _rw.claimId, p_user_code: String(currentUser.code),
-                    p_customer: { name: name, phone: phone, city: city, address: addr }
+                    p_customer: customer
                 });
-                if (error) { rwClaimErrToast(error); return; }
+                if (error) {
+                    requote = /FEE_CHANGED|NO_MONEY/.test(String(error.message || ''));
+                    rwClaimErrToast(error);
+                    return;
+                }
+                if (fee > 0) {
+                    // باڵانسی نوێ دەربکەوێت — هەمان شتی خەڵاتی پارە
+                    delete walletTxCache[String(currentUser.code)];
+                    delete walletHoldCache[String(currentUser.code)];
+                    walletReadyState.loaded = false;
+                }
                 rwCloseClaimSheet();
-                showToast('پیرۆزە! ئۆردەری خەڵاتەکەت تۆمار کرا و بۆت دەگات', 'success');
+                showToast(fee > 0
+                    ? 'پیرۆزە! ئۆردەری خەڵاتەکەت تۆمار کرا — ' + xferMoney(fee) + ' د.ع کرێی گەیاندن لە جزدانەکەت کەم کرایەوە'
+                    : 'پیرۆزە! ئۆردەری خەڵاتەکەت تۆمار کرا و بۆت دەگات', 'success');
                 loadRewardsHome(true);
             });
+            // `guardSubmit` دوگمەکە دەگەڕێنێتەوە دۆخی پێش ناردن — دۆخی ڕاستەقینە دووبارە دابنێ
+            if (requote) await rwClQuote(); else rwClFeePaint();
         }
 
         // ---- لیستی بردنەوەکان (پاشا) ----
@@ -32639,13 +32876,21 @@
                         : 'ژمارەی مۆبایل تەواو نییە — پێویستە 11 ژمارە بێت (نموونە: 0750 123 4567).'
                 });
             }
-            // لە گۆڕیندا سەبەتەی نوێ دەکرێت بەتاڵ بێت (تەنها گەڕاندنەوە)،
-            // بەڵام نابێت هەردوو سەبەتەکە بەتاڵ بن
-            if (cart.length === 0 && !(exchangeFormOn() && exForm.retCart.length > 0)) {
+            // ⭐ گۆڕین = لانیکەم یەک کاڵای گەڕاوە **و** یەک کاڵای نێردراو بۆ کڕیار (خاوەن ٢٠٢٦-١٠-٢١:
+            //    «نابێت ئەم ئۆردەرە قبوڵ بکرێ تاوەکو کاڵاکە دیاری نەکەن»). پێشتر یەکێکیان بەس بوو، بۆیە
+            //    گۆڕینێک بێ کاڵای نێردراو قبوڵ دەکرا. سێرڤەریش هەمان یاسایە (db/142 · `EXCHANGE_ITEMS`).
+            //    ⚠️ کاڵای گەڕاوە تەنها دوای هەڵبژاردنی ئۆردەری ڕەسەن — پێش ئەوە بەشەکە شاراوەیە و
+            //    هەڵەکەی «ئۆردەری ڕەسەن هەڵبژێرە»ی خوارەوە دەیگرێت.
+            if (exchangeFormOn()) {
+                if (exForm.parent && !exForm.retCart.length) {
+                    problems.push({ k: 'exret', m: 'کاڵای گەڕاوە دیاری بکە — لە گۆڕیندا دەبێت لانیکەم یەک کاڵا لە کڕیار وەربگیرێتەوە.' });
+                }
+                if (cart.length === 0) {
+                    problems.push({ k: 'cart', m: 'کاڵای نێردراو بۆ کڕیار بنووسە — لە گۆڕیندا دەبێت لانیکەم یەک کاڵای نوێ بۆ کڕیار بنێردرێت.' });
+                }
+            } else if (cart.length === 0) {
                 problems.push({
-                    k: 'cart', m: exchangeFormOn()
-                        ? 'هیچ کاڵایەک نەنووسراوە — کاڵای گەڕاوە یان کاڵای نوێ زیاد بکە.'
-                        : 'هیچ کاڵایەک زیاد نەکراوە — ناو و نرخی کاڵاکە بنووسە، پاشان «زیادکردن بۆ سەبەتە» لێبدە.'
+                    k: 'cart', m: 'هیچ کاڵایەک زیاد نەکراوە — ناو و نرخی کاڵاکە بنووسە، پاشان «زیادکردن بۆ سەبەتە» لێبدە.'
                 });
             }
             // ⭐ سنووری بڕ — دەرگای پێنجەم. ئۆردەرێکی کۆن کە بۆ دەستکاری
@@ -32741,8 +32986,9 @@
                 if (exData.deliveryOn === EXCHANGE_MODE_MEMBER && exKingOwnedParent()) {
                     showToast("ئۆردەری ڕەسەن هی پاشایە — گەیاندن تەنها لەسەر پاشا یان کڕیار دەبێت", "error"); return;
                 }
-                if (!cart.length && !exData.retCart.length) {
-                    showToast("کاڵای گەڕاوە یان کاڵای نوێ بنووسە", "error"); return;
+                // پارێزەری دووەم (هەمان یاسای سەرەوە) — گۆڕین هەردوو سەبەتەکەی دەوێت
+                if (!exData.retCart.length || !cart.length) {
+                    showToast(!exData.retCart.length ? "کاڵای گەڕاوە دیاری بکە" : "کاڵای نێردراو بۆ کڕیار بنووسە", "error"); return;
                 }
                 // 💸 پارە بە کڕیار دەدرێتەوە؟ پێش ناردن بە ژمارەوە بپرسە (٢٠٢٦-١٠-١٥): «ئێستا»ی
                 //    ٠ یان بەتاڵ واتا **هەموو** پارەی پێشوو دەگەڕێتەوە. TjZ5f-6gGnF بەم شێوەیە
@@ -35397,7 +35643,9 @@
             phone1: { input: 'phone1', label: 'lbl-phone1', err: 'err-phone1' },
             cart: { input: 'item-name', label: 'lbl-cart', err: 'err-cart' },
             received: { input: 'amount-received', label: 'lbl-received', err: 'err-received' },
-            paymethod: { input: null, label: null, err: 'err-paymethod' }
+            paymethod: { input: null, label: null, err: 'err-paymethod' },
+            // سەبەتەی کاڵای گەڕاوەی گۆڕین — بە چیپەکان پڕ دەبێتەوە، نەک بە نووسین (`exChipToggle`)
+            exret: { input: null, label: null, err: 'err-exret' }
         };
 
         function setOrderErr(key, msg) {
@@ -45477,6 +45725,7 @@
                 name: l.name, qty: l.qty || 1,
                 unitPrice: l.cost / (l.qty || 1), srcIdx: l.idx
             });
+            if (exForm.retCart.length) clearOrderErr('exret');
             exRenderChips();
             exRenderRetList();
             exApplyParentAutos();
