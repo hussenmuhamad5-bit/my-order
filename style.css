@@ -18669,6 +18669,15 @@ body.sx-wide {
   gap: 8px;
 }
 
+/* ⚠️ `.st-grid` دوو جار ناوی داندراوە: کارتەکانی داشبۆردی ستۆرج (٢٠٢٦-٠٩-٢٠) هەمان پۆلیان هەیە و ڕێساکەیان
+   دواترە (`1fr` · ≥720px دوو ستوون)، بۆیە لەو ڕۆژەوە دوگمەکانی گۆڕینی حاڵەت لەسەر تەلەفۆن یەک لە ژێر یەکی تر
+   بوون. دوو پۆل بەسەر یەک پۆلدا زاڵە — لە هەموو پانییەک (٢٠٢٦-١٠-٢٥، کاتی پاشا سێ دوگمەی هەیە بۆ هەموو حاڵەتێک).
+   ⭐ هەمیشە یەک ڕیز: ژمارەی ستوون = ژمارەی دوگمە (`--n`، ١–٣)، نەک auto-fit — لە ٣٢٠px دەبوو بە ٢ + ١ */
+.st-changer .st-grid {
+  grid-template-columns: repeat(var(--n, 3), minmax(0, 1fr));
+  gap: 8px;
+}
+
 .st-btn {
   /* ٧٢px — زۆر لەسەرووی کەمترین ئەندازەی دەستلێدان (٤٤px) */
   min-height: 72px;
@@ -23954,6 +23963,8 @@ body.sx-wide {
 .rw-fee-row > span > i { font-size: 16px; color: #64748b; flex: none; }
 .rw-fee-row > b { font-size: var(--fs-sm, 14px); font-weight: 800; color: #0f172a; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .rw-fee-row.is-sub > b { font-weight: 700; color: #334155; }
+/* db/148: ڕیزی پارەی ئامادە تەنها بۆ سێرڤەری کۆن (لە جزدان) — `display: flex` بەسەر `hidden`ـدا زاڵە */
+.rw-fee-row[hidden] { display: none; }
 .rw-fee-note { font-size: 11.5px; line-height: 1.7; color: #64748b; }
 .rw-fee-note:empty { display: none; }
 .rw-fee.is-short { border-color: rgba(220, 38, 38, 0.35); background: rgba(220, 38, 38, 0.05); }
@@ -27852,6 +27863,83 @@ body.sx-wide {
 
 .xfer-ready.is-bad {
   color: #b91c1c;
+}
+
+/* 🪙 db/145 — ناردن لە پاشەکەوتیش (تەنها خاوەنی «بینینی پاشەکەوت»): بانەری دووەم لە هەنگاوی وەرگر، و
+   دوو دوگمەی سەرچاوە لە جێی دێڕی «پارەی ئامادە» لە هەنگاوی بڕ. گرید نەک flex-wrap — هەمیشە دوو ستوون. */
+.xfer-banner.is-sav {
+  margin-top: 6px;
+  background: #f0fdfa;
+  color: #115e59;
+}
+
+.xfer-src {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.xfer-src-btn {
+  min-width: 0;
+  min-height: 46px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: var(--r-md);
+  background: #fff;
+  color: #475569;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.xfer-src-btn > i {
+  flex-shrink: 0;
+  color: #94a3b8;
+  font-size: 20px;
+}
+
+.xfer-src-t {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  line-height: 1.3;
+}
+
+.xfer-src-t small {
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.xfer-src-t b {
+  color: var(--text-main);
+  font-size: 13px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.xfer-src-btn.is-on {
+  border-color: var(--primary);
+  background: #e8f2fb;
+  color: var(--primary);
+}
+
+.xfer-src-btn.is-on > i {
+  color: var(--primary);
+}
+
+.xfer-src-btn[data-src="savings"].is-on {
+  border-color: #0d9488;
+  background: #f0fdfa;
+  color: #0f766e;
+}
+
+.xfer-src-btn[data-src="savings"].is-on > i {
+  color: #0d9488;
 }
 
 .xfer-chips {
