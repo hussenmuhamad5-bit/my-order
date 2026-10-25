@@ -31876,13 +31876,21 @@
             await logOrderAction(o, 'status', { from: o.status, to: newStatus, detail: detail });
         }
 
+        // ⭐ (٢٠٢٦-١٠-٢٦) «لە ڕێگایە» لێرەوە ئۆردەرەکە نادات بە هیچ شۆفێرێک: ناچێتە هیچ لیستێکی بەڕێکردن، بۆیە
+        //    حسابی هیچ شۆفێرێک نییە و کۆمپانیای گەیاندن (API — db/127) هەرگیز نایبینێت. ٢٠٢٦-١٠-٢٥ ١٤:١٧–١٤:٢٠ ٩
+        //    ئۆردەر بەم شێوەیە کران («لابردنی قوفڵی پرێنت» + «لە ڕێگایە» لە ئایفۆنێکەوە) و هەرگیز نەگەیشتنە لای
+        //    کۆمپانیاکە. دانی ڕاستەقینە بە شۆفێر = سکان لە ئەپی پرێنتەر. پرسیار پێش گۆڕین، نەک ڕێگری
+        //    (`updateOrderStatus` · `kingSetStatus`).
+        const ONWAY_NO_DRIVER_WARN = '⚠️ «لە ڕێگایە» لێرەوە ئۆردەرەکە نادات بە هیچ شۆفێرێک — ناچێتە هیچ لیستێکی بەڕێکردن، '
+            + 'و کۆمپانیای گەیاندن (API) نایبینێت.\n\nبۆ دانی بە شۆفێر: لە ئەپی پرێنتەر لەسەر لیستی شۆفێرەکە سکانی بکە.';
+
         // 👑 db/146 (خاوەن ٢٠٢٦-١٠-٢٥) — پاشا: «ئامادە دەکرێت» / «لە ڕێگایە» لە گەیشتوو، گەڕاوە، یان «لە ڕێگایە» → «ئامادە»،
         //    بە یەک بانگ و یەک تڕانزاکشن (`order_king_set_status`، INVOKER — `orders_guard` و هەموو تریگەرەکان دەڕۆن):
         //    لە گەیشتوو → قازانجی دابەشکراوی هەموو کەسێک دەگەڕێتەوە؛ لە گەڕاوە → پارەی پێشوەختی جزدان دووبارە
         //    دەبڕدرێت؛ ئۆردەری چاوەڕوان بەردەست دەبێت. ⭐ ژمارەکان **پێش** پرسیارەکە (یاسای کرداری وێرانکەر) — جووڵەکان
         //    ڕاستەوخۆ دەهێنرێن، نەک لە `orderProfitCache` (هەرگیز بەسەرناچێت). ⚠️ هیچ پاشەکشەیەکی PGRST202 نییە:
         //    ئەم گۆڕینانە بەبێ db/146 لە سێرڤەر ڕێگەپێنەدراون.
-        async function kingSetStatus(o, newStatus) {
+        async function kingSetStatus(o, newStatus, warn) {
             const fromB = statusBucket(o.status);
             let ask = '';
             if (fromB === 'deliv') {
@@ -31920,6 +31928,8 @@
                         + 'بە گۆڕینی بۆ «' + newStatus + '»، ئەو پارەیە دووبارە لە جزدانەکەی دەبڕدرێت.\n\nدڵنیایت؟';
                 }
             }
+            // «لە ڕێگایە»ی دەستی (ONWAY_NO_DRIVER_WARN) — یەک پرسیار، نەک دوو
+            if (warn) ask = ask ? warn + '\n\n' + ask : warn + '\n\nهەر بیگۆڕیت بۆ «' + newStatus + '»؟';
             if (ask && !confirm(ask)) return;
             showToast("خەریکی نوێکردنەوە...", "loading");
             try {
@@ -32095,13 +32105,17 @@
                 return;
             }
 
+            // ⭐ «لە ڕێگایە»ی دەستی = هیچ شۆفێرێک (ONWAY_NO_DRIVER_WARN) — پرسیار پێش هەر نووسینێک
+            const noDriverWarn = (o && statusBucket(newStatus) === 'onway' && statusBucket(o.status) !== 'onway')
+                ? ONWAY_NO_DRIVER_WARN : '';
+
             // 👑 پاشا → «ئامادە دەکرێت» / «لە ڕێگایە» لە گەیشتوو یان گەڕاوە، یان «لە ڕێگایە» → «ئامادە»: یەک بانگ
             //    (`order_king_set_status`). «ئامادە» → «لە ڕێگایە» (قوفڵ و چاوەڕوانیش) هەر ڕێگا کۆنەکەیە (db/135).
             if (king && o) {
                 const fromB = statusBucket(o.status), toB = statusBucket(newStatus);
                 if ((toB === 'prep' || toB === 'onway')
                     && (fromB === 'deliv' || fromB === 'ret' || (fromB === 'onway' && toB === 'prep'))) {
-                    await kingSetStatus(o, newStatus);
+                    await kingSetStatus(o, newStatus, noDriverWarn);
                     return;
                 }
             }
@@ -32202,6 +32216,7 @@
 
             // گۆڕینی ئاسایی وەک (ڕێگا -> ئامادە)
             if (newStatus === "گەڕاوەتەوە" && !reason) { showToast("هۆکار بنووسە!", "error"); return; }
+            if (noDriverWarn && !confirm(noDriverWarn + '\n\nهەر بیگۆڕیت بۆ «' + newStatus + '»؟')) return;
             showToast("خەریکی نوێکردنەوە...", "loading");
             try {
                 // ⚡ db/135: حاڵەت + تۆمار بە یەک بانگ
