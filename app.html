@@ -920,6 +920,11 @@
                                         onchange="filterEditUsers()"><span>ئەندام</span></label>
                             </div>
 
+                            <!-- 🌳 هەڵبژاردنی تیم بە هەڕەم — هی ئەم لیستە بۆ خۆی (`ttScopeSync`) -->
+                            <div class="tt-scope-row" id="tt-scope-edit">
+                                <button type="button" class="tt-scope" onclick="ttScopeOpen('edit')"><i class='bx bx-sitemap'></i><span class="tt-scope-t">تیم: <em>هەموو</em></span><i class='bx bx-chevron-down'></i></button>
+                            </div>
+
                             <div class="search-row">
                                 <div class="search-group">
                                     <input class="search-input" type="search" id="edit-list-search"
@@ -1193,6 +1198,11 @@
                                     onchange="filterProfitUsers()"><span>ڕاوێژکار</span></label>
                         </div>
 
+                        <!-- 🌳 هەڵبژاردنی تیم بە هەڕەم — هی ئەم لیستە بۆ خۆی (`ttScopeSync`) -->
+                        <div class="tt-scope-row" id="tt-scope-profit">
+                            <button type="button" class="tt-scope" onclick="ttScopeOpen('profit')"><i class='bx bx-sitemap'></i><span class="tt-scope-t">تیم: <em>هەموو</em></span><i class='bx bx-chevron-down'></i></button>
+                        </div>
+
                         <div class="search-row">
                             <div class="search-group" id="profit-search-container">
                                 <input class="search-input" type="search" id="search-profit-input"
@@ -1273,6 +1283,11 @@
                                     onchange="filterWalletUsers()"><span>ڕاوێژکار</span></label>
                             <label><input type="radio" name="wallet_role_filter" value="ئەندام"
                                     onchange="filterWalletUsers()"><span>ئەندام</span></label>
+                        </div>
+
+                        <!-- 🌳 هەڵبژاردنی تیم بە هەڕەم — هی ئەم لیستە بۆ خۆی (`ttScopeSync`) -->
+                        <div class="tt-scope-row" id="tt-scope-wallet">
+                            <button type="button" class="tt-scope" onclick="ttScopeOpen('wallet')"><i class='bx bx-sitemap'></i><span class="tt-scope-t">تیم: <em>هەموو</em></span><i class='bx bx-chevron-down'></i></button>
                         </div>
 
                         <div class="search-row" id="wallet-search-sort-row">
@@ -2813,13 +2828,16 @@
                 </button>
             </div>
 
-            <!-- دوگمەی گۆڕینی بینین (هەموو / بەپێی ئەندام) — تەنها لە تابی تیم -->
+            <!-- دوگمەی گۆڕینی بینین (هەموو / بەپێی ئەندام / بەپێی تیم) — تەنها لە تابی تیم.
+                 «بەپێی تیم» سەربەخۆیە، جێی هیچیان ناگرێتەوە (خاوەن ٢٠٢٦-١٠-٢٥) -->
             <div class="segmented-control" id="team-view-mode" style="display:none; margin-bottom:12px;">
                 <label><input type="radio" name="team_view_mode" value="all" checked
                         onchange="switchTeamView('all')"><span><i class='bx bx-list-ul'></i> هەموو</span></label>
                 <label><input type="radio" name="team_view_mode" value="members"
                         onchange="switchTeamView('members')"><span><i class='bx bx-group'></i> بەپێی
                         ئەندام</span></label>
+                <label><input type="radio" name="team_view_mode" value="tree"
+                        onchange="switchTeamView('tree')"><span><i class='bx bx-sitemap'></i> بەپێی تیم</span></label>
             </div>
 
             <!-- فلتەری پلە (تەنها لە تابی ئۆردەری تیم دەردەکەوێت) -->
@@ -3009,6 +3027,26 @@
                 <span class="fsheet-title" id="whold-title">ئۆردەرە چاوەڕوانەکان</span>
             </div>
             <div class="fsheet-body" id="whold-body"></div>
+        </div>
+    </div>
+
+    <!-- ============================================================
+         🌳 هەڵبژاردنی تیم بە هەڕەم (٢٠٢٦-١٠-٢٥) — جزدانەکان · قازانج · چاکسازی
+         هەمان دارەی «بەپێی تیم»: بەڕێوەبەرێک بکەرەوە، پاشان سەرپەرشت، ڕاوێژکار،
+         ئەندام؛ دوگمەی خوارەوە لیستەکە بۆ ئەو تیمە دەپاڵێوێت. هەر لیستێک
+         هەڵبژاردنی خۆی هەیە (`ttScopes`). ⚠️ لە `SHEET_CLOSERS`دا تۆمارکراوە.
+         ============================================================ -->
+    <div id="tt-sheet" class="fsheet" role="dialog" aria-modal="true" aria-label="هەڵبژاردنی تیم">
+        <div class="fsheet-scrim" onclick="ttSheetClose()"></div>
+        <div class="fsheet-panel">
+            <div class="fsheet-head">
+                <button type="button" class="fsheet-x" onclick="ttSheetClose()" aria-label="داخستن">
+                    <i class='bx bx-x'></i>
+                </button>
+                <span class="fsheet-title">هەڵبژاردنی تیم</span>
+            </div>
+            <div class="fsheet-body" id="tt-sheet-body"></div>
+            <div class="fsheet-foot" id="tt-sheet-foot"></div>
         </div>
     </div>
 
@@ -4692,12 +4730,22 @@
         // ئایا `allEmployeesLite` تەواوی خشتەکەی تێدایە؟ `loadHierarchyUsers`
         // پێویستی پێیەتی: بەبێ دارەی تەواو ناتوانێت تیمەکە بپاڵێوێت.
         let teamScopeLoaded = false;
+        // 🌳 «بەپێی تیم» (٢٠٢٦-١٠-٢٥): هەمان دارەی `computeMyTeam` — باوکی هەر کەسێک، ڕەگی تیمەکەم، و ئەو
+        //    لیستەی لێوەی دروست بوو. ⚠️ دارەی دووەم نییە: `ttTreeData` تەنها ئەمانە دەخوێنێتەوە.
+        let teamTreeParent = null, teamTreeRoot = '', teamTreeSrc = null;
+        // پلەکانی دارەکە (کلیلی ڕەنگ و ڕیزبەندی) — ڕەنگەکان لە style.css: `--role-*` · `.rp-*` · `.cp-*`
+        const TT_ROLES = ['mgr', 'sup', 'con', 'mem'];
+        const TT_ROLE_KEY = { 'پاشا': 'king', 'بەڕێوەبەر': 'mgr', 'سەرپەرشت': 'sup', 'ڕاوێژکار': 'con', 'ئەندام': 'mem' };
+        const TT_ROLE_NAME = { king: 'پاشا', mgr: 'بەڕێوەبەر', sup: 'سەرپەرشت', con: 'ڕاوێژکار', mem: 'ئەندام' };
+        const TT_ROLE_PL = { mgr: 'بەڕێوەبەرەکان', sup: 'سەرپەرشتەکان', con: 'ڕاوێژکارەکان', mem: 'ئەندامەکان' };
+        const TT_NAV_MAX = 12;   // قووڵترین ئاستی دارەکە بۆ هەنگاوی گەڕانەوە (ئەمڕۆ ٥: ڕەگ · بەڕێوەبەر · سەرپەرشت · ڕاوێژکار · ئەندام)
 
         // «تیم» = تەواوی ژێردەستەکانی بەڕێوەبەری سەرووی من (ڕەگی تیم).
         // بۆیە ڕاوێژکارێک کە بەڕێوەبەر دروستی کردوو، تەواوی تیمی ئەو بەڕێوەبەرە دەبینێت.
         function computeMyTeam() {
             let mine = new Set();
             myLineCodesSet = new Set();   // ئەگەر داتاکە نەهاتبێت، نابێت هی جاری پێشوو بمێنێتەوە
+            teamTreeParent = null; teamTreeRoot = ''; teamTreeSrc = null;
             let myCode = currentUser ? String(currentUser.code || '').trim() : '';
             roleByCode = {};
             allEmployeesLite.forEach(e => {
@@ -4786,6 +4834,8 @@
                     if (!cr || cr === kingCode || roleOf[cr] === 'پاشا' || !(cr in creatorOf)) break;
                     root = cr;
                 }
+                // 🌳 «بەپێی تیم» هەمان باوک و هەمان ڕەگ دەخوێنێتەوە
+                teamTreeParent = creatorOf; teamTreeRoot = root; teamTreeSrc = allEmployeesLite;
                 // کۆکردنەوەی تەواوی ژێردەستەکانی ڕەگ (بە خۆیشیەوە)
                 let queue = [root]; mine.add(root);
                 while (queue.length) {
@@ -7811,7 +7861,15 @@
         let currentOrdersTab = "my";
         let teamMembersData = [];
         let selectedTeamMember = null;
-        let teamViewMode = "all"; // "all" = هەموو ئۆردەرەکان، "members" = بەپێی ئەندام
+        let teamViewMode = "all"; // "all" = هەموو ئۆردەرەکان، "members" = بەپێی ئەندام، "tree" = بەپێی تیم (هەڕەم)
+        // 🌳 بەپێی تیم: ڕێگای ڕاستەقینە لە ڕەگەوە تا ئەو کەسەی کراوەتەوە ('ROOT' = هەموو تیمەکان)،
+        //    تابی ناو پەڕەکە (کەسەکان / ئۆردەرەکان) و خانەی پلە. بڕوانە `ttOn` و [[team-hierarchy-view]].
+        let ttPath = [], ttSub = 'people', ttChip = 'all';
+        let _ttCounts = null;        // ژمارەی ئۆردەری هەموو تیمەکە بۆ دارەکە — {key, map, t}
+        let _ttLevel = {};           // کۆد → {sub, chip}: گەڕانەوە هەمان تاب و خانەی ئەو پەڕەیە دەدۆزێتەوە
+        // هەڵبژاردنی تیم لە لیستەکانی ئەدمین — هەر لیستێک بۆ خۆی (خاوەن ٢٠٢٦-١٠-٢٥: «تەواو جیاواز بێت»)
+        let ttScopes = { wallet: null, profit: null, edit: null };
+        let ttSheetCtx = null, ttSheetPath = [];
 
         // ============================================================
         // هێنانەوەی هەموو ڕیزەکان — Supabase بە بنەڕەت لە ١٠٠٠ ڕیز دەوەستێت
@@ -8169,6 +8227,7 @@
                 let it = _mgmtPlan[i];
                 if (it.c) { html += buildMgmtOrderCard(it.c, _mgmtShowMember); cards++; }
                 else if (it.m) { html += buildMemberCard(it.m, it.mo); cards++; }
+                else if (it.p) { html += ttRowHtml(it.p, it.o || {}); cards++; }   // 🌳 ڕیزی کەس لە «بەپێی تیم»
                 else html += it.d || it.h || '';
                 i++;
             }
@@ -8274,7 +8333,9 @@
             return [
                 currentOrdersTab, teamViewMode, selectedTeamMember || '',
                 roleEl ? roleEl.value : '',
-                p.p_status || '', p.p_date_from || '', p.p_date_to || '', p.p_search || ''
+                p.p_status || '', p.p_date_from || '', p.p_date_to || '', p.p_search || '',
+                // 🌳 هەر پەڕەیەکی «بەپێی تیم» شوێنی خۆی هەیە — گەڕانەوە هەمان شوێن دەدۆزێتەوە
+                teamViewMode === 'tree' ? ttPath.join('>') + '/' + ttSub + '/' + ttChip : ''
             ].join('|');
         }
 
@@ -8444,7 +8505,8 @@
                                     ${avatarHtml(member.avatar, member.full_name, 40, member.code)}
                                     <div class="tm-details">
                                         <h4>${member.full_name || "بێ ناو"}${rvwDone ? ` <span class="rvw-chip"><i class='bx bx-check-double'></i>پشکنرا</span>` : ''}</h4>
-                                        <p>کۆد: <span dir="ltr">${member.code}</span> | پلە: ${normalizeRole(member.role) || "ئەندام"}</p>
+                                        <p>کۆد: <span dir="ltr">${member.code}</span> | پلە: <span class="rp rp-${ttRoleKey(member.role)}">${normalizeRole(member.role) || "ئەندام"}</span></p>
+                                        ${ttCardChainHtml(member.code)}
                                     </div>
                                 </div>
                                 <div class="tm-stats">
@@ -8714,6 +8776,8 @@
             if (currentOrdersTab === tabKey) return;
 
             currentOrdersTab = tabKey;
+            // 🌳 هەنگاوەکانی گەڕانەوەی «بەپێی تیم» تەنها لە تابی تیمدا (پەڕەکە خۆی دەمێنێتەوە)
+            ttSyncNav();
 
             // تێبینی: کۆدی سڕینەوەی (selectedTeamMember = null) مان لابرد بۆ ئەوەی شوێنەکەت ون نەبێت
 
@@ -9372,12 +9436,18 @@
                 //    و کارتەکە دەڵێت «ئاماری خۆی شاردووەتەوە» — تەنانەت
                 //    بۆ پاشاش.
                 let sCodeReal = (mem && mem.code) || o.seller_code || sCode;
+                // 🌳 (٢٠٢٦-١٠-٢٥) ڕەنگی پلە + «لەژێر کێیە» (سەرپەرشت · ڕاوێژکار) — خاوەن: «دیار بێ ئەو
+                //    ئەندامە کێی سەرپەرشتە کێی ڕاوێژکارە لە کاتی سەیری ئۆردەرەکانی» · «تەنها بە بینینی
+                //    لای سەرەوە بزانین». زنجیرەکە لە دارەی ئێستاوەیە (`ttChainHtml`)، نەک لە وێنەی ئۆردەرەکە.
                 topHtml = `
                     <div class="mocc-owner">
                         ${avatarHtml(mAvatar, mName, 30, sCodeReal)}
-                        <div class="mocc-owner-info">
-                            <span class="mocc-oname">${mNameShort}</span>
-                            ${mRole ? `<span class="mocc-orole">${mRole}</span>` : ''}
+                        <div class="mocc-owner-col">
+                            <div class="mocc-owner-info">
+                                <span class="mocc-oname">${mNameShort}</span>
+                                ${mRole ? `<span class="mocc-orole rp-${ttRoleKey(mRole)}">${mRole}</span>` : ''}
+                            </div>
+                            ${ttCardChainHtml(sCodeReal)}
                         </div>
                     </div>`;
                 custRow = `
@@ -9598,6 +9668,7 @@
         function invalidateMgmtCache() {
             _mgmtCache.clear();
             _mgmtCacheEntry = null;
+            _ttCounts = null;   // 🌳 ژمارەکانی دارەکەش
         }
 
         // گەڕاندنەوەی دۆخێکی کاشکراو بۆ ناو گۆڕاوە کارپێکەرەکان
@@ -9688,6 +9759,8 @@
                     mgmtWarm("team", "all");
                 } else if (selectedTeamMember) {
                     return;   // لەناو ئەندامێکدایە — تەنیشتی ڕوون نییە
+                } else if (teamViewMode === "tree") {
+                    mgmtWarm("my", "all");   // 🌳 پەڕەکانی دارەکە لە ژمارەکانی کاشەوە دەکرێنەوە
                 } else if (teamViewMode === "members") {
                     mgmtWarm("team", "all");
                     mgmtWarm("my", "all");
@@ -9730,6 +9803,9 @@
             let rvwOn = reviewModeOn();
             let rvwF = rvwOn ? reviewFilter() : 'all';
             let _viewOk = {};
+            // 🌳 بەپێی تیم: تەنها ئۆردەری ئەو کەسانەی لە تیمی کراوەدان (+ خانەی پلە) — بۆ نوێبوونەوەی
+            //    ڕاستەوخۆ (`rtPatchMgmt`)؛ سێرڤەر پێشتر بە هەمان کۆدەکان فلتەری کردووە
+            let ttSet = ttOn() ? ttSellerLowerSet() : null;
             return function (o) {
                 // فلتەری پشکنین لە سەرەوە — هەرزانترینە و زۆرترین لادەبات.
                 // لەگەڵ ماشێنی load-moreـی ئێستادا کاردەکات: ئەگەر پەڕەیەک
@@ -9748,7 +9824,8 @@
                 if (currentOrdersTab === "my" && !isMyOrder) return false;
                 if (currentOrdersTab === "team" && !selectedTeamMember && isMyOrder) return false;
                 if (currentOrdersTab === "team" && selectedTeamMember && sellerCode !== selMemberCode) return false;
-                if (currentOrdersTab === "team" && !selectedTeamMember && roleFilter !== "all") {
+                if (ttSet && !ttSet.has(sellerCode)) return false;
+                if (currentOrdersTab === "team" && !selectedTeamMember && !ttSet && roleFilter !== "all") {
                     let mem = teamMemberOf(sellerCode);
                     if (!mem || normalizeRole(mem.role) !== roleFilter) return false;
                 }
@@ -9844,6 +9921,8 @@
         // پاشان ڕەندەری کلاینت. هەر تاب/فلتەر/گەڕانێک ئەمە بانگ دەکات.
         async function reloadMgmt(force) {
             if (!isManagementDataLoaded) return;
+            // 🌳 بەپێی تیم — ڕێڕەوی خۆی هەیە (ژمارەی هەموو تیمەکە + ئۆردەرەکانی ئەو کەسە)
+            if (ttOn()) return ttReloadMgmt(force);
             let list = document.getElementById('management-orders-list');
             let reqId = ++_mgmtReqId;
             let sellers = mgmtSellersForView();
@@ -9994,9 +10073,11 @@
             let viewModeBox = document.getElementById('team-view-mode');
             if (viewModeBox) viewModeBox.style.display = (currentOrdersTab === "team" && !selectedTeamMember) ? "flex" : "none";
 
-            // فلتەری پلە تەنها لە تابی تیم و لە دۆخی لیستی ئەندامان دەردەکەوێت
+            // فلتەری پلە تەنها لە تابی تیم و لە دۆخی لیستی ئەندامان دەردەکەوێت.
+            // 🌳 «بەپێی تیم» خانەکانی پلەی خۆی هەیە (بە ژمارەوە)، بۆیە ئەم ڕیزە لەوێ نییە
             let roleFilterBox = document.getElementById('orders-role-filter');
-            if (roleFilterBox) roleFilterBox.style.display = (currentOrdersTab === "team" && !selectedTeamMember) ? "flex" : "none";
+            if (roleFilterBox) roleFilterBox.style.display = (currentOrdersTab === "team" && !selectedTeamMember && teamViewMode !== 'tree') ? "flex" : "none";
+            ttSyncSearchHint();
 
             // چیپی «ڕیزبەندی» لە ژێر بۆکسی گەڕان و ژمارەی سەر دوگمەی فلتەر
             // نوێ دەکرێنەوە — چونکە دۆخی بینین (ئۆردەر/ئەندام) گۆڕاوە و
@@ -10012,6 +10093,9 @@
             // نەخشاندنی کۆن (هەموو کارتەکان بەیەکەوە) نەماوە — لەجیاتی ئەوە
             // «پلانێک» دروست دەکرێت و بە کۆمەڵی ٤٠ کارتی نەخشێنراو دەردەکەوێت
             _mgmtResetWindow();
+
+            // 🌳 بەپێی تیم: پەڕەی کەسێک (ڕێگا + کارتی کەس + کەسەکان یان ئۆردەرەکان)
+            if (ttOn()) { ttRenderList(list, filteredOrders); return; }
 
             if (currentOrdersTab === "team" && teamViewMode === "members" && !selectedTeamMember) {
                 // تیمەکە بەتاڵە — بەڵام لەوانەیە ئەندامی مێژوویی هەبێت
@@ -30923,8 +31007,8 @@
             if (activeScreenId() !== 'orders-management-screen') return;
 
             // لیستی ئەندامان کارتی ئۆردەری تێدا نییە — ژمارەکانی
-            // ئەندامان لە سەردانی داهاتوودا نوێ دەبنەوە
-            const membersView = (currentOrdersTab === 'team' && teamViewMode === 'members' && !selectedTeamMember);
+            // ئەندامان لە سەردانی داهاتوودا نوێ دەبنەوە. 🌳 هەمان شت بۆ لیستی کەسەکانی «بەپێی تیم»
+            const membersView = (currentOrdersTab === 'team' && teamViewMode === 'members' && !selectedTeamMember) || ttPeopleNow();
             const passes = mgmtPage.passes || function () { return false; };
             const newestFirst = (ordersSortVal() === 'new');
             let touched = false;
@@ -31569,7 +31653,7 @@
 
         // دۆخی «لیستی ئەندامان» — کارتەکان ئەندامن نەک ئۆردەر
         function printMembersView() {
-            return currentOrdersTab === "team" && teamViewMode === "members" && !selectedTeamMember;
+            return (currentOrdersTab === "team" && teamViewMode === "members" && !selectedTeamMember) || ttPeopleNow();
         }
 
         // بارەکە تەنها بۆ خاوەن دەسەڵاتی پرێنت دەردەکەوێت
@@ -33810,12 +33894,749 @@
             reloadMgmt().then(() => { if (listEl) listEl.scrollTop = teamMembersScrollTop; });
         }
 
-        // گۆڕینی شێوازی بینینی ئۆردەرەکانی تیم: "all" (هەموو) یان "members" (بەپێی ئەندام)
+        // گۆڕینی شێوازی بینینی ئۆردەرەکانی تیم: "all" (هەموو)، "members" (بەپێی ئەندام) یان "tree" (بەپێی تیم)
         function switchTeamView(mode) {
             teamViewMode = mode;
             selectedTeamMember = null;
+            // 🌳 پەڕەی پێشووی دارەکە دەمێنێتەوە (هەمان شوێن)؛ یەکەم جار → ڕەگ. گەڕانی ئۆردەر
+            //    لێرە دەبێتە گەڕانی کەس، بۆیە دەقە کۆنەکە نامێنێت
+            if (mode === 'tree') { ttEnsurePath(); ttClearSearch(); }
+            ttSyncNav();
             reloadMgmt();
             mgmtWarmSiblings();   // دۆخەکەی تر ئامادە دەکرێت بۆ گەڕانەوە
+        }
+
+        // ============================================================
+        // 🌳 «بەپێی تیم» — پیشاندانی هەڕەمی (خاوەن ٢٠٢٦-١٠-٢٥)
+        // ------------------------------------------------------------
+        // «یەکەم جار لارینەکە بکەمەوە… هەموو سەرپەرشتەکانی بهێنێت… ئەگەر ئەو سەرپەرشتە
+        // ڕاوێژکاری هەبن ئەوە ڕاوێژکارەکەشی هەڵبژێرم… سەیری ئۆردەری ئەندامەکانی بکەم» ·
+        // «دیار بێ ئەو ئەندامە کێی سەرپەرشتە کێی ڕاوێژکارە». نموونەی پەسەندکراو و ژمارەکان:
+        // [[team-hierarchy-view]].
+        //
+        // ⭐ دارەکە هی `computeMyTeam`ـە (`teamTreeParent` · `teamTreeRoot`) = db/144 — هیچ
+        //    یاسایەکی دووەمی «کێ لەژێر کێیە» نییە (db_tree_test ـی FUZZ هەردووکیان دەپشکنێت).
+        // ⭐ پەڕەی هەر کەسێک ئەندامە ڕاستەوخۆکانی خۆی پیشان دەدات (٢١٠ لە ٣٣٦ ئەندام ڕاستەوخۆ لەژێر
+        //    بەڕێوەبەرن)، و breadcrumb هەمیشە زنجیرەی ڕاستەقینەیە (`ttPathFrom`)، نەک ڕێگای پەنجەدانان.
+        // ⚡ ژمارەی هەموو کەسەکان: یەک `orders_member_counts` (هەمان بانگی «بەپێی ئەندام»، کاش، بێ گەڕان)
+        //    → کردنەوەی بەڕێوەبەر و سەرپەرشت هیچ داواکارییەکی ناوێت؛ ئۆردەرەکانی تیمێک: یەک `orders_page`
+        //    بە کۆدەکانی ئەو تیمە (پەڕەپەڕە، «زیاتر» تا کۆتایی). گەڕانی کەس لەسەر ئامێرەکەیە.
+        // ⚠️ هیچ دەسەڵاتێکی نوێ: کەسەکان = `teamMembersData` (مەودا + سنووری پلە)، ئۆردەرەکان هێشتا
+        //    بە `mgmtMakePasses` دەپشکنرێن، و ئەوەی تەنها ڕێگایە (سەرپەرشتێک کە ئۆردەرەکانی نابینیت بەڵام
+        //    ئەندامەکانی دەبینیت) دەردەکەوێت بەبێ ژمارەی خۆی.
+        // ============================================================
+        function ttRoleKey(role) { return TT_ROLE_KEY[normalizeRole(String(role || '').trim())] || 'mem'; }
+        function ttMyLower() { return String((currentUser && currentUser.code) || '').trim().toLowerCase(); }
+        function ttOn() { return currentOrdersTab === 'team' && teamViewMode === 'tree' && !selectedTeamMember; }
+
+        // دارەی هەموو کارمەندان (باوک · منداڵ، بە ڕیزی پلە و ناو) — تەنها کاتێک لیستی کارمەندان گۆڕا.
+        // ⚠️ باوکێک کە نەماوە، یان خولێک لە داتای کۆندا (A ← B ← A)، دەچێتە ژێر ڕەگ: هیچ کەسێک ون نابێت.
+        let _ttTree = null;
+        function ttTreeData() {
+            if (!allEmployeesLite || !allEmployeesLite.length) return null;
+            if (teamTreeSrc !== allEmployeesLite || !teamTreeParent) computeMyTeam();
+            if (!teamTreeParent) return null;
+            if (_ttTree && _ttTree.src === teamTreeSrc && _ttTree.par === teamTreeParent) return _ttTree;
+            const emp = Object.create(null), parent = Object.create(null), kids = { ROOT: [] }, lower = Object.create(null);
+            allEmployeesLite.forEach(e => {
+                const c = String(e.code || '').trim();
+                if (c) { emp[c] = e; lower[c.toLowerCase()] = c; }
+            });
+            const isKing = c => normalizeRole(emp[c].role) === 'پاشا';
+            Object.keys(emp).forEach(c => {
+                if (isKing(c)) return;                 // پاشا خۆی ڕەگەکەیە
+                let p = String(teamTreeParent[c] || '').trim();
+                if (!p || p === c || !(p in emp) || isKing(p)) p = 'ROOT';
+                parent[c] = p;
+                (kids[p] = kids[p] || []).push(c);
+            });
+            const reach = () => {
+                const seen = new Set(['ROOT']), st = ['ROOT'];
+                while (st.length) { const c = st.pop(); (kids[c] || []).forEach(k => { if (!seen.has(k)) { seen.add(k); st.push(k); } }); }
+                return seen;
+            };
+            let seen = reach(), guard = 0;
+            while (guard++ < 50) {
+                const lost = Object.keys(parent).filter(c => !seen.has(c)).sort();
+                if (!lost.length) break;
+                const c = lost[0];
+                kids[parent[c]] = (kids[parent[c]] || []).filter(k => k !== c);
+                parent[c] = 'ROOT';
+                kids.ROOT.push(c);
+                seen = reach();
+            }
+            const rank = { mgr: 0, sup: 1, con: 2, mem: 3, king: 4 };
+            Object.keys(kids).forEach(p => kids[p].sort((a, b) =>
+                (rank[ttRoleKey(emp[a].role)] - rank[ttRoleKey(emp[b].role)]) || cmpName(emp[a].full_name, emp[b].full_name)));
+            _ttTree = { src: teamTreeSrc, par: teamTreeParent, emp, parent, kids, lower };
+            return _ttTree;
+        }
+
+        // ئەو بەشەی دارەکە کە لیستێک پیشانی دەدات: کەسێک کە `ok` ڕێگەی پێدەدات، یان لەژێریدا کەسێکی
+        // ڕێگەپێدراو هەیە (ڕێگاکە ناپچڕێت). `size[c]` = ژمارەی کەسە دیارەکانی ژێری بە پلە، `size[c].ok` =
+        // ئەوانەی ڕێگەپێدراون. کاش بە دارەکە و سەرچاوەی `ok`.
+        const _ttViews = {};
+        function ttViewOf(key, ok) {
+            const T = ttTreeData();
+            if (!T) return null;
+            const old = _ttViews[key];
+            if (old && old.T === T && old.sig === ok.sig) return old;
+            const order = [], seen = new Set(['ROOT']), st = ['ROOT'];
+            while (st.length) {
+                const c = st.pop();
+                order.push(c);
+                (T.kids[c] || []).forEach(k => { if (!seen.has(k)) { seen.add(k); st.push(k); } });
+            }
+            const vis = Object.create(null), size = Object.create(null), okc = Object.create(null);
+            for (let i = order.length - 1; i >= 0; i--) {
+                const c = order[i];
+                const s = { mgr: 0, sup: 0, con: 0, mem: 0, n: 0, ok: 0 };
+                okc[c] = c !== 'ROOT' && !!ok(c);
+                let any = okc[c];
+                (T.kids[c] || []).forEach(k => {
+                    if (!vis[k]) return;
+                    any = true;
+                    const ks = size[k];
+                    TT_ROLES.forEach(r => { s[r] += ks[r]; });
+                    s.n += ks.n + 1;
+                    s.ok += ks.ok + (okc[k] ? 1 : 0);
+                    s[ttRoleKey(T.emp[k].role)]++;
+                });
+                vis[c] = c === 'ROOT' || any;
+                size[c] = s;
+            }
+            const V = { T, key, sig: ok.sig, order, vis, size, okc, kids: c => (T.kids[c] || []).filter(k => vis[k]) };
+            _ttViews[key] = V;
+            return V;
+        }
+
+        // دارەی «ئۆردەری تیم»: ئەو کەسانەی ئۆردەرەکانیان لێرە دەبینیت (`teamMembersData`، بێ خۆم)
+        let _ttOkSet = null, _ttOkSrc = null;
+        function ttOrdersView() {
+            if (_ttOkSrc !== teamMembersData) {
+                const s = new Set();
+                teamMembersData.forEach(t => s.add(String(t.code || '').trim().toLowerCase()));
+                _ttOkSet = s; _ttOkSrc = teamMembersData;
+            }
+            const set = _ttOkSet, me = ttMyLower();
+            const ok = c => { const l = String(c).toLowerCase(); return l !== me && set.has(l); };
+            ok.sig = teamMembersData;
+            return ttViewOf('orders', ok);
+        }
+
+        // ڕەگی دارەکە: پاشا یان مەودای «هەموان» → هەموو تیمەکان؛ ئەگەرنا ڕەگی تیمەکەم (هەمان `computeMyTeam`)
+        function ttRootFor(all) {
+            if (userRole === 'پاشا' || all) return 'ROOT';
+            const T = ttTreeData();
+            const r = String(teamTreeRoot || (currentUser && currentUser.code) || '').trim();
+            return (T && T.emp[r]) ? r : 'ROOT';
+        }
+        function ttRoot() { return ttRootFor(!!(mgmtScope && mgmtScope.myScope === 'all')); }
+        function ttCur() { return ttPath.length ? ttPath[ttPath.length - 1] : ttRoot(); }
+
+        // ڕێگای ڕاستەقینە لە ڕەگەوە تا ئەم کەسە — null ئەگەر لە دەرەوەی ڕەگەکەیە
+        function ttPathFrom(root, code) {
+            const T = ttTreeData();
+            if (!T) return [root];
+            if (code === root) return [root];
+            const up = [];
+            let c = code, g = 0;
+            while (c && c !== 'ROOT' && c !== root && g++ < 60) { up.push(c); c = T.parent[c]; }
+            if (c !== root) return null;
+            return [root].concat(up.reverse());
+        }
+        // ڕێگاکە دەمێنێتەوە ئەگەر هێشتا ڕاستە؛ ئەگەرنا (داتا گۆڕا، کەسەکە گوازرایەوە) → ڕێگای ئێستای یان ڕەگ
+        function ttEnsurePath() {
+            const root = ttRoot();
+            const last = ttPath.length ? ttPath[ttPath.length - 1] : root;
+            const V = ttOrdersView();
+            const p = (V && (last === root || V.vis[last])) ? ttPathFrom(root, last) : null;
+            ttPath = p || [root];
+        }
+        function ttIsLeaf(code) {
+            if (code === 'ROOT' || code === ttRoot()) return false;
+            const V = ttOrdersView();
+            return !V || !V.kids(code).length;
+        }
+        // ئایا ئێستا لیستی کەسەکانی پەڕەیەکی دارەکەیە؟ (هیچ کارتی ئۆردەر — وەک «بەپێی ئەندام»)
+        function ttPeopleNow() { return ttOn() && ttSub === 'people' && !ttIsLeaf(ttCur()); }
+
+        function ttSubtree(V, node, withSelf) {
+            const out = [], st = [node], seen = new Set([node]);
+            if (withSelf && node !== 'ROOT') out.push(node);
+            while (st.length) {
+                const c = st.pop();
+                V.kids(c).forEach(k => { if (!seen.has(k)) { seen.add(k); out.push(k); st.push(k); } });
+            }
+            return out;
+        }
+        // فرۆشیارەکانی ئەم پەڕەیە بەپێی خانەی پلە: هەموو · خۆی · پلەیەک (بێ خودی کەسەکە)
+        function ttSellerCodes(node, chip) {
+            const V = ttOrdersView();
+            if (!V) return [];
+            if (chip === 'self') return (node !== 'ROOT' && V.okc[node]) ? [node] : [];
+            let codes = ttSubtree(V, node, true).filter(c => V.okc[c]);
+            if (chip !== 'all') codes = codes.filter(c => c !== node && ttRoleKey(V.T.emp[c].role) === chip);
+            return codes;
+        }
+        // هەمان نووسینی `allowedCodes` (کۆدی ڕاستەقینە + شێوەی بێ بۆشایی) — `seller_code = any(...)` وردە
+        function ttServerCodes(codes) {
+            const want = new Set(codes.map(c => String(c).toLowerCase()));
+            const out = [], got = new Set();
+            (mgmtScope.allowedCodes || []).forEach(c => {
+                if (c && want.has(String(c).trim().toLowerCase()) && !got.has(c)) { got.add(c); out.push(c); }
+            });
+            return out;
+        }
+        function ttSellerLowerSet() {
+            if (ttPeopleNow()) return new Set();
+            return new Set(ttSellerCodes(ttCur(), ttChip).map(c => c.toLowerCase()));
+        }
+
+        // ژمارەی ئۆردەری هەر کەس (`own`)، هەموو تیمەکەی (`team`)، و تیمەکەی بەپێی پلە (`by`) — لە یەک مەپ
+        function ttAggOf(V, counts) {
+            if (V._agg && V._aggOf === counts) return V._agg;
+            const K = ['total', 'prep', 'onway', 'deliv', 'ret'];
+            const z = () => ({ total: 0, prep: 0, onway: 0, deliv: 0, ret: 0 });
+            const agg = Object.create(null);
+            for (let i = V.order.length - 1; i >= 0; i--) {
+                const c = V.order[i];
+                if (!V.vis[c]) continue;
+                const own = z(), team = z(), by = { mgr: 0, sup: 0, con: 0, mem: 0 };
+                const mc = (V.okc[c] && counts) ? counts[c.toLowerCase()] : null;
+                if (mc) K.forEach(k => { own[k] = Number(mc[k]) || 0; });
+                K.forEach(k => { team[k] = own[k]; });
+                V.kids(c).forEach(k => {
+                    const a = agg[k];
+                    if (!a) return;
+                    K.forEach(x => { team[x] += a.team[x]; });
+                    TT_ROLES.forEach(r => { by[r] += a.by[r]; });
+                    by[ttRoleKey(V.T.emp[k].role)] += a.own.total;
+                });
+                agg[c] = { own, team, by };
+            }
+            V._agg = agg; V._aggOf = counts;
+            return agg;
+        }
+        function ttCountsMap() { return (_ttCounts && _ttCounts.map) || mgmtMemberCounts || {}; }
+
+        // ---------- بارکردن ----------
+        // ژمارەکان (هەموو تیمەکە، بێ گەڕان) و ئۆردەرەکانی ئەم پەڕەیە (کۆدەکانی تیمەکەی + خانەی پلە) پێکەوە:
+        // یەک هەنگاو. ژمارەکان کاش دەبن، بۆیە چوونە ناو کەسێک لە «کەسەکان» هیچ داواکارییەکی نییە.
+        async function ttReloadMgmt(force) {
+            const list = document.getElementById('management-orders-list');
+            const reqId = ++_mgmtReqId;
+            ttEnsurePath();
+            ttSyncNav();
+            const code = ttCur(), sort = ordersSortVal();
+            const fresh = e => !!e && (Date.now() - e.t) < MGMT_CACHE_TTL;
+            const cParams = orderFilterParams(mgmtSellersForView());
+            cParams.p_search = null;
+            const cKey = JSON.stringify(cParams);
+            let counts = (!force && _ttCounts && _ttCounts.key === cKey && fresh(_ttCounts)) ? _ttCounts.map : null;
+            const people = ttPeopleNow();
+            let oParams = null, oKey = null, hit = null;
+            if (!people) {
+                const sellers = ttServerCodes(ttSellerCodes(code, ttChip));
+                // ⚠️ لیستێکی بەتاڵ = «هەموو فرۆشیارەکان» لە سێرڤەر — بۆیە کۆدێک کە هیچ کەسێک نییەتی
+                oParams = orderFilterParams(sellers.length ? sellers : ['~']);
+                // مێژووی تیم (گوازراوەکان، db/020) تەنها لە ڕەگ و «هەموو»
+                if (!(code === ttRoot() && ttChip === 'all')) oParams.p_hist = null;
+                oKey = 'tt|' + mgmtCacheKey(oParams, sort, false) + '|' + code + '|' + ttChip;
+                hit = force ? null : _mgmtCache.get(oKey);
+                if (!fresh(hit)) hit = null;
+            }
+            const show = () => {
+                if (people) mgmtRestoreCached({ memberCounts: counts, dayCounts: null, rows: [], cursor: null, offset: 0, hasMore: false }, cParams, sort, true);
+                else mgmtRestoreCached(hit, oParams, sort, false);
+                applyOrderFilters();
+            };
+            if (counts && (people || hit)) { if (hit) hit.memberCounts = counts; show(); return; }
+
+            // سکێلێتۆن تەنها دوای ٢٢٠ms: سەرەوەی پەڕەکە (ئەگەر ژمارەکان هەن) + شێوەی ڕیزەکان یان کارتەکان
+            const spinT = setTimeout(() => {
+                if (reqId !== _mgmtReqId || !list) return;
+                const sk = people ? skelHtml('row', 5, { cls: 'tt-row', end: 'num' }) : skelHtml('order', 4, { compact: true });
+                list.innerHTML = (counts ? ttHeadHtml(counts) : '') + sk;
+            }, 220);
+            try {
+                const [cRows, oRes] = await Promise.all([
+                    counts ? null : rpc('orders_member_counts', cParams),
+                    (people || hit) ? null : Promise.all([rpc('orders_day_counts', oParams), fetchOrdersPage(oParams, null, UI_PAGE, 0, sort)])
+                ]);
+                clearTimeout(spinT);
+                if (reqId !== _mgmtReqId) return;
+                if (cRows) { counts = buildMemberCountsMap(cRows); _ttCounts = { key: cKey, map: counts, t: Date.now() }; }
+                if (!people && !hit) {
+                    hit = mgmtCacheSet(oKey, {
+                        memberCounts: counts, dayCounts: buildDayCountsMap(oRes[0]), rows: oRes[1].rows,
+                        cursor: oRes[1].nextCursor, offset: oRes[1].nextOffset, hasMore: oRes[1].hasMore
+                    });
+                }
+                if (hit) hit.memberCounts = counts;
+                show();
+            } catch (e) {
+                clearTimeout(spinT);
+                console.log(e);
+                if (reqId !== _mgmtReqId) return;
+                if (list) list.innerHTML = connErrorHtml('reloadMgmt(true)');
+            }
+        }
+
+        // ---------- چوون و گەڕانەوە ----------
+        function ttGo(path, restore) {
+            _ttLevel[ttCur()] = { sub: ttSub, chip: ttChip };
+            ttPath = path;
+            const st = (restore && _ttLevel[ttCur()]) || { sub: 'people', chip: 'all' };
+            ttSub = st.sub; ttChip = st.chip;
+            ttClearSearch();
+            ttSyncNav();
+            reloadMgmt();
+        }
+        // پەنجە لە کەسێک: پەڕەکەی — بە ڕێگای ڕاستەقینەوە، تەنانەت لە لیستی تەختی «ئەندام»ـەوە
+        function ttOpen(code) { const p = ttPathFrom(ttRoot(), code); if (p) ttGo(p, false); }
+        function ttCrumb(i) { if (i >= 0 && i < ttPath.length - 1) ttGo(ttPath.slice(0, i + 1), true); }
+        function ttUp() { if (ttPath.length > 1) ttGo(ttPath.slice(0, -1), true); }
+        function ttSetSub(s) { if (ttSub === s) return; ttSub = s; ttChip = 'all'; ttClearSearch(); ttSyncSearchHint(); reloadMgmt(); }
+        function ttSetChip(k) { ttChip = (ttChip === k) ? 'all' : k; reloadMgmt(); }
+        // «گوازراوەکان» لە «بەپێی ئەندام»دان (ئۆردەرە کۆنەکانیان، db/020)
+        function ttGoMembers() {
+            const r = document.querySelector('input[name="team_view_mode"][value="members"]');
+            if (r) r.checked = true;
+            switchTeamView('members');
+        }
+        // هەنگاوێکی گەڕانەوە بۆ هەر ئاستێک: Back = یەک ئاست بۆ سەرەوە، نەک دەرچوون ([[back-navigation]])
+        function ttSyncNav() {
+            const depth = ttOn() ? ttPath.length : 0;
+            for (let k = 2; k <= TT_NAV_MAX; k++) {
+                if (k <= depth) navPush('tt:' + k, ttUp);
+                else navDrop('tt:' + k);
+            }
+        }
+        function ttSearchVal() { const s = document.getElementById('orders-search-input'); return s ? s.value.trim() : ''; }
+        function ttClearSearch() { const s = document.getElementById('orders-search-input'); if (s && s.value) s.value = ''; }
+        // بۆکسی گەڕان لە «کەسەکان»ی دارەکەدا کەس دەگەڕێت (لەسەر ئامێر)، لە شوێنەکانی تر ئۆردەر
+        function ttSyncSearchHint() {
+            const s = document.getElementById('orders-search-input');
+            if (!s) return;
+            // کورت — لە ٣٢٠px بۆکسەکە ~١٥٠px ـە و دەقی درێژتر لە سەرەتاوە دەبڕدرا
+            const ph = ttPeopleNow() ? 'گەڕانی ناوی کەس...' : 'گەڕان بەناو، مۆبایل، یان کۆد...';
+            if (s.placeholder !== ph) s.placeholder = ph;
+        }
+
+        // ---------- نەخشاندن ----------
+        function ttKingAvHtml(size) {
+            return `<span class="tt-king-av" style="width:${size}px; height:${size}px; font-size:${Math.round(size * 0.55)}px;" aria-hidden="true"><i class='bx bx-crown'></i></span>`;
+        }
+        // وێنە لە تۆماری تەواوی کارمەند (بەڕێوەبردن) یان لە لیستەکانی ئەدمین
+        let _ttAvIdx = null, _ttAvSrc = null;
+        function ttAvatarOf(code) {
+            const r = employeeByCode && employeeByCode[code];
+            if (r && r.avatar) return r.avatar;
+            if (_ttAvSrc !== allEditableUsers) {
+                _ttAvIdx = Object.create(null);
+                (allEditableUsers || []).forEach(u => { if (u && u.data && u.data.avatar) _ttAvIdx[u.code] = u.data.avatar; });
+                _ttAvSrc = allEditableUsers;
+            }
+            return _ttAvIdx[code] || '';
+        }
+        function ttPeopleSummary(s) {
+            const parts = [];
+            TT_ROLES.forEach(r => { if (s && s[r]) parts.push(fmtNum(s[r]) + ' ' + TT_ROLE_NAME[r]); });
+            return parts.length ? parts.join(' · ') : 'هێشتا کەسی نییە';
+        }
+        // ئەوانەی لە نێوان `base` و کەسەکەدان، لە سەرەوە بۆ خوارەوە (خۆی و `base` نا)
+        function ttChainBetween(T, base, code) {
+            if (!T || code === base) return [];
+            const up = [];
+            let c = T.parent[code], g = 0;
+            while (c && c !== 'ROOT' && c !== base && g++ < 60) { up.push(c); c = T.parent[c]; }
+            return up.reverse();
+        }
+        // ⭐ دوو ناونیشانی کوردیی تەنیشت یەک (پلە + ناو) دوو flex item ـن، نەک دەقێکی لکاو
+        function ttChainPills(T, codes) {
+            return codes.map(c => {
+                const r = ttRoleKey(T.emp[c].role);
+                return `<span class="cp cp-${r}"><em>${TT_ROLE_NAME[r]}</em><span>${histEsc(firstNameOf(T.emp[c].full_name))}</span></span>`;
+            }).join(`<i class='bx bx-chevron-left cp-sep' aria-hidden="true"></i>`);
+        }
+        // کارتی ئۆردەر و کارتی ئەندام لە تابی تیم: لەژێر کێیە — لە سەرەوەی ئەم لیستەوە (پەڕەی دارەکە یان ڕەگی من)
+        function ttCardChainHtml(code) {
+            if (currentOrdersTab !== 'team' || !code) return '';
+            const T = ttTreeData();
+            const c = T && (T.emp[code] ? code : T.lower[String(code).trim().toLowerCase()]);
+            if (!c) return '';
+            const base = ttOn() ? ttCur() : ttRoot();
+            const ch = ttChainBetween(T, base, c);
+            if (ch.length) return `<div class="tt-chain">${ttChainPills(T, ch)}</div>`;
+            if (ttOn() && base !== 'ROOT' && c !== base && T.parent[c] === base) {
+                return `<div class="tt-chain"><span class="cp cp-direct">ڕاستەوخۆ لەژێر ${histEsc(firstNameOf(T.emp[base].full_name))}</span></div>`;
+            }
+            return '';
+        }
+
+        function ttCrumbsHtml(path, fn) {
+            const T = ttTreeData(), me = String((currentUser && currentUser.code) || '').trim();
+            return `<div class="tt-crumbs-wrap tt-full"><div class="tt-crumbs" role="navigation" aria-label="ڕێگای تیم">` + path.map((c, i) => {
+                const cur = i === path.length - 1;
+                const e = (T && T.emp[c]) || {};
+                const nm = c === 'ROOT' ? 'هەموو' : firstNameOf(e.full_name || '');
+                const av = c === 'ROOT' ? ttKingAvHtml(20) : avatarHtml(ttAvatarOf(c), e.full_name, 20, '', { noTap: true });
+                return (i ? `<i class='bx bx-chevron-left tt-sep' aria-hidden="true"></i>` : '')
+                    + `<button type="button" class="tt-crumb${cur ? ' is-cur' : ''}"${cur ? ' aria-current="page"' : ` onclick="${fn}(${i})"`}>`
+                    + `${av}<span class="tt-crumb-t">${histEsc(nm)}</span>${c === me ? '<span class="tt-me">من</span>' : ''}</button>`;
+            }).join('') + `</div></div>`;
+        }
+
+        function ttLineageHtml(T, code) {
+            const rk = ttRoleKey(T.emp[code].role);
+            if (rk === 'mgr') return '';
+            const anc = [];
+            let c = T.parent[code], g = 0;
+            while (c && c !== 'ROOT' && g++ < 60) { anc.push(c); c = T.parent[c]; }
+            const of = r => anc.find(x => ttRoleKey(T.emp[x].role) === r);
+            const cell = (r, x) => x
+                ? `<div class="tt-lin lin-${r}"><small>${TT_ROLE_NAME[r]}</small><b>${histEsc(T.emp[x].full_name || '')}</b></div>`
+                : `<div class="tt-lin lin-${r} is-none"><small>${TT_ROLE_NAME[r]}</small><b>نییە</b></div>`;
+            const m = of('mgr');
+            const cells = [m ? cell('mgr', m) : `<div class="tt-lin lin-king"><small>سەر بە</small><b>پاشا · ڕاستەوخۆ</b></div>`];
+            if (rk === 'con' || rk === 'mem') cells.push(cell('sup', of('sup')));
+            if (rk === 'mem') cells.push(cell('con', of('con')));
+            return `<div class="tt-lineage n${cells.length}">${cells.join('')}</div>`;
+        }
+        function ttStatsHtml(c, label) {
+            const b = statusBadgesFromCounts(c);
+            return `<div class="tt-stats"><div class="tt-total"><b>${fmtNum(c.total)}</b><span>${label}</span></div>`
+                + (b ? `<div class="tt-badges">${b}</div>` : '') + `</div>`;
+        }
+        function ttNodeCardHtml(V, A, code) {
+            if (code === 'ROOT') {
+                return `<div class="tt-node tt-full"><div class="tt-node-head">${ttKingAvHtml(46)}<div class="tt-node-t">`
+                    + `<div class="tt-node-name"><span class="tt-node-nm">هەموو تیمەکان</span></div>`
+                    + `<div class="tt-node-sub">${ttPeopleSummary(V.size.ROOT)}</div></div></div>`
+                    + ttStatsHtml(A.ROOT ? A.ROOT.team : { total: 0 }, 'ئۆردەری هەموو تیمەکان') + `</div>`;
+            }
+            const T = V.T, e = T.emp[code], rk = ttRoleKey(e.role), a = A[code] || { own: { total: 0 }, team: { total: 0 } };
+            const leaf = ttIsLeaf(code), isMe = code === String((currentUser && currentUser.code) || '').trim();
+            const name = e.full_name || 'بێ ناو';
+            // پلەکە لە پیلەکەدایە — دێڕی خوارەوە تەنها ئەوەی پیلەکە نایڵێت
+            const sub = leaf ? (isMe ? 'تۆ' : '')
+                : (isMe ? 'تیمەکەم · ' : '') + fmtNum(V.size[code].n) + ' کەس لە تیمەکەیدا';
+            return `<div class="tt-node tt-full"><div class="tt-node-head">`
+                + `<span class="tt-ring rr-${rk}">${avatarHtml(ttAvatarOf(code), name, 46, code)}</span>`
+                + `<div class="tt-node-t"><div class="tt-node-name"><span class="tt-node-nm">${histEsc(name)}</span><span class="rp rp-${rk}">${TT_ROLE_NAME[rk]}</span></div>`
+                + (sub ? `<div class="tt-node-sub">${sub}</div>` : '') + `</div>`
+                + `<button type="button" class="tt-prof" data-mprof="${histEsc(code)}" data-mpn="${histEsc(name)}" aria-label="هەموو شتەکانی ${histEsc(name)}" title="هەموو شتەکانی"><i class='bx bx-id-card'></i></button>`
+                + `</div>${ttLineageHtml(T, code)}${ttStatsHtml(leaf ? a.own : a.team, leaf ? 'ئۆردەر' : 'ئۆردەری هەموو تیمەکە')}</div>`;
+        }
+        // خانەکانی پلە — یەک ڕیزی یەکسان (٤ لە زۆرترین)، نەک چیپی سکڕۆڵکراو. «هەموو» خانە نییە: کۆی گشتی لەسەر
+        // دوگمەی «کەسەکان / ئۆردەرەکان»ـە، و پەنجەلێدانی دووبارە لە خانەیەکی چالاک دەیگەڕێنێتەوە بۆ هەموو.
+        // ⚠️ پێوانەکراو: بە پێنج خانە «سەرپەرشت» لە ٣٢٠ – ٤١٢px دەبڕدرا (٦٦ > ٥٤px لە ٣٦٠)
+        function ttCellsHtml(cells, on, fn) {
+            if (cells.length < 2) return '';
+            const k0 = cells.find(c => c[0] === on);
+            const pl = { self: 'ئۆردەری خۆی', mgr: 'بەڕێوەبەرەکان', sup: 'سەرپەرشتەکان', con: 'ڕاوێژکارەکان', mem: 'ئەندامەکان' };
+            return `<div class="tt-cells tt-full n${cells.length}" role="group" aria-label="جیاکردنەوە بە پلە">` + cells.map(([k, t, n]) =>
+                `<button type="button" class="tt-cell${on === k ? ' on' : ''}${TT_ROLES.includes(k) ? ' c-' + k : ''}" onclick="${fn}('${k}')" aria-pressed="${on === k}">`
+                + `<span class="l">${TT_ROLES.includes(k) ? '<i class="dot" aria-hidden="true"></i>' : ''}<span>${t}</span></span><b>${fmtNum(n)}</b></button>`).join('') + `</div>`
+                + (k0 ? `<div class="tt-only tt-full"><span>تەنها ${pl[on] || ''}</span><button type="button" onclick="${fn}('${on}')"><i class='bx bx-x'></i>هەموو</button></div>` : '');
+        }
+        function ttSecHtml(icon, titleHtml, n) {
+            return `<div class="tt-sec tt-full"><div class="tt-sec-l">${icon ? `<i class='bx ${icon}'></i>` : ''}${titleHtml}</div>${n == null ? '' : `<small>${fmtNum(n)}</small>`}</div>`;
+        }
+        function ttDayTotal() {
+            let n = 0;
+            Object.keys(mgmtDayCounts || {}).forEach(d => { const c = mgmtDayCounts[d]; n += (c.prep || 0) + (c.onway || 0) + (c.deliv || 0) + (c.ret || 0); });
+            return n;
+        }
+
+        // سەرەوەی پەڕەکە: ڕێگا · کارتی کەس · کەسەکان/ئۆردەرەکان · خانەکانی پلە (بۆ سکێلێتۆنیش)
+        function ttHeadHtml(counts) {
+            const V = ttOrdersView();
+            if (!V) return '';
+            const code = ttCur(), A = ttAggOf(V, counts || ttCountsMap());
+            let h = ttCrumbsHtml(ttPath, 'ttCrumb') + ttNodeCardHtml(V, A, code);
+            if (ttIsLeaf(code)) return h;
+            const a = A[code] || { team: { total: 0 }, by: { mgr: 0, sup: 0, con: 0, mem: 0 }, own: { total: 0 } };
+            const people = ttSub === 'people';
+            h += `<div class="tt-seg tt-full" role="tablist">`
+                + `<button type="button" class="${people ? 'on' : ''}" onclick="ttSetSub('people')" role="tab" aria-selected="${people}"><i class='bx bx-group'></i><span>کەسەکان</span><b>${fmtNum(V.size[code].n)}</b></button>`
+                + `<button type="button" class="${people ? '' : 'on'}" onclick="ttSetSub('orders')" role="tab" aria-selected="${!people}"><i class='bx bx-package'></i><span>ئۆردەرەکان</span><b>${fmtNum(a.team.total)}</b></button>`
+                + `</div>`;
+            let cells;
+            if (people) {
+                cells = TT_ROLES.filter(r => V.size[code][r]).map(r => [r, TT_ROLE_NAME[r], V.size[code][r]]);
+            } else {
+                cells = [];
+                if (code !== 'ROOT' && a.own.total) cells.push(['self', 'خۆی', a.own.total]);
+                TT_ROLES.forEach(r => { if (a.by[r]) cells.push([r, TT_ROLE_NAME[r], a.by[r]]); });
+            }
+            // خانەی چالاک کە ژمارەکەی بوو بە سفر (فلتەر گۆڕا) دەمێنێتەوە بە ٠ — لیستەکەش بەتاڵە، و دەتوانیت لای ببەیت
+            if (ttChip !== 'all' && !cells.some(c => c[0] === ttChip)) cells.push([ttChip, ttChip === 'self' ? 'خۆی' : (TT_ROLE_NAME[ttChip] || ''), 0]);
+            return h + ttCellsHtml(cells, ttChip, 'ttSetChip');
+        }
+
+        function ttRowHtml(code, o) {
+            const V = ttOrdersView();
+            if (!V) return '';
+            const T = V.T, e = T.emp[code] || {}, rk = ttRoleKey(e.role);
+            const A = ttAggOf(V, ttCountsMap()), a = A[code] || { own: { total: 0 }, team: { total: 0 } };
+            const leader = V.kids(code).length > 0;
+            const c = leader ? a.team : a.own;
+            const name = e.full_name || 'بێ ناو';
+            let meta = `<span class="rp rp-${rk}">${TT_ROLE_NAME[rk]}</span>`;
+            if (leader) meta += `<span class="tt-grp"><i class='bx bx-group'></i>${ttPeopleSummary(V.size[code])}</span>`;
+            if (o.chainFrom) {
+                const ch = ttChainBetween(T, o.chainFrom, code);
+                if (ch.length) meta += ttChainPills(T, ch);
+                else if (o.chainFrom !== 'ROOT') meta += `<span class="cp cp-direct">ڕاستەوخۆ</span>`;
+            }
+            const b = statusBadgesFromCounts(c);
+            return `<div class="tt-row${leader ? ' is-leader' : ''}" data-tt="${histEsc(code)}">`
+                + `<span class="tt-ring rr-${rk}">${avatarHtml(ttAvatarOf(code), name, 40, code)}</span>`
+                + `<button type="button" class="tt-main" onclick="ttOpen('${histEsc(code)}')">`
+                + `<span class="tt-txt"><span class="tt-name">${histEsc(name)}</span><span class="tt-meta">${meta}</span>${b ? `<span class="tt-badges">${b}</span>` : ''}</span>`
+                + `<span class="tt-num"><b>${fmtNum(c.total)}</b><small>${leader ? 'ئۆردەری تیم' : 'ئۆردەر'}</small></span>`
+                + `<i class='bx bx-chevron-left tt-go' aria-hidden="true"></i></button></div>`;
+        }
+        // ڕیزبەندی بەپێی هەڵبژاردنی «بەپێی ئەندام» (هەمان `memberPlanComparator`) — ژمارەی تیم بۆ سەرۆکەکان
+        function ttSortCodes(V, A, codes) {
+            const cmp = memberPlanComparator(sortValOf('members'));
+            return codes.map(c => ({ c, m: V.T.emp[c], mo: (A[c] ? (V.kids(c).length ? A[c].team : A[c].own) : null) }))
+                .sort(cmp).map(x => x.c);
+        }
+        function ttPeopleTokens(V, A, code) {
+            const T = V.T, toks = [];
+            const q = ttSearchVal();
+            if (q) {
+                const pool = ttSubtree(V, code, false).map(c => ({ c, name: T.emp[c].full_name || '', code: c }));
+                const hits = searchRank(pool, q, x => [x.name, x.code]).map(x => x.c);
+                toks.push({ h: ttSecHtml('bx-search', 'ئەنجامی گەڕان', hits.length) });
+                if (!hits.length) toks.push({ h: `<p class="tt-empty tt-full">هیچ کەسێک بەم ناوە لەناو ئەم تیمەدا نییە.</p>` });
+                hits.forEach(c => toks.push({ p: c, o: { chainFrom: code } }));
+                return toks;
+            }
+            const first = code === 'ROOT' ? '' : firstNameOf(T.emp[code].full_name || '');
+            if (ttChip === 'all') {
+                const kids = V.kids(code);
+                const groups = TT_ROLES.map(r => [r, kids.filter(c => ttRoleKey(T.emp[c].role) === r)]).filter(g => g[1].length);
+                if (!groups.length) toks.push({ h: `<p class="tt-empty tt-full">هیچ کەسێک لەژێر ${histEsc(first || 'ئەم تیمە')} نییە.</p>` });
+                const onlyMem = groups.length === 1 && groups[0][0] === 'mem';
+                groups.forEach(([r, list]) => {
+                    let title;
+                    if (code === 'ROOT') title = r === 'mem' ? 'ڕاستەوخۆ لەژێر پاشا' : TT_ROLE_PL[r];
+                    else if (r === 'mem') title = (onlyMem ? 'ئەندامەکانی ' : 'ئەندامە ڕاستەوخۆکانی ') + histEsc(first);
+                    else title = TT_ROLE_PL[r] + 'ی ' + histEsc(first);
+                    toks.push({ h: ttSecHtml(r === 'mem' ? 'bx-user' : 'bx-sitemap', title, list.length) });
+                    ttSortCodes(V, A, list).forEach(c => toks.push({ p: c, o: {} }));
+                });
+                if (code === ttRoot()) { const n = ttHistCount(V); if (n) toks.push({ h: ttHistNoteHtml(n) }); }
+                return toks;
+            }
+            // یەک پلە: هەموو ئەوانەی ئەو پلەیەن لە ژێر ئەم پەڕەیە، کۆکراوە بەپێی ئەوەی ڕاستەوخۆ لەژێر کێن
+            const all = ttSubtree(V, code, false).filter(c => ttRoleKey(T.emp[c].role) === ttChip);
+            if (!all.length) { toks.push({ h: `<p class="tt-empty tt-full">هیچ ${TT_ROLE_NAME[ttChip] || ''}ێک لێرە نییە.</p>` }); return toks; }
+            const by = new Map();
+            all.forEach(c => { const p = T.parent[c]; if (!by.has(p)) by.set(p, []); by.get(p).push(c); });
+            const keys = [...by.keys()].sort((x, y) => (x === code ? -1 : y === code ? 1 : by.get(y).length - by.get(x).length));
+            keys.forEach(p => {
+                const head = (p === code)
+                    ? `<span>ڕاستەوخۆ لەژێر ${histEsc(first || 'پاشا')}</span>`
+                    : `<span>لەژێر</span>${ttChainPills(T, ttChainBetween(T, code, p).concat([p]))}`;
+                toks.push({ h: ttSecHtml(p === code ? 'bx-user' : '', head, by.get(p).length) });
+                ttSortCodes(V, A, by.get(p)).forEach(c => toks.push({ p: c, o: {} }));
+            });
+            return toks;
+        }
+        // ئەوانەی ئۆردەریان لە ژمارەکاندایە بەڵام ئیتر لە دارەی ئەم تیمەدا نین (گوازراونەتەوە، db/020)
+        function ttHistCount(V) {
+            const counts = ttCountsMap(), me = ttMyLower();
+            let n = 0;
+            Object.keys(counts).forEach(k => {
+                if (k === me || !(counts[k] && counts[k].total > 0)) return;
+                const c = V.T.lower[k];
+                if (!c || !V.vis[c]) n++;
+            });
+            return n;
+        }
+        function ttHistNoteHtml(n) {
+            return `<div class="tt-note tt-full"><i class='bx bx-history'></i><span>${fmtNum(n)} ئەندامی پێشووی تیمەکەت (گوازراونەتەوە) — ئۆردەرە کۆنەکانیان لە «بەپێی ئەندام»دان</span>`
+                + `<button type="button" onclick="ttGoMembers()">بینین</button></div>`;
+        }
+
+        function ttRenderList(list, filteredOrders) {
+            const V = ttOrdersView();
+            if (!V) { list.innerHTML = skelHtml('row', 5, { cls: 'tt-row', end: 'num' }); return; }
+            const code = ttCur();
+            const A = ttAggOf(V, ttCountsMap());
+            let plan = [{ h: ttHeadHtml() }];
+            const nm = code === 'ROOT' ? 'هەموو تیمەکان' : firstNameOf(V.T.emp[code].full_name || '');
+            if (ttPeopleNow()) {
+                plan = plan.concat(ttPeopleTokens(V, A, code));
+                _mgmtStart(list, plan, false, null);
+            } else {
+                const leaf = ttIsLeaf(code);
+                const ttl = leaf ? 'ئۆردەرەکانی ' + histEsc(nm)
+                    : (code === 'ROOT' ? 'ئۆردەرەکانی هەموو تیمەکان' : 'ئۆردەرەکانی تیمی ' + histEsc(nm));
+                plan.push({ h: ttSecHtml('bx-package', ttl, ttDayTotal()) });
+                mgmtPage.showMember = !leaf;
+                mgmtPage.lastDay = null;
+                plan = plan.concat(mgmtTokensFromOrders(filteredOrders, false));
+                if (!filteredOrders.length && !mgmtPage.hasMore) plan.push({ h: `<p class="tt-empty tt-full">هیچ داواکارییەک نەدۆزرایەوە.</p>` });
+                _mgmtStart(list, plan, !leaf, mgmtPage.hasMore ? mgmtListLoadMore : null);
+            }
+            // ڕێگاکە تا کۆتایی (کەسی کراوە) دیار بێت
+            const cr = list.querySelector('.tt-crumbs');
+            if (cr) cr.scrollLeft = -cr.scrollWidth;
+        }
+
+        // ============================================================
+        // 🌳 هەڵبژاردنی تیم لە لیستەکانی ئەدمین — جزدانەکان · قازانج · چاکسازی (کلیلەکان)
+        // ------------------------------------------------------------
+        // هەمان دارە لە شیتێکدا (`#tt-sheet`)؛ هەر لیستێک هەڵبژاردنی خۆی هەیە (`ttScopes`). خاوەن:
+        // «لە شوێنی ئۆردەر و جزدان تەواو جیاواز بێت». پێڕەوی هەر لیستێک (`ttCtxOk`) ڕێک هەمان
+        // پشکنینی خودی لیستەکەیە (خۆ-دەستکاری · بینینی جزدان · بەڕێوەبردنی کلیل) — دەرگای دووەم نییە.
+        // ============================================================
+        function ttCtxOk(ctx, u) {
+            if (!u || isSelfAdminLocked(u.code)) return false;
+            if (ctx === 'wallet') return canViewWallet(u.code);
+            if (ctx === 'edit') return canAdminKey(u.code, u.data && u.data.role);
+            return true;
+        }
+        const _ttAdmOk = {};
+        function ttAdminView(ctx) {
+            const src = allEditableUsers || [];
+            let st = _ttAdmOk[ctx];
+            if (!st || st.src !== src) {
+                const s = new Set();
+                src.forEach(u => { if (ttCtxOk(ctx, u)) s.add(String(u.code || '').trim().toLowerCase()); });
+                st = _ttAdmOk[ctx] = { src, s };
+            }
+            const ok = c => st.s.has(String(c).toLowerCase());
+            ok.sig = src;
+            return ttViewOf('adm:' + ctx, ok);
+        }
+        function ttAdminRoot() { return ttRootFor(false); }
+        function ttScopeNode(ctx) { const p = ttScopes[ctx]; return (p && p.length > 1) ? p[p.length - 1] : null; }
+        // هەڵبژاردنی ئەم لیستە → {has(code)}، یان null بۆ «هەموو»
+        function ttScopeOf(ctx) {
+            const node = ttScopeNode(ctx);
+            if (!node) return null;
+            const V = ttAdminView(ctx);
+            if (!V) return null;
+            if (!V.vis[node]) { ttScopes[ctx] = null; return null; }   // ئەو کەسە نەماوە → هەموو
+            const set = new Set(ttSubtree(V, node, true).map(c => c.toLowerCase()));
+            return { node, has: c => set.has(String(c || '').trim().toLowerCase()) };
+        }
+        // لەژێر کێیە — لە سەرەوەی هەڵبژاردنی ئەم لیستەوە (یان ڕەگ)
+        function ttListChainHtml(ctx, code) {
+            const T = ttTreeData();
+            const c = T && (T.emp[code] ? code : T.lower[String(code || '').trim().toLowerCase()]);
+            if (!c) return '';
+            const ch = ttChainBetween(T, ttScopeNode(ctx) || ttAdminRoot(), c);
+            return ch.length ? `<span class="tt-chain">${ttChainPills(T, ch)}</span>` : '';
+        }
+        function ttScopeSync(ctx) {
+            const box = document.getElementById('tt-scope-' + ctx);
+            if (!box) return;
+            const node = ttScopeNode(ctx), T = ttTreeData();
+            let html;
+            if (node && T) {
+                const shown = ttScopes[ctx].filter(c => c !== 'ROOT' && c !== ttAdminRoot());
+                html = `<button type="button" class="tt-scope is-set" onclick="ttScopeOpen('${ctx}')"><i class='bx bx-sitemap'></i>`
+                    + `<span class="tt-scope-t"><span>تیم:</span>${ttChainPills(T, shown.length ? shown : [node])}</span></button>`
+                    + `<button type="button" class="tt-scope-x" onclick="ttScopeClear('${ctx}')" aria-label="لابردنی هەڵبژاردنی تیم"><i class='bx bx-x'></i></button>`;
+            } else {
+                html = `<button type="button" class="tt-scope" onclick="ttScopeOpen('${ctx}')"><i class='bx bx-sitemap'></i>`
+                    + `<span class="tt-scope-t"><span>تیم:</span><em>${ttAdminRoot() === 'ROOT' ? 'هەموو' : 'هەموو تیمەکەم'}</em></span><i class='bx bx-chevron-down'></i></button>`;
+            }
+            if (box.__tt !== html) { box.__tt = html; box.innerHTML = html; }
+        }
+        function ttRefilter(ctx) {
+            const ids = { wallet: 'wallet-users-list', profit: 'profit-users-list', edit: 'edit-users-list' };
+            if (ctx === 'wallet') filterWalletUsers();
+            else if (ctx === 'profit') filterProfitUsers();
+            else if (ctx === 'edit') filterEditUsers();
+            const l = document.getElementById(ids[ctx]);
+            if (l) l.scrollTop = 0;
+        }
+        function ttScopeClear(ctx) { ttScopes[ctx] = null; ttRefilter(ctx); }
+
+        function ttScopeOpen(ctx) {
+            if (!ttTreeData()) {
+                showToast('لیستی کارمەندان هێشتا نەهاتووە — چرکەیەکی تر هەوڵ بدەرەوە', 'error');
+                try { loadTeamScope(); } catch (e) { }
+                return;
+            }
+            ttSheetCtx = ctx;
+            ttSheetPath = ttScopeNode(ctx) ? ttScopes[ctx].slice() : [ttAdminRoot()];
+            const sh = document.getElementById('tt-sheet');
+            if (sh) sh.classList.add('show');
+            ttSheetRender();
+        }
+        function ttSheetClose() {
+            const sh = document.getElementById('tt-sheet');
+            if (sh) sh.classList.remove('show');
+            for (let k = 2; k <= TT_NAV_MAX; k++) navDrop('tts:' + k);
+        }
+        // ⚠️ دوای هەنگاوی شیتەکە (`m:tt-sheet`، چاودێرەکە لە microtask ـدا دایدەنێت) — ئەگەرنا Back شیتەکە
+        //    دادەخات لەبری ئەوەی یەک ئاست بگەڕێتەوە
+        function ttSheetSyncNav() {
+            setTimeout(() => {
+                const sh = document.getElementById('tt-sheet');
+                const depth = (sh && sh.classList.contains('show')) ? ttSheetPath.length : 0;
+                for (let k = 2; k <= TT_NAV_MAX; k++) {
+                    if (k <= depth) navPush('tts:' + k, ttSheetUp);
+                    else navDrop('tts:' + k);
+                }
+            }, 0);
+        }
+        function ttSheetUp() { if (ttSheetPath.length > 1) { ttSheetPath = ttSheetPath.slice(0, -1); ttSheetRender(); } }
+        function ttSheetCrumb(i) { if (i >= 0 && i < ttSheetPath.length - 1) { ttSheetPath = ttSheetPath.slice(0, i + 1); ttSheetRender(); } }
+        function ttSheetGo(code) {
+            const V = ttAdminView(ttSheetCtx);
+            if (V && V.kids(code).length) { ttSheetPath = ttSheetPath.concat([code]); ttSheetRender(); }
+            else ttSheetApply(ttSheetPath.concat([code]));     // ئەندامێک: تەنها ئەو
+        }
+        function ttSheetApply(path) {
+            const p = path || ttSheetPath, ctx = ttSheetCtx;
+            ttScopes[ctx] = (p.length > 1) ? p.slice() : null;
+            ttSheetClose();
+            ttRefilter(ctx);
+        }
+        function ttSheetRowHtml(V, code) {
+            const T = V.T, e = T.emp[code] || {}, rk = ttRoleKey(e.role), leader = V.kids(code).length > 0;
+            const name = e.full_name || 'بێ ناو';
+            const n = V.size[code].ok + (V.okc[code] ? 1 : 0);
+            return `<div class="tt-row${leader ? ' is-leader' : ''}">`
+                + `<span class="tt-ring rr-${rk}">${avatarHtml(ttAvatarOf(code), name, 40, '', { noTap: true })}</span>`
+                + `<button type="button" class="tt-main" onclick="ttSheetGo('${histEsc(code)}')">`
+                + `<span class="tt-txt"><span class="tt-name">${histEsc(name)}</span><span class="tt-meta"><span class="rp rp-${rk}">${TT_ROLE_NAME[rk]}</span>`
+                + (leader ? `<span class="tt-grp"><i class='bx bx-group'></i>${ttPeopleSummary(V.size[code])}</span>` : '') + `</span></span>`
+                + (leader ? `<span class="tt-num"><b>${fmtNum(n)}</b><small>کەس</small></span><i class='bx bx-chevron-left tt-go' aria-hidden="true"></i>`
+                    : `<span class="tt-pick" aria-hidden="true"><i class='bx bx-check'></i></span>`)
+                + `</button></div>`;
+        }
+        function ttSheetRender() {
+            const body = document.getElementById('tt-sheet-body'), foot = document.getElementById('tt-sheet-foot');
+            const V = ttAdminView(ttSheetCtx);
+            if (!body || !foot || !V) return;
+            const node = ttSheetPath[ttSheetPath.length - 1];
+            if (node !== 'ROOT' && !V.vis[node]) ttSheetPath = [ttAdminRoot()];
+            const cur = ttSheetPath[ttSheetPath.length - 1], T = V.T;
+            const kids = V.kids(cur);
+            const sorted = kids.slice().sort((x, y) => (V.kids(y).length ? 1 : 0) - (V.kids(x).length ? 1 : 0) || (V.size[y].ok - V.size[x].ok) || cmpName(T.emp[x].full_name, T.emp[y].full_name));
+            body.innerHTML = ttCrumbsHtml(ttSheetPath, 'ttSheetCrumb')
+                + `<div class="tt-sheet-list">` + (sorted.length ? sorted.map(c => ttSheetRowHtml(V, c)).join('')
+                    : `<p class="tt-empty">هیچ کەسێک لێرە نییە.</p>`) + `</div>`;
+            const n = (cur === 'ROOT' ? 0 : (V.okc[cur] ? 1 : 0)) + V.size[cur].ok;
+            const what = { wallet: 'جزدانەکانی', profit: 'قازانجی', edit: 'کلیلەکانی' }[ttSheetCtx] || '';
+            const who = (cur === ttAdminRoot()) ? 'هەموو' : 'تیمی ' + histEsc(firstNameOf((T.emp[cur] || {}).full_name || ''));
+            foot.innerHTML = `<button type="button" class="btn fsheet-apply" onclick="ttSheetApply()"><i class='bx bx-check'></i> ${what} ${who} · ${fmtNum(n)} کەس</button>`;
+            const cr = body.querySelector('.tt-crumbs');
+            if (cr) cr.scrollLeft = -cr.scrollWidth;
+            body.scrollTop = 0;
+            ttSheetSyncNav();
         }
 
 
@@ -34180,6 +35001,7 @@
             'shop-fund-sheet': () => fundClose(),
             'rw-cospick-sheet': () => rwCosPickClose(),
             'whold-sheet': () => closeWholdSheet(),
+            'tt-sheet': () => ttSheetClose(),
             'xfer-sheet': () => xferClose(),
             'sal-sheet': () => salClose(),
             'capi-edit-sheet': () => capiCloseEditor(),
@@ -41005,7 +41827,7 @@
         // کام کۆمەڵە بژاردە؟ لە دۆخی «بەپێی ئەندام» ڕیزبەندی ئەندامان،
         // ئەگەرنا ڕیزبەندی خودی ئۆردەرەکان
         function fsSortId() {
-            return (currentOrdersTab === "team" && teamViewMode === "members" && !selectedTeamMember)
+            return ((currentOrdersTab === "team" && teamViewMode === "members" && !selectedTeamMember) || ttPeopleNow())
                 ? 'members' : 'orders';
         }
 
@@ -41604,7 +42426,7 @@
                 // لە دۆخی «بەپێی ئەندام»دا ئۆردەر نەخشێنراو نییە، بۆیە
                 // ژماردنیان مانای نییە
                 let showCounter = reviewModeOn()
-                    && !(currentOrdersTab === 'team' && teamViewMode === 'members' && !selectedTeamMember);
+                    && !(currentOrdersTab === 'team' && teamViewMode === 'members' && !selectedTeamMember) && !ttPeopleNow();
                 if (showCounter) {
                     let c = reviewCounts();
                     html += `<span class="afchip rvw-count" title="لە ئۆردەرە بارکراوەکاندا">
@@ -41878,12 +42700,16 @@
             if (editSection.style.display === 'block' && !document.getElementById('wa-user-code').value) {
                 editSection.style.display = 'none';
             }
+            // 🌳 هەڵبژاردنی تیمی ئەم لیستە (هی خۆی، جیا لە قازانج و چاکسازی)
+            let tsc = ttScopeOf('wallet');
+            ttScopeSync('wallet');
 
             let filteredUsers = allEditableUsers.filter(u => {
                 // ⭐ جزدانی خۆم لێرە نییە — لە شاشەی «جزدانەکەم» دەیبینم
                 if (isSelfAdminLocked(u.code)) return false;
                 // مەودا + سنووری پلەی «بینینی جزدان» — ئەوەی نایبینێت، لە لیستەکەدا نییە
                 if (!canViewWallet(u.code)) return false;
+                if (tsc && !tsc.has(u.code)) return false;
                 if (roleFilter !== "all" && u.data.role !== roleFilter) return false;
                 return !searchVal || memberSearchTier(u, wQ) > 0;
             });
@@ -41914,6 +42740,7 @@
                         <span class="wcard-txt">
                             <b>${histEsc(u.name)}</b>
                             <span class="wcard-sub"><span class="wcard-role ${rc}">${histEsc(role)}</span><bdi dir="ltr">${histEsc(u.code)}</bdi></span>
+                            ${ttListChainHtml('wallet', u.code)}
                         </span>
                         <span class="wcard-money">
                             <span class="is-bal${bal < 0 ? ' is-neg' : ''}" title="باڵانس"><i class='bx bx-wallet'></i><bdi dir="ltr">${bal.toLocaleString()}</bdi></span>
@@ -44744,11 +45571,15 @@
             if (editSection.style.display === 'block' && !document.getElementById('p-hidden-code').value) {
                 editSection.style.display = 'none';
             }
+            // 🌳 هەڵبژاردنی تیمی ئەم لیستە (هی خۆی)
+            let tsc = ttScopeOf('profit');
+            ttScopeSync('profit');
 
             // فلتەرکردنی کارمەندان بەپێی پلە و بۆکسی گەڕان
             let filteredUsers = allEditableUsers.filter(u => {
                 // ⭐ ڕێژەی قازانجی خۆم لێرە نییە
                 if (isSelfAdminLocked(u.code)) return false;
+                if (tsc && !tsc.has(u.code)) return false;
                 if (roleFilter !== "all" && u.data.role !== roleFilter) return false;
                 return !searchVal || memberSearchTier(u, pQ) > 0;
             });
@@ -44772,7 +45603,9 @@
                             ${avatarHtml(u.data.avatar, u.name, 40, u.code)}
                             <div style="min-width:0;">
                                 <strong style="color:#1e293b; font-size:14px;">${u.name}</strong><br>
+                                <span class="rp rp-${ttRoleKey(u.data.role)}">${normalizeRole(u.data.role) || 'ئەندام'}</span>
                                 <span style="font-size:11px; color:#64748b; font-family:'MSO Digits',monospace;">${u.code}</span>
+                                ${ttListChainHtml('profit', u.code)}
                             </div>
                         </div>
                         <div style="text-align:left;">
@@ -44846,6 +45679,9 @@
             let sortVal = sortValOf('edit');
             let listContainer = document.getElementById('edit-users-list');
             if (!listContainer) return;
+            // 🌳 هەڵبژاردنی تیمی ئەم لیستە (هی خۆی)
+            let tsc = ttScopeOf('edit');
+            ttScopeSync('edit');
 
             let filtered = allEditableUsers.filter(u => {
                 // ⭐ خۆم لە لیستەکەدا نییە (تەنها پاشا خۆی دەبینێت)
@@ -44853,6 +45689,7 @@
                 // ⭐ تەنها ئەو کلیلانەی بەڕێوەیان دەبەم — نەک سەرووم یان هاوئاستم
                 //    (`allEditableUsers` هەموو تیمەکەیە، بۆ جزدان و قازانجیش)
                 if (!canAdminKey(u.code, u.data.role)) return false;
+                if (tsc && !tsc.has(u.code)) return false;
                 let r = normalizeRole(u.data.role);
                 if (roleFilter && roleFilter !== "all" && r !== roleFilter) return false;
                 if (searchVal && !(memberSearchTier(u, eQ) > 0)) return false;
@@ -44888,12 +45725,13 @@
                             <div style="min-width:0;">
                                 <strong style="color:#1e293b; font-size:14px;">${u.name}</strong>${held ? ` <span class="held-badge"><i class='bx bx-shield-x'></i>ڕاگیراو</span>` : ''}<br>
                                 <span style="font-size:11px; color:#64748b; font-family:'MSO Digits',monospace;">${u.code}</span>
+                                ${ttListChainHtml('edit', u.code)}
                             </div>
                         </div>
                         <div style="display:flex; align-items:center; gap:10px; flex-shrink:0;">
                             ${loginBtn}
                             <div style="text-align:left;">
-                                <span style="display:block; font-size:12px; font-weight:bold; color:var(--primary);">${normalizeRole(u.data.role)}</span>
+                                <span class="rp rp-${ttRoleKey(u.data.role)}" style="display:inline-block; font-size:11px;">${normalizeRole(u.data.role)}</span>
                                 <span style="font-size:10px; color:#94a3b8;">دەستکاری <i class='bx bx-edit'></i></span>
                             </div>
                         </div>
