@@ -907,7 +907,7 @@
                     <!-- بینینی لیستی کلیلەکان (وەک بەشی قازانجەکان) -->
                     <div id="edit-list-view">
                         <div class="sh-collapse" id="edit-filters-collapse">
-                            <div class="segmented-control" id="edit-role-filter" style="margin-bottom: 15px;">
+                            <div class="segmented-control role-seg" id="edit-role-filter" style="margin-bottom: 15px;">
                                 <label><input type="radio" name="edit_role_filter" value="all" checked
                                         onchange="filterEditUsers()"><span>هەموو</span></label>
                                 <label><input type="radio" name="edit_role_filter" value="بەڕێوەبەر"
@@ -1187,7 +1187,7 @@
                 <div class="container" id="profits-container">
 
                     <div class="sh-collapse" id="profit-filters-collapse">
-                        <div class="segmented-control" id="profit-role-filter" style="margin-bottom: 15px;">
+                        <div class="segmented-control role-seg" id="profit-role-filter" style="margin-bottom: 15px;">
                             <label><input type="radio" name="profit_role_filter" value="all" checked
                                     onchange="filterProfitUsers()"><span>هەموو</span></label>
                             <label><input type="radio" name="profit_role_filter" value="بەڕێوەبەر"
@@ -1272,7 +1272,7 @@
             <div id="section-wallets" style="display: none;">
                 <div class="container" id="wallets-container">
                     <div class="sh-collapse" id="wallet-filters-collapse">
-                        <div class="segmented-control" style="margin-bottom: 15px;" id="wallet-role-tabs-container">
+                        <div class="segmented-control role-seg" style="margin-bottom: 15px;" id="wallet-role-tabs-container">
                             <label><input type="radio" name="wallet_role_filter" value="all" checked
                                     onchange="filterWalletUsers()"><span>هەموو</span></label>
                             <label><input type="radio" name="wallet_role_filter" value="بەڕێوەبەر"
@@ -2841,7 +2841,7 @@
             </div>
 
             <!-- فلتەری پلە (تەنها لە تابی ئۆردەری تیم دەردەکەوێت) -->
-            <div class="segmented-control" id="orders-role-filter" style="display:none; margin-bottom:12px;">
+            <div class="segmented-control role-seg" id="orders-role-filter" style="display:none; margin-bottom:12px;">
                 <label><input type="radio" name="orders_role_filter" value="all" checked
                         onchange="applyOrderFilters()"><span>هەموو</span></label>
                 <label><input type="radio" name="orders_role_filter" value="بەڕێوەبەر"
@@ -6013,6 +6013,27 @@
                         + (i ? 'نەیمپاڵێت' : 'ئاڤاتار') + '</span></div><div class="mk-rail">'
                         + tile('تاجی زێڕین', '400 کۆین') + tile('خولگە', '1200 کۆین') + tile('ئاگر', '3000 کۆین') + '</div></section>';
                 }
+            } else if (kind === 'tt') {
+                // ✨ «بەپێی تیم»: ڕێک پێکهاتەی `ttRowHtml` (بازنە + وێنە · ناو · کورتەی تیم · حاڵەتەکان · ژمارە)
+                //    بە دەقی ڕوون، بۆیە لە هەر پانییەک وەک ڕیزی ڕاستەقینە دەشکێت. سەرۆکەکانن (یەکەم پەڕە)، بە شێوەی
+                //    بەرهەم (٢٠٢٦-١٠-٢٥): تیمەکان (2,3,104) · (0,0,78) · (7,0,38)، و ژمارەکان سێ – چوار ژمارەیین (فلتەری
+                //    بنەڕەت = هەموو کات؛ تیمی لارین لە ٣٠ ڕۆژدا 1172 · 458 · 135 · 40). ⚠️ ڕیزی گشتیی `row` ٤٢px بوو
+                //    بەرامبەر ٩١ – ١٤٩px ـی ڕیزی ڕاستەقینە
+                const S = [[{ sup: 2, con: 3, mem: 104 }, [1172, 458, 40, 135], 1805],
+                    [{ mem: 78 }, [640, 95, 18, 72], 825], [{ sup: 7, mem: 38 }, [410, 88, 9, 51], 558]];
+                const icn = ['bx-check-circle', 'bx-car', 'bx-package', 'bx-undo'];
+                for (let i = 0; i < n; i++) {
+                    const [team, nums, tot] = S[i % 3];
+                    // هەمان `ttPeopleSummary` (پارچەی نەشکاو)، بۆیە لە هەمان شوێن دێڕ دەشکێت
+                    const gp = ttPeopleSummary(team).replace(/class="tt-gp"/g, 'class="tt-gp sk-w"');
+                    const bd = nums.map((v, j) => `<span class="sk-w" style="${SBADGE_SM} font-weight:700; display:inline-flex; align-items:center;"><i class='bx ${icn[j]}'></i>${v}</span>`).join('');
+                    h += `<div class="tt-row is-leader sk-shim" aria-hidden="true"><span class="tt-ring">${sk('sk-ava', '34px', 'width:34px;height:34px')}</span>`
+                        + `<span class="tt-main"><span class="tt-txt"><span class="tt-name"><span class="sk-w">${i % 2 ? 'ناوی سەرپەرشت' : 'ناوی بەڕێوەبەر'}</span></span>`
+                        + `<span class="tt-meta"><span class="tt-grp"><i class='bx bx-group sk-w'></i>${gp}</span></span>`
+                        + `<span class="tt-badges">${bd}</span></span>`
+                        + `<span class="tt-num"><b class="sk-w">${tot}</b><small class="sk-w">ئۆردەری تیم</small></span>`
+                        + `<i class='bx bx-chevron-left tt-go' aria-hidden="true"></i></span></div>`;
+                }
             } else if (kind === 'tiles') {
                 // هەمان ڕیزبەندیی `renderStats`: کارتی ئاست · خانەکانی ژمارە · چارت
                 h = `<div class="sk-card"><div class="sk-line-row">${sk('sk-ava', '46px', 'width:46px;height:46px')}`
@@ -7993,9 +8014,13 @@
         }
 
         // بەیجی حاڵەت لە ژمارە ئامادەکراوەکانەوە — هەمان ڕووکاری `statusCountBadges`
-        function statusBadgesFromCounts(c) {
+        // `sm` = هەمان پیلەکان بچووکتر (ڕیزەکانی «بەپێی تیم»): هەر چوار حاڵەت لە ٣٢٠px لە یەک دێڕدا. ⚠️ ستایلی ناوخۆییە،
+        //   بۆیە قەبارەکە لێرە دەگۆڕدرێت، نەک بە CSS؛ سکێلێتۆنی ڕیزەکە (`skelHtml('tt')`) هەمان `SBADGE_SM` بەکاردێنێت
+        const SBADGE_SM = 'font-size:10px; padding:1px 5px; border-radius:5px; gap:2px;';
+        function statusBadgesFromCounts(c, sm) {
             if (!c) return '';
-            let b = (n, bg, col, icon) => { n = Number(n) || 0; return n > 0 ? `<span style="background:${bg}; color:${col}; font-size:11px; font-weight:700; padding:2px 7px; border-radius:6px; display:inline-flex; align-items:center; gap:3px;"><i class='bx ${icon}'></i>${n}</span>` : ''; };
+            const box = sm ? SBADGE_SM : 'font-size:11px; padding:2px 7px; border-radius:6px; gap:3px;';
+            let b = (n, bg, col, icon) => { n = Number(n) || 0; return n > 0 ? `<span style="background:${bg}; color:${col}; ${box} font-weight:700; display:inline-flex; align-items:center;"><i class='bx ${icon}'></i>${n}</span>` : ''; };
             return b(c.deliv, 'rgba(16,185,129,0.15)', '#059669', 'bx-check-circle')
                 + b(c.onway, 'rgba(245,158,11,0.15)', '#d97706', 'bx-car')
                 + b(c.prep, 'rgba(59,130,246,0.15)', '#2563eb', 'bx-package')
@@ -8504,8 +8529,8 @@
                                 <div class="tm-info">
                                     ${avatarHtml(member.avatar, member.full_name, 40, member.code)}
                                     <div class="tm-details">
-                                        <h4>${member.full_name || "بێ ناو"}${rvwDone ? ` <span class="rvw-chip"><i class='bx bx-check-double'></i>پشکنرا</span>` : ''}</h4>
-                                        <p>کۆد: <span dir="ltr">${member.code}</span> | پلە: <span class="rp rp-${ttRoleKey(member.role)}">${normalizeRole(member.role) || "ئەندام"}</span></p>
+                                        <h4 class="rk-${ttRoleKey(member.role)}" title="${TT_ROLE_NAME[ttRoleKey(member.role)]}">${member.full_name || "بێ ناو"}${rvwDone ? ` <span class="rvw-chip"><i class='bx bx-check-double'></i>پشکنرا</span>` : ''}</h4>
+                                        <p>کۆد: <span dir="ltr">${member.code}</span></p>
                                         ${ttCardChainHtml(member.code)}
                                     </div>
                                 </div>
@@ -9439,13 +9464,14 @@
                 // 🌳 (٢٠٢٦-١٠-٢٥) ڕەنگی پلە + «لەژێر کێیە» (سەرپەرشت · ڕاوێژکار) — خاوەن: «دیار بێ ئەو
                 //    ئەندامە کێی سەرپەرشتە کێی ڕاوێژکارە لە کاتی سەیری ئۆردەرەکانی» · «تەنها بە بینینی
                 //    لای سەرەوە بزانین». زنجیرەکە لە دارەی ئێستاوەیە (`ttChainHtml`)، نەک لە وێنەی ئۆردەرەکە.
+                //    ٢٠٢٦-١٠-٢٦: پلە = ڕەنگی ناوەکە (`rk-<k>`)، نەک پیلی «ئەندام» لە تەنیشتی (خاوەن)
+                const mRk = mRole ? ttRoleKey(mRole) : '';
                 topHtml = `
                     <div class="mocc-owner">
                         ${avatarHtml(mAvatar, mName, 30, sCodeReal)}
                         <div class="mocc-owner-col">
                             <div class="mocc-owner-info">
-                                <span class="mocc-oname">${mNameShort}</span>
-                                ${mRole ? `<span class="mocc-orole rp-${ttRoleKey(mRole)}">${mRole}</span>` : ''}
+                                <span class="mocc-oname${mRk ? ' rk-' + mRk : ''}"${mRk ? ` title="${TT_ROLE_NAME[mRk]}"` : ''}>${mNameShort}</span>
                             </div>
                             ${ttCardChainHtml(sCodeReal)}
                         </div>
@@ -34171,7 +34197,7 @@
             // سکێلێتۆن تەنها دوای ٢٢٠ms: سەرەوەی پەڕەکە (ئەگەر ژمارەکان هەن) + شێوەی ڕیزەکان یان کارتەکان
             const spinT = setTimeout(() => {
                 if (reqId !== _mgmtReqId || !list) return;
-                const sk = people ? skelHtml('row', 5, { cls: 'tt-row', end: 'num' }) : skelHtml('order', 4, { compact: true });
+                const sk = people ? skelHtml('tt', 5) : skelHtml('order', 4, { compact: true });
                 list.innerHTML = (counts ? ttHeadHtml(counts) : '') + sk;
             }, 220);
             try {
@@ -34255,10 +34281,13 @@
             }
             return _ttAvIdx[code] || '';
         }
+        // «2 سەرپەرشت · 6 ئەندام» — هەر «ژمارە + پلە» پارچەیەکی نەشکاوە (`.tt-gp`) و «·» لەناو پارچەی پێشوویە، بۆیە دێڕ تەنها
+        // لە نێوان پارچەکاندا دەشکێت: لە ٣٢٠px «2 سەرپەرشت · 2» / «ڕاوێژکار · 6 ئەندام» بوو ([[landmines]] ٢٠٩)
         function ttPeopleSummary(s) {
             const parts = [];
             TT_ROLES.forEach(r => { if (s && s[r]) parts.push(fmtNum(s[r]) + ' ' + TT_ROLE_NAME[r]); });
-            return parts.length ? parts.join(' · ') : 'هێشتا کەسی نییە';
+            if (!parts.length) return 'هێشتا کەسی نییە';
+            return parts.map((p, i) => `<span class="tt-gp">${p}${i < parts.length - 1 ? ' ·' : ''}</span>`).join('');
         }
         // ئەوانەی لە نێوان `base` و کەسەکەدان، لە سەرەوە بۆ خوارەوە (خۆی و `base` نا)
         function ttChainBetween(T, base, code) {
@@ -34268,11 +34297,13 @@
             while (c && c !== 'ROOT' && c !== base && g++ < 60) { up.push(c); c = T.parent[c]; }
             return up.reverse();
         }
-        // ⭐ دوو ناونیشانی کوردیی تەنیشت یەک (پلە + ناو) دوو flex item ـن، نەک دەقێکی لکاو
+        // ⭐ تەنها ناو، بە ڕەنگی پلەکەی، لە گەورەوە بۆ بچووک (خاوەن ٢٠٢٦-١٠-٢٦: «تەنها ناوی بەڕێوەبەرەکە بە ڕەنگی مۆر
+        //    بنووسرێ… بە سیلسیلە بە دوای یەکدا… بۆ ئەوەی شوێنی زۆر نەگرێ») — وشەی پلە تەنها لە `title` (کۆمپیوتەر). هەر ناوێک
+        //    flex item ـی خۆیەتی و جیاکەرەوەکە ئایکۆنە، بۆیە دوو ناو هەرگیز نالکێن ([[landmines]] ١٤٧)
         function ttChainPills(T, codes) {
             return codes.map(c => {
                 const r = ttRoleKey(T.emp[c].role);
-                return `<span class="cp cp-${r}"><em>${TT_ROLE_NAME[r]}</em><span>${histEsc(firstNameOf(T.emp[c].full_name))}</span></span>`;
+                return `<span class="cp cp-${r}" title="${TT_ROLE_NAME[r]}">${histEsc(firstNameOf(T.emp[c].full_name))}</span>`;
             }).join(`<i class='bx bx-chevron-left cp-sep' aria-hidden="true"></i>`);
         }
         // کارتی ئۆردەر و کارتی ئەندام لە تابی تیم: لەژێر کێیە — لە سەرەوەی ئەم لیستەوە (پەڕەی دارەکە یان ڕەگی من)
@@ -34290,34 +34321,30 @@
             return '';
         }
 
+        // ڕێگا: هەر ناوێک بە ڕەنگی پلەکەی (`rk-<k>`؛ «هەموو» = زێڕینی پاشا) — خاوەن ٢٠٢٦-١٠-٢٦: «لەسەرەوەش ڕێک ناوی ناوەکان
+        // ببێت بەو ڕەنگە کە ئەو پلەیە هەیانە»
         function ttCrumbsHtml(path, fn) {
             const T = ttTreeData(), me = String((currentUser && currentUser.code) || '').trim();
             return `<div class="tt-crumbs-wrap tt-full"><div class="tt-crumbs" role="navigation" aria-label="ڕێگای تیم">` + path.map((c, i) => {
                 const cur = i === path.length - 1;
                 const e = (T && T.emp[c]) || {};
                 const nm = c === 'ROOT' ? 'هەموو' : firstNameOf(e.full_name || '');
-                const av = c === 'ROOT' ? ttKingAvHtml(20) : avatarHtml(ttAvatarOf(c), e.full_name, 20, '', { noTap: true });
+                const rk = c === 'ROOT' ? 'king' : ttRoleKey(e.role);
+                const av = c === 'ROOT' ? ttKingAvHtml(18) : avatarHtml(ttAvatarOf(c), e.full_name, 18, '', { noTap: true });
                 return (i ? `<i class='bx bx-chevron-left tt-sep' aria-hidden="true"></i>` : '')
-                    + `<button type="button" class="tt-crumb${cur ? ' is-cur' : ''}"${cur ? ' aria-current="page"' : ` onclick="${fn}(${i})"`}>`
+                    + `<button type="button" class="tt-crumb rk-${rk}${cur ? ' is-cur' : ''}" title="${c === 'ROOT' ? 'هەموو تیمەکان' : TT_ROLE_NAME[rk]}"${cur ? ' aria-current="page"' : ` onclick="${fn}(${i})"`}>`
                     + `${av}<span class="tt-crumb-t">${histEsc(nm)}</span>${c === me ? '<span class="tt-me">من</span>' : ''}</button>`;
             }).join('') + `</div></div>`;
         }
 
+        // لەژێر کێیە (کارتی کەس) = هەمان زنجیرەی ناو بە ڕەنگی پلە، لە بەڕێوەبەرەوە بۆ خوارەوە (ڕێک ئەوەی دارەکە دەڵێت)، نەک
+        // خانەی «سەرپەرشت: … · ڕاوێژکار: نییە» (خاوەن ٢٠٢٦-١٠-٢٦ — ٦١px لە ٣٦٠ → یەک دێڕ). پلەیەک کە نییە دەرناکەوێت؛ بێ
+        // بەڕێوەبەر = «ڕاستەوخۆ لەژێر پاشا»
         function ttLineageHtml(T, code) {
-            const rk = ttRoleKey(T.emp[code].role);
-            if (rk === 'mgr') return '';
-            const anc = [];
-            let c = T.parent[code], g = 0;
-            while (c && c !== 'ROOT' && g++ < 60) { anc.push(c); c = T.parent[c]; }
-            const of = r => anc.find(x => ttRoleKey(T.emp[x].role) === r);
-            const cell = (r, x) => x
-                ? `<div class="tt-lin lin-${r}"><small>${TT_ROLE_NAME[r]}</small><b>${histEsc(T.emp[x].full_name || '')}</b></div>`
-                : `<div class="tt-lin lin-${r} is-none"><small>${TT_ROLE_NAME[r]}</small><b>نییە</b></div>`;
-            const m = of('mgr');
-            const cells = [m ? cell('mgr', m) : `<div class="tt-lin lin-king"><small>سەر بە</small><b>پاشا · ڕاستەوخۆ</b></div>`];
-            if (rk === 'con' || rk === 'mem') cells.push(cell('sup', of('sup')));
-            if (rk === 'mem') cells.push(cell('con', of('con')));
-            return `<div class="tt-lineage n${cells.length}">${cells.join('')}</div>`;
+            if (ttRoleKey(T.emp[code].role) === 'mgr') return '';
+            const ch = ttChainBetween(T, 'ROOT', code);
+            return `<div class="tt-chain tt-node-chain">`
+                + (ch.length ? ttChainPills(T, ch) : `<span class="cp cp-king">ڕاستەوخۆ لەژێر پاشا</span>`) + `</div>`;
         }
         function ttStatsHtml(c, label) {
             const b = statusBadgesFromCounts(c);
@@ -34325,21 +34352,23 @@
                 + (b ? `<div class="tt-badges">${b}</div>` : '') + `</div>`;
         }
         function ttNodeCardHtml(V, A, code) {
+            // ژمارەی هەر پلەیەک لەسەر خانەکانی خوارەوەیە — لێرە تەنها کۆی کەسەکان (وەک کارتی هەر سەرۆکێک)
             if (code === 'ROOT') {
-                return `<div class="tt-node tt-full"><div class="tt-node-head">${ttKingAvHtml(46)}<div class="tt-node-t">`
+                return `<div class="tt-node tt-full"><div class="tt-node-head">${ttKingAvHtml(40)}<div class="tt-node-t">`
                     + `<div class="tt-node-name"><span class="tt-node-nm">هەموو تیمەکان</span></div>`
-                    + `<div class="tt-node-sub">${ttPeopleSummary(V.size.ROOT)}</div></div></div>`
+                    + `<div class="tt-node-sub">${fmtNum(V.size.ROOT.n)} کەس</div></div></div>`
                     + ttStatsHtml(A.ROOT ? A.ROOT.team : { total: 0 }, 'ئۆردەری هەموو تیمەکان') + `</div>`;
             }
             const T = V.T, e = T.emp[code], rk = ttRoleKey(e.role), a = A[code] || { own: { total: 0 }, team: { total: 0 } };
             const leaf = ttIsLeaf(code), isMe = code === String((currentUser && currentUser.code) || '').trim();
             const name = e.full_name || 'بێ ناو';
-            // پلەکە لە پیلەکەدایە — دێڕی خوارەوە تەنها ئەوەی پیلەکە نایڵێت
+            // پلەکە ڕەنگی ناوەکەیە (`rk-<k>`، خاوەن ٢٠٢٦-١٠-٢٦: «ناوەکە بکە بەو ڕەنگە»، نەک پیلی پلە) — دێڕی خوارەوە تەنها
+            // ئەوەی ناوەکە نایڵێت
             const sub = leaf ? (isMe ? 'تۆ' : '')
                 : (isMe ? 'تیمەکەم · ' : '') + fmtNum(V.size[code].n) + ' کەس لە تیمەکەیدا';
             return `<div class="tt-node tt-full"><div class="tt-node-head">`
-                + `<span class="tt-ring rr-${rk}">${avatarHtml(ttAvatarOf(code), name, 46, code)}</span>`
-                + `<div class="tt-node-t"><div class="tt-node-name"><span class="tt-node-nm">${histEsc(name)}</span><span class="rp rp-${rk}">${TT_ROLE_NAME[rk]}</span></div>`
+                + `<span class="tt-ring rr-${rk}">${avatarHtml(ttAvatarOf(code), name, 40, code)}</span>`
+                + `<div class="tt-node-t"><div class="tt-node-name"><span class="tt-node-nm rk-${rk}" title="${TT_ROLE_NAME[rk]}">${histEsc(name)}</span></div>`
                 + (sub ? `<div class="tt-node-sub">${sub}</div>` : '') + `</div>`
                 + `<button type="button" class="tt-prof" data-mprof="${histEsc(code)}" data-mpn="${histEsc(name)}" aria-label="هەموو شتەکانی ${histEsc(name)}" title="هەموو شتەکانی"><i class='bx bx-id-card'></i></button>`
                 + `</div>${ttLineageHtml(T, code)}${ttStatsHtml(leaf ? a.own : a.team, leaf ? 'ئۆردەر' : 'ئۆردەری هەموو تیمەکە')}</div>`;
@@ -34370,7 +34399,8 @@
             const V = ttOrdersView();
             if (!V) return '';
             const code = ttCur(), A = ttAggOf(V, counts || ttCountsMap());
-            let h = ttCrumbsHtml(ttPath, 'ttCrumb') + ttNodeCardHtml(V, A, code);
+            // ڕێگا تەنها کاتێک شوێنێکی سەرتر هەیە: لە ڕەگدا تاکە «هەموو» / «من»ـە و کارتەکەی خوارەوە هەمان شت دەڵێت
+            let h = (ttPath.length > 1 ? ttCrumbsHtml(ttPath, 'ttCrumb') : '') + ttNodeCardHtml(V, A, code);
             if (ttIsLeaf(code)) return h;
             const a = A[code] || { team: { total: 0 }, by: { mgr: 0, sup: 0, con: 0, mem: 0 }, own: { total: 0 } };
             const people = ttSub === 'people';
@@ -34399,18 +34429,21 @@
             const leader = V.kids(code).length > 0;
             const c = leader ? a.team : a.own;
             const name = e.full_name || 'بێ ناو';
-            let meta = `<span class="rp rp-${rk}">${TT_ROLE_NAME[rk]}</span>`;
+            // ناو بە ڕەنگی پلەکەی (`rk-<k>`)، بێ پیلی پلە (خاوەن ٢٠٢٦-١٠-٢٦)؛ دێڕی دووەم تەنها ئەگەر شتێکی هەبێت (کورتەی تیم ·
+            // زنجیرەی گەڕان) — ئەندامێک دوو دێڕە، نەک سێ ([[team-hierarchy-view]])
+            let meta = '';
             if (leader) meta += `<span class="tt-grp"><i class='bx bx-group'></i>${ttPeopleSummary(V.size[code])}</span>`;
             if (o.chainFrom) {
                 const ch = ttChainBetween(T, o.chainFrom, code);
                 if (ch.length) meta += ttChainPills(T, ch);
                 else if (o.chainFrom !== 'ROOT') meta += `<span class="cp cp-direct">ڕاستەوخۆ</span>`;
             }
-            const b = statusBadgesFromCounts(c);
+            const b = statusBadgesFromCounts(c, true);
             return `<div class="tt-row${leader ? ' is-leader' : ''}" data-tt="${histEsc(code)}">`
-                + `<span class="tt-ring rr-${rk}">${avatarHtml(ttAvatarOf(code), name, 40, code)}</span>`
+                + `<span class="tt-ring rr-${rk}">${avatarHtml(ttAvatarOf(code), name, 34, code)}</span>`
                 + `<button type="button" class="tt-main" onclick="ttOpen('${histEsc(code)}')">`
-                + `<span class="tt-txt"><span class="tt-name">${histEsc(name)}</span><span class="tt-meta">${meta}</span>${b ? `<span class="tt-badges">${b}</span>` : ''}</span>`
+                + `<span class="tt-txt"><span class="tt-name rk-${rk}" title="${TT_ROLE_NAME[rk]}">${histEsc(name)}</span>`
+                + (meta ? `<span class="tt-meta">${meta}</span>` : '') + (b ? `<span class="tt-badges">${b}</span>` : '') + `</span>`
                 + `<span class="tt-num"><b>${fmtNum(c.total)}</b><small>${leader ? 'ئۆردەری تیم' : 'ئۆردەر'}</small></span>`
                 + `<i class='bx bx-chevron-left tt-go' aria-hidden="true"></i></button></div>`;
         }
@@ -34481,7 +34514,7 @@
 
         function ttRenderList(list, filteredOrders) {
             const V = ttOrdersView();
-            if (!V) { list.innerHTML = skelHtml('row', 5, { cls: 'tt-row', end: 'num' }); return; }
+            if (!V) { list.innerHTML = skelHtml('tt', 5); return; }
             const code = ttCur();
             const A = ttAggOf(V, ttCountsMap());
             let plan = [{ h: ttHeadHtml() }];
@@ -34624,10 +34657,10 @@
             const name = e.full_name || 'بێ ناو';
             const n = V.size[code].ok + (V.okc[code] ? 1 : 0);
             return `<div class="tt-row${leader ? ' is-leader' : ''}">`
-                + `<span class="tt-ring rr-${rk}">${avatarHtml(ttAvatarOf(code), name, 40, '', { noTap: true })}</span>`
+                + `<span class="tt-ring rr-${rk}">${avatarHtml(ttAvatarOf(code), name, 34, '', { noTap: true })}</span>`
                 + `<button type="button" class="tt-main" onclick="ttSheetGo('${histEsc(code)}')">`
-                + `<span class="tt-txt"><span class="tt-name">${histEsc(name)}</span><span class="tt-meta"><span class="rp rp-${rk}">${TT_ROLE_NAME[rk]}</span>`
-                + (leader ? `<span class="tt-grp"><i class='bx bx-group'></i>${ttPeopleSummary(V.size[code])}</span>` : '') + `</span></span>`
+                + `<span class="tt-txt"><span class="tt-name rk-${rk}" title="${TT_ROLE_NAME[rk]}">${histEsc(name)}</span>`
+                + (leader ? `<span class="tt-meta"><span class="tt-grp"><i class='bx bx-group'></i>${ttPeopleSummary(V.size[code])}</span></span>` : '') + `</span>`
                 + (leader ? `<span class="tt-num"><b>${fmtNum(n)}</b><small>کەس</small></span><i class='bx bx-chevron-left tt-go' aria-hidden="true"></i>`
                     : `<span class="tt-pick" aria-hidden="true"><i class='bx bx-check'></i></span>`)
                 + `</button></div>`;
@@ -42747,14 +42780,14 @@
             //    ڕێڕەوی کارتی پڕۆفایل). وێنەکە پڕۆفایل دەکاتەوە (گوێگری گرتن).
             winRender(listContainer, filteredUsers, u => {
                 const bal = Number(u.data.balance || 0), sav = Number(u.data.savings || 0);
-                const role = u.data.role || "ئەندام";
-                const rc = role === "پاشا" ? 'is-king' : role === "بەڕێوەبەر" ? 'is-mgr' : role === "سەرپەرشت" ? 'is-sup' : role === "ڕاوێژکار" ? 'is-con' : 'is-mem';
+                // پلە = ڕەنگی ناوەکە (`rk-<k>`، ٢٠٢٦-١٠-٢٦)، نەک پیلی پلە لە ژێری
+                const rk = ttRoleKey(u.data.role);
                 return `
                     <button type="button" class="wcard" onclick="openWalletEdit('${u.code}')">
                         ${avatarHtml(u.data.avatar, u.name, 44, u.code)}
                         <span class="wcard-txt">
-                            <b>${histEsc(u.name)}</b>
-                            <span class="wcard-sub"><span class="wcard-role ${rc}">${histEsc(role)}</span><bdi dir="ltr">${histEsc(u.code)}</bdi></span>
+                            <b class="rk-${rk}" title="${TT_ROLE_NAME[rk]}">${histEsc(u.name)}</b>
+                            <span class="wcard-sub"><bdi dir="ltr">${histEsc(u.code)}</bdi></span>
                             ${ttListChainHtml('wallet', u.code)}
                         </span>
                         <span class="wcard-money">
@@ -45617,8 +45650,7 @@
                         <div style="display:flex; align-items:center; gap:10px; min-width:0;">
                             ${avatarHtml(u.data.avatar, u.name, 40, u.code)}
                             <div style="min-width:0;">
-                                <strong style="color:#1e293b; font-size:14px;">${u.name}</strong><br>
-                                <span class="rp rp-${ttRoleKey(u.data.role)}">${normalizeRole(u.data.role) || 'ئەندام'}</span>
+                                <strong class="adm-nm rk-${ttRoleKey(u.data.role)}" title="${TT_ROLE_NAME[ttRoleKey(u.data.role)]}" style="font-size:14px;">${u.name}</strong><br>
                                 <span style="font-size:11px; color:#64748b; font-family:'MSO Digits',monospace;">${u.code}</span>
                                 ${ttListChainHtml('profit', u.code)}
                             </div>
@@ -45738,7 +45770,7 @@
                         <div style="display:flex; align-items:center; gap:10px; min-width:0;">
                             ${avatarHtml(u.data.avatar, u.name, 40, u.code)}
                             <div style="min-width:0;">
-                                <strong style="color:#1e293b; font-size:14px;">${u.name}</strong>${held ? ` <span class="held-badge"><i class='bx bx-shield-x'></i>ڕاگیراو</span>` : ''}<br>
+                                <strong class="adm-nm rk-${ttRoleKey(u.data.role)}" title="${TT_ROLE_NAME[ttRoleKey(u.data.role)]}" style="font-size:14px;">${u.name}</strong>${held ? ` <span class="held-badge"><i class='bx bx-shield-x'></i>ڕاگیراو</span>` : ''}<br>
                                 <span style="font-size:11px; color:#64748b; font-family:'MSO Digits',monospace;">${u.code}</span>
                                 ${ttListChainHtml('edit', u.code)}
                             </div>
@@ -45746,7 +45778,6 @@
                         <div style="display:flex; align-items:center; gap:10px; flex-shrink:0;">
                             ${loginBtn}
                             <div style="text-align:left;">
-                                <span class="rp rp-${ttRoleKey(u.data.role)}" style="display:inline-block; font-size:11px;">${normalizeRole(u.data.role)}</span>
                                 <span style="font-size:10px; color:#94a3b8;">دەستکاری <i class='bx bx-edit'></i></span>
                             </div>
                         </div>

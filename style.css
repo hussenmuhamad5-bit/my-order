@@ -7653,23 +7653,14 @@ i.moc-avatar {
   min-width: 0;
 }
 
+/* ناوی خاوەن بە ڕەنگی پلەکەی (`rk-<k>`) — پیلی «ئەندام»ـی تەنیشتی لابرا (خاوەن ٢٠٢٦-١٠-٢٦) */
 .mocc-oname {
   font-size: 13px;
   font-weight: 600;
-  color: #1e293b;
+  color: var(--rk, #1e293b);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-
-.mocc-orole {
-  font-size: 10px;
-  font-weight: 600;
-  color: var(--primary);
-  background: rgba(36, 129, 204, 0.1);
-  padding: 1px 7px;
-  border-radius: 10px;
-  flex-shrink: 0;
 }
 
 /* ڕیزی کڕیار (ژێر سەردێڕی ئەندام) */
@@ -8373,7 +8364,7 @@ i.moc-avatar {
 .tm-details h4 {
   margin: 0 0 4px 0;
   font-size: 15px;
-  color: #1e293b;
+  color: var(--rk, #1e293b);
   font-weight: 600;
 }
 
@@ -8424,26 +8415,25 @@ i.moc-avatar {
   --role-mem-bg: #eef2f6;
 }
 
-/* پیلی پلە — `mocc-orole` (کارتی ئۆردەر) هەمان ڕەنگ وەردەگرێت */
-.rp {
-  display: inline-flex;
-  align-items: center;
-  flex-shrink: 0;
-  padding: 0 7px;
-  border-radius: var(--r-full);
-  font-size: 10px;
-  font-weight: 700;
-  line-height: 1.7;
-  white-space: nowrap;
-  color: var(--role-mem);
-  background: var(--role-mem-bg);
-}
+/* ⭐ ناوی کەس بە ڕەنگی پلەکەی — هیچ پیلێکی «بەڕێوەبەر · ئەندام» لە تەنیشت، ژێر یان سەرووی ناو (خاوەن ٢٠٢٦-١٠-٢٦:
+   «ناوی بەڕێوەبەرەکە… بکە بەو ڕەنگەی کە بۆی دیاریکراوە… بۆ ئەوەی شوێنی زۆر نەگرێ و تووشی تێکەڵی نەبین»).
+   `rk-<k>` لەسەر خودی توخمی ناوەکە (یان دوگمەی ڕێگا) گۆڕاوەکان دادەنێت؛ هەر یاسایەکی ناو `var(--rk, <ڕەنگی پێشوو>)` دەخوێنێتەوە،
+   بۆیە بێ پلە (کەسی نەناسراو) هەمان ڕەنگی پێشوو دەمێنێت و هیچ شەڕی تایبەتمەندی (specificity) نییە */
+.rk-king { --rk: var(--role-king); --rk-bg: var(--role-king-bg); --rk-bd: rgba(161, 98, 7, .32); }
+.rk-mgr { --rk: var(--role-mgr); --rk-bg: var(--role-mgr-bg); --rk-bd: rgba(109, 40, 217, .3); }
+.rk-sup { --rk: var(--role-sup); --rk-bg: var(--role-sup-bg); --rk-bd: rgba(14, 116, 144, .3); }
+.rk-con { --rk: var(--role-con); --rk-bg: var(--role-con-bg); --rk-bd: rgba(190, 24, 93, .28); }
+.rk-mem { --rk: var(--role-mem); --rk-bg: var(--role-mem-bg); --rk-bd: rgba(71, 85, 105, .26); }
 
-.rp-king, .mocc-orole.rp-king { color: var(--role-king); background: var(--role-king-bg); }
-.rp-mgr, .mocc-orole.rp-mgr { color: var(--role-mgr); background: var(--role-mgr-bg); }
-.rp-sup, .mocc-orole.rp-sup { color: var(--role-sup); background: var(--role-sup-bg); }
-.rp-con, .mocc-orole.rp-con { color: var(--role-con); background: var(--role-con-bg); }
-.rp-mem, .mocc-orole.rp-mem { color: var(--role-mem); background: var(--role-mem-bg); }
+/* ڕێبەری ڕەنگەکان: فلتەرەکانی پلە (`role-seg`) هەمان ڕەنگ دەگرن، چونکە وشەی پلە ئیتر لەسەر ناوەکان نییە */
+.role-seg input[value="بەڕێوەبەر"] + span { color: var(--role-mgr); }
+.role-seg input[value="سەرپەرشت"] + span { color: var(--role-sup); }
+.role-seg input[value="ڕاوێژکار"] + span { color: var(--role-con); }
+.role-seg input[value="ئەندام"] + span { color: var(--role-mem); }
+.role-seg input[value="بەڕێوەبەر"]:checked + span { background: var(--role-mgr-bg); }
+.role-seg input[value="سەرپەرشت"]:checked + span { background: var(--role-sup-bg); }
+.role-seg input[value="ڕاوێژکار"]:checked + span { background: var(--role-con-bg); }
+.role-seg input[value="ئەندام"]:checked + span { background: var(--role-mem-bg); }
 
 /* «لەژێر کێیە»: پیلی پلە + ناو، لە سەرەوە بۆ خوارەوە. ⚠️ پلە و ناو دوو flex item ـن
    (دوو ناونیشانی کوردی — هەرگیز یەک دەقی لکاو، [[landmines]] ١٤٧) */
@@ -8455,6 +8445,8 @@ i.moc-avatar {
   min-width: 0;
 }
 
+/* ⭐ تەنها ناو — ڕەنگەکە دەڵێت کێیە (بەڕێوەبەر مۆر · سەرپەرشت شینی دەریایی · ڕاوێژکار پەمەیی)، نەک وشەی پلە
+   (خاوەن ٢٠٢٦-١٠-٢٦) */
 .cp {
   display: inline-flex;
   align-items: center;
@@ -8469,12 +8461,6 @@ i.moc-avatar {
   background: var(--role-mem-bg);
 }
 
-.cp em {
-  font-style: normal;
-  font-weight: 500;
-  opacity: .8;
-}
-
 .cp-king { color: var(--role-king); background: var(--role-king-bg); }
 .cp-mgr { color: var(--role-mgr); background: var(--role-mgr-bg); }
 .cp-sup { color: var(--role-sup); background: var(--role-sup-bg); }
@@ -8484,7 +8470,7 @@ i.moc-avatar {
 
 .cp-sep {
   flex-shrink: 0;
-  font-size: 13px;
+  font-size: 12px;
   color: #94a3b8;
 }
 
@@ -8498,10 +8484,6 @@ i.moc-avatar {
 
 .tm-details .tt-chain {
   margin-top: 5px;
-}
-
-.tm-details .rp {
-  vertical-align: middle;
 }
 
 /* بازنەی پلە لە دەوری وێنە (تەنها لە ڕیزەکانی دارەکە و کارتی کەس) */
@@ -8528,23 +8510,17 @@ i.moc-avatar {
   color: #fff;
 }
 
-/* --- ڕێگا (breadcrumb) — لکاو بە سەرەوەی لیستەکەوە. ⚠️ لە شوێنی چەسپانی خۆیدا دەست پێدەکات
-   (`margin-top: -5px` = `padding-top`ی لیستەکە)، بۆیە لە یەکەم سکڕۆڵدا ناخلیسکێت ([[landmines]] ٥٦) */
-/* ⚠️ -20px نەک -25px: لیستەکە خۆی ٥px لە هەر لایەک لە شاشە گەورەترە (پەدینگی ٢٥ لەناو شاشەی ٢٠)،
-   بۆیە پاشبنەمای ڕێگاکە ڕێک بەقەد شاشەکەیە — پێوانەکراو [-5, 365] لە ٣٦٠ پێش چاکسازی */
+/* --- ڕێگا (breadcrumb) — لەگەڵ لیستەکە سکڕۆڵ دەکات، لکاو نییە. خاوەن (٢٠٢٦-١٠-٢٦، سکرینشۆت): «کاتێک سکرۆڵ دەکەین
+   ئەمە ون نابێت… با لە کاتی سکرۆڵکردن ون بێت» — «هەموو»ـی لکاو بە درێژایی لیستەکە لەسەر کارتەکان دەمایەوە. لە ڕەگدا هەر
+   دانانرێت (`ttHeadHtml`)؛ گەڕانەوەی یەک ئاست = Back ([[back-navigation]]) */
 .tt-crumbs-wrap {
-  position: sticky;
-  top: 0;
-  z-index: 3;
-  margin: -5px -20px 8px;
-  padding: 6px 20px 8px;
-  background: var(--bg);
+  margin: 0 0 7px;
 }
 
 .tt-crumbs {
   display: flex;
   align-items: center;
-  gap: 3px;
+  gap: 2px;
   overflow-x: auto;
   scrollbar-width: none;
 }
@@ -8557,13 +8533,13 @@ i.moc-avatar {
   flex-shrink: 0;
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  min-height: 38px;
-  padding: 0 5px 0 11px;
+  gap: 4px;
+  min-height: 34px;
+  padding: 0 4px 0 10px;
   border: 1px solid #e2e8f0;
   border-radius: var(--r-full);
   background: #fff;
-  color: #334155;
+  color: var(--rk, #334155);
   font-family: inherit;
   font-size: var(--fs-sm);
   font-weight: var(--font-semibold);
@@ -8571,10 +8547,11 @@ i.moc-avatar {
   cursor: pointer;
 }
 
+/* ئەوەی کراوەیە: تۆنی ڕەنگی پلەکەی خۆی (هەموو = زێڕینی پاشا)، نەک شینی گشتی */
 .tt-crumb.is-cur {
-  border-color: rgba(36, 129, 204, .32);
-  background: rgba(36, 129, 204, .1);
-  color: var(--primary);
+  border-color: var(--rk-bd, rgba(36, 129, 204, .32));
+  background: var(--rk-bg, rgba(36, 129, 204, .1));
+  color: var(--rk, var(--primary));
   font-weight: var(--font-bold);
   cursor: default;
 }
@@ -8591,14 +8568,14 @@ i.moc-avatar {
 
 .tt-sep {
   flex-shrink: 0;
-  font-size: 18px;
+  font-size: 15px;
   color: #94a3b8;
 }
 
 /* --- کارتی کەس --- */
 .tt-node {
-  margin-bottom: 10px;
-  padding: 12px 13px;
+  margin-bottom: 8px;
+  padding: 10px 11px;
   border: 1px solid #e2e8f0;
   border-radius: var(--r-lg);
   background: #fff;
@@ -8608,7 +8585,7 @@ i.moc-avatar {
 .tt-node-head {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 9px;
 }
 
 .tt-node-t {
@@ -8631,7 +8608,7 @@ i.moc-avatar {
   font-size: var(--fs-lg);
   font-weight: var(--font-bold);
   line-height: 1.4;
-  color: var(--text-main);
+  color: var(--rk, var(--text-main));
   overflow-wrap: anywhere;
 }
 
@@ -8643,64 +8620,48 @@ i.moc-avatar {
 
 .tt-prof {
   flex-shrink: 0;
-  width: 44px;
-  height: 44px;
+  width: 36px;
+  height: 36px;
   padding: 0;
   border: 1px solid #e2e8f0;
-  border-radius: var(--r-md);
+  border-radius: var(--r-sm);
   background: #f8fafc;
   color: var(--primary);
-  font-size: 22px;
+  font-size: 18px;
   display: grid;
   place-items: center;
   cursor: pointer;
 }
 
-/* کێ سەرپەرشت و ڕاوێژکارە — خانەیەک بۆ هەر پلەیەک، ناو تا کۆتایی دەشکێت (هیچ «…») */
-.tt-lineage {
-  display: grid;
-  gap: 6px;
-  margin-top: 10px;
+/* ⚠️ `button i { font-size: var(--icon-md) }` (٢٠px) هەموو ئایکۆنێکی ناو دوگمە دەگرێت — ڕیزی کەس، ڕێگا و دوگمەی پڕۆفایل
+   هەموویان دوگمەن. پێوانەکراو (٢٠٢٦-١٠-٢٦): ئایکۆنی حاڵەت ٢٠px بوو لەناو پیلی ١٠px (پیل ٣٧.٧px لەبری ~٢٨)، و تاجی
+   «هەموو» ٢٠px لەناو بازنەی ٢٠px. حاڵەت و تاج قەبارەی پیل/بازنەکەی خۆیان دەگرنەوە (ستایلی ناوخۆیی) */
+.tt-badges i,
+.tt-king-av i {
+  font-size: inherit;
 }
 
-.tt-lineage.n1 { grid-template-columns: minmax(0, 1fr); }
-.tt-lineage.n2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-.tt-lineage.n3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-
-.tt-lin {
-  min-width: 0;
-  padding: 6px 8px;
-  border-radius: var(--r-sm);
+.tt-prof i {
+  font-size: 18px;
 }
 
-.tt-lin small {
-  display: block;
-  font-size: 10px;
-  font-weight: 600;
-  opacity: .85;
+/* لەژێر کێیە — زنجیرەی ناو بە ڕەنگی پلە (`ttLineageHtml`)، لە بەڕێوەبەرەوە بۆ خوارەوە، یەک دێڕ */
+.tt-node-chain {
+  margin-top: 8px;
 }
 
-.tt-lin b {
-  display: block;
-  font-size: var(--fs-sm);
-  font-weight: 700;
-  line-height: 1.4;
-  overflow-wrap: anywhere;
+.tt-node-chain .cp {
+  font-size: 11px;
+  padding: 1px 7px;
 }
-
-.tt-lin.is-none b { font-weight: 500; opacity: .7; }
-.tt-lin.lin-king { color: var(--role-king); background: var(--role-king-bg); }
-.tt-lin.lin-mgr { color: var(--role-mgr); background: var(--role-mgr-bg); }
-.tt-lin.lin-sup { color: var(--role-sup); background: var(--role-sup-bg); }
-.tt-lin.lin-con { color: var(--role-con); background: var(--role-con-bg); }
 
 .tt-stats {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 6px;
-  margin-top: 10px;
-  padding-top: 9px;
+  gap: 5px;
+  margin-top: 8px;
+  padding-top: 7px;
   border-top: 1px dashed #eef2f5;
 }
 
@@ -8712,7 +8673,7 @@ i.moc-avatar {
 }
 
 .tt-total b {
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 800;
   color: var(--primary);
   font-variant-numeric: tabular-nums;
@@ -8733,13 +8694,13 @@ i.moc-avatar {
 /* --- کەسەکان / ئۆردەرەکان — هەمان شێوەی `.segmented-control` --- */
 .tt-seg {
   display: flex;
-  margin: 0 0 8px;
+  margin: 0 0 7px;
 }
 
 .tt-seg button {
   flex: 1;
   min-width: 0;
-  min-height: var(--ctl-h);
+  min-height: 38px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -8763,7 +8724,7 @@ i.moc-avatar {
   font-weight: 600;
 }
 
-.tt-seg i { font-size: 16px; }
+.tt-seg i { font-size: 15px; }
 
 .tt-seg b {
   font-weight: 700;
@@ -8775,8 +8736,8 @@ i.moc-avatar {
 .tt-cells {
   display: grid;
   grid-template-columns: repeat(var(--n, 4), minmax(0, 1fr));
-  gap: 5px;
-  margin: 0 0 8px;
+  gap: 4px;
+  margin: 0 0 7px;
 }
 
 .tt-cells.n2 { --n: 2; }
@@ -8789,7 +8750,7 @@ i.moc-avatar {
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  margin: -2px 2px 8px;
+  margin: -1px 2px 7px;
   font-size: var(--fs-sm);
   font-weight: 700;
   color: var(--primary);
@@ -8800,7 +8761,7 @@ i.moc-avatar {
   display: inline-flex;
   align-items: center;
   gap: 3px;
-  min-height: 32px;
+  min-height: 30px;
   padding: 0 10px 0 8px;
   border: 1px solid #e2e8f0;
   border-radius: var(--r-full);
@@ -8812,23 +8773,23 @@ i.moc-avatar {
   cursor: pointer;
 }
 
-.tt-only button i { font-size: 15px; }
+.tt-only button i { font-size: 14px; }
 
 .tt-cell {
   min-width: 0;
-  min-height: 48px;
+  min-height: 40px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 1px;
-  padding: 4px 2px;
+  gap: 0;
+  padding: 3px 2px;
   border: 1px solid #e2e8f0;
-  border-radius: var(--r-md);
+  border-radius: var(--r-sm);
   background: #fff;
   color: var(--text-main);
   font-family: inherit;
-  font-size: 11.5px;
+  font-size: 11px;
   font-weight: 600;
   line-height: 1.3;
   cursor: pointer;
@@ -8844,8 +8805,8 @@ i.moc-avatar {
 
 .tt-cell .dot {
   flex-shrink: 0;
-  width: 7px;
-  height: 7px;
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
   background: var(--role-mem);
 }
@@ -8856,7 +8817,7 @@ i.moc-avatar {
 .tt-cell.c-mem .dot { background: #94a3b8; }
 
 .tt-cell b {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 800;
   color: var(--text-secondary);
   font-variant-numeric: tabular-nums;
@@ -8883,8 +8844,8 @@ i.moc-avatar {
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  margin: 12px 0 7px;
-  padding-bottom: 6px;
+  margin: 10px 0 6px;
+  padding-bottom: 5px;
   border-bottom: 1px dashed #e2e8f0;
   font-size: var(--fs-sm);
   font-weight: 700;
@@ -8900,7 +8861,7 @@ i.moc-avatar {
 }
 
 .tt-sec-l > i {
-  font-size: 15px;
+  font-size: 14px;
   color: var(--primary);
 }
 
@@ -8912,11 +8873,14 @@ i.moc-avatar {
   font-variant-numeric: tabular-nums;
 }
 
+/* ڕیزی کەس: ناو (بە ڕەنگی پلەکەی، `rk-<k>`) لە دێڕی یەکەم، کورتەی تیم (سەرۆکەکان) یان زنجیرە (گەڕان) لە دووەم، حاڵەتەکان
+   (`sm`) لە سێیەم — ئەندامێک دوو دێڕە. پێوانەکراو ٣٦٠ (٢٠٢٦-١٠-٢٦، Noto Kufi): سەرۆک ١١٩ – ١٤٩px → ٦٧ – ٨٦، ئەندام ٦٢ – ٩١ →
+   ٤٦ – ٥١؛ یەکەم کردنەوەی پاشا ١ ڕیز → ٣ لەسەر شاشە ([[team-hierarchy-view]]) */
 .tt-row {
   min-width: 0;
   display: flex;
   align-items: center;
-  margin-bottom: 6px;
+  margin-bottom: 5px;
   border: 1px solid #e2e8f0;
   border-radius: var(--r-md);
   background: #fff;
@@ -8926,7 +8890,7 @@ i.moc-avatar {
 .tt-row.is-leader { border-color: #dbe3ee; }
 
 .tt-row > .tt-ring {
-  margin-inline-start: 12px;
+  margin-inline-start: 10px;
 }
 
 .tt-main {
@@ -8934,14 +8898,17 @@ i.moc-avatar {
   min-width: 0;
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 10px 8px 10px 6px;
-  padding-inline-start: 10px;
+  gap: 7px;
+  padding: 7px 6px 7px 4px;
+  padding-inline-start: 9px;
   border: 0;
   border-radius: var(--r-md);
   background: transparent;
   color: inherit;
   font-family: inherit;
+  /* ⚠️ هەمان ١.٢ـی دوگمەی گشتی (یاسای `button` لە سەرەتای فایلەکە)، بۆ ئەوەی span ـی سکێلێتۆن (`skelHtml('tt')`)
+     ١.٥ـی body وەرنەگرێت — هەمان ناوەڕۆک ٧٣.٧ بەرامبەر ٦٧.٤px بوو. ⚠️ `normal` نا: Noto Kufi بە normal ٦٧ → ٨٢px دەبوو */
+  line-height: 1.2;
   text-align: right;
   cursor: pointer;
 }
@@ -8957,10 +8924,11 @@ i.moc-avatar {
 }
 
 .tt-name {
-  font-size: 14px;
+  min-width: 0;
+  font-size: 13.5px;
   font-weight: 600;
-  line-height: 1.4;
-  color: var(--text-main);
+  line-height: 1.35;
+  color: var(--rk, var(--text-main));
   overflow-wrap: anywhere;
 }
 
@@ -8968,7 +8936,7 @@ i.moc-avatar {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 4px 5px;
+  gap: 3px 4px;
   font-size: var(--fs-xs);
   font-weight: 600;
   color: var(--text-secondary);
@@ -8977,15 +8945,21 @@ i.moc-avatar {
 .tt-grp {
   display: inline-flex;
   align-items: center;
-  gap: 3px;
+  flex-wrap: wrap;
+  gap: 0 4px;
 }
 
 .tt-grp i {
-  font-size: 13px;
+  font-size: 12px;
   color: #94a3b8;
 }
 
-.tt-txt .tt-badges { margin-top: 2px; }
+/* «ژمارە + پلە» نەشکاوە (`ttPeopleSummary`) — دێڕ تەنها لە نێوان پارچەکاندا دەشکێت */
+.tt-gp {
+  white-space: nowrap;
+}
+
+.tt-txt .tt-badges { gap: 3px; }
 
 .tt-num {
   flex-shrink: 0;
@@ -8996,14 +8970,14 @@ i.moc-avatar {
 }
 
 .tt-num b {
-  font-size: 16px;
+  font-size: 14.5px;
   font-weight: 700;
   color: var(--primary);
   font-variant-numeric: tabular-nums;
 }
 
 .tt-num small {
-  font-size: 10px;
+  font-size: 9.5px;
   font-weight: 600;
   color: #94a3b8;
   white-space: nowrap;
@@ -9011,20 +8985,26 @@ i.moc-avatar {
 
 .tt-go {
   flex-shrink: 0;
-  font-size: 22px;
+  font-size: 18px;
   color: #b3c0cf;
 }
 
 .tt-pick {
   flex-shrink: 0;
-  width: 34px;
-  height: 34px;
+  width: 30px;
+  height: 30px;
   border-radius: 50%;
   display: grid;
   place-items: center;
   background: rgba(36, 129, 204, .1);
   color: var(--primary);
-  font-size: 18px;
+  font-size: 16px;
+}
+
+/* سکێلێتۆنی ڕیز (`skelHtml('tt')`): هەمان پێکهاتە، دەقی ڕوون — ژمارەی شین و ڕەنگی پلەیش ڕوون دەبن */
+.tt-row.sk-shim .sk-w,
+.tt-row.sk-shim .sk-w * {
+  color: transparent;
 }
 
 .tt-empty {
@@ -9061,7 +9041,7 @@ i.moc-avatar {
 
 .tt-note button {
   flex-shrink: 0;
-  min-height: 38px;
+  min-height: 34px;
   padding: 0 14px;
   border: 1px solid rgba(36, 129, 204, .3);
   border-radius: var(--r-sm);
@@ -9140,10 +9120,7 @@ i.moc-avatar {
 }
 
 #tt-sheet .tt-crumbs-wrap {
-  position: static;
   margin: 0;
-  padding: 0;
-  background: none;
 }
 
 .tt-sheet-list {
@@ -9158,12 +9135,10 @@ i.moc-avatar {
 @media (max-width: 359px) {
   #team-view-mode span i { display: none; }
   .tt-cell .dot { display: none; }
-  .tt-cell { font-size: 11px; }
   /* خاڵ نییە، بۆیە ناوەکە خۆی ڕەنگی پلەکە دەگرێت */
   .tt-cell.c-mgr:not(.on) .l { color: var(--role-mgr); }
   .tt-cell.c-sup:not(.on) .l { color: var(--role-sup); }
   .tt-cell.c-con:not(.on) .l { color: var(--role-con); }
-  .tt-lin b { font-size: 11px; }
 }
 
 /* کۆمپیوتەر: سەرەوەی پەڕەکە بە درێژایی هەموو ستوونەکانی لیستەکە (ڕیزەکان دوو ستوونن) */
@@ -10494,10 +10469,11 @@ body.keyboard-open #main-fab {
   gap: 3px;
 }
 
-/* ناو تا دوو دێڕ — نەک «…» لە یەک دێڕدا؛ ناوی تەواو لە پانێڵەکەدایە */
+/* ناو تا دوو دێڕ — نەک «…» لە یەک دێڕدا؛ ناوی تەواو لە پانێڵەکەدایە. ڕەنگی ناو = ڕەنگی پلە (`rk-<k>`، ٢٠٢٦-١٠-٢٦) */
 .wcard-txt b {
   display: -webkit-box;
   overflow: hidden;
+  color: var(--rk, var(--text-main));
   font-size: 14px;
   line-height: 1.35;
   overflow-wrap: anywhere;
@@ -10518,19 +10494,10 @@ body.keyboard-open #main-fab {
   font-family: "MSO Digits", ui-monospace, Menlo, Consolas, monospace;
 }
 
-.wcard-role {
-  padding: 1px 7px;
-  border-radius: var(--r-full);
-  font-size: 10px;
-  font-weight: 700;
+/* ناوی کەس لە لیستی قازانج و کلیلەکان (`adm-nm`) — ڕەنگی پلەکەی، نەک پیلی پلە */
+.adm-nm {
+  color: var(--rk, #1e293b);
 }
-
-/* 🌳 هەمان ڕەنگەکانی پلە لە هەموو ئەپەکە (`--role-*`، ٢٠٢٦-١٠-٢٥) — پێشتر سەوز/شین/پرتەقاڵی، کە ڕەنگی حاڵەتن */
-.wcard-role.is-mem { background: var(--role-mem-bg); color: var(--role-mem); }
-.wcard-role.is-mgr { background: var(--role-mgr-bg); color: var(--role-mgr); }
-.wcard-role.is-sup { background: var(--role-sup-bg); color: var(--role-sup); }
-.wcard-role.is-con { background: var(--role-con-bg); color: var(--role-con); }
-.wcard-role.is-king { background: var(--role-king-bg); color: var(--role-king); }
 
 .wcard-txt .tt-chain { margin-top: 1px; }
 
