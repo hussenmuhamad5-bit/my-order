@@ -791,7 +791,9 @@
             <div id="section-create-code">
                 <div class="container">
                     <label>ناوی سیانی</label>
-                    <input type="text" id="u-name" placeholder="ناوی تەواو بنووسە">
+                    <input type="text" id="u-name" placeholder="ناوی تەواو بنووسە" oninput="dupNameSoon()" onfocus="dupNameWarm()">
+                    <!-- ⚠️ ناوی دووبارە: سێرڤەر لە هەموو کارمەندان دەگەڕێت (db/152)؛ ناو + کۆد تەنها بۆ ئەوەی دەیبینیت (`dupNamePaint`) -->
+                    <div id="u-name-dup" class="dupn" aria-live="polite"></div>
 
                     <div id="wrapper-telegram">
                         <label>خاوەنی تێلیگرامە؟ (بۆ بەکارهێنانی بۆت)</label>
@@ -890,7 +892,7 @@
                         <div id="perms-create"></div>
                     </div>
 
-                    <button class="btn" style="background:var(--primary); margin-top:20px; font-size:16px;"
+                    <button class="btn" id="u-create-btn" style="background:var(--primary); margin-top:20px; font-size:16px;"
                         onclick="generateCode()"><i class='bx bx-user-plus'></i> دروستکردنی کۆدی نوێ</button>
 
                     <div class="result-box" id="result" style="display: none;">
@@ -2839,6 +2841,10 @@
                 <label><input type="radio" name="team_view_mode" value="tree"
                         onchange="switchTeamView('tree')"><span><i class='bx bx-sitemap'></i> بەپێی تیم</span></label>
             </div>
+
+            <!-- 🌳 ڕێگای «بەپێی تیم» (هەموو › لارین › نیاز …) — لێرە، لەگەڵ گەڕان و فلتەر و دوگمەکانی سەرەوە، نەک لەناو لیستەکە:
+                 لە سکڕۆڵی خوارەوە لەگەڵ ئەوان ون دەبێت و بە کەمێک سکڕۆڵی سەرەوە دەگەڕێتەوە (`ttSyncCrumbBar`، خاوەن ٢٠٢٦-١٠-٢٧) -->
+            <div id="tt-crumb-bar" class="tt-crumb-bar" hidden></div>
 
             <!-- فلتەری پلە (تەنها لە تابی ئۆردەری تیم دەردەکەوێت) -->
             <div class="segmented-control role-seg" id="orders-role-filter" style="display:none; margin-bottom:12px;">
@@ -5974,10 +5980,18 @@
                 //    ٤ ڕیز (١٣٢px)، کۆمپیوتەری پان ٣ ڕیز (١١٠px) — کارتی چوار ڕیزی جێگیر لەوێ هەر ١٣٢ بوو ([[landmines]] ٢٨٣).
                 //    دەقەکان شێوەی باوترینی بەرهەمن (٢٠٢٦-١٠-١٧، ٣٠ ڕۆژ): ناوی کڕیار زۆرجار بەتاڵە → «بێ ناو»، کاڵا ~١٣
                 //    پیت، کۆد ١١، بڕ ٥ ژمارە، هەولێر؛ ٧٣٪ی ئۆردەرەکانی ٢٤ کاتژمێر بێ نیشانەی پرێنت و کۆمێنتن.
+                //    `opt.member` = کارتی تیم (`buildMgmtOrderCard(o, true)`): سەردێڕی ئەندام (وێنەی ٣٠ · ناو · زنجیرەی «لەژێر کێیە»)
+                //    + ڕیزی کڕیار — لە پەڕەیەکی تیمدا هەموو کارتێک زنجیرەی هەیە (جگە لە ئۆردەری خودی کەسەکە)، بۆیە هەمان بەرزی
+                const top = opt.member
+                    ? `<div class="mocc-owner"><span class="sk sk-ava" style="width:30px;height:30px"></span><div class="mocc-owner-col">`
+                        + `<div class="mocc-owner-info"><span class="mocc-oname"><span class="sk-w">ناوی ئەندام</span></span></div>`
+                        + `<div class="tt-chain"><span class="cp sk-w">سەرپەرشت</span></div></div></div>`
+                    : `<div class="mocc-cust"><i class='bx bx-user'></i><span class="mocc-name"><span class="sk-w">بێ ناو</span></span></div>`;
+                const cust = opt.member ? `<div class="mocc-custrow"><i class='bx bx-user'></i><span><span class="sk-w">بێ ناو</span></span></div>` : '';
                 for (let i = 0; i < n; i++) {
                     h += `<div class="modern-order-card moc-compact sk-shim sk-moc" aria-hidden="true">`
-                        + `<div class="mocc-top"><div class="mocc-cust"><i class='bx bx-user'></i><span class="mocc-name"><span class="sk-w">بێ ناو</span></span></div>`
-                        + `<span class="moc-status sk-w">ئامادە دەکرێت</span></div>`
+                        + `<div class="mocc-top">${top}`
+                        + `<span class="moc-status sk-w">ئامادە دەکرێت</span></div>${cust}`
                         + `<div class="mocc-line"><p class="mocc-items"><i class='bx bx-package'></i><span><span class="sk-w">${i % 2 ? 'جلی منداڵانە' : 'کراسی زستانە'}</span></span></p>`
                         + `<span class="mocc-amount sk-w"><span dir="ltr">25,000</span> د.ع</span></div>`
                         + `<div class="mocc-bottom"><div class="mocc-meta">`
@@ -6019,14 +6033,14 @@
                 //    بەرهەم (٢٠٢٦-١٠-٢٥): تیمەکان (2,3,104) · (0,0,78) · (7,0,38)، و ژمارەکان سێ – چوار ژمارەیین (فلتەری
                 //    بنەڕەت = هەموو کات؛ تیمی لارین لە ٣٠ ڕۆژدا 1172 · 458 · 135 · 40). ⚠️ ڕیزی گشتیی `row` ٤٢px بوو
                 //    بەرامبەر ٩١ – ١٤٩px ـی ڕیزی ڕاستەقینە
+                //    ⭐ لە دارەکەدا ئەمە تەنها پاشەکشەیە (دارەی کارمەندان هێشتا نەهاتووە) — پەڕەی چاوەڕوان `ttPendingHtml`ـە
                 const S = [[{ sup: 2, con: 3, mem: 104 }, [1172, 458, 40, 135], 1805],
                     [{ mem: 78 }, [640, 95, 18, 72], 825], [{ sup: 7, mem: 38 }, [410, 88, 9, 51], 558]];
-                const icn = ['bx-check-circle', 'bx-car', 'bx-package', 'bx-undo'];
                 for (let i = 0; i < n; i++) {
                     const [team, nums, tot] = S[i % 3];
                     // هەمان `ttPeopleSummary` (پارچەی نەشکاو)، بۆیە لە هەمان شوێن دێڕ دەشکێت
                     const gp = ttPeopleSummary(team).replace(/class="tt-gp"/g, 'class="tt-gp sk-w"');
-                    const bd = nums.map((v, j) => `<span class="sk-w" style="${SBADGE_SM} font-weight:700; display:inline-flex; align-items:center;"><i class='bx ${icn[j]}'></i>${v}</span>`).join('');
+                    const bd = pendBadgesHtml({ deliv: nums[0], onway: nums[1], prep: nums[2], ret: nums[3] }, true);
                     h += `<div class="tt-row is-leader sk-shim" aria-hidden="true"><span class="tt-ring">${sk('sk-ava', '34px', 'width:34px;height:34px')}</span>`
                         + `<span class="tt-main"><span class="tt-txt"><span class="tt-name"><span class="sk-w">${i % 2 ? 'ناوی سەرپەرشت' : 'ناوی بەڕێوەبەر'}</span></span>`
                         + `<span class="tt-meta"><span class="tt-grp"><i class='bx bx-group sk-w'></i>${gp}</span></span>`
@@ -6100,6 +6114,9 @@
             }
             if (kind === 'grid') h = `<div class="sk-grid">${h}</div>`;
             if (kind === 'lines') h = `<div class="sk-card">${h}</div>`;
+            // `opt.bare` = بێ پێچەر — بۆ ناو سکێلێتۆنێکی تر (`ttPendingHtml`)؛ دوو `sk-list` ـی هێلانەکراو لە کۆمپیوتەر کارتەکان
+            // دەخاتە یەک خانەی گریدەکە
+            if (opt.bare) return h;
             // `opt.wrap` = پۆلی لیستە ڕاستەقینەکە (بۆ نموونە `xfer-list`)، بۆ ئەوەی بۆشایی نێوان ڕیزەکانیش یەک بێت
             return `<div class="sk-list${opt.wrap ? ' ' + opt.wrap : ''}" data-sk="${kind}" role="status" aria-label="بار دەبێت…">${h}</div>`;
         }
@@ -8017,14 +8034,23 @@
         // `sm` = هەمان پیلەکان بچووکتر (ڕیزەکانی «بەپێی تیم»): هەر چوار حاڵەت لە ٣٢٠px لە یەک دێڕدا. ⚠️ ستایلی ناوخۆییە،
         //   بۆیە قەبارەکە لێرە دەگۆڕدرێت، نەک بە CSS؛ سکێلێتۆنی ڕیزەکە (`skelHtml('tt')`) هەمان `SBADGE_SM` بەکاردێنێت
         const SBADGE_SM = 'font-size:10px; padding:1px 5px; border-radius:5px; gap:2px;';
+        const SBADGE_MD = 'font-size:11px; padding:2px 7px; border-radius:6px; gap:3px;';
         function statusBadgesFromCounts(c, sm) {
             if (!c) return '';
-            const box = sm ? SBADGE_SM : 'font-size:11px; padding:2px 7px; border-radius:6px; gap:3px;';
+            const box = sm ? SBADGE_SM : SBADGE_MD;
             let b = (n, bg, col, icon) => { n = Number(n) || 0; return n > 0 ? `<span style="background:${bg}; color:${col}; ${box} font-weight:700; display:inline-flex; align-items:center;"><i class='bx ${icon}'></i>${n}</span>` : ''; };
             return b(c.deliv, 'rgba(16,185,129,0.15)', '#059669', 'bx-check-circle')
                 + b(c.onway, 'rgba(245,158,11,0.15)', '#d97706', 'bx-car')
                 + b(c.prep, 'rgba(59,130,246,0.15)', '#2563eb', 'bx-package')
                 + b(c.ret, 'rgba(239,68,68,0.15)', '#dc2626', 'bx-undo');
+        }
+        // ⏳ هەمان پیلەکان (هەمان بۆکس · ئایکۆن · ڕیزبەندی) بەڵام ژمارەکان هێشتا نەهاتوون — دەقی ڕوون لەناو پیلی لێدەر
+        //   (`sk-w`)، بێ ڕەنگی حاڵەت. `c` = ژمارەی نموونە، تەنها بۆ پانییەکە؛ وەک `statusBadgesFromCounts` سفر = بێ پیل
+        function pendBadgesHtml(c, sm) {
+            const box = sm ? SBADGE_SM : SBADGE_MD;
+            return [['deliv', 'bx-check-circle'], ['onway', 'bx-car'], ['prep', 'bx-package'], ['ret', 'bx-undo']]
+                .filter(([k]) => Number(c[k]) > 0)
+                .map(([k, ic]) => `<span class="sk-w" style="${box} font-weight:700; display:inline-flex; align-items:center;"><i class='bx ${ic}'></i>${c[k]}</span>`).join('');
         }
 
         // بەیجی ڕۆژ: ئەگەر مەپی سێرڤەر هەبوو ئەوە بەکاردێت (ورد، کۆی تەواوی
@@ -10095,15 +10121,8 @@
             let roleFilterEl = document.querySelector('input[name="orders_role_filter"]:checked');
             let roleFilter = roleFilterEl ? roleFilterEl.value : "all";
 
-            // دوگمەی گۆڕینی بینین (هەموو / بەپێی ئەندام): تەنها لە تابی تیم و پێش چوونە ناو ئەندامێک
-            let viewModeBox = document.getElementById('team-view-mode');
-            if (viewModeBox) viewModeBox.style.display = (currentOrdersTab === "team" && !selectedTeamMember) ? "flex" : "none";
-
-            // فلتەری پلە تەنها لە تابی تیم و لە دۆخی لیستی ئەندامان دەردەکەوێت.
-            // 🌳 «بەپێی تیم» خانەکانی پلەی خۆی هەیە (بە ژمارەوە)، بۆیە ئەم ڕیزە لەوێ نییە
-            let roleFilterBox = document.getElementById('orders-role-filter');
-            if (roleFilterBox) roleFilterBox.style.display = (currentOrdersTab === "team" && !selectedTeamMember && teamViewMode !== 'tree') ? "flex" : "none";
-            ttSyncSearchHint();
+            // دوگمەکانی بینین · فلتەری پلە · ڕێگای «بەپێی تیم» — یەک شوێن (هەمان شت لە دەستپێکی بارکردنیش، `ttReloadMgmt`)
+            mgmtSyncHeadRows();
 
             // چیپی «ڕیزبەندی» لە ژێر بۆکسی گەڕان و ژمارەی سەر دوگمەی فلتەر
             // نوێ دەکرێنەوە — چونکە دۆخی بینین (ئۆردەر/ئەندام) گۆڕاوە و
@@ -33943,6 +33962,7 @@
             //    لێرە دەبێتە گەڕانی کەس، بۆیە دەقە کۆنەکە نامێنێت
             if (mode === 'tree') { ttEnsurePath(); ttClearSearch(); }
             ttSyncNav();
+            mgmtSyncHeadRows();   // فلتەری پلە · ڕێگا — یەکسەر، نەک دوای وەڵامی سێرڤەر
             reloadMgmt();
             mgmtWarmSiblings();   // دۆخەکەی تر ئامادە دەکرێت بۆ گەڕانەوە
         }
@@ -34161,6 +34181,44 @@
         }
         function ttCountsMap() { return (_ttCounts && _ttCounts.map) || mgmtMemberCounts || {}; }
 
+        // ---------- ڕیزەکانی سەرەوە (ناوچەی شاردنەوە لە سکڕۆڵ) ----------
+        // دوگمەی گۆڕینی بینین (هەموو / بەپێی ئەندام / بەپێی تیم): تەنها لە تابی تیم و پێش چوونە ناو ئەندامێک. فلتەری پلە تەنها لە
+        // «هەموو» و «بەپێی ئەندام» — 🌳 «بەپێی تیم» خانەکانی پلەی خۆی هەیە (بە ژمارەوە). ⚠️ لە دەستپێکی بارکردنیش (نەک تەنها لە
+        // هاتنی داتا): پێشتر ڕیزی پلە (٤٢px) تا وەڵامی سێرڤەر دەمایەوە و پاشان ون دەبوو — سکێلێتۆن و پەڕەکە بە ٤٢px بازیان دەدا
+        function mgmtSyncHeadRows() {
+            let changed = false;
+            const show = (id, on) => {
+                const el = document.getElementById(id);
+                const d = on ? 'flex' : 'none';
+                if (el && el.style.display !== d) { el.style.display = d; changed = true; }
+            };
+            show('team-view-mode', currentOrdersTab === 'team' && !selectedTeamMember);
+            show('orders-role-filter', currentOrdersTab === 'team' && !selectedTeamMember && teamViewMode !== 'tree');
+            ttSyncSearchHint();
+            if (ttSyncCrumbBar()) changed = true;
+            // بەرزیی ناوچەکە گۆڕا → لیستەکە دەبێت ڕێک لە ژێریەوە دەست پێبکات (ئەگەرنا ١٤٠ms دواتر بە چاودێرەکە)
+            if (changed) shRelayout('management-orders-list');
+        }
+
+        // ⭐ ڕێگای «بەپێی تیم» لە ناوچەی سەرەوەیە — لەگەڵ گەڕان، فلتەر و «هەموو / بەپێی ئەندام / بەپێی تیم»، نەک لەناو لیستەکە.
+        //    لە سکڕۆڵی خوارەوە لەگەڵ ئەوان ون دەبێت و بە کەمێک سکڕۆڵی سەرەوە دەگەڕێتەوە (`registerScrollHide`). خاوەن
+        //    (٢٠٢٦-١٠-٢٧، سکرینشۆت): «لەگەڵ ئەوان ون بێت و دواتر دەربکەوێتەوە نەوەک سکرۆڵ بێت، لەگەڵ ئۆردەرەکان سکرۆڵ نەبێتە سەرەوە …
+        //    هەر کاتێک یەک تۆز پەنجەمان هێنایە سەرەوە، ڕاستەوخۆ ئەم بەشە دەربکەوێتەوە». لە ڕەگدا نییە (کارتی کەسەکە هەمان شت
+        //    دەڵێت). `true` = گۆڕا (بەرزیی ناوچەکە).
+        function ttSyncCrumbBar() {
+            const bar = document.getElementById('tt-crumb-bar');
+            if (!bar) return false;
+            const html = (ttOn() && ttPath.length > 1 && ttTreeData()) ? ttCrumbsHtml(ttPath, 'ttCrumb') : '';
+            if (bar._last === html) return false;
+            bar._last = html;
+            bar.innerHTML = html;
+            bar.hidden = !html;
+            // ڕێگاکە تا کۆتایی (کەسی کراوە) دیار بێت
+            const cr = bar.querySelector('.tt-crumbs');
+            if (cr) cr.scrollLeft = -cr.scrollWidth;
+            return true;
+        }
+
         // ---------- بارکردن ----------
         // ژمارەکان (هەموو تیمەکە، بێ گەڕان) و ئۆردەرەکانی ئەم پەڕەیە (کۆدەکانی تیمەکەی + خانەی پلە) پێکەوە:
         // یەک هەنگاو. ژمارەکان کاش دەبن، بۆیە چوونە ناو کەسێک لە «کەسەکان» هیچ داواکارییەکی نییە.
@@ -34169,6 +34227,7 @@
             const reqId = ++_mgmtReqId;
             ttEnsurePath();
             ttSyncNav();
+            mgmtSyncHeadRows();
             const code = ttCur(), sort = ordersSortVal();
             const fresh = e => !!e && (Date.now() - e.t) < MGMT_CACHE_TTL;
             const cParams = orderFilterParams(mgmtSellersForView());
@@ -34194,11 +34253,11 @@
             };
             if (counts && (people || hit)) { if (hit) hit.memberCounts = counts; show(); return; }
 
-            // سکێلێتۆن تەنها دوای ٢٢٠ms: سەرەوەی پەڕەکە (ئەگەر ژمارەکان هەن) + شێوەی ڕیزەکان یان کارتەکان
+            // سکێلێتۆن تەنها دوای ٢٢٠ms: هەمان پەڕە (کارتی کەس · کەسەکان/ئۆردەرەکان · خانەکانی پلە · سەردێڕەکان · ڕیزەکان)، تەنها
+            // ژمارەکان چاوەڕوانن — بۆیە کاتێک داتاکە دێت هیچ شتێک گەورە نابێت و ناجووڵێت (`ttPendingHtml`)
             const spinT = setTimeout(() => {
                 if (reqId !== _mgmtReqId || !list) return;
-                const sk = people ? skelHtml('tt', 5) : skelHtml('order', 4, { compact: true });
-                list.innerHTML = (counts ? ttHeadHtml(counts) : '') + sk;
+                list.innerHTML = ttPendingHtml(counts);
             }, 220);
             try {
                 const [cRows, oRes] = await Promise.all([
@@ -34346,7 +34405,12 @@
             return `<div class="tt-chain tt-node-chain">`
                 + (ch.length ? ttChainPills(T, ch) : `<span class="cp cp-king">ڕاستەوخۆ لەژێر پاشا</span>`) + `</div>`;
         }
-        function ttStatsHtml(c, label) {
+        // `p` = ژمارەی نموونەی پەڕەی چاوەڕوان (`ttPendNums`) — تەنها لەژێر `_ttPend`
+        function ttStatsHtml(c, label, p) {
+            if (_ttPend) {
+                return `<div class="tt-stats"><div class="tt-total"><b class="sk-w">${fmtNum(p.total)}</b><span>${label}</span></div>`
+                    + `<div class="tt-badges">${pendBadgesHtml(p)}</div></div>`;
+            }
             const b = statusBadgesFromCounts(c);
             return `<div class="tt-stats"><div class="tt-total"><b>${fmtNum(c.total)}</b><span>${label}</span></div>`
                 + (b ? `<div class="tt-badges">${b}</div>` : '') + `</div>`;
@@ -34357,7 +34421,7 @@
                 return `<div class="tt-node tt-full"><div class="tt-node-head">${ttKingAvHtml(40)}<div class="tt-node-t">`
                     + `<div class="tt-node-name"><span class="tt-node-nm">هەموو تیمەکان</span></div>`
                     + `<div class="tt-node-sub">${fmtNum(V.size.ROOT.n)} کەس</div></div></div>`
-                    + ttStatsHtml(A.ROOT ? A.ROOT.team : { total: 0 }, 'ئۆردەری هەموو تیمەکان') + `</div>`;
+                    + ttStatsHtml(A.ROOT ? A.ROOT.team : { total: 0 }, 'ئۆردەری هەموو تیمەکان', TT_PEND_N.root) + `</div>`;
             }
             const T = V.T, e = T.emp[code], rk = ttRoleKey(e.role), a = A[code] || { own: { total: 0 }, team: { total: 0 } };
             const leaf = ttIsLeaf(code), isMe = code === String((currentUser && currentUser.code) || '').trim();
@@ -34371,7 +34435,7 @@
                 + `<div class="tt-node-t"><div class="tt-node-name"><span class="tt-node-nm rk-${rk}" title="${TT_ROLE_NAME[rk]}">${histEsc(name)}</span></div>`
                 + (sub ? `<div class="tt-node-sub">${sub}</div>` : '') + `</div>`
                 + `<button type="button" class="tt-prof" data-mprof="${histEsc(code)}" data-mpn="${histEsc(name)}" aria-label="هەموو شتەکانی ${histEsc(name)}" title="هەموو شتەکانی"><i class='bx bx-id-card'></i></button>`
-                + `</div>${ttLineageHtml(T, code)}${ttStatsHtml(leaf ? a.own : a.team, leaf ? 'ئۆردەر' : 'ئۆردەری هەموو تیمەکە')}</div>`;
+                + `</div>${ttLineageHtml(T, code)}${ttStatsHtml(leaf ? a.own : a.team, leaf ? 'ئۆردەر' : 'ئۆردەری هەموو تیمەکە', ttPendNums(V, code))}</div>`;
         }
         // خانەکانی پلە — یەک ڕیزی یەکسان (٤ لە زۆرترین)، نەک چیپی سکڕۆڵکراو. «هەموو» خانە نییە: کۆی گشتی لەسەر
         // دوگمەی «کەسەکان / ئۆردەرەکان»ـە، و پەنجەلێدانی دووبارە لە خانەیەکی چالاک دەیگەڕێنێتەوە بۆ هەموو.
@@ -34382,11 +34446,14 @@
             const pl = { self: 'ئۆردەری خۆی', mgr: 'بەڕێوەبەرەکان', sup: 'سەرپەرشتەکان', con: 'ڕاوێژکارەکان', mem: 'ئەندامەکان' };
             return `<div class="tt-cells tt-full n${cells.length}" role="group" aria-label="جیاکردنەوە بە پلە">` + cells.map(([k, t, n]) =>
                 `<button type="button" class="tt-cell${on === k ? ' on' : ''}${TT_ROLES.includes(k) ? ' c-' + k : ''}" onclick="${fn}('${k}')" aria-pressed="${on === k}">`
-                + `<span class="l">${TT_ROLES.includes(k) ? '<i class="dot" aria-hidden="true"></i>' : ''}<span>${t}</span></span><b>${fmtNum(n)}</b></button>`).join('') + `</div>`
+                + `<span class="l">${TT_ROLES.includes(k) ? '<i class="dot" aria-hidden="true"></i>' : ''}<span>${t}</span></span>`
+                + (n == null ? `<b class="sk-w">188</b>` : `<b>${fmtNum(n)}</b>`) + `</button>`).join('') + `</div>`
                 + (k0 ? `<div class="tt-only tt-full"><span>تەنها ${pl[on] || ''}</span><button type="button" onclick="${fn}('${on}')"><i class='bx bx-x'></i>هەموو</button></div>` : '');
         }
-        function ttSecHtml(icon, titleHtml, n) {
-            return `<div class="tt-sec tt-full"><div class="tt-sec-l">${icon ? `<i class='bx ${icon}'></i>` : ''}${titleHtml}</div>${n == null ? '' : `<small>${fmtNum(n)}</small>`}</div>`;
+        // `pend` = ژمارەکە هێشتا نەهاتووە (پیلی چاوەڕوان، `n` تەنها بۆ پانییەکە)
+        function ttSecHtml(icon, titleHtml, n, pend) {
+            return `<div class="tt-sec tt-full"><div class="tt-sec-l">${icon ? `<i class='bx ${icon}'></i>` : ''}${titleHtml}</div>`
+                + `${n == null ? '' : `<small${pend ? ' class="sk-w"' : ''}>${fmtNum(n)}</small>`}</div>`;
         }
         function ttDayTotal() {
             let n = 0;
@@ -34394,23 +34461,48 @@
             return n;
         }
 
-        // سەرەوەی پەڕەکە: ڕێگا · کارتی کەس · کەسەکان/ئۆردەرەکان · خانەکانی پلە (بۆ سکێلێتۆنیش)
+        // ⏳ پەڕەیەک کە ژمارەکانی ئۆردەری هێشتا نەهاتوون (`ttPendingHtml`): هەمان دروستکەرەکان، تەنها ژمارەکانی ئۆردەر پیلی
+        //    چاوەڕوانن. ⚠️ تەنها لەناو `ttPendingHtml` ڕاستە (`try/finally`).
+        //    ژمارەکانی نموونە شێوەی بەرهەمن بەپێی جۆری ڕیز (٢٠٢٦-١٠-٢٧، هەموو کات، دارەی ژێرەوەی هەر سەرۆکێک): ڕیزی سەرەوەی
+        //    لیستێک گەورەترینە (ڕیزبەندی بەپێی ژمارە) — بەڕێوەبەر 5079 · 4096 (٤ ژمارەیی، ٦٣٪ چوار حاڵەت)؛ سەرپەرشت 233 · 154
+        //    (171 · 11 · 1 · 50)؛ ڕاوێژکار 27 (تەنها گەیشتوو + گەڕاوە)؛ ئەندام ٩٠٪ ≤ 66؛ هەموو تیمەکان ~10,300. پانیی پیلەکانە کە
+        //    دەڵێت ڕیزی حاڵەتەکان لە ٣٢٠px دەشکێت یان نا (١٧px)، بۆیە یەک ژمارە بۆ هەموو ڕیزەکان هەڵە بوو
+        let _ttPend = false;
+        const TT_PEND_N = {
+            root: { total: 10276, deliv: 8521, onway: 846, prep: 63, ret: 846 },
+            mgr: { total: 1805, deliv: 1172, onway: 458, prep: 40, ret: 135 },
+            sup: { total: 233, deliv: 171, onway: 11, prep: 1, ret: 50 },
+            con: { total: 27, deliv: 12, ret: 15 },
+            own: { total: 66, deliv: 50, onway: 5, prep: 2, ret: 9 }
+        };
+        function ttPendNums(V, code) {
+            if (code === 'ROOT') return TT_PEND_N.root;
+            if (!V.kids(code).length) return TT_PEND_N.own;
+            return TT_PEND_N[ttRoleKey(V.T.emp[code].role)] || TT_PEND_N.own;
+        }
+
+        // سەرەوەی پەڕەکە: کارتی کەس · کەسەکان/ئۆردەرەکان · خانەکانی پلە (بۆ سکێلێتۆنیش). ڕێگاکە لێرە نییە — لە ناوچەی سەرەوەیە
+        // (`ttSyncCrumbBar`). ⏳ `_ttPend`: ژمارەکانی ئۆردەر هێشتا نەهاتوون — هەمان پەڕە، ژمارەکان پیلی چاوەڕوانن
         function ttHeadHtml(counts) {
             const V = ttOrdersView();
             if (!V) return '';
             const code = ttCur(), A = ttAggOf(V, counts || ttCountsMap());
-            // ڕێگا تەنها کاتێک شوێنێکی سەرتر هەیە: لە ڕەگدا تاکە «هەموو» / «من»ـە و کارتەکەی خوارەوە هەمان شت دەڵێت
-            let h = (ttPath.length > 1 ? ttCrumbsHtml(ttPath, 'ttCrumb') : '') + ttNodeCardHtml(V, A, code);
+            let h = ttNodeCardHtml(V, A, code);
             if (ttIsLeaf(code)) return h;
             const a = A[code] || { team: { total: 0 }, by: { mgr: 0, sup: 0, con: 0, mem: 0 }, own: { total: 0 } };
             const people = ttSub === 'people';
             h += `<div class="tt-seg tt-full" role="tablist">`
                 + `<button type="button" class="${people ? 'on' : ''}" onclick="ttSetSub('people')" role="tab" aria-selected="${people}"><i class='bx bx-group'></i><span>کەسەکان</span><b>${fmtNum(V.size[code].n)}</b></button>`
-                + `<button type="button" class="${people ? '' : 'on'}" onclick="ttSetSub('orders')" role="tab" aria-selected="${!people}"><i class='bx bx-package'></i><span>ئۆردەرەکان</span><b>${fmtNum(a.team.total)}</b></button>`
+                + `<button type="button" class="${people ? '' : 'on'}" onclick="ttSetSub('orders')" role="tab" aria-selected="${!people}"><i class='bx bx-package'></i><span>ئۆردەرەکان</span>${_ttPend ? `<b class="sk-w">${fmtNum(ttPendNums(V, code).total)}</b>` : `<b>${fmtNum(a.team.total)}</b>`}</button>`
                 + `</div>`;
             let cells;
             if (people) {
                 cells = TT_ROLES.filter(r => V.size[code][r]).map(r => [r, TT_ROLE_NAME[r], V.size[code][r]]);
+            } else if (_ttPend) {
+                // ⏳ ئۆردەری هەر پلەیەک نەزانراوە — هەمان خانەکانی پلەی ناو تیمەکە (لە دارەکەوە)، ژمارەکان پیل
+                cells = [];
+                if (code !== 'ROOT' && V.okc[code]) cells.push(['self', 'خۆی', null]);
+                TT_ROLES.forEach(r => { if (V.size[code][r]) cells.push([r, TT_ROLE_NAME[r], null]); });
             } else {
                 cells = [];
                 if (code !== 'ROOT' && a.own.total) cells.push(['self', 'خۆی', a.own.total]);
@@ -34438,6 +34530,20 @@
                 if (ch.length) meta += ttChainPills(T, ch);
                 else if (o.chainFrom !== 'ROOT') meta += `<span class="cp cp-direct">ڕاستەوخۆ</span>`;
             }
+            // ⏳ ژمارەکان نەهاتوون (`ttPendingHtml`): هەمان ڕیز بۆ هەمان کەس — هەمان دێڕەکان (کورتەی تیم · زنجیرە · حاڵەت) بە
+            //    دەقی ڕوون، بۆیە بەرزییەکەی بەرزیی ڕیزی ڕاستەقینەیە. ناو و وێنە شاراون: ڕیزبەندی بەپێی ژمارەیە، کەسەکان دواتر
+            //    جێگۆڕکێ دەکەن — ناوێک کە دەخوێندرێتەوە و لە پڕ دەچێتە شوێنێکی تر لە بازدان خراپترە
+            if (_ttPend) {
+                const p = ttPendNums(V, code);
+                const pm = meta.replace(/class="tt-gp"/g, 'class="tt-gp sk-w"').replace(/class="cp cp-[a-z]+"/g, 'class="cp sk-w"')
+                    .replace("bx-group'", "bx-group sk-w'");
+                return `<div class="tt-row${leader ? ' is-leader' : ''} sk-shim" aria-hidden="true">`
+                    + `<span class="tt-ring"><span class="sk sk-ava" style="width:34px;height:34px"></span></span>`
+                    + `<span class="tt-main"><span class="tt-txt"><span class="tt-name"><span class="sk-w">${histEsc(name)}</span></span>`
+                    + (pm ? `<span class="tt-meta">${pm}</span>` : '') + `<span class="tt-badges">${pendBadgesHtml(p, true)}</span></span>`
+                    + `<span class="tt-num"><b class="sk-w">${fmtNum(p.total)}</b><small class="sk-w">${leader ? 'ئۆردەری تیم' : 'ئۆردەر'}</small></span>`
+                    + `<i class='bx bx-chevron-left tt-go' aria-hidden="true"></i></span></div>`;
+            }
             const b = statusBadgesFromCounts(c, true);
             return `<div class="tt-row${leader ? ' is-leader' : ''}" data-tt="${histEsc(code)}">`
                 + `<span class="tt-ring rr-${rk}">${avatarHtml(ttAvatarOf(code), name, 34, code)}</span>`
@@ -34450,7 +34556,9 @@
         // ڕیزبەندی بەپێی هەڵبژاردنی «بەپێی ئەندام» (هەمان `memberPlanComparator`) — ژمارەی تیم بۆ سەرۆکەکان
         function ttSortCodes(V, A, codes) {
             const cmp = memberPlanComparator(sortValOf('members'));
-            return codes.map(c => ({ c, m: V.T.emp[c], mo: (A[c] ? (V.kids(c).length ? A[c].team : A[c].own) : null) }))
+            // ⏳ ژمارەکان نەهاتوون: سەرۆک = ١، ئەندام = ٠ — ڕیزە بەرزەکان (کورتەی تیم) لە هەمان لای ڕیزبەندیی ژمارە دەکەون
+            const pend = c => { const n = V.kids(c).length ? 1 : 0; return { total: n, deliv: n, ret: n }; };
+            return codes.map(c => ({ c, m: V.T.emp[c], mo: _ttPend ? pend(c) : (A[c] ? (V.kids(c).length ? A[c].team : A[c].own) : null) }))
                 .sort(cmp).map(x => x.c);
         }
         function ttPeopleTokens(V, A, code) {
@@ -34478,7 +34586,8 @@
                     toks.push({ h: ttSecHtml(r === 'mem' ? 'bx-user' : 'bx-sitemap', title, list.length) });
                     ttSortCodes(V, A, list).forEach(c => toks.push({ p: c, o: {} }));
                 });
-                if (code === ttRoot()) { const n = ttHistCount(V); if (n) toks.push({ h: ttHistNoteHtml(n) }); }
+                // ⏳ گوازراوەکان لە ژمارەکانەوە دەناسرێنەوە — تا ئەوان نەهاتوون نازانرێت
+                if (code === ttRoot() && !_ttPend) { const n = ttHistCount(V); if (n) toks.push({ h: ttHistNoteHtml(n) }); }
                 return toks;
             }
             // یەک پلە: هەموو ئەوانەی ئەو پلەیەن لە ژێر ئەم پەڕەیە، کۆکراوە بەپێی ئەوەی ڕاستەوخۆ لەژێر کێن
@@ -34512,30 +34621,75 @@
                 + `<button type="button" onclick="ttGoMembers()">بینین</button></div>`;
         }
 
+        // سەردێڕی بەشی ئۆردەرەکان — یەک شوێن بۆ پەڕە ڕاستەقینەکە و پەڕەی چاوەڕوان
+        function ttOrdersTitle(V, code, leaf) {
+            const nm = code === 'ROOT' ? 'هەموو تیمەکان' : firstNameOf(V.T.emp[code].full_name || '');
+            return leaf ? 'ئۆردەرەکانی ' + histEsc(nm)
+                : (code === 'ROOT' ? 'ئۆردەرەکانی هەموو تیمەکان' : 'ئۆردەرەکانی تیمی ' + histEsc(nm));
+        }
+
         function ttRenderList(list, filteredOrders) {
             const V = ttOrdersView();
             if (!V) { list.innerHTML = skelHtml('tt', 5); return; }
             const code = ttCur();
             const A = ttAggOf(V, ttCountsMap());
             let plan = [{ h: ttHeadHtml() }];
-            const nm = code === 'ROOT' ? 'هەموو تیمەکان' : firstNameOf(V.T.emp[code].full_name || '');
             if (ttPeopleNow()) {
                 plan = plan.concat(ttPeopleTokens(V, A, code));
                 _mgmtStart(list, plan, false, null);
             } else {
                 const leaf = ttIsLeaf(code);
-                const ttl = leaf ? 'ئۆردەرەکانی ' + histEsc(nm)
-                    : (code === 'ROOT' ? 'ئۆردەرەکانی هەموو تیمەکان' : 'ئۆردەرەکانی تیمی ' + histEsc(nm));
-                plan.push({ h: ttSecHtml('bx-package', ttl, ttDayTotal()) });
+                plan.push({ h: ttSecHtml('bx-package', ttOrdersTitle(V, code, leaf), ttDayTotal()) });
                 mgmtPage.showMember = !leaf;
                 mgmtPage.lastDay = null;
                 plan = plan.concat(mgmtTokensFromOrders(filteredOrders, false));
                 if (!filteredOrders.length && !mgmtPage.hasMore) plan.push({ h: `<p class="tt-empty tt-full">هیچ داواکارییەک نەدۆزرایەوە.</p>` });
                 _mgmtStart(list, plan, !leaf, mgmtPage.hasMore ? mgmtListLoadMore : null);
             }
-            // ڕێگاکە تا کۆتایی (کەسی کراوە) دیار بێت
-            const cr = list.querySelector('.tt-crumbs');
-            if (cr) cr.scrollLeft = -cr.scrollWidth;
+        }
+
+        // ⏳ سەردێڕی ڕۆژێک کە هێشتا نازانرێت — هەمان بۆکسی `dayHeadHtml` (بۆشایی · هێڵ · ئایکۆن · پیلەکان)، بە دەقی ڕوون.
+        //    ⚠️ `data-day` ی نییە: ئەوە بۆ دانانی کارتی نوێیە لە نوێکردنەوەی ڕاستەوخۆدا، نەک بۆ شێوە. پیلەکان شێوەی بەرهەمن
+        //    (دوایین ڕۆژ، ٢٠٢٦-١٠-٢٧): ئەندام ٢٣٤ لە ٢٥٠ یەک حاڵەت · تیم ١١ یەک، ٥ دوو (≤ 45) — چوار پیل لە ٣٢٠px دەشکا (٥٣ لەبری ٢٨px)
+        function pendDayHeadHtml(leaf) {
+            return `<div class="sk-day" aria-hidden="true" style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin:12px 0 7px 0; padding-bottom:6px; border-bottom:1px dashed #e2e8f0;">`
+                + `<div style="display:flex; align-items:center; gap:5px; font-size:12px; font-weight:700;"><i class='bx bx-calendar-event sk-w' style="font-size:15px;"></i>`
+                + `<span class="sk-w">ئەمڕۆ</span><span class="sk-w" dir="ltr" style="font-size:10px; font-weight:600;">0000-00-00</span></div>`
+                + `<div style="display:flex; align-items:center; gap:5px; flex-wrap:wrap; justify-content:flex-end;">${pendBadgesHtml(leaf ? { prep: 1 } : { onway: 31, prep: 13 })}</div></div>`;
+        }
+
+        // ⏳ پەڕەی چاوەڕوان (دوای ٢٢٠ms، تا ژمارەکان / ئۆردەرەکان دێن): هەمان پەڕە بە هەمان دروستکەرەکان — کارتی کەس (ناو · وێنە ·
+        //    زنجیرە · ژمارەی کەسەکان، لە دارەکەوە) · کەسەکان/ئۆردەرەکان · خانەکانی پلە · سەردێڕەکان · ڕیزی هەر کەسێک · کارتی
+        //    ئۆردەر — تەنها ژمارەکانی ئۆردەر پیلی چاوەڕوانن. خاوەن (٢٠٢٦-١٠-٢٧، سکرینشۆت): «کارتەکانی بەشی بە پێی تیم گەورەترە
+        //    کەچی لە لۆدینگەکە بچووک دیارە … کارتەکان لە پڕ گەورە دەبن». پێشتر تەنها ڕیز بوو، بۆیە کارتی کەس + دوگمەکان +
+        //    خانەکان (~٢٢٠ – ٢٨٠px) لە پڕ لە سەرەوەی ڕیزەکان دەهاتن. سەرەوەکە کار دەکات (کەسەکان/ئۆردەرەکان · خانەکان ·
+        //    پڕۆفایل — داواکاریی نوێ کۆنەکە بەجێدەهێڵێت، `_mgmtReqId`)؛ ڕیز و کارتەکان نا (`sk-shim`). ڕیزەکان تا پڕبوونی
+        //    شاشەیەک (`TT_PEND_ROWS`) — هەموو پەڕەکە لە هاتنی داتادا دەگۆڕدرێت
+        const TT_PEND_ROWS = 12;
+        function ttPendingHtml(counts) {
+            const V = ttOrdersView();
+            if (!V) return skelHtml('tt', 5);
+            const code = ttCur();
+            let h = '';
+            _ttPend = !counts;
+            try {
+                h = ttHeadHtml(counts);
+                if (ttPeopleNow()) {
+                    let rows = 0;
+                    for (const t of ttPeopleTokens(V, ttAggOf(V, counts || {}), code)) {
+                        if (rows >= TT_PEND_ROWS) break;
+                        if (t.p) { rows++; h += ttRowHtml(t.p, t.o); } else h += t.h;
+                    }
+                } else {
+                    // ئۆردەرەکانی ئەم پەڕەیە هەمیشە چاوەڕوانن (ژمارەکان لەوانەیە کاش بن) — ژمارەی بەشەکە لە ڕۆژەکانەوەیە
+                    const leaf = ttIsLeaf(code);
+                    h += ttSecHtml('bx-package', ttOrdersTitle(V, code, leaf), ttPendNums(V, code).total, true)
+                        + pendDayHeadHtml(leaf) + skelHtml('order', 4, { compact: true, member: !leaf, bare: true });
+                }
+            } finally {
+                _ttPend = false;
+            }
+            return `<div class="sk-list" data-sk="tt" role="status" aria-label="بار دەبێت…">${h}</div>`;
         }
 
         // ============================================================
@@ -35424,6 +35578,8 @@
                 layout();
                 state.lastY = scroller.scrollTop;
             };
+            // بەرزیی ناوچەکە گۆڕا (ڕیزێکی سەرەوە دەرکەوت/ون بوو) — تەنها پێوانەکە، شاردن/دەرخستن وەک خۆی
+            state.relayout = layout;
 
             // ---- لۆجیکی سکڕۆڵ (ڕێک وەک `initHeaderScroll` لە trio.dev) ----
             function onScroll() {
@@ -35470,6 +35626,12 @@
 
         function resetAllScrollHide() {
             shRegistry.forEach(s => { try { s.reset(); } catch (e) { } });
+        }
+
+        // یەک لیست: ناوچەکەی سەرەوەی بە بەرزیی نوێیەوە بپێوەرەوە (`mgmtSyncHeadRows` — ڕێگای «بەپێی تیم» · فلتەری پلە)
+        function shRelayout(id) {
+            const st = shRegistry.find(s => s.scroller && s.scroller.id === id);
+            if (st && st.relayout) { try { st.relayout(); } catch (e) { } }
         }
 
         // ---- تۆمارکردنی هەموو بەشەکان ----
@@ -41059,6 +41221,162 @@
 
         // ٥. دروستکردنی کارمەند
         // ٥. فەنکشنی دروستکردنی کارمەند لەگەڵ کات و بەروار
+        // ============================================================
+        // ⚠️ ناوی دووبارە لە دروستکردنی کلیل (خاوەن ٢٠٢٦-١٠-٢٧، دوو جار)
+        // ------------------------------------------------------------
+        // «ئەگەر ئەو ناوە بوونی هەبێت ئاگادارمان بکاتەوە… ناوەکەمان نیشان بدە لەگەڵ کۆدەکەی» · «ڕێک ڕاستەوخۆ گەڕان لە
+        // سێروەر بکە بەڵام گەڕانێک بێ کە خێرا بێت» · «ئەگەر … ئەو ناوە لە تیمەکەی خۆیدا بوو … [کۆد] و ناوەکەی … بەڵام
+        // ئەگەر تیمی خۆی نەبوو تەنها بنووسرێ ئەم ناوە دووبارە». ئاگادارییە، نەک ڕێگری (دوو کەس دەتوانن هەمان ناویان هەبێت):
+        //   • هەمان ناو یان زۆر نزیک → بۆکسی زەرد، و پرسیار پێش دروستکردن (`dupNameAsk` لە `generateCode`)
+        //   • ناوی هاوشێوە → بۆکسی خۆڵەمێشی (٥، پاشان «Nی تر پیشان بدە» — ٢٠ هاتوون، زیاتر بە داواکاری)
+        // ⭐ سێرڤەر دەگەڕێت (db/152 `employee_name_dup`) لە **هەموو** کارمەندان، بە یاسای SEARCH-KEYS (هەر کیبۆردێک)،
+        //    و ناو + کۆد + پلە تەنها بۆ ئەوانەی دەتوانیت ببینیت: تیمەکەت · پاشا · «چاکسازی/بینینی کلیلی هەموان» · ⭐ یان
+        //    «بینینی ئۆردەر: هەموان» (db/153). ئەوانی تر تەنها ئاگادارین («ئاگادار بە، ئەم ناوە دووبارەیە») — نە ناو، نە
+        //    کۆد، نە ژمارە، نە تیم (سێرڤەر تەنها «هەیە» دەنێرێت)، و «هاوشێوە»ی تیمەکانی تر هەر نایەت.
+        // ⭐ خێرایی: یەک بانگ (URLـی جێگیر — preflight یەک جار، کاتی فۆکەسی خانەکە گەرم دەکرێت)، ٢٥٠ms دوای وەستانی
+        //    نووسین، کاش بۆ هەر ناوێک (تەنها بۆ نووسین — دروستکردن هەمیشە نوێ دەپرسێت)، کلیلی پێشبڕکێ پێش `await`.
+        // ⚠️ فەنکشن هێشتا لە سێرڤەر نییە (PGRST202) → هیچ ئاگادارییەک، دروستکردن وەک خۆی.
+        // ============================================================
+        const _dup = { t: 0, seq: 0, warm: false, cache: new Map() };
+        function dupNameKey(s) { return String(s || '').trim().replace(/\s+/g, ' '); }
+        // کەمتر لە ٢ پیت یان زیاتر لە ٨٠ = هیچ (هەمان سنوورەکانی سێرڤەر، هەمان k1) — بێ بانگ
+        function dupNameShort(k) { return searchK1(k).replace(/ /g, '').length < 2 || k.length > 80; }
+        function dupNameNorm(d) {
+            const rows = (a) => (Array.isArray(a) ? a : []).filter(x => x && x.code).map(x => ({
+                code: String(x.code), name: String(x.name || x.code), role: String(x.role || ''), rank: Number(x.rank) || 0 }));
+            const byName = (a, b) => cmpName(a.name, b.name);
+            const like = rows(d && d.like).sort((a, b) => (a.rank - b.rank) || byName(a, b));
+            return { same: rows(d && d.same).sort(byName), near: rows(d && d.near).sort(byName), like,
+                likeN: Math.max(Number(d && d.like_n) || 0, like.length),
+                sameH: Number(d && d.same_h) || 0, nearH: Number(d && d.near_h) || 0 };
+        }
+        // `all` = هەموو «هاوشێوە»کان (نەک ٢٠) · `fresh` = کاش مەخوێنەرەوە (پرسیاری دروستکردن)
+        async function dupNameFetch(k, all, fresh) {
+            const full = _dup.cache.get(k + '|all'), part = _dup.cache.get(k);
+            if (!fresh) { if (full) return full; if (part && !all) return part; }
+            const { data, error } = await supabase.rpc('employee_name_dup', { p_name: k, p_all: !!all });
+            if (error) {
+                if (rpcMissing(error)) return null;                  // db/152 هێشتا نییە → هیچ
+                throw error;
+            }
+            const r = dupNameNorm(data);
+            if (_dup.cache.size > 200) _dup.cache.clear();
+            _dup.cache.set(k, r);
+            if (all || r.like.length >= r.likeN) _dup.cache.set(k + '|all', r);
+            return r;
+        }
+        // preflight و پەیوەندی یەک جار، کاتێک خانەی ناو فۆکەس دەکرێت — یەکەم پشکنینی ڕاستەقینە یەک هەنگاو کەمتر
+        function dupNameWarm() {
+            if (_dup.warm) return;
+            _dup.warm = true;
+            supabase.rpc('employee_name_dup', { p_name: '', p_all: false }).then(() => { }, () => { _dup.warm = false; });
+        }
+        // ڕیزێک: ناو بە ڕەنگی پلەکەی · کۆد · زنجیرە (دوو کەس دەتوانن هەمان ناویان هەبێت — ناو بە تەنها بەس نییە)
+        function dupNameRowHtml(x, tag) {
+            const T = ttTreeData(), rk = ttRoleKey(x.role);
+            let chain = '';
+            if (T && T.emp[x.code]) {
+                const ch = ttChainBetween(T, 'ROOT', x.code);
+                if (ch.length) chain = `<span class="tt-chain">${ttChainPills(T, ch)}</span>`;
+            }
+            return `<div class="dupn-row"><span class="dupn-nm rk-${rk}" title="${TT_ROLE_NAME[rk]}">${histEsc(x.name)}</span>`
+                + `<bdi class="dupn-code" dir="ltr">${histEsc(x.code)}</bdi>${tag ? `<span class="dupn-tag">${tag}</span>` : ''}${chain}</div>`;
+        }
+        // ⭐ db/153: کەسێک کە نایبینیت — تەنها ئاگادارییەک: نە ناو، نە کۆد، نە ژمارە، نە تیم (خاوەن: «تەنها بڵێت ئاگادار بە
+        //    ئەم ناوە دووبارەیە … تا زانیاری نەدات لای کێیە … لە چ تیمێکدایە»). `near` = تەنها ناوی زۆر نزیک؛ `also` =
+        //    ڕیزی دیاریش هەیە، بۆیە «… تریش»
+        function dupNameHiddenHtml(near, also) {
+            const t = near ? (also ? 'ئاگادار بە، ناوێکی زۆر نزیکی تریش هەیە' : 'ئاگادار بە، ناوێکی زۆر نزیک بەم ناوە هەیە')
+                : (also ? 'ئاگادار بە، ئەم ناوە لای کەسێکی تریش هەیە' : 'ئاگادار بە، ئەم ناوە دووبارەیە');
+            return `<div class="dupn-row is-hid"><i class='bx bx-info-circle'></i><span class="dupn-hid">${t}</span></div>`;
+        }
+        function dupNamePaint(box, r) {
+            let h = '';
+            if (r) {
+                const shown = r.same.length + r.near.length, hid = r.sameH || r.nearH;
+                if (shown) {
+                    // «نزیک» لەسەر ڕیز تەنها کاتێک تێکەڵن — بە تەنها، سەردێڕەکە خۆی دەیڵێت. ژمارەی سەردێڕ = تەنها ئەوانەی دیارن
+                    const same = r.same.length || r.sameH, tag = same ? 'نزیک' : '';
+                    h += `<div class="dupn-box is-same"><div class="dupn-h"><i class='bx bx-error'></i>`
+                        + `<span>${same ? 'ئەم ناوە بوونی هەیە' : 'ناوێکی زۆر نزیک هەیە'}</span>`
+                        + (shown > 1 ? `<small>${fmtNum(shown)} کەس</small>` : '') + `</div>`
+                        + r.same.map(x => dupNameRowHtml(x)).join('') + r.near.map(x => dupNameRowHtml(x, tag)).join('')
+                        + (hid ? dupNameHiddenHtml(!r.sameH, true) : '') + `</div>`;
+                } else if (hid) {
+                    // هەمووی لە تیمەکانی ترە → یەک دێڕی ئاگاداری، بێ سەردێڕ و بێ ژمارە
+                    h += `<div class="dupn-box is-same">${dupNameHiddenHtml(!r.sameH, false)}</div>`;
+                }
+                if (r.like.length) {
+                    const show = box.__all ? r.like : r.like.slice(0, 5);
+                    h += `<div class="dupn-box"><div class="dupn-h"><i class='bx bx-search-alt'></i><span>ناوی هاوشێوە</span><small>${fmtNum(r.likeN)}</small></div>`
+                        + show.map(x => dupNameRowHtml(x)).join('')
+                        + (r.likeN > show.length ? `<button type="button" class="dupn-more" onclick="dupNameMore(this)">${fmtNum(r.likeN - show.length)}ی تر پیشان بدە</button>` : '')
+                        + `</div>`;
+                }
+            }
+            box.classList.remove('is-wait');
+            if (box.__h !== h) { box.__h = h; box.innerHTML = h; }
+        }
+        async function dupNameRender() {
+            const box = document.getElementById('u-name-dup'), inp = document.getElementById('u-name');
+            if (!box || !inp) return;
+            const k = dupNameKey(inp.value);
+            if (box.__q !== k) { box.__q = k; box.__all = false; }
+            if (dupNameShort(k)) { ++_dup.seq; dupNamePaint(box, null); return; }
+            const seq = ++_dup.seq, all = !!box.__all;               // کلیلی پێشبڕکێ پێش `await`
+            if (box.__h) box.classList.add('is-wait');               // ئەوەی دیارە هی ناوێکی پێشووە
+            let r = null;
+            try { r = await dupNameFetch(k, all, false); }
+            catch (e) {
+                // لە کاتی نووسیندا بێدەنگ (دروستکردن خۆی دووبارە دەپرسێت)؛ «Nی تر» شکستی هێنا → ئەوەی هەبوو
+                if (all && seq === _dup.seq) { box.__all = false; r = _dup.cache.get(k) || null; showToast('نەتوانرا ناوەکانی تر بهێنرێن', 'error'); }
+            }
+            if (seq !== _dup.seq || dupNameKey(inp.value) !== k) return;      // وەڵامێکی نوێتر خاوەنی بۆکسەکەیە
+            dupNamePaint(box, r);
+        }
+        function dupNameSoon() {
+            clearTimeout(_dup.t);
+            const inp = document.getElementById('u-name'), k = dupNameKey(inp && inp.value);
+            // کورت یان کاشکراو → یەکسەر؛ ئەگەرنا ٢٥٠ms دوای وەستانی نووسین
+            if (dupNameShort(k) || _dup.cache.has(k)) { dupNameRender(); return; }
+            _dup.t = setTimeout(dupNameRender, 250);
+        }
+        function dupNameMore(btn) {
+            const box = document.getElementById('u-name-dup');
+            if (!box) return;
+            if (btn) { btn.disabled = true; btn.innerHTML = "<i class='bx bx-loader-alt bx-spin'></i> " + histEsc(btn.textContent); }
+            box.__all = true;
+            dupNameRender();
+        }
+        // پرسیاری پێش دروستکردن — `false` = مەینێرە. هەمیشە نوێ لە سێرڤەر (کەسێکی تر لەوانەیە ئێستا کلیلی بەم ناوە
+        // دروست کردبێت)؛ دوگمەکە سێ خاڵ وەردەگرێت تا وەڵام دێت. تیمێکی تر = تەنها ژمارە، وەک بۆکسەکە
+        async function dupNameAsk(name) {
+            const k = dupNameKey(name);
+            if (dupNameShort(k)) return true;
+            const btn = document.getElementById('u-create-btn'), was = btn ? btn.innerHTML : '';
+            if (btn) { btn.disabled = true; btn.innerHTML = "<i class='bx bx-loader-alt bx-spin'></i> پشکنینی ناو…"; }
+            let r = null, err = null;
+            try { r = await dupNameFetch(k, false, true); } catch (e) { err = e; }
+            if (btn) { btn.disabled = false; btn.innerHTML = was; }
+            if (err) return confirm('⚠️ نەتوانرا بپشکنرێت ئایا ئەم ناوە پێشتر هەیە.\n\nهەر کلیلەکە دروست بکەیت؟');
+            if (!r) return true;                                         // db/152 هێشتا نییە
+            // بۆکسەکەش هەمان وەڵام نیشان دەدات (یارمەتییە — پرسیارەکەی خوارەوە ئەوەیە کە گرنگە)
+            try {
+                const box = document.getElementById('u-name-dup'), inp = document.getElementById('u-name');
+                if (box && inp && dupNameKey(inp.value) === k) { ++_dup.seq; box.__q = k; dupNamePaint(box, r); }
+            } catch (e) { console.error('dupNamePaint:', e); }
+            const shown = r.same.concat(r.near), hidden = r.sameH || r.nearH;
+            if (!shown.length && !hidden) return true;
+            const ASK = '\n\nهەر کلیلێکی نوێ بەم ناوە دروست بکەیت؟';
+            // ⭐ db/153: تەنها لە تیمەکانی ترە → تەنها ئاگاداری، بێ ناو و کۆد و ژمارە و تیم
+            if (!shown.length) return confirm('⚠️ ' + (r.sameH ? 'ئاگادار بە، ئەم ناوە دووبارەیە.' : 'ئاگادار بە، ناوێکی زۆر نزیک بەم ناوە هەیە.') + ASK);
+            const FSI = String.fromCharCode(0x2068), PDI = String.fromCharCode(0x2069);
+            const lines = shown.slice(0, 5).map(x => '• ' + FSI + x.name + PDI + ' — کۆد ' + FSI + x.code + PDI);
+            if (shown.length > 5) lines.push('…');
+            if (hidden) lines.push('• ' + (r.sameH ? 'هەروەها لای کەسێکی تریش هەیە' : 'هەروەها ناوێکی زۆر نزیکی تریش هەیە'));
+            return confirm('⚠️ ' + (r.same.length || r.sameH ? 'ئەم ناوە پێشتر هەیە:' : 'ناوێکی زۆر نزیک پێشتر هەیە:') + '\n' + lines.join('\n') + ASK);
+        }
+
         async function generateCode() {
             // ⚠️ `create_key`، نەک `manage_employees` — چاکسازیی کلیلی
             //    هەموان مافی **دروستکردن** نادات
@@ -41116,6 +41434,13 @@
             }
             if (!name) { showToast("تکایە ناوی سیانی بنووسە!", "error"); return; }
 
+            // 🔒 دوو پەنجەدانان = یەک کلیل: قوفڵ پێش یەکەم `await`ـی دوای پشکنینەکان (هەموو ئەوانەی سەرەوە هاوکاتن)
+            if (generateCode._busy) return;
+            generateCode._busy = true;
+            // ⚠️ هەمان ناو یان زۆر نزیک → پرسیار پێش دروستکردن (ئاگادارییە، نەک ڕێگری — دوو کەس دەتوانن هەمان ناویان
+            //    هەبێت). سێرڤەر لە هەموو کارمەندان دەگەڕێت؛ تیمێکی تر = تەنها «لە تیمێکی تر» (db/152)
+            if (!await dupNameAsk(name)) { generateCode._busy = false; return; }
+
             // جادووە نوێیەکە: وەرگرتنی کات و بەروار بە شێوازی 12 کاتژمێری
             let now = new Date();
             let year = now.getFullYear();
@@ -41157,6 +41482,8 @@
                 };
                 let { error } = await supabase.from('employees').insert([insertData]);
                 if (error) throw error;
+                // کلیلی نوێ لە سێرڤەرە (تریگەری `employee_search`) — وەڵامە کاشکراوەکان ئیتر کۆنن
+                _dup.cache.clear();
 
                 showToast("بە سەرکەوتوویی دروست کرا!", "success");
                 document.getElementById('result').style.display = 'block';
@@ -41164,6 +41491,7 @@
                 document.getElementById('result-text').innerText = (hasTelegram === "بەڵێ") ? "🤖 کۆدی بۆت:" : "✅ کۆدی ئاسایی:";
 
                 document.getElementById('u-name').value = '';
+                dupNameRender();
                 document.querySelectorAll('input[name="u_telegram"]').forEach(r => r.checked = false);
                 document.querySelectorAll('input[name="u_role"]').forEach(r => r.checked = false);
                 updateFormByRole('create');
@@ -41175,6 +41503,8 @@
                 document.getElementById('admin-screen-content').style.display = 'flex';
             } catch (err) {
                 showToast(serverGuardMsg(err) || "کێشەیەک ڕوویدا لە دروستکردندا", "error");
+            } finally {
+                generateCode._busy = false;
             }
         }
 
@@ -44005,12 +44335,50 @@
         // ئامادەی ئەو سەرچاوەیەی هەڵبژێردراوە
         function xferReady() { return xferReadyOf(xferState && xferState.src); }
 
+        // 🔒 db/155 (خاوەن ٢٠٢٦-١٠-٢٧): بە ناو تەنها تیمی خۆت — مەگەر پاشا بیت یان دەسەڵاتێکی «هەموان»ت هەبێت (`find_all`)؛
+        //    کەسانی تر تەنها بە کۆدی تەواوی خۆیان. ⚠️ یاساکە لە سێرڤەرە (`wallet_transfer_find`)، ئەمانە تەنها دەقی ڕووکارن.
+        //    `null` = هێشتا نەزانراوە (یان سێرڤەری پێش db/155) → دەقە گشتییەکەی پێشوو، هیچ ئاگادارییەک.
+        function xferFindAll() {
+            const h = xferState && xferState.home;
+            return h && typeof h.find_all === 'boolean' ? h.find_all : null;
+        }
+        // دەقێک بە شێوەی کۆد — هەموو کۆدێک ژمارەی تێدایە، ناو نا (٣٩٩ / ٣٩٩، ٢٠٢٦-١٠-٢٧)؛ ژمارەی کوردی وەک ئینگلیزی
+        function xferCodeLike(q) {
+            const c = toEnglishDigits(q);
+            return /^[A-Za-z0-9]{3,10}$/.test(c) && /\d/.test(c);
+        }
+        // ئەو کەسەی کۆدەکەی ڕێک ئەوەیە کە نووسراوە (هەر کیبۆردێک) — بۆ نیشانەی «بە کۆد»
+        function xferIsCodeHit(p) {
+            const s = xferState;
+            return !!(s && p && p.code && toEnglishDigits(s.q).toLowerCase() === String(p.code).toLowerCase());
+        }
+        function xferScopeHtml() {
+            return xferFindAll() === false
+                ? `<i class='bx bx-shield-quarter'></i><span>بە ناو تەنها <b>تیمەکەت</b> دەدۆزرێتەوە — کەسانی تر بە <b>کۆدی تەواو</b>ی خۆیان</span>`
+                : '';
+        }
+        function xferSearchPh() {
+            return xferFindAll() === false ? 'ناوی کەسێکی تیمەکەت، یان کۆد…' : 'ناو یان کۆدی کەسەکە…';
+        }
+        // پاتچ — خانەی گەڕان دەستی لێنادرێت (فۆکەس و دەقەکەی دەمێنێت)
+        function xferPatchScope() {
+            const el = document.getElementById('xfer-scope');
+            if (el) {
+                const html = xferScopeHtml();
+                if (el._last !== html) { el._last = html; el.innerHTML = html; }
+                el.hidden = !html;
+            }
+            const q = document.getElementById('xfer-q');
+            if (q) { const ph = xferSearchPh(); if (q.placeholder !== ph) q.placeholder = ph; }
+        }
+
         function xferPatchHome() {
             const s = xferState;
             if (!s) return;
             if (s.step === 'pick') {
                 const b = document.getElementById('xfer-ready-banner');
                 if (b) { const html = xferReadyBannerHtml(); if (b._last !== html) { b._last = html; b.innerHTML = html; } }
+                xferPatchScope();
                 xferPatchResults();
             } else if (s.step === 'amount') xferPatchAmount();
         }
@@ -44049,11 +44417,12 @@
                 + ` data-avatar="${histEsc(p.avatar || '')}" data-role="${histEsc(p.role || '')}" onclick="xferPickEl(this)"`;
         }
 
-        function xferPersonHtml(p) {
+        // `byCode`: کۆدەکەی ڕێک ئەوەیە کە نووسراوە — کارتەکە سەوز دەبێت و «بە کۆد» دەڵێت (دڵنیایی: کەسە ڕاستەکەیە)
+        function xferPersonHtml(p, byCode) {
             const role = p.role ? histEsc(p.role) + ' · ' : '';
-            return `<button type="button" class="xfer-person"${xferPersonAttrs(p)}>
+            return `<button type="button" class="xfer-person${byCode ? ' is-code' : ''}"${xferPersonAttrs(p)}>
                         ${avatarHtml(p.avatar, p.name || p.code, 40)}
-                        <span class="xfer-person-txt"><b><bdi>${histEsc(p.name || p.code)}</bdi></b><small>${role}<bdi dir="ltr">${histEsc(p.code)}</bdi></small></span>
+                        <span class="xfer-person-txt"><b><bdi>${histEsc(p.name || p.code)}</bdi></b><small>${role}<bdi dir="ltr">${histEsc(p.code)}</bdi>${byCode ? `<span class="xfer-bycode"><i class='bx bx-check-circle'></i>بە کۆد</span>` : ''}</small></span>
                         <i class='bx bx-chevron-left'></i>
                     </button>`;
         }
@@ -44072,17 +44441,27 @@
                 if (s.searchErr) return `<div class="xfer-empty"><i class='bx bx-wifi-off'></i><b>پەیوەندی نەبوو</b><small>دووبارە بنووسە</small></div>`;
                 const list = s.results || [];
                 if (!list.length) {
+                    // ⚠️ هەرگیز نەڵێت «لە تیمێکی تردا هەیە» — بوونی کەسێکی دەرەوەی تیم ئاشکرا ناکرێت
+                    if (xferCodeLike(s.q)) {
+                        return `<div class="xfer-empty"><i class='bx bx-key'></i><b>هیچ کەسێک بەم کۆدە نییە</b><small>کۆدەکە دووبارە ببینەوە — لە «وەرگرتنی پارە»ـی ئەو کەسەدا دیارە</small></div>`;
+                    }
+                    if (xferFindAll() === false) {
+                        return `<div class="xfer-empty"><i class='bx bx-group'></i><b>لە تیمەکەتدا کەس بەم ناوە نییە</b><small>بۆ کەسێکی تیمێکی تر، کۆدەکەی لێ وەربگرە و لێرە بینووسە — لە «وەرگرتنی پارە»ـی خۆیدا دیارە</small></div>`;
+                    }
                     return `<div class="xfer-empty"><i class='bx bx-search-alt'></i><b>کەس نەدۆزرایەوە</b><small>ناو یان کۆدی تەواوی کەسەکە بنووسە — هەندێک کەس تەنها بە کۆد دەدۆزرێنەوە</small></div>`;
                 }
-                return `<div class="xfer-list">${list.map(xferPersonHtml).join('')}</div>`;
+                return `<div class="xfer-list">${list.map(p => xferPersonHtml(p, xferIsCodeHit(p))).join('')}</div>`;
             }
             if (!h) return '';
             const recent = Array.isArray(h.recent) ? h.recent : [];
             const team = (Array.isArray(h.team) ? h.team : []).filter(p => !recent.some(r => r.code === p.code));
             let html = '';
             if (recent.length) html += `<div class="xfer-sec">دوایین کەسەکان</div><div class="xfer-recent">${recent.map(xferRecentHtml).join('')}</div>`;
-            if (team.length) html += `<div class="xfer-sec">تیمەکەم</div><div class="xfer-list">${team.map(xferPersonHtml).join('')}</div>`;
-            if (!html) html = `<div class="xfer-empty"><i class='bx bx-user-circle'></i><b>بۆ کێ دەنێریت؟</b><small>ناو یان کۆدی کەسەکە لە سەرەوە بنووسە</small></div>`;
+            if (team.length) html += `<div class="xfer-sec">تیمەکەم</div><div class="xfer-list">${team.map(p => xferPersonHtml(p)).join('')}</div>`;
+            if (!html) {
+                html = `<div class="xfer-empty"><i class='bx bx-user-circle'></i><b>بۆ کێ دەنێریت؟</b><small>${xferFindAll() === false
+                    ? 'ناوی کەسێکی تیمەکەت، یان کۆدی تەواوی کەسێکی تر لە سەرەوە بنووسە' : 'ناو یان کۆدی کەسەکە لە سەرەوە بنووسە'}</small></div>`;
+            }
             return html;
         }
 
@@ -44099,8 +44478,9 @@
                     <label class="xfer-search">
                         <i class='bx bx-search'></i>
                         <input type="search" id="xfer-q" enterkeyhint="search" autocomplete="off" maxlength="60"
-                               placeholder="ناو یان کۆدی کەسەکە…" aria-label="گەڕان بۆ وەرگر" value="${histEsc(s.q)}">
+                               placeholder="${xferSearchPh()}" aria-label="گەڕان بۆ وەرگر" value="${histEsc(s.q)}">
                     </label>
+                    <div id="xfer-scope" class="xfer-scope"${xferScopeHtml() ? '' : ' hidden'}>${xferScopeHtml()}</div>
                     <div id="xfer-results" class="xfer-results">${xferResultsHtml()}</div>`;
         }
 
@@ -44111,6 +44491,8 @@
             if (res) res._last = xferResultsHtml();
             const b = document.getElementById('xfer-ready-banner');
             if (b) b._last = xferReadyBannerHtml();
+            const sc = document.getElementById('xfer-scope');
+            if (sc) sc._last = xferScopeHtml();
             if (!q) return;
             q.addEventListener('input', () => {
                 const s = xferState;
@@ -44665,7 +45047,7 @@
                         ${avatarHtml(me.avatar, userName, 72)}
                         <b class="xfer-mycode-name"><bdi>${histEsc(userName)}</bdi></b>
                         <div class="xfer-mycode-code" dir="ltr">${histEsc(me.code)}</div>
-                        <p>ئەم کۆدە بدە بەو کەسەی دەیەوێت پارەت بۆ بنێرێت — لە «ناردنی پارە» کۆدەکەت دەنووسێت و ناوەکەت دەبینێت. پارەکە یەکسەر دەچێتە <b>پارەی ئامادە</b>ی جزدانەکەت.</p>
+                        <p>ئەم کۆدە بدە بەو کەسەی دەیەوێت پارەت بۆ بنێرێت — لە «ناردنی پارە» کۆدەکەت دەنووسێت و ناوەکەت دەبینێت. کەسێکی دەرەوەی تیمەکەت تەنها بەم کۆدە دەتدۆزێتەوە، نەک بە ناو. پارەکە یەکسەر دەچێتە <b>پارەی ئامادە</b>ی جزدانەکەت.</p>
                     </div>`;
         }
 

@@ -8510,11 +8510,20 @@ i.moc-avatar {
   color: #fff;
 }
 
-/* --- ڕێگا (breadcrumb) — لەگەڵ لیستەکە سکڕۆڵ دەکات، لکاو نییە. خاوەن (٢٠٢٦-١٠-٢٦، سکرینشۆت): «کاتێک سکرۆڵ دەکەین
-   ئەمە ون نابێت… با لە کاتی سکرۆڵکردن ون بێت» — «هەموو»ـی لکاو بە درێژایی لیستەکە لەسەر کارتەکان دەمایەوە. لە ڕەگدا هەر
-   دانانرێت (`ttHeadHtml`)؛ گەڕانەوەی یەک ئاست = Back ([[back-navigation]]) */
+/* --- ڕێگا (breadcrumb) — لکاو نییە (خاوەن ٢٠٢٦-١٠-٢٦: «با لە کاتی سکرۆڵکردن ون بێت»)، و لە ٢٠٢٦-١٠-٢٧ـەوە لە ناوچەی
+   سەرەوەیە (`#tt-crumb-bar`، لەگەڵ گەڕان · فلتەر · «هەموو / بەپێی ئەندام / بەپێی تیم»)، نەک لەناو لیستەکە: لە سکڕۆڵی خوارەوە
+   لەگەڵ ئەوان ون دەبێت و بە کەمێک سکڕۆڵی سەرەوە دەگەڕێتەوە — خاوەن (سکرینشۆت): «لەگەڵ ئەوان ون بێت و دواتر دەربکەوێتەوە
+   نەوەک سکرۆڵ بێت». لە ڕەگدا نییە؛ گەڕانەوەی یەک ئاست = Back ([[back-navigation]]) */
 .tt-crumbs-wrap {
   margin: 0 0 7px;
+}
+
+.tt-crumb-bar {
+  margin: -2px 0 10px;
+}
+
+.tt-crumb-bar .tt-crumbs-wrap {
+  margin: 0;
 }
 
 .tt-crumbs {
@@ -9007,6 +9016,23 @@ i.moc-avatar {
   color: transparent;
 }
 
+/* ⏳ پەڕەی چاوەڕوان (`ttPendingHtml`): ژمارەکانی ئۆردەر لە کارتی کەس · دوگمەکان · خانەکانی پلە · سەردێڕەکان — ڕەنگی
+   خۆیان (`.tt-total b` · `.tt-cell b` · `.tt-cell.on b` · `.tt-sec small`) لە `.sk-w` بەهێزترە، بۆیە ئەمە (٠،٣،٠) */
+.sk-list[data-sk="tt"] .sk-w,
+.sk-list[data-sk="tt"] .sk-w * {
+  color: transparent;
+}
+
+/* خانەی چالاک (ڕەنگی پلە): پیلی خۆڵەمێشی لەسەر مۆر/شین ناشیرینە — هەمان سپیی کاڵی ژمارەکەی */
+.sk-list[data-sk="tt"] .tt-cell.on .sk-w {
+  background: rgba(255, 255, 255, .35);
+}
+
+/* جیاکەرەوەی زنجیرەی ڕیزێکی چاوەڕوان — پیلەکان شاراون، بۆیە تیرەکانیش */
+.tt-row.sk-shim .cp-sep {
+  color: transparent;
+}
+
 .tt-empty {
   margin: 0;
   padding: 28px 8px;
@@ -9144,6 +9170,13 @@ i.moc-avatar {
 /* کۆمپیوتەر: سەرەوەی پەڕەکە بە درێژایی هەموو ستوونەکانی لیستەکە (ڕیزەکان دوو ستوونن) */
 @media (min-width: 720px) {
   #management-orders-list > .tt-full {
+    grid-column: 1 / -1;
+  }
+
+  /* ⏳ پەڕەی چاوەڕوان (`ttPendingHtml`): پێچەرەکەی (`.sk-list`) لێرە `display: contents`ـە، بۆیە منداڵەکانی ڕاستەوخۆ
+     خانەی گریدەکەن — سەرەوە و سەردێڕی ڕۆژ بە درێژایی هەموو ستوونەکان، وەک پەڕە ڕاستەقینەکە */
+  #management-orders-list > .sk-list > .tt-full,
+  #management-orders-list > .sk-list > .sk-day {
     grid-column: 1 / -1;
   }
 }
@@ -10497,6 +10530,128 @@ body.keyboard-open #main-fab {
 /* ناوی کەس لە لیستی قازانج و کلیلەکان (`adm-nm`) — ڕەنگی پلەکەی، نەک پیلی پلە */
 .adm-nm {
   color: var(--rk, #1e293b);
+}
+
+/* ⚠️ ناوی دووبارە لە دروستکردنی کلیل (`dupNamePaint`، خاوەن ٢٠٢٦-١٠-٢٧، وەڵامی سێرڤەر db/152): «ئەم ناوە بوونی
+   هەیە» (زەرد) و «ناوی هاوشێوە» (خۆڵەمێشی) — ناو بە ڕەنگی پلەکەی، کۆد، زنجیرە لە دێڕی دووەم؛ کەسێکی تیمێکی تر =
+   ڕیزی قوفڵ بێ ناو و کۆد (`is-hid`). بەتاڵ = هیچ شوێنێک ناگرێت؛ پڕ = ٦px لە ژێر خانەی ناو (مارجنی خوارەوەی خانەکە
+   دەگەڕێنێتەوە). `is-wait` = ئەوەی دیارە هی ناوێکی پێشووە، وەڵامی نوێ لە ڕێگایە */
+.dupn {
+  transition: opacity .15s ease;
+}
+
+.dupn.is-wait { opacity: .55; }
+
+.dupn:not(:empty) {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: calc(6px - var(--sp-3)) 0 var(--sp-3);
+}
+
+.dupn-box {
+  min-width: 0;
+  padding: 6px 10px 2px;
+  border: 1px solid #e2e8f0;
+  border-radius: var(--r-sm);
+  background: #f8fafc;
+}
+
+.dupn-box.is-same {
+  border-color: #fcd34d;
+  background: #fffbeb;
+}
+
+.dupn-h {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding-bottom: 4px;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+.dupn-h i { font-size: 15px; }
+.dupn-box.is-same .dupn-h { color: #b45309; }
+
+.dupn-h small {
+  margin-inline-start: auto;
+  font-size: 11px;
+  font-weight: 600;
+  color: #94a3b8;
+}
+
+.dupn-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 3px 8px;
+  min-width: 0;
+  padding: 5px 0;
+  border-top: 1px dashed #e2e8f0;
+}
+
+.dupn-box.is-same .dupn-row { border-top-color: #fde68a; }
+
+.dupn-nm {
+  min-width: 0;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+  color: var(--rk, var(--text-main));
+}
+
+.dupn-code {
+  padding: 0 5px;
+  border: 1px solid #e2e8f0;
+  border-radius: 5px;
+  background: #fff;
+  font-family: "MSO Digits", ui-monospace, Menlo, Consolas, monospace;
+  font-size: 11px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.dupn-tag {
+  padding: 0 6px;
+  border-radius: 5px;
+  background: #fef3c7;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.7;
+  color: #b45309;
+  white-space: nowrap;
+}
+
+.dupn-row .tt-chain { flex-basis: 100%; }
+
+/* کەسێکی تیمێکی تر — سێرڤەر تەنها ژمارەکەی ناردووە */
+.dupn-row.is-hid { color: #92400e; }
+.dupn-row.is-hid i { font-size: 15px; color: #b45309; }
+
+.dupn-hid {
+  font-size: 12.5px;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.dupn-more {
+  display: block;
+  width: 100%;
+  min-height: 32px;
+  padding: 0;
+  border: none;
+  border-top: 1px dashed #e2e8f0;
+  background: none;
+  font-size: 12px;
+  font-weight: 700;
+  text-align: start;
+  color: var(--primary);
+  cursor: pointer;
 }
 
 .wcard-txt .tt-chain { margin-top: 1px; }
@@ -28299,6 +28454,36 @@ body.sx-wide {
   pointer-events: none;
 }
 
+/* 🔒 db/155: «بە ناو تەنها تیمەکەت دەدۆزرێتەوە — کەسانی تر بە کۆدی تەواو» — تەنها بۆ ئەوەی دەسەڵاتێکی «هەموان»ی نییە
+   (`find_all: false`). نزیک بە خانەی گەڕان، یەک دێڕ لە ٣٦٠px */
+.xfer-scope {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: -5px;
+  padding: 7px 10px;
+  border-radius: var(--r-sm);
+  background: #f1f5f9;
+  color: #475569;
+  font-size: 11.5px;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.xfer-scope[hidden] {
+  display: none;
+}
+
+.xfer-scope i {
+  flex-shrink: 0;
+  color: var(--primary);
+  font-size: 15px;
+}
+
+.xfer-scope b {
+  color: var(--text-main);
+}
+
 .xfer-results {
   display: flex;
   flex-direction: column;
@@ -28398,6 +28583,32 @@ body.sx-wide {
   flex-shrink: 0;
   color: #cbd5e1;
   font-size: 20px;
+}
+
+/* کۆدی تەواو نووسرا و ئەم کەسەی هێنا — سەوز، «✓ بە کۆد»: دڵنیایی کە کەسە ڕاستەکەیە */
+.xfer-person.is-code {
+  border-color: #a7f3d0;
+  background: #f0fdf4;
+}
+
+.xfer-bycode {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  margin-inline-start: 6px;
+  padding: 0 6px;
+  border-radius: var(--r-full);
+  background: #dcfce7;
+  color: #15803d;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.7;
+  vertical-align: 1px;
+  white-space: nowrap;
+}
+
+.xfer-bycode i {
+  font-size: 11px;
 }
 
 .xfer-empty {
@@ -31879,7 +32090,8 @@ body.boot-skel #sbar-returned {
   color: transparent;
 }
 
-.sk-moc .mocc-cust i {
+.sk-moc .mocc-cust i,
+.sk-moc .mocc-custrow i {
   background: #e5e7eb;
   animation: bskPulse 1.2s ease-in-out infinite;
 }
@@ -31983,6 +32195,7 @@ i.bx.bx-loader-alt.bx-spin::before { content: none; }
   .sk-n-wait,
   .sk-w,
   .sk-moc .mocc-cust i,
+  .sk-moc .mocc-custrow i,
   .ptr-dots.spinning,
   i.bx.bx-loader-alt.bx-spin,
   .olog-bar,
