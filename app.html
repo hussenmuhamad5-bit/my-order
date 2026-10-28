@@ -3042,12 +3042,12 @@
                         <label class="fcal-in">
                             <span>لە</span>
                             <input type="text" id="txf-min" inputmode="numeric" autocomplete="off" dir="ltr" placeholder="0"
-                                oninput="txfAmtInput('min', this)" onblur="txfAmtBlur(this)">
+                                onfocus="fsheetKeepField(this)" oninput="txfAmtInput('min', this)" onblur="txfAmtBlur(this)">
                         </label>
                         <label class="fcal-in">
                             <span>تا</span>
                             <input type="text" id="txf-max" inputmode="numeric" autocomplete="off" dir="ltr" placeholder="∞"
-                                oninput="txfAmtInput('max', this)" onblur="txfAmtBlur(this)">
+                                onfocus="fsheetKeepField(this)" oninput="txfAmtInput('max', this)" onblur="txfAmtBlur(this)">
                         </label>
                     </div>
                 </div>
@@ -41910,6 +41910,38 @@
                 return;
             }
             document.body.classList.toggle('keyboard-open', h < kbBaseline - 150);
+            fsheetKeepNow();
+        }
+
+        // ⌨️ خانەیەکی ناو شیت کە کیبۆرد دایدەپۆشێت — خاوەن (٢٠٢٦-١٠-٢٨): «… کیبۆڕ دەکرێتەوە ئەو بڕی پارەیە ون دەبێت … نازانی
+        //    چەندت نووسیوە». کیبۆرد شیتەکە کورت دەکاتەوە (`.fsheet-panel` = `max-height: 92vh`)، بەڵام `scrollTop`ـی `.fsheet-body`
+        //    وەک خۆی دەمێنێتەوە، بۆیە خانەیەکی خوارەوە دەچووە ژێر کیبۆرد و پێی شیتەکە — نە WebView ـەکە و نە ئەپ نەیدەهێنایە بەرچاو.
+        //    تەنها بۆ خانەیەک کە داوای دەکات (`onfocus="fsheetKeepField(this)"`)، شیتەکانی تر وەک خۆیانن. هەر گۆڕانێکی قەبارە
+        //    (`kbSync`) تا خانەکە چالاکە دووبارە دەیپشکنێت؛ تەنها `.fsheet-body` دەجووڵێت، هەرگیز پەڕەکە.
+        let _fkField = null;
+        function fsheetKeepField(el) {
+            _fkField = el;
+            fsheetKeepNow();
+            [120, 320, 650].forEach(ms => setTimeout(fsheetKeepNow, ms));   // کیبۆرد بە ئەنیمەیشن دەکرێتەوە
+        }
+        function fsheetKeepNow() {
+            const el = _fkField;
+            if (!el) return;
+            if (document.activeElement !== el) { _fkField = null; return; }
+            const body = el.closest('.fsheet-body');
+            if (!body) return;
+            const box = el.closest('.fsec') || el;                            // ناونیشانی بەشەکە + خانەکە پێکەوە، ئەگەر جێی ببێتەوە
+            const vv = window.visualViewport;
+            const b = body.getBoundingClientRect();
+            const top = b.top + 8;
+            const bottom = Math.min(b.bottom, vv ? vv.offsetTop + vv.height : window.innerHeight) - 12;
+            if (bottom - top < 40) return;
+            const rb = box.getBoundingClientRect(), ri = el.getBoundingClientRect();
+            let d = 0;
+            if (rb.bottom > bottom) d = rb.bottom - bottom;
+            if (rb.top - d < top) d = Math.max(0, ri.bottom - bottom);        // بەشەکە جێی نابێتەوە → تەنها خانەکە
+            if (ri.top - d < top) d = ri.top - top;
+            if (Math.abs(d) >= 1) body.scrollTop += d;
         }
 
         window.addEventListener('resize', kbSync);
@@ -44094,10 +44126,12 @@
             txfReload(h);
         }
 
+        // ژمارەدار (`has-n`) = دوو ڕیز: ئایکۆن + ناو لە سەرەوە (`.txf-h`)، ژمارە لە خوارەوە. خاوەن (٢٠٢٦-١٠-٢٨): لە تەنیشت
+        // «10,383» ناوی «جزدان» پیت بە پیت دەشکا — خانەی ٣ ستوونی ~١٠٥px ـە و ئایکۆن + ژمارەکە هەمووی دەگرت.
         function txfChipHtml(on, onclick, label, icon, count, zero) {
-            return `<button type="button" class="fchip txf-chip${on ? ' is-on' : ''}${zero ? ' is-zero' : ''}" onclick="${onclick}">`
-                + (icon ? `<i class='bx ${icon}'></i>` : '') + `<span>${label}</span>`
-                + (count != null ? `<em class="txf-n">${count}</em>` : '') + `</button>`;
+            const head = (icon ? `<i class='bx ${icon}'></i>` : '') + `<span>${label}</span>`;
+            return `<button type="button" class="fchip txf-chip${count != null ? ' has-n' : ''}${on ? ' is-on' : ''}${zero ? ' is-zero' : ''}" onclick="${onclick}">`
+                + (count != null ? `<span class="txf-h">${head}</span><em class="txf-n">${count}</em>` : head) + `</button>`;
         }
 
         function txfRenderSheet() {

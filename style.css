@@ -19855,7 +19855,7 @@ body.sx-wide {
 
 .txf-sum-n {
   min-width: 0;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 
 .txf-sum-n b {
@@ -19956,27 +19956,52 @@ body.sx-wide {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
+/* خاوەن (٢٠٢٦-١٠-٢٨): «نووسینەکان … تۆزێک بچووکیان بکەوە» — دەق 12 → 11px، ئایکۆن 18 → 16px، ژمارە 11 → 10px */
 .txf-chip {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: 5px;
   min-width: 0;
   padding: 6px 10px;
   border-radius: 14px;
-  font-size: var(--fs-sm);
-  line-height: 1.3;
+  font-size: var(--fs-xs);
+  line-height: 1.35;
   text-align: center;
 }
 
 .txf-chip i {
   flex: 0 0 auto;
-  font-size: 18px;
+  font-size: 16px;
 }
 
-.txf-chip > span {
+/* ⚠️ `overflow-wrap: anywhere` نا — ناوەکە دەتوانێت تا یەک پیت بچووک ببێتەوە، و «جزدان» لە تەنیشت «10,383» پیت بە پیت
+   دەشکا (هیچ شتێک نەدەبڕدرا، بۆیە پشکنینی «بڕاو» سەوز بوو). `break-word` تەنها وشەیەک دەشکێنێت کە بە تەنها جێی نابێتەوە. */
+.txf-chip > span,
+.txf-h > span {
   min-width: 0;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
+}
+
+/* ژمارەدار: ئایکۆن + ناو لە سەرەوە، ژمارە لە خوارەوە — ناو هەموو پانییەکەی خانەکە وەردەگرێت */
+.txf-chip.has-n {
+  flex-direction: column;
+  gap: 3px;
+  padding: 7px 8px;
+}
+
+/* ٣ ستوون لە ٣٢٠px = خانەی ٩٢px: «پاشەکەوت» (55.2px لە Noto Kufi 11px) + ئایکۆن بە پەدینگی 8px تەنها 53px ـی هەبوو → 5px = 60px */
+.txf-g3 .txf-chip.has-n {
+  padding-inline: 5px;
+}
+
+.txf-h {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .txf-n {
@@ -19986,10 +20011,10 @@ body.sx-wide {
   border-radius: var(--r-full);
   background: rgba(15, 23, 42, 0.07);
   color: var(--text-secondary);
-  font-size: 11px;
+  font-size: var(--fs-2xs);
   font-style: normal;
   font-weight: 700;
-  line-height: 1.5;
+  line-height: 1.4;
 }
 
 .fchip.is-on .txf-n {
