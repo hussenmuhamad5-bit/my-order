@@ -3000,6 +3000,90 @@
     </div>
 
     <!-- ============================================================
+         🔎 شیتی فلتەری مێژووی جزدان (db/157 · خاوەن ٢٠٢٦-١٠-٢٧)
+         ------------------------------------------------------------
+         هەمان `fsheet` و چیپەکانی فلتەری ئۆردەرەکان؛ یەک شیت بۆ هەردوو شوێن («جزدانەکەم» و مێژووی جزدانی ئەندام
+         لە ئەدمین — `txfSheetHost`). ژمارەکانی ناو چیپەکان و دوگمەی «پیشاندان» لە سێرڤەرەوەن (`wallet_tx_find`،
+         `p_limit = 0`)، هەرگیز لە ڕیزی براوزەر. «ڕۆژێک» و «مەودای دڵخواز» ڕۆژژمێرە هاوبەشەکە قەرز دەکەن
+         (`#txf-date-sheet`). ⚠️ داخستن بە `txfSheetClose` (`SHEET_CLOSERS`).
+         ⚠️ ژمارەی چیپەکان دابەشی ستوونەکان دەبێت: بەروار ٨ ÷ ٢ · ئاڕاستە ٣ ÷ ٣ · جۆر ١٠ ÷ ٢ · جزدان ٣ ÷ ٣.
+         ============================================================ -->
+    <div id="txf-sheet" class="fsheet" role="dialog" aria-modal="true" aria-label="فلتەری جووڵەکان">
+        <div class="fsheet-scrim" onclick="txfSheetClose()"></div>
+        <div class="fsheet-panel">
+            <div class="fsheet-head">
+                <button type="button" class="fsheet-x" onclick="txfSheetClose()" aria-label="داخستن">
+                    <i class='bx bx-x'></i>
+                </button>
+                <span class="fsheet-title">فلتەری جووڵەکان</span>
+                <button type="button" class="fsheet-reset" onclick="txfSheetReset()">سڕینەوە</button>
+            </div>
+
+            <div class="fsheet-body" id="txf-body">
+                <div class="fsec">
+                    <div class="fsec-t">بەروار</div>
+                    <div class="fchips txf-g2" id="txf-dates"></div>
+                </div>
+                <div class="fsec">
+                    <div class="fsec-t">ئاڕاستە</div>
+                    <div class="fchips txf-g3" id="txf-dirs"></div>
+                </div>
+                <div class="fsec">
+                    <div class="fsec-t">جۆری جووڵە <span class="txf-sec-hint">· دەتوانیت چەند دانەیەک هەڵبژێریت</span></div>
+                    <div class="fchips txf-g2" id="txf-kinds"></div>
+                </div>
+                <div class="fsec" id="txf-wallet-sec">
+                    <div class="fsec-t">جزدان یان پاشەکەوت</div>
+                    <div class="fchips txf-g3" id="txf-wallets"></div>
+                </div>
+                <div class="fsec">
+                    <div class="fsec-t">بڕی پارە (د.ع)</div>
+                    <div class="fcal-inputs">
+                        <label class="fcal-in">
+                            <span>لە</span>
+                            <input type="text" id="txf-min" inputmode="numeric" autocomplete="off" dir="ltr" placeholder="0"
+                                oninput="txfAmtInput('min', this)" onblur="txfAmtBlur(this)">
+                        </label>
+                        <label class="fcal-in">
+                            <span>تا</span>
+                            <input type="text" id="txf-max" inputmode="numeric" autocomplete="off" dir="ltr" placeholder="∞"
+                                oninput="txfAmtInput('max', this)" onblur="txfAmtBlur(this)">
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="fsheet-foot">
+                <div class="fsheet-sum" id="txf-sheet-sum">هەموو جووڵەکان</div>
+                <button type="button" class="btn fsheet-apply" id="txf-apply" onclick="txfSheetApply()">
+                    <i class='bx bx-check'></i> <span id="txf-apply-lbl">پیشاندانی ئەنجامەکان</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ⚠️ ڕۆژژمێری فلتەری جزدان — لەسەر `#txf-sheet` دەکرێتەوە، بۆیە z-index > ٢٤٠٠ (`.fsheet`).
+         `.fcal-wrap` لە `#fcal-home`ـەوە دەگوێزرێتەوە بۆ `#txf-cal-slot` و هەر داخستنێک دەیگەڕێنێتەوە
+         (`txfCloseCal` · `closeModal`). هیچ `stopPropagation`ێک نییە — ڕووداوەکانی ڕۆژژمێر لەسەر `document`ـن. -->
+    <div id="txf-date-sheet" class="modal-overlay" style="z-index: 2450;"
+        onclick="if (event.target.id === 'txf-date-sheet') txfCloseCal()">
+        <div class="modal-content is-sxd">
+            <div class="modal-header">
+                <h3 class="modal-title is-sm"><i class='bx bx-calendar-edit'></i>
+                    <span id="txfd-title">مەودای دڵخواز</span></h3>
+                <button class="modal-close" onclick="txfCloseCal()"><i class='bx bx-x'></i></button>
+            </div>
+            <div class="sxd-body" id="txf-cal-slot"></div>
+            <div class="sxd-foot">
+                <div class="sxd-info" id="txfd-info">بەروارەکان هەڵبژێرە</div>
+                <button type="button" class="btn sxd-apply" id="txfd-apply" onclick="txfApplyCal()">
+                    <i class='bx bx-check'></i> پەسەندکردن
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================================
          شیتی کاتدارکردنی ئۆردەر — «کەی داخیل بێت؟»
          ------------------------------------------------------------
          بە پەنجەدانانی ٣ چرکە لەسەر دوگمەی «ناردنی داواکاری»
@@ -3825,6 +3909,8 @@
                 <button class="modal-close" onclick="closeModal(null, 'wallet-transactions-modal')"><i
                         class='bx bx-x'></i></button>
             </div>
+            <!-- 🔎 گەڕان و فلتەری مێژووی ئەم ئەندامە (db/157) — هەمان پارچەی «جزدانەکەم» (`txfMount('adm')`) -->
+            <div class="txf is-modal" id="txf-adm"></div>
             <div id="wallet-tx-modal-body" class="wallet-tx-modal-body">
                 <p style="text-align:center; color:#888; font-size:12px; margin: 15px 0;">لە لۆدکردندایە...</p>
             </div>
@@ -3947,6 +4033,8 @@
         <h3
             style="margin-top: 12px; margin-bottom: 6px; font-size: 14px; color:#1e293b; border-bottom: 2px solid #e2e8f0; padding-bottom: 6px;">
             دوایین جووڵە داراییەکان</h3>
+        <!-- 🔎 گەڕان و فلتەری مێژوو (db/157) — `txfMount('my')` ناوەڕۆکەکەی دادەنێت؛ لە دەرەوەی سکڕۆڵەرەکەیە، بۆیە هەمیشە دیارە -->
+        <div class="txf" id="txf-my"></div>
         <!-- بەتاڵ بە ئەنقەست: `loadMyWalletData` سکێلێتۆنی جووڵەکان دادەنێت؛ «هیچ جووڵەیەک نییە» پێش هاتنی داتا درۆ بوو -->
         <div id="my-transactions-list"></div>
     </div>
@@ -35035,6 +35123,8 @@
             //    هەرگیز بانگ ناکرێت. بڕوانە [[landmines]].
             if (modalId === 'sx-date-sheet' || modalId === 'sched-date-sheet'
                 || modalId === 'rw-date-sheet' || modalId === 'bk-date-sheet') fcalReturnHome();
+            // 🔎 ڕۆژژمێری فلتەری جزدان (db/157) — هەمان گەڕاندنەوە، و پۆلی یەک-ڕۆژ لادەبرێت
+            if (modalId === 'txf-date-sheet') txfCloseCal();
             // پەنجەرەی وردەکاری ئۆردەر داخرا → وەک «پشکنراو» نیشان دەکرێت.
             // ئەمە تاکە ڕێگای داخستنە (X، پاشخان، دەستکاری، سڕینەوە…)
             if (modalId === 'order-details-modal') {
@@ -35208,7 +35298,8 @@
             'sal-sheet': () => salClose(),
             'capi-edit-sheet': () => capiCloseEditor(),
             'capi-key-sheet': () => capiCloseKey(),
-            'capi-log-sheet': () => capiCloseLog()
+            'capi-log-sheet': () => capiCloseLog(),
+            'txf-sheet': () => txfSheetClose()
         };
 
         function navWatchOverlays() {
@@ -42932,6 +43023,7 @@
             // 💸 دوگمەی «ناردنی پارە» بەپێی `send_money` — پێش هەر داواکارییەک،
             //    بۆیە تۆڕی خراپیش هەر ڕاستی دەکاتەوە
             xferSyncActions();
+            txfSync('my');                    // 🔎 شریتی گەڕان (db/157) — ئەکاونتێکی تر = لە سەرەتاوە
             let list = document.getElementById('my-transactions-list');
             // ✨ تا داتا دێت: ژمارەکان پیل و جووڵەکان سکێلێتۆن — نەک «0 د.ع» کە درۆیە
             const balEls = ['my-wallet-balance', 'my-wallet-savings'].map(id => document.getElementById(id)).filter(Boolean);
@@ -42977,6 +43069,8 @@
                 // ژماردن — لیستەکە بۆی ناوەستێت؛ تەنها دوای لیستەکە دەنووسرێت (ئەگەرنا «هیچ جووڵەیەک نییە»
                 // بۆ ساتێک لەبری سپینەرەکە دەردەکەوت)
                 countP.then(n => { myTxTotal = n; renderMyTx(); }).catch(() => { });
+                // 🔎 گەڕان/فلتەر چالاکە → ئەنجامەکانیشی نوێ دەبنەوە (جووڵەی نوێ دەچێتە شوێنی خۆی)
+                if (txfOn('my')) txfReload('my', { quiet: true });
                 isWalletDataLoaded = true;
             } catch (err) {
                 if (!isWalletDataLoaded) {
@@ -43585,10 +43679,598 @@
             if (b) { b.disabled = false; b.innerHTML = "<i class='bx bx-refresh'></i> دووبارە هەوڵبدە"; }
         }
 
+        // ============================================================
+        // 🔎 گەڕان و فلتەری مێژووی جزدان — db/157 (خاوەن ٢٠٢٦-١٠-٢٧)
+        // ------------------------------------------------------------
+        // خاوەن: «… بتوانین فلتەری بکەین یان گەڕانێک بکەین بە کۆت. بڕی پارە … بۆ ئەندامان و هەروەها بۆ پاشا کاتێک
+        // دەچێتە جزدانی ئەندامەکانی … هەر بەروارەیەکت ویست ئەو بەروارە دیاری بکەی یان ماوەیەک دیاری بکەی وەکو شوێنی
+        // ئۆردەرەکان». یەک پارچە، دوو شوێن: «جزدانەکەم» (`my`) و مێژووی جزدانی ئەندامێک لە ئەدمین (`adm`).
+        //  • بێ فلتەر = ڕێڕەوی ئێستا (`wallet_tx_page`) وەک خۆی. هەر فلتەرێک = `wallet_tx_find`: سێرڤەر دەگەڕێت، دەپاڵێوێت و
+        //    دەژمێرێت — ژمارە و کۆی پارە هەرگیز لە ڕیزی براوزەر نا ([[landmines]] ١٦٠).
+        //  • پاشەکەوت: سێرڤەر بڕیار دەدات (`hide_savings`)؛ بەشی «جزدان یان پاشەکەوت» تەنها کاتێک دەبینرێت.
+        //  • گەڕان = کۆد (پیتی لاتینی · ژمارە · «-») یان بڕ. پیتی کوردی/عەرەبی → ڕوونکردنەوە و هیچ داواکارییەک: گەڕانی ناو
+        //    یاسای SEARCH-KEYS ـی هەیە، نەک ilike ـێکی دووەم.
+        //  • ⚠️ کلیلەکانی `p_filter` و کلیلی جۆرەکان = SQL ـی db/157 (`check.mjs` § ٩٧) — یەکێکیان بگۆڕە، ئەوی تریش.
+        // ============================================================
+        const TXF_KINDS = [
+            { k: 'profit', t: 'قازانجی ئۆردەر', i: 'bx-trending-up' },
+            { k: 'return', t: 'گەڕانەوەی ئۆردەر', i: 'bx-undo' },
+            { k: 'salary', t: 'پێدانی مووچە', i: 'bx-money-withdraw' },
+            { k: 'bonus', t: 'زیادکردنی دەستی', i: 'bx-plus-circle' },
+            { k: 'deduct', t: 'کەمکردنەوەی دەستی', i: 'bx-minus-circle' },
+            { k: 'xfer', t: 'ناردن و وەرگرتن', i: 'bx-transfer-alt' },
+            { k: 'reward', t: 'خەڵات', i: 'bx-trophy' },
+            { k: 'pay', t: 'پارەدانی ئۆردەر', i: 'bx-credit-card' },
+            { k: 'shop', t: 'کۆگا', i: 'bx-store' },
+            { k: 'other', t: 'ڕاستکردنەوە و هیتر', i: 'bx-wrench' }
+        ];
+        const TXF_DATES = [
+            { v: 'all', t: 'هەموو کاتێک' }, { v: 'today', t: 'ئەمڕۆ' },
+            { v: 'yesterday', t: 'دوێنێ' }, { v: 'last7', t: '7 ڕۆژی ڕابردوو' },
+            { v: 'month', t: 'ئەم مانگە' }, { v: 'prevmonth', t: 'مانگی ڕابردوو' },
+            { v: 'day', t: 'ڕۆژێک…', i: 'bx-calendar-check' }, { v: 'custom', t: 'مەودای دڵخواز…', i: 'bx-calendar-edit' }
+        ];
+        const TXF_DIRS = [{ v: 'all', t: 'هەموو' }, { v: 'in', t: 'هاتوو', i: 'bx-up-arrow-alt' }, { v: 'out', t: 'ڕۆیشتوو', i: 'bx-down-arrow-alt' }];
+        const TXF_WALLETS = [{ v: 'all', t: 'هەردووکیان' }, { v: 'balance', t: 'جزدان', i: 'bx-wallet' }, { v: 'savings', t: 'پاشەکەوت', i: 'bx-coin-stack' }];
+        const TXF_PAGE = 100;
+        // پیتی کوردی/عەرەبی — ژمارەی کوردی نا (ئەوانە \p{Nd}ـن و سێرڤەر دەیانکاتە لاتینی)
+        const TXF_AR = /(?=\p{Script=Arabic})\p{L}/u;
+        const TXF_REL = ['today', 'yesterday', 'last7', 'month', 'prevmonth'];
+
+        function txfEmpty(q) {
+            return { q: q || '', preset: 'all', from: null, to: null, dir: 'all', kinds: [], wallet: 'all', min: null, max: null };
+        }
+        function txfHostNew(list) {
+            return { list: list, owner: undefined, f: txfEmpty(), rows: [], cursor: null, done: true, busy: false,
+                res: null, err: null, seq: 0, timer: 0, loading: false, hideSav: null };
+        }
+        const TXF = { my: txfHostNew('my-transactions-list'), adm: txfHostNew('wallet-tx-modal-body') };
+
+        function txfCode(h) { return h === 'my' ? ((currentUser && currentUser.code) || null) : (window.currentWalletCode || null); }
+
+        // «ئەم مانگە» · «مانگی ڕابردوو» + پێشدانراوەکانی شیتی ئۆردەر (`fsPresetRange`)
+        function txfPresetRange(p) {
+            const t = fdToday();
+            if (p === 'month') return [fdKey(new Date(t.getFullYear(), t.getMonth(), 1)), fdKey(t)];
+            if (p === 'prevmonth') return [fdKey(new Date(t.getFullYear(), t.getMonth() - 1, 1)), fdKey(new Date(t.getFullYear(), t.getMonth(), 0))];
+            return fsPresetRange(p);
+        }
+
+        // ⭐ ئەوەی دەنێردرێت — کلیلەکان ڕێک هی db/157 ن (q · from · to · kinds · dir · min · max · wallet)
+        function txfParams(f) {
+            const p = {};
+            const q = String(f.q || '').trim();
+            if (q && !TXF_AR.test(q)) p.q = q;
+            if (f.preset !== 'all' && f.from) {
+                // «ئەمڕۆ» دوای نیوەشەو هێشتا ئەمڕۆیە — هەر جارێک لە نوێوە دەژمێردرێت
+                const r = TXF_REL.includes(f.preset) ? txfPresetRange(f.preset) : [f.from, f.to || f.from];
+                p.from = r[0]; p.to = r[1] || r[0];
+            }
+            if (f.dir !== 'all') p.dir = f.dir;
+            if (f.kinds.length) p.kinds = f.kinds.slice();
+            if (f.wallet !== 'all') p.wallet = f.wallet;
+            if (f.min != null) p.min = f.min;
+            if (f.max != null) p.max = f.max;
+            return p;
+        }
+        function txfActive(f) { return Object.keys(txfParams(f)).length > 0; }
+        function txfOn(h) { const s = TXF[h]; return !!s && s.owner === txfCode(h) && txfActive(s.f); }
+        function txfSavVisible(h) {
+            const s = TXF[h];
+            if (s.hideSav != null) return !s.hideSav;
+            return h === 'my' ? can('view_savings') : true;
+        }
+
+        async function txfFetch(code, f, limit, cursor) {
+            const { data, error } = await supabase.rpc('wallet_tx_find', {
+                p_user_code: String(code),
+                p_filter: txfParams(f),
+                p_limit: limit,
+                p_before_at: cursor ? cursor.at : null,
+                p_before_id: cursor ? cursor.id : null
+            });
+            if (error) throw error;
+            return data || {};
+        }
+
+        function txfBox(h, sel) {
+            const b = document.getElementById('txf-' + h);
+            return b ? (sel ? b.querySelector(sel) : b) : null;
+        }
+
+        // شریتی گەڕان — یەک جار دروست دەکرێت؛ خانەی نووسین هەرگیز دووبارە نانەخشێنرێتەوە (فۆکەس و نووسین دەمێنن)
+        function txfMount(h) {
+            const box = txfBox(h);
+            if (!box || box.dataset.on) return box;
+            box.dataset.on = '1';
+            box.innerHTML = `<div class="search-row txf-row">
+                <div class="search-group txf-sg">
+                    <input class="search-input txf-q" type="text" dir="auto" maxlength="60" autocomplete="off" spellcheck="false"
+                        enterkeyhint="search" placeholder="گەڕان بە کۆد یان بڕی پارە…" aria-label="گەڕان لە جووڵەکان بە کۆد یان بڕی پارە"
+                        oninput="txfOnInput('${h}')" onkeydown="if (event.key === 'Enter') { this.blur(); txfOnInput('${h}', true); }">
+                    <svg viewBox="0 0 24 24" aria-hidden="true" class="search-icon"><g><path d="M21.53 20.47l-3.66-3.66C19.195 15.24 20 13.214 20 11c0-4.97-4.03-9-9-9s-9 4.03-9 9 4.03 9 9 9c2.215 0 4.24-.804 5.808-2.13l3.66 3.66c.147.146.34.22.53.22s.385-.073.53-.22c.295-.293.295-.767.002-1.06zM3.5 11c0-4.135 3.365-7.5 7.5-7.5s7.5 3.365 7.5 7.5-3.365 7.5-7.5 7.5-7.5-3.365-7.5-7.5z"></path></g></svg>
+                    <button type="button" class="txf-x" hidden onclick="txfClearQ('${h}')" aria-label="سڕینەوەی گەڕان"><i class='bx bx-x'></i></button>
+                </div>
+                <button type="button" class="filter-btn txf-fbtn" onclick="txfOpenSheet('${h}')" title="فلتەرکردن" aria-label="فلتەرکردن">
+                    <i class='bx bx-slider-alt'></i><span class="filter-badge" style="display:none;">0</span>
+                </button>
+            </div>
+            <div class="txf-hint" hidden></div>
+            <div class="active-filters txf-chips" style="display:none;"></div>
+            <div class="txf-sum" hidden></div>`;
+            return box;
+        }
+
+        // کەسی جزدانەکە گۆڕا (ئەکاونتێکی تر · ئەندامێکی تر لە ئەدمین) → فلتەر و ئەنجامەکانی پێشوو هی ئەو نین
+        function txfSync(h) {
+            const s = TXF[h], code = txfCode(h);
+            txfMount(h);
+            if (s.owner !== code) {
+                s.owner = code; s.f = txfEmpty(); s.rows = []; s.cursor = null; s.done = true;
+                s.res = null; s.err = null; s.loading = false; s.hideSav = null; s.seq++;
+                clearTimeout(s.timer);
+                const q = txfBox(h, '.txf-q'); if (q) q.value = '';
+                txfPaintBar(h); txfPaintSum(h);
+            }
+            return s;
+        }
+
+        function txfOnInput(h, now) {
+            const s = txfSync(h);
+            const el = txfBox(h, '.txf-q');
+            const x = txfBox(h, '.txf-x');
+            if (x && el) x.hidden = !el.value;
+            clearTimeout(s.timer);
+            s.timer = setTimeout(() => {
+                const v = el ? el.value.trim() : '';
+                if (!now && v === String(s.f.q || '').trim()) return;
+                s.f.q = v;
+                txfReload(h);
+            }, now ? 0 : 380);
+        }
+
+        function txfClearQ(h) {
+            const el = txfBox(h, '.txf-q');
+            if (el) el.value = '';
+            txfOnInput(h, true);
+        }
+
+        // هیچ فلتەرێک نەما → هەمان لیستی ئێستا (پەڕەکانی `wallet_tx_page`)
+        function txfBackToPlain(h) {
+            if (h === 'my') renderMyTx();
+            else if (window.currentWalletCode) renderWalletTransactions(walletTxCache[window.currentWalletCode] || [], window.currentWalletCode);
+        }
+
+        async function txfReload(h, opt) {
+            opt = opt || {};
+            const s = txfSync(h);
+            txfPaintBar(h);
+            if (!txfActive(s.f)) {
+                s.seq++; s.rows = []; s.res = null; s.err = null; s.loading = false;
+                txfPaintSum(h);
+                txfBackToPlain(h);
+                return;
+            }
+            const my = ++s.seq;                       // ⚠️ کلیلی پێشبڕکێ پێش await
+            const code = s.owner;
+            const quiet = !!(opt.quiet && s.res && !s.err);
+            const list = document.getElementById(s.list);
+            if (!quiet) {
+                s.loading = true; s.err = null;
+                if (list) { list.innerHTML = skelHtml('tx', 6); list.scrollTop = 0; }
+                txfPaintSum(h);
+            }
+            const keep = list ? list.scrollTop : 0;
+            try {
+                const r = await txfFetch(code, s.f, TXF_PAGE, null);
+                if (my !== s.seq || s.owner !== code) return;
+                const rows = Array.isArray(r.rows) ? r.rows : [];
+                if (quiet && s.rows.length > TXF_PAGE) {
+                    // ⭐ نوێکردنەوەی پاشەوە: پەڕە بارکراوەکان مەڕژێنە — ڕیزی نوێ دەچێتە شوێنی خۆی، کێرسەر و «تەواو» وەک خۆیان
+                    const byId = new Map(s.rows.map(x => [x.id, x]));
+                    rows.forEach(x => byId.set(x.id, x));
+                    s.rows = [...byId.values()].sort((a, b) => (a.created_at < b.created_at ? 1 : a.created_at > b.created_at ? -1
+                        : (String(a.id) < String(b.id) ? 1 : String(a.id) > String(b.id) ? -1 : 0)));
+                } else {
+                    s.rows = rows; s.cursor = txCursorOf(rows); s.done = !r.more;
+                }
+                s.res = r; s.err = null;
+                if (typeof r.hide_savings === 'boolean') s.hideSav = r.hide_savings;
+            } catch (e) {
+                if (my !== s.seq) return;
+                console.warn('txfReload:', e);
+                if (!quiet) { s.err = e; s.rows = []; s.res = null; }
+            }
+            s.loading = false;
+            txfRender(h);
+            if (quiet && list) list.scrollTop = keep;
+        }
+
+        async function txfMore(h) {
+            const s = TXF[h];
+            if (s.busy || s.done || !txfActive(s.f)) return;
+            s.busy = true;
+            txMoreSetBusy('#' + s.list);
+            const my = s.seq, code = s.owner;
+            const list = document.getElementById(s.list);
+            const keep = list ? list.scrollTop : 0;
+            try {
+                const r = await txfFetch(code, s.f, TXF_PAGE, s.cursor);
+                if (my === s.seq && s.owner === code) {
+                    const rows = Array.isArray(r.rows) ? r.rows : [];
+                    s.rows = s.rows.concat(rows);
+                    if (rows.length) s.cursor = txCursorOf(rows);
+                    s.done = !r.more;
+                    txfRender(h);
+                    if (list) list.scrollTop = keep;
+                }
+            } catch (e) {
+                console.warn('txfMore:', e);
+                txMoreSetRetry('#' + s.list);
+            }
+            s.busy = false;
+        }
+
+        function txfErrText(e) {
+            const m = String((e && (e.message || e)) || '');
+            if (/PGRST202|wallet_tx_find/.test(m) && /not find|schema cache/i.test(m)) return 'گەڕان هێشتا لەسەر سێرڤەر ئامادە نییە.';
+            if (/BAD_FILTER/.test(m)) return 'ئەم گەڕانە ناخوێندرێتەوە — کۆد یان بڕی پارە بنووسە.';
+            return serverGuardMsg(e) || 'کێشەیەک لە گەڕاندا ڕوویدا.';
+        }
+
+        // لیستی ئەنجامەکان — هەمان ڕیزەکان و ناوبڕی ڕۆژەکانی مێژووی ئاسایی (`buildTxItemHtml`)
+        function txfRender(h) {
+            const s = TXF[h];
+            txfPaintBar(h);
+            txfPaintSum(h);
+            const list = document.getElementById(s.list);
+            if (!list || s.loading) return;
+            let html;
+            if (s.err) {
+                html = `<div class="txf-empty is-err"><i class='bx bx-error-circle'></i><b>${histEsc(txfErrText(s.err))}</b>`
+                    + `<button type="button" class="txf-empty-btn" onclick="txfReload('${h}')"><i class='bx bx-refresh'></i> دووبارە هەوڵبدەرەوە</button></div>`;
+            } else if (!s.rows.length) {
+                html = `<div class="txf-empty"><i class='bx bx-search-alt'></i><b>هیچ جووڵەیەک بەم گەڕان و فلتەرە نییە</b>`
+                    + `<span>کۆدەکە یان بڕەکە بپشکنە، یان فلتەرێک لابدە.</span>`
+                    + `<button type="button" class="txf-empty-btn" onclick="txfClearAll('${h}')"><i class='bx bx-eraser'></i> سڕینەوەی گەڕان و فلتەرەکان</button></div>`;
+            } else {
+                const total = s.res && s.res.sum ? Number(s.res.sum.n) : -1;
+                const remain = total < 0 ? null : Math.max(0, total - s.rows.length);
+                html = renderTxListWithDayDividers(s.rows, buildTxItemHtml)
+                    + (s.done ? '' : txMoreBtnHtml(`txfMore('${h}')`, remain))
+                    + txCountHtml(s.rows.length, total);
+            }
+            if (list.innerHTML !== html) list.innerHTML = html;
+        }
+
+        // ڕیزی پوختە: ژمارە + هاتوو/ڕۆیشتوو — بۆ هەر جزدانێک بە جیا (هەرگیز تێکەڵ، هەرگیز پوخت). لە سێرڤەرەوەیە.
+        function txfPaintSum(h) {
+            const s = TXF[h];
+            const el = txfBox(h, '.txf-sum');
+            if (!el) return;
+            if (!txfActive(s.f) || s.err) { el.hidden = true; if (el.innerHTML) el.innerHTML = ''; return; }
+            el.hidden = false;
+            let html;
+            if (s.loading || !s.res || !s.res.sum) {
+                html = `<div class="txf-sum-row">${skelInline(76)}${skelInline(96)}${skelInline(84)}</div>`;
+            } else {
+                const m = s.res.sum, q = s.res.q || {};
+                const n = Number(m.n) || 0;
+                const pill = (v, cls, ic, sign) => Number(v) > 0
+                    ? `<span class="txf-pill ${cls}"><i class='bx ${ic}'></i><bdi dir="ltr">${sign}${xferMoney(v)}</bdi> د.ع</span>` : '';
+                const what = q.amount != null ? ` · بڕی <bdi dir="ltr">${xferMoney(q.amount)}</bdi> د.ع`
+                    : (q.code ? ` · «<bdi dir="ltr">${histEsc(q.code)}</bdi>»` : '');
+                const row = (label, a, b) => (Number(a) > 0 || Number(b) > 0)
+                    ? `<div class="txf-sum-row">${label ? `<span class="txf-sum-w">${label}</span>` : ''}`
+                      + pill(a, 'is-in', 'bx-up-arrow-alt', '+') + pill(b, 'is-out', 'bx-down-arrow-alt', '−') + `</div>` : '';
+                html = `<div class="txf-sum-row"><span class="txf-sum-n"><b>${n.toLocaleString('en-US')}</b> جووڵە${what}</span></div>`;
+                const bal = Number(m.bal_n) > 0, sav = Number(m.sav_n) > 0;
+                if (bal && sav) html += row('جزدان', m.bal_in, m.bal_out) + row('پاشەکەوت', m.sav_in, m.sav_out);
+                else if (sav) html += row('پاشەکەوت', m.sav_in, m.sav_out);
+                else html += row('', m.bal_in, m.bal_out);
+            }
+            if (el.innerHTML !== html) el.innerHTML = html;
+        }
+
+        // مەودای بڕ — دەستپێک لە ڕاست (هەمان یاسای مەودای بەروار، `fdRange`)؛ ≥ / ≤ بەکارنایەت (لە RTL ئاوێنە دەبن)
+        function txfAmtLabel(a, b) {
+            const one = (v) => FD_FSI + xferMoney(v) + FD_PDI;
+            if (a != null && b != null) return 'بڕ: ' + FD_RLI + one(a) + ' – ' + one(b) + FD_PDI + ' د.ع';
+            if (a != null) return 'بڕ: لە ' + one(a) + ' د.ع بەرەو سەرەوە';
+            return 'بڕ: تا ' + one(b) + ' د.ع';
+        }
+
+        function txfParts(f) {
+            const out = [];
+            const p = txfParams(f);
+            if (p.from) {
+                const d = TXF_DATES.find(x => x.v === f.preset);
+                out.push({ kind: 'date', t: (f.preset === 'day' || f.preset === 'custom') ? fdRange(p.from, p.to) : (d ? d.t : '') });
+            }
+            if (p.dir) out.push({ kind: 'dir', t: p.dir === 'in' ? 'هاتوو' : 'ڕۆیشتوو' });
+            const ks = p.kinds || [];
+            if (ks.length > 3) out.push({ kind: 'kinds', t: ks.length + ' جۆری جووڵە' });
+            else ks.forEach(k => { const m = TXF_KINDS.find(x => x.k === k); out.push({ kind: 'kind', v: k, t: m ? m.t : k }); });
+            if (p.wallet) out.push({ kind: 'wallet', t: p.wallet === 'savings' ? 'پاشەکەوت' : 'جزدان' });
+            if (p.min != null || p.max != null) out.push({ kind: 'amt', t: txfAmtLabel(p.min, p.max) });
+            return out;
+        }
+
+        // چیپە چالاکەکان + ژمارەی دوگمەی فلتەر + ڕوونکردنەوەی گەڕانی ناو
+        function txfPaintBar(h) {
+            const s = TXF[h];
+            const parts = txfParts(s.f);
+            const n = parts.length;
+            const badge = txfBox(h, '.filter-badge'), btn = txfBox(h, '.txf-fbtn');
+            if (badge) { badge.textContent = String(n); badge.style.display = n ? 'flex' : 'none'; }
+            if (btn) btn.classList.toggle('is-on', n > 0);
+            const box = txfBox(h, '.txf-chips');
+            if (box) {
+                let html = parts.map(p => `<button type="button" class="afchip" onclick="txfClearPart('${h}', '${p.kind}', '${p.v || ''}')"><span>${histEsc(p.t)}</span><i class='bx bx-x'></i></button>`).join('');
+                if (n >= 2) html += `<button type="button" class="afchip is-clear" onclick="txfClearAll('${h}')"><i class='bx bx-eraser'></i><span>سڕینەوەی هەمووی</span></button>`;
+                if (box.innerHTML !== html) box.innerHTML = html;
+                box.style.display = n ? 'flex' : 'none';
+            }
+            const hint = txfBox(h, '.txf-hint');
+            if (hint) {
+                const q = String(s.f.q || '').trim();
+                const bad = !!q && TXF_AR.test(q);
+                hint.hidden = !bad;
+                const html = bad ? `<i class='bx bx-info-circle'></i><span>گەڕان تەنها بە <b>کۆد</b> (پیتی ئینگلیزی) یان <b>بڕی پارە</b>یە. بۆ جۆری جووڵە، دوگمەی فلتەر بەکاربهێنە.</span>` : '';
+                if (hint.innerHTML !== html) hint.innerHTML = html;
+            }
+            const x = txfBox(h, '.txf-x'), qi = txfBox(h, '.txf-q');
+            if (x && qi) x.hidden = !qi.value;
+        }
+
+        function txfClearPart(h, kind, v) {
+            const f = TXF[h].f;
+            if (kind === 'date') { f.preset = 'all'; f.from = null; f.to = null; }
+            else if (kind === 'dir') f.dir = 'all';
+            else if (kind === 'kind') f.kinds = f.kinds.filter(k => k !== v);
+            else if (kind === 'kinds') f.kinds = [];
+            else if (kind === 'wallet') f.wallet = 'all';
+            else if (kind === 'amt') { f.min = null; f.max = null; }
+            txfReload(h);
+        }
+
+        function txfClearAll(h) {
+            const s = TXF[h];
+            s.f = txfEmpty();
+            const q = txfBox(h, '.txf-q'); if (q) q.value = '';
+            clearTimeout(s.timer);
+            txfReload(h);
+        }
+
+        // ---------- شیتی فلتەر ----------
+        // `txfDraft` تەنها لەناو شیتەکەدا دەژی؛ هەتا «پیشاندان» هیچ شتێک لە لیستەکە ناگۆڕێت (هەمان `fsDraft`).
+        let txfSheetHost = 'my', txfDraft = txfEmpty(), txfLive = null, txfLiveSeq = 0, txfLiveTimer = 0;
+
+        // ژمارەی جۆرەکان بێ فلتەری جۆرە، و ژمارەی جزدانەکان بێ فلتەری جزدان (هەمان `kinds` · `wallets` ـی سێرڤەر) —
+        // بۆیە هەڵبژاردنی جۆرێک ژمارەکانی ئەو بەشە ناگۆڕێت و هیچ شتێک بە بێهوودە نالەرزێت
+        function txfSig(d, which) {
+            const p = txfParams(d);
+            if (which === 'k') delete p.kinds;
+            if (which === 'w') delete p.wallet;
+            return JSON.stringify(p);
+        }
+
+        function txfOpenSheet(h) {
+            const s = txfSync(h);
+            if (!s.owner) return;
+            txfSheetHost = h;
+            const qi = txfBox(h, '.txf-q');
+            txfDraft = JSON.parse(JSON.stringify(s.f));
+            txfDraft.q = qi ? qi.value.trim() : txfDraft.q;
+            txfLive = null;
+            ['min', 'max'].forEach(k => { const el = document.getElementById('txf-' + k); if (el) el.value = txfDraft[k] == null ? '' : xferMoney(txfDraft[k]); });
+            txfRenderSheet();
+            document.getElementById('txf-sheet').classList.add('show');
+            document.body.classList.add('fsheet-open');
+            const body = document.getElementById('txf-body'); if (body) body.scrollTop = 0;
+            txfLiveSoon(0);
+        }
+
+        function txfSheetClose() {
+            const sh = document.getElementById('txf-sheet');
+            if (sh) sh.classList.remove('show');
+            if (!document.querySelector('.fsheet.show')) document.body.classList.remove('fsheet-open');
+            clearTimeout(txfLiveTimer); txfLiveSeq++;
+        }
+
+        function txfSheetReset() {
+            txfDraft = txfEmpty(txfDraft.q);
+            ['min', 'max'].forEach(k => { const el = document.getElementById('txf-' + k); if (el) el.value = ''; });
+            txfRenderSheet(); txfLiveSoon();
+        }
+
+        function txfSheetApply() {
+            const h = txfSheetHost, s = TXF[h];
+            const qi = txfBox(h, '.txf-q');
+            s.f = JSON.parse(JSON.stringify(txfDraft));
+            s.f.q = qi ? qi.value.trim() : s.f.q;     // ئەوەی ئێستا لە خانەکەدایە، نەک ئەوەی پێش کردنەوەی شیتەکە
+            clearTimeout(s.timer);
+            txfSheetClose();
+            txfReload(h);
+        }
+
+        function txfChipHtml(on, onclick, label, icon, count, zero) {
+            return `<button type="button" class="fchip txf-chip${on ? ' is-on' : ''}${zero ? ' is-zero' : ''}" onclick="${onclick}">`
+                + (icon ? `<i class='bx ${icon}'></i>` : '') + `<span>${label}</span>`
+                + (count != null ? `<em class="txf-n">${count}</em>` : '') + `</button>`;
+        }
+
+        function txfRenderSheet() {
+            const d = txfDraft, h = txfSheetHost;
+            const L = txfLive;
+            const ok = (w) => !!(L && !L.err && L.res && L['s' + w] === txfSig(d, w));
+            // ژمارەیەک کە هێشتا نەهاتووە = پیلی سکێلێتۆن؛ هەڵە = هیچ ژمارەیەک (نەک «0»)
+            const num = (map, key, w) => ok(w) ? (Number((map || {})[key]) || 0) : null;
+            const slot = (map, key, w) => {
+                const v = num(map, key, w);
+                return v != null ? v.toLocaleString('en-US') : (L && L.err ? null : skelInline(18, 'sk-s txf-n-sk'));
+            };
+            const set = (id, html) => { const el = document.getElementById(id); if (el && el.innerHTML !== html) el.innerHTML = html; };
+            set('txf-dates', TXF_DATES.map(p => {
+                let label = p.t;
+                if (d.preset === p.v && d.from && (p.v === 'day' || p.v === 'custom')) label = fdRange(d.from, p.v === 'day' ? d.from : (d.to || d.from));
+                return txfChipHtml(d.preset === p.v, `txfPickDate('${p.v}')`, label, p.i);
+            }).join(''));
+            set('txf-dirs', TXF_DIRS.map(o => txfChipHtml(d.dir === o.v, `txfPick('dir', '${o.v}')`, o.t, o.i)).join(''));
+            const km = L && L.res ? L.res.kinds : null;
+            set('txf-kinds', TXF_KINDS.map(k => txfChipHtml(d.kinds.includes(k.k), `txfPickKind('${k.k}')`, k.t, k.i,
+                slot(km, k.k, 'k'), num(km, k.k, 'k') === 0)).join(''));
+            const sec = document.getElementById('txf-wallet-sec');
+            const sv = txfSavVisible(h);
+            if (sec) sec.style.display = sv ? '' : 'none';
+            if (sv) {
+                const wm = L && L.res ? L.res.wallets : null;
+                const all = ok('w') ? ((Number((wm || {}).balance) || 0) + (Number((wm || {}).savings) || 0)) : null;
+                set('txf-wallets', TXF_WALLETS.map(o => {
+                    const c = o.v === 'all' ? (all != null ? all.toLocaleString('en-US') : (L && L.err ? null : skelInline(18, 'sk-s txf-n-sk'))) : slot(wm, o.v, 'w');
+                    return txfChipHtml(d.wallet === o.v, `txfPick('wallet', '${o.v}')`, o.t, o.i, c, o.v !== 'all' && num(wm, o.v, 'w') === 0);
+                }).join(''));
+            }
+            ['min', 'max'].forEach(k => {
+                const el = document.getElementById('txf-' + k);
+                if (el && el !== document.activeElement) el.value = d[k] == null ? '' : xferMoney(d[k]);
+            });
+            txfPaintSheetSum();
+        }
+
+        function txfPaintSheetSum() {
+            const d = txfDraft, L = txfLive;
+            const ok = !!(L && !L.err && L.res && L.res.sum && L.sa === txfSig(d, 'a'));
+            const el = document.getElementById('txf-sheet-sum'), lbl = document.getElementById('txf-apply-lbl');
+            const n = ok ? (Number(L.res.sum.n) || 0) : null;
+            let html;
+            if (n != null) html = `<b>${n.toLocaleString('en-US')}</b> جووڵە` + (txfActive(d) ? '' : ' · هەموو مێژووەکە');
+            else html = (L && L.err) ? 'ژمارەکە نەزانراوە' : skelInline(80);
+            if (el && el.innerHTML !== html) el.innerHTML = html;
+            if (lbl) lbl.textContent = n != null ? ('پیشاندانی ' + n.toLocaleString('en-US') + ' جووڵە') : 'پیشاندانی ئەنجامەکان';
+        }
+
+        function txfLiveSoon(ms) {
+            clearTimeout(txfLiveTimer);
+            txfLiveTimer = setTimeout(txfLiveFetch, ms == null ? 280 : ms);
+            txfPaintSheetSum();
+        }
+
+        // ژمارەی زیندوو: یەک بانگ (`p_limit = 0` = تەنها پوختە) بۆ هەر گۆڕانێک لە شیتەکەدا — تەنها کاتێک شیتەکە کراوەیە
+        async function txfLiveFetch() {
+            const sh = document.getElementById('txf-sheet');
+            if (!sh || !sh.classList.contains('show')) return;
+            const h = txfSheetHost, s = TXF[h];
+            const d = JSON.parse(JSON.stringify(txfDraft));
+            const my = ++txfLiveSeq;                  // ⚠️ پێش await
+            const sig = { sk: txfSig(d, 'k'), sw: txfSig(d, 'w'), sa: txfSig(d, 'a') };
+            try {
+                const r = await txfFetch(s.owner, d, 0, null);
+                if (my !== txfLiveSeq) return;
+                txfLive = Object.assign(sig, { res: r });
+                if (typeof r.hide_savings === 'boolean') s.hideSav = r.hide_savings;
+            } catch (e) {
+                if (my !== txfLiveSeq) return;
+                console.warn('txfLiveFetch:', e);
+                txfLive = { err: e };
+            }
+            if (sh.classList.contains('show')) txfRenderSheet();
+        }
+
+        function txfPick(field, v) { txfDraft[field] = v; txfRenderSheet(); txfLiveSoon(); }
+
+        function txfPickKind(k) {
+            const a = txfDraft.kinds, i = a.indexOf(k);
+            if (i >= 0) a.splice(i, 1); else a.push(k);
+            txfRenderSheet(); txfLiveSoon();
+        }
+
+        function txfPickDate(v) {
+            if (v === 'day' || v === 'custom') { txfOpenCal(v); return; }
+            txfDraft.preset = v;
+            if (v === 'all') { txfDraft.from = null; txfDraft.to = null; }
+            else { const r = txfPresetRange(v); txfDraft.from = r[0]; txfDraft.to = r[1]; }
+            txfRenderSheet(); txfLiveSoon();
+        }
+
+        // بڕ: ژمارەی کوردی/فارسی و جیاکەرەوەکان قبووڵن؛ لە کاتی نووسیندا خانەکە نانووسرێتەوە، تەنها لە `blur`
+        function txfAmtParse(v) {
+            const dgt = toEnglishDigits(String(v == null ? '' : v)).replace(/[^0-9]/g, '');
+            return dgt ? Math.min(Number(dgt), 999999999999) : null;
+        }
+        function txfAmtInput(which, el) { txfDraft[which] = txfAmtParse(el.value); txfLiveSoon(); }
+        function txfAmtBlur(el) { const n = txfAmtParse(el.value); el.value = n == null ? '' : xferMoney(n); }
+
+        // ---------- ڕۆژژمێر: «ڕۆژێک» یان «مەودای دڵخواز» — `.fcal-wrap` قەرز دەکرێت (هەمان `bkOpenCal`) ----------
+        let _txfCalMode = 'custom';
+        let _txfCal = { preset: 'custom', from: null, to: null };
+
+        function txfOpenCal(mode) {
+            _txfCalMode = mode;
+            const today = fdKey(fdToday());
+            const d = txfDraft;
+            const a = d.from || today;
+            _txfCal = { preset: 'custom', from: a, to: mode === 'day' ? a : (d.to || a) };
+            const wrap = document.querySelector('#fcal-home .fcal-wrap') || document.querySelector('.fcal-wrap');
+            const slot = document.getElementById('txf-cal-slot');
+            if (wrap && slot) slot.appendChild(wrap);
+            if (slot) slot.classList.toggle('is-single', mode === 'day');
+            const ttl = document.getElementById('txfd-title');
+            if (ttl) ttl.innerText = mode === 'day' ? 'ڕۆژێک هەڵبژێرە' : 'مەودای دڵخواز';
+            fcalD = _txfCal;
+            fcalOnChange = txfCalSync;
+            fcalHostId = 'txf-cal-slot';      // ⚠️ بەبێ ئەمە سکڕۆڵ بێدەنگ دەشکێت ([[landmines]] ١٤٢)
+            fcalHover = null;
+            fcalDragEdge = null;
+            fcalFocus = _txfCal.from;
+            fcalAlign(_txfCal.from);
+            fcalBackMonths = 12;
+            fcalFwdMonths = 0;                // مێژوو تەنها ڕابردووە
+            document.getElementById('txf-date-sheet').classList.add('show');
+            fcalRender();
+            txfCalSync();
+            requestAnimationFrame(() => fcalScrollToMonth(_txfCal.from, 'auto'));
+        }
+
+        function txfCalSync() {
+            const D = _txfCal;
+            if (_txfCalMode === 'day' && D.from) D.to = D.from;
+            fcalPaint();
+            const info = document.getElementById('txfd-info'), btn = document.getElementById('txfd-apply');
+            const a = D.from, b = D.to || D.from;
+            if (info) {
+                if (!a) info.innerHTML = _txfCalMode === 'day' ? 'ڕۆژێک هەڵبژێرە' : 'بەرواری دەستپێک هەڵبژێرە';
+                else if (_txfCalMode === 'day') info.innerHTML = '<i class="bx bx-calendar"></i> ' + fdRange(a, a);
+                else info.innerHTML = '<i class="bx bx-calendar"></i> ' + fdRange(a, b) + ' · <b>' + fmtNum(fdDaysBetween(a, b)) + ' ڕۆژ</b>';
+            }
+            if (btn) btn.disabled = !a;
+            if (typeof fsSyncInputs === 'function') fsSyncInputs();
+        }
+
+        function txfCloseCal() {
+            const m = document.getElementById('txf-date-sheet');
+            if (m) m.classList.remove('show');
+            const slot = document.getElementById('txf-cal-slot');
+            if (slot) slot.classList.remove('is-single');
+            fcalReturnHome();
+        }
+
+        function txfApplyCal() {
+            const a = _txfCal.from;
+            if (!a) return;
+            txfDraft.preset = _txfCalMode;
+            txfDraft.from = a;
+            txfDraft.to = _txfCalMode === 'day' ? a : (_txfCal.to || a);
+            txfCloseCal();
+            txfRenderSheet(); txfLiveSoon();
+        }
+
         // ---- جزدانی خۆم ----
         let myTxRows = [], myTxCursor = null, myTxDone = false, myTxBusy = false, myTxTotal = -1;
 
         function renderMyTx() {
+            // 🔎 گەڕان یان فلتەر چالاکە → ئەنجامەکانی سێرڤەر (db/157)، نەک ئەم پەڕانە
+            if (txfOn('my')) { txfRender('my'); return; }
             const list = document.getElementById('my-transactions-list');
             if (!list) return;
             const canSee = can('view_savings');
@@ -43636,6 +44318,7 @@
             let code = window.currentWalletCode;
             if (!code) return;
             document.getElementById('wallet-transactions-modal').classList.add('show');
+            txfSync('adm');                   // 🔎 ئەندامێکی تر = گەڕان و فلتەر لە سەرەتاوە
             loadUserWalletTransactions(code); // بەبێ force → ئەگەر پێشتر لۆد کرابێت لە کاش وەردەگرێت
         }
 
@@ -43684,6 +44367,8 @@
         let walletTxCursor = {}, walletTxDone = {}, walletTxTotal = {}, walletTxBusy = false;
 
         function renderWalletTransactions(txs, code) {
+            // 🔎 گەڕان یان فلتەر چالاکە بۆ ئەم ئەندامە → ئەنجامەکانی سێرڤەر (db/157)
+            if (txfOn('adm')) { txfRender('adm'); return; }
             let list = document.getElementById('wallet-tx-modal-body');
             if (!list) return;
             const done = code ? (walletTxDone[code] !== false) : true;
@@ -43725,6 +44410,9 @@
             if (!list || !code) return;
 
             let hasCache = !!walletTxCache[code];
+
+            // 🔎 ڕاکێشان بۆ نوێکردنەوە لەکاتی گەڕان/فلتەر → ئەنجامەکانی فلتەریش نوێ دەبنەوە، بێ ڕژاندنی پەڕە بارکراوەکان
+            if (force && txfOn('adm')) txfReload('adm', { quiet: true });
 
             // ئەگەر پێشتر لۆد کراوە و داوای نوێکردنەوە نەکراوە → دەستبەجێ هی کاش پیشان بدە
             if (hasCache && !force) {

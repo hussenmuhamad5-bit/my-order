@@ -19741,6 +19741,277 @@ body.sx-wide {
   font-size: 14px;
 }
 
+/* ============================================================
+   🔎 گەڕان و فلتەری مێژووی جزدان (db/157 · ٢٠٢٦-١٠-٢٨)
+   ------------------------------------------------------------
+   هەمان پارچەکانی ڕیزی گەڕانی ئۆردەرەکان (`.search-row` · `.filter-btn` · `.afchip`) و چیپەکانی شیتی فلتەر
+   (`.fchip`)، لەگەڵ ڕیزی پوختە و دۆخی بەتاڵی خۆی. لە «جزدانەکەم» لە دەرەوەی سکڕۆڵەرەکەیە، بۆیە هەمیشە دیارە.
+   ⚠️ گرووپە چیپەکانی شیتەکە گریدن و ژمارەکەیان دابەشی ستوونەکان دەبێت (٨ ÷ ٢ · ٣ ÷ ٣ · ١٠ ÷ ٢ · ٣ ÷ ٣).
+   ============================================================ */
+.txf {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 0 0 auto;
+  min-width: 0;
+}
+
+.txf:empty {
+  display: none;
+}
+
+.txf:not(.is-modal) {
+  margin-bottom: 4px;
+}
+
+.txf.is-modal {
+  margin: 2px 0 8px;
+}
+
+.txf .search-row {
+  margin: 0;
+}
+
+.txf-sg .txf-q {
+  padding-left: 46px;
+}
+
+.txf-x {
+  position: absolute;
+  left: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.txf-x i {
+  font-size: 20px;
+}
+
+.txf-x[hidden],
+.txf-hint[hidden],
+.txf-sum[hidden] {
+  display: none;
+}
+
+.txf-hint {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 7px 10px;
+  border: 1px solid #fde68a;
+  border-radius: var(--r-sm);
+  background: #fffbeb;
+  color: #92400e;
+  font-size: var(--fs-xs);
+  line-height: 1.6;
+}
+
+.txf-hint i {
+  flex: 0 0 auto;
+  margin-top: 2px;
+  font-size: 16px;
+}
+
+.txf .active-filters {
+  margin-bottom: 0;
+}
+
+.afchip.is-clear {
+  border-style: dashed;
+  background: transparent;
+  color: var(--text-secondary);
+}
+
+.txf-sum {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 8px 10px;
+  border: 1px solid #e2e8f0;
+  border-radius: var(--r-sm);
+  background: #f8fafc;
+  font-size: var(--fs-xs);
+  color: var(--text-secondary);
+}
+
+.txf-sum-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.txf-sum-n {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.txf-sum-n b {
+  color: var(--text-main);
+  font-size: var(--fs-sm);
+}
+
+.txf-sum-w {
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.txf-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 11.5px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.txf-pill i {
+  font-size: 14px;
+}
+
+.txf-pill.is-in {
+  background: rgba(16, 185, 129, 0.15);
+  color: #059669;
+}
+
+.txf-pill.is-out {
+  background: rgba(239, 68, 68, 0.15);
+  color: #dc2626;
+}
+
+.txf-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  margin: 18px 0;
+  padding: 18px 14px;
+  border: 1px dashed #cbd5e1;
+  border-radius: 14px;
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: var(--fs-sm);
+}
+
+.txf-empty > i {
+  font-size: 30px;
+  color: #94a3b8;
+}
+
+.txf-empty b {
+  color: var(--text-main);
+  font-size: var(--fs-md);
+}
+
+.txf-empty.is-err > i {
+  color: #dc2626;
+}
+
+.txf-empty-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 40px;
+  margin-top: 6px;
+  padding: 0 14px;
+  border: 1px solid #e2e8f0;
+  border-radius: var(--r-full);
+  background: #fff;
+  color: var(--primary);
+  font-family: inherit;
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.txf-empty-btn i {
+  font-size: 17px;
+}
+
+.fchips.txf-g2,
+.fchips.txf-g3 {
+  display: grid;
+  gap: 8px;
+}
+
+.fchips.txf-g2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.fchips.txf-g3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.txf-chip {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 0;
+  padding: 6px 10px;
+  border-radius: 14px;
+  font-size: var(--fs-sm);
+  line-height: 1.3;
+  text-align: center;
+}
+
+.txf-chip i {
+  flex: 0 0 auto;
+  font-size: 18px;
+}
+
+.txf-chip > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.txf-n {
+  flex: 0 0 auto;
+  min-width: 20px;
+  padding: 1px 6px;
+  border-radius: var(--r-full);
+  background: rgba(15, 23, 42, 0.07);
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 1.5;
+}
+
+.fchip.is-on .txf-n {
+  background: rgba(255, 255, 255, 0.25);
+  color: #fff;
+}
+
+.txf-n-sk {
+  flex: 0 0 auto;
+  height: 14px;
+  border-radius: var(--r-full);
+}
+
+.txf-chip.is-zero:not(.is-on) {
+  opacity: 0.55;
+}
+
+.txf-sec-hint {
+  font-weight: 400;
+  letter-spacing: 0;
+}
+
 
 /* ============================================================
    ڕیزی سەبەتەی کاڵاکان
