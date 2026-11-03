@@ -269,6 +269,41 @@
             <div class="ofp-dots" id="ofp-dots"></div>
         </div>
 
+        <!-- 🧾 پڕکردنەوە بۆ ئەندامی تر (db/166) — تەنها ئۆردەری نوێ، تەنها بە `order_for_subordinates` (پاشا هەمیشە)، و
+             تەنها کاتێک گۆڕین کوژاوەیە (گۆڕین خاوەنەکەی لە ئۆردەری ڕەسەنەوە دێت). `behalfSync` دەری دەخات و دەیشارێتەوە.
+             ئۆردەرەکە هی ئەندامەکەیە (`seller_code`)؛ سێرڤەر `created_by_*`، زنجیرە و ناوی سەر وەسڵ دادەنێت. -->
+        <div class="obh" id="obh" style="display:none;">
+            <div class="switch-group obh-switch">
+                <label for="switch-behalf"><i class='bx bx-user-pin'></i> پڕکردنەوە بۆ ئەندامی تر</label>
+                <label class="switch">
+                    <input type="checkbox" id="switch-behalf" onchange="behalfToggle(this.checked)">
+                    <div class="slider">
+                        <div class="circle"><svg class="cross" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="4">
+                                <line x1="18" y1="6" x2="6" y2="18"></line>
+                                <line x1="6" y1="6" x2="18" y2="18"></line>
+                            </svg><svg class="checkmark" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="4">
+                                <polyline points="20 6 9 17 4 12"></polyline>
+                            </svg></div>
+                    </div>
+                </label>
+            </div>
+            <div class="obh-body" id="obh-body" style="display:none;">
+                <div class="obh-pick" id="obh-pick">
+                    <div class="obh-search">
+                        <i class='bx bx-search'></i>
+                        <input type="text" id="obh-q" placeholder="ئەندامەکە هەڵبژێرە... (گەڕان بە ناو یان کۆد)"
+                            autocomplete="off" oninput="behalfRenderList()" aria-label="گەڕان بە ناو یان کۆدی ئەندام">
+                    </div>
+                    <div class="obh-count" id="obh-count"></div>
+                    <div class="obh-list" id="obh-list" role="listbox" aria-label="ئەو کەسانەی دەتوانیت ئۆردەریان بۆ پڕ بکەیتەوە"></div>
+                </div>
+                <div class="obh-card" id="obh-card" style="display:none;"></div>
+                <div class="field-err" id="err-behalf" role="alert"><i class='bx bx-error-circle'></i><span></span></div>
+            </div>
+        </div>
+
         <div class="switch-group">
             <label>ناوی کڕیار</label>
             <label class="switch">
@@ -4192,6 +4227,8 @@
                             { key: 'st_ret2del', label: 'گەڕاوە → گەیشتوو' },
                         ]
                     },
+                    // 🧾 db/166 — بەڕێوەبەریش دەیبەخشێت (`PERM_EDITABLE_BY_MANAGER`)، تەنها ئەگەر خۆی هەیبێت (`permGrantable`)
+                    { key: 'order_for_subordinates', type: 'toggle', label: 'پڕکردنەوەی ئۆردەر بۆ ئەندامانی خوار خۆی' },
                 ]
             },
             {
@@ -4275,6 +4312,7 @@
             manage_trash: 'کردنەوەی تەنەکەی خۆڵ، بینینی هەموو شتە سڕاوەکان و گەڕاندنەوەیان. پاشا هەمیشە ئەم دەسەڵاتەی هەیە.',
             view_passwords: 'بینینی پاسوۆردی ئەو بەکارهێنەرانەی دەیانبینێت، و گۆڕینیان لە بەشی چاکسازی. دەسەڵاتێکی زۆر هەستیارە — تەنها بە کەسی متمانەپێکراو بیدە.',
             use_rewards: 'بەشی چاڵنج و ئاڕپی. بە کوژاندنەوە: ئەو کەسە چاڵنج و ئاڕپی **بە هیچ شێوەیەک نابینێت** و خاڵ و خەڵاتی بۆ ناژمێردرێت — بەڵام کۆگا (کە بۆ هەمووانە) دەمێنێتەوە و دوگمەکەی دەبێتە 🏪 کۆگا. بە بنەڕەت کراوەیە بۆ هەمووان.',
+            order_for_subordinates: 'ڕێگە دەدات لە فۆڕمی «ئۆردەری نوێ» ئۆردەر بۆ سەر ناوی ئەندامانی ژێر دەسەڵاتی خۆی پڕ بکاتەوە — تەنها پلەی خوارتر لە خۆی و لە تیمەکەی (پاشا بۆ هەمووان). قازانج، خاڵ، پاشەکەوت و ئامار بۆ ئەو ئەندامە دەڕوات، بەڵام لەسەر ئۆردەرەکە و لە مێژووەکەیدا دەنووسرێت کێ پڕی کردەوە. ئەوەی پڕی کردۆتەوە ئۆردەرەکە دەبینێت و دەستکاری و سڕینەوەی دەکات وەک خاوەنەکەی. بە بنەڕەت کراوەیە بۆ بەڕێوەبەر، سەرپەرشت و ڕاوێژکار.',
             send_money: 'ناردنی پارەی **ئامادە**ی جزدان بۆ کارمەندێکی تر لە «جزدانەکەم»ـەوە (پارەی چاوەڕوانی خولی 10 ڕۆژە نانێردرێت). بە کوژاندنەوە: دوگمەی «ناردنی پارە» نامێنێت و سێرڤەریش ڕەتی دەکاتەوە — بەڵام هێشتا دەتوانێت پارە وەربگرێت. بە بنەڕەت کراوەیە بۆ هەمووان.',
             login_as: 'لە بەشی چاکسازی دوگمەی «چوونەژوورەوە بەم ئەکاونتە» دەردەکەوێت — بە یەک کلیک دەچێتە ناو ئەکاونتی ئەو کەسە و ئەکاونتەکە بۆ ئاڵوگۆڕی خێرا پاشەکەوت دەکرێت. دەسەڵاتێکی زۆر مەترسیدارە: هەرچی ئەو کەسە بۆی هەیە، ئەمیش دەیکات.',
             // ژێرەکان و خانەکان
@@ -4311,10 +4349,10 @@
             }));
         })();
 
-        const PERM_KEYS_ALL = ['create_key', 'delete_key', 'view_orders', 'edit_order', 'ed_prep', 'ed_onway', 'delete_order', 'mark_print', 'unlock_print', 'change_status', 'st_delivered', 'st_returned', 'st_del2ret', 'st_ret2del', 'distribute', 'pf_driver', 'pf_manager', 'pf_supervisor', 'pf_consultant', 'pf_member', 'pf_savings', 'view_savings', 'set_profit_rates', 'view_wallets', 'manage_wallets', 'manage_all_keys', 'manage_cities', 'manage_trash', 'view_passwords', 'login_as', 'use_rewards', 'send_money'];
+        const PERM_KEYS_ALL = ['create_key', 'delete_key', 'view_orders', 'edit_order', 'ed_prep', 'ed_onway', 'delete_order', 'mark_print', 'unlock_print', 'change_status', 'st_delivered', 'st_returned', 'st_del2ret', 'st_ret2del', 'distribute', 'pf_driver', 'pf_manager', 'pf_supervisor', 'pf_consultant', 'pf_member', 'pf_savings', 'view_savings', 'set_profit_rates', 'view_wallets', 'manage_wallets', 'manage_all_keys', 'manage_cities', 'manage_trash', 'view_passwords', 'login_as', 'use_rewards', 'send_money', 'order_for_subordinates'];
         const PERM_SCOPE_KEYS = ['view_orders', 'edit_order', 'delete_order', 'change_status', 'distribute', 'set_profit_rates', 'view_wallets', 'manage_wallets'];
         const PERM_PROFIT_KEYS = ['pf_driver', 'pf_manager', 'pf_supervisor', 'pf_consultant', 'pf_member', 'pf_savings'];
-        const PERM_TOGGLE_KEYS = ['create_key', 'delete_key', 'ed_prep', 'ed_onway', 'mark_print', 'unlock_print', 'st_delivered', 'st_returned', 'st_del2ret', 'st_ret2del', 'view_savings', 'manage_all_keys', 'manage_cities', 'manage_trash', 'view_passwords', 'login_as', 'use_rewards', 'send_money'];
+        const PERM_TOGGLE_KEYS = ['create_key', 'delete_key', 'ed_prep', 'ed_onway', 'mark_print', 'unlock_print', 'st_delivered', 'st_returned', 'st_del2ret', 'st_ret2del', 'view_savings', 'manage_all_keys', 'manage_cities', 'manage_trash', 'view_passwords', 'login_as', 'use_rewards', 'send_money', 'order_for_subordinates'];
         PERM_KEYS_ALL.push.apply(PERM_KEYS_ALL, PERM_TIER_KEYS);
 
         // دەسەڵاتی بنەڕەتی هەر پلەیەک (فۆرماتی نوێ) — کلیلە کۆنەکان ئەمە وەردەگرن
@@ -4356,19 +4394,22 @@
                     manage_trash: true, view_passwords: true, login_as: true, ed_prep: true, ed_onway: true,
                     // 🔓 `unlock_print` (db/129) — تەنها پاشا بە بنەڕەت؛ بۆ هەموو پلەیەکی
                     //    تر لە لووپی سەرەوە `false`ـە (هەمان `perm_defaults`ی سێرڤەر)
-                    mark_print: true, unlock_print: true, use_rewards: true, send_money: true
+                    mark_print: true, unlock_print: true, use_rewards: true, send_money: true,
+                    order_for_subordinates: true
                 }, allStatus, fullProfit));
             }
+            // 🧾 `order_for_subordinates` (db/166) — بە بنەڕەت کراوە بۆ هەموو پلەیەکی سەرووی ئەندام (خاوەن ٢٠٢٦-١١-٠٣)،
+            //    ئەندام `false` (لووپی سەرەوە). `perm_defaults`ـی سێرڤەر هەمان شت دەڵێت (FUZZـی db_guard_test).
             if (role === 'بەڕێوەبەر') {
                 // بنەڕەت: تیمی خۆی (وەک ڕەفتاری کۆن). پاشا دەتوانێت «هەموان» بداتێ.
                 // بەڕێوەبەر خۆی بەشی پرێنت بەڕێوە دەبات، بۆیە `mark_print`ـی هەیە.
                 return allOn(Object.assign({
                     create_key: true, delete_key: true, view_orders: 'team',
-                    change_status: 'team', distribute: 'team', mark_print: true
+                    change_status: 'team', distribute: 'team', mark_print: true, order_for_subordinates: true
                 }, allStatus, fullProfit));
             }
             if (role === 'سەرپەرشت' || role === 'ڕاوێژکار') {
-                return allOn(Object.assign({ change_status: 'team', distribute: 'team' }, allStatus, fullProfit));
+                return allOn(Object.assign({ change_status: 'team', distribute: 'team', order_for_subordinates: true }, allStatus, fullProfit));
             }
             return base; // ئەندام و هەر پلەیەکی تر
         }
@@ -4965,7 +5006,8 @@
                 // manager/admin/consultant پێویستن: زنجیرەی دەسەڵات
                 // تەنها بە `creator` نییە — بڕوانە `computeMyTeam`
                 const { data } = await supabase.from('employees')
-                    .select('code,creator,role,manager,admin,consultant,full_name');
+                    // `suspended` — لیستی «پڕکردنەوە بۆ ئەندامی تر» (db/166) ئەکاونتی ڕاگیراو پیشان نادات
+                    .select('code,creator,role,manager,admin,consultant,full_name,suspended');
                 if (data) {
                     allEmployeesLite = data;
                     teamScopeLoaded = true;
@@ -5105,7 +5147,9 @@
             if (!o) return false;
             if (userRole === 'پاشا') return true;
             let myCode = currentUser ? currentUser.code : '';
-            let isOwner = (o.seller_code === myCode);
+            // 🧾 db/166: ئەوەی ئۆردەرەکەی بۆ کەسێکی تر پڕکردەوە (`created_by_code`) وەک خاوەنەکەیەتی بۆ ئەم سێ
+            //    کردارە — ئاوێنەی `p2_can_order`ـی سێرڤەر. حاڵەت و دابەشکردن هەر بە دەسەڵاتەکانی خۆی.
+            let isOwner = (o.seller_code === myCode) || (!!o.created_by_code && o.created_by_code === myCode);
             // خاوەنی ئۆردەر هەمیشە دەتوانێت هی خۆی ببینێت/دەستکاری/بسڕێتەوە
             if (isOwner && (action === 'view' || action === 'edit' || action === 'delete')) return true;
             // ناتوانیت کارێک لەسەر ئۆردەرێک بکەیت کە بۆت نییە بیبینیت.
@@ -5197,9 +5241,12 @@
             return !!o && !!o.scheduled_at;
         }
 
+        // 🧾 db/166 (خاوەن ٢٠٢٦-١١-٠٣): ئۆردەری چاوەڕوان کە بۆ کەسێکی تر پڕکراوەتەوە، دروستکەرەکەشی دەستکاری /
+        //    بەردەست / سڕینەوەی دەکات — هەمان `v_maker`ـی `orders_guard` و `p3_can_delete_order`
         function schedIsMine(o) {
             if (!o || !currentUser) return false;
-            return String(o.seller_code || '') === String(currentUser.code || '');
+            const me = String(currentUser.code || '');
+            return String(o.seller_code || '') === me || (!!o.created_by_code && String(o.created_by_code) === me);
         }
 
         // تاکە دەرگا: «ئایا ئەم بەکارهێنەرە دەتوانێت دەستی لەم
@@ -5403,7 +5450,7 @@
             // · db/142 (گۆڕین هەردوو سەبەتەکەی دەوێت) · db/145 (ناردن لە پاشەکەوت) · db/146 (حاڵەتی پاشا)
             // · db/158 (پارە چوو، حاڵەت نەگۆڕا — دابەشکردن تەنها لەگەڵ «گەیشتووە»)
             // · db/161 (حاڵەت لەم نێوانەدا گۆڕا)
-            let x = /\b(?:STATUS_CHANGED|EXCHANGE_ITEMS|NO_PERM_SAVINGS|BAD_FROM|NOT_KING|BAD_FIELD|BAD_NAME|BAD_NOTE|BAD_MODE|BAD_TIMES|BAD_DELAY|BAD_WINDOW|BAD_RATE|BAD_CAP|BAD_DRIVERS|BAD_LABEL|NAME_TAKEN|DRIVER_TAKEN|NO_API|NO_KEY|TOO_MANY_KEYS|NO_PERM_SEND|BAD_AMOUNT|NOTE_TOO_LONG|NO_RECIPIENT|SELF_TRANSFER|TO_SUSPENDED|KEY_REUSED|BAD_KEY|NOT_STAFF|IDENTITY_LOCKED|SELF_LOCKED|COLUMN_LOCKED|NO_PERM_KEY|NO_PERM_CREATE|NO_PERM_PASSWORD|NO_PERM_DELETE|ONLY_NEW_KEYS|ROLE_NOT_ALLOWED|CHAIN_NOT_ALLOWED|NOT_ALLOWED|NO_PERM_WALLET|NO_PERM_TRASH|ORDER_LOCKED|PRINT_LOCKED|ORDER_SCHEDULED_PENDING|NO_PERM_STATUS|NO_PERM_EDIT|NO_PERM_PRINT|NO_PERM_DISTRIBUTE|BAD_DATE|TOO_MANY|DIST_ROWS|DIST_OVER_TOTAL|DIST_PERM|NO_PERM_ORDER|ORDER_NOT_FOUND|BAD_REASON|BAD_STATUS|WALLET_NOT_OWNER|WALLET_NOT_ON_ORDER|OVER_READY|NOT_DISTRIBUTED|NEED_UPDATE):\s*([^\n]+)/.exec(m);
+            let x = /\b(?:STATUS_CHANGED|EXCHANGE_ITEMS|NO_PERM_SAVINGS|BAD_FROM|NOT_KING|BAD_FIELD|BAD_NAME|BAD_NOTE|BAD_MODE|BAD_TIMES|BAD_DELAY|BAD_WINDOW|BAD_RATE|BAD_CAP|BAD_DRIVERS|BAD_LABEL|NAME_TAKEN|DRIVER_TAKEN|NO_API|NO_KEY|TOO_MANY_KEYS|NO_PERM_SEND|NO_PERM_BEHALF|BAD_AMOUNT|NOTE_TOO_LONG|NO_RECIPIENT|SELF_TRANSFER|TO_SUSPENDED|KEY_REUSED|BAD_KEY|NOT_STAFF|IDENTITY_LOCKED|SELF_LOCKED|COLUMN_LOCKED|NO_PERM_KEY|NO_PERM_CREATE|NO_PERM_PASSWORD|NO_PERM_DELETE|ONLY_NEW_KEYS|ROLE_NOT_ALLOWED|CHAIN_NOT_ALLOWED|NOT_ALLOWED|NO_PERM_WALLET|NO_PERM_TRASH|ORDER_LOCKED|PRINT_LOCKED|ORDER_SCHEDULED_PENDING|NO_PERM_STATUS|NO_PERM_EDIT|NO_PERM_PRINT|NO_PERM_DISTRIBUTE|BAD_DATE|TOO_MANY|DIST_ROWS|DIST_OVER_TOTAL|DIST_PERM|NO_PERM_ORDER|ORDER_NOT_FOUND|BAD_REASON|BAD_STATUS|WALLET_NOT_OWNER|WALLET_NOT_ON_ORDER|OVER_READY|NOT_DISTRIBUTED|NEED_UPDATE):\s*([^\n]+)/.exec(m);
             return x ? x[1].trim() : '';
         }
 
@@ -5969,7 +6016,7 @@
         //    **چەند** دەیبەخشێت `permGrantable` دیاری دەکات (ئەوەی خۆی هەیەتی).
         // `ed_prep` زیادکرا (٢٠٢٦-١٠-٠٨): سویچەکەی لە فۆڕمی بەڕێوەبەردا
         // دەردەکەوت بەڵام پاشەکەوت فڕێی دەدا — دەرگایەکی مردوو.
-        const PERM_EDITABLE_BY_MANAGER = ['create_key', 'delete_key', 'view_orders', 'edit_order', 'ed_prep', 'delete_order', 'change_status', 'st_delivered', 'st_returned', 'st_del2ret', 'st_ret2del', 'distribute', 'pf_driver', 'pf_manager', 'pf_supervisor', 'pf_consultant', 'pf_member', 'pf_savings', 'view_savings'].concat(PERM_ORDER_TIER_KEYS);
+        const PERM_EDITABLE_BY_MANAGER = ['create_key', 'delete_key', 'view_orders', 'edit_order', 'ed_prep', 'delete_order', 'change_status', 'st_delivered', 'st_returned', 'st_del2ret', 'st_ret2del', 'distribute', 'pf_driver', 'pf_manager', 'pf_supervisor', 'pf_consultant', 'pf_member', 'pf_savings', 'view_savings', 'order_for_subordinates'].concat(PERM_ORDER_TIER_KEYS);
 
         // پاککردنەوەی دەسەڵاتەکان پێش خەزنکردن — **پارێزەرەکە ئەمەیە**، نەک ڕووکار.
         //   پاشا         → هەموو شت
@@ -8818,6 +8865,8 @@
                 //    لێرەدا هەموو ڕێگاکانی کردنەوە دەگرێتەوە — نوێ،
                 //    دەستکاری (کە فۆرمەکەی پێشتر پڕکردووە)، و کۆپی.
                 try { updateOrderProgress(); } catch (e) { }
+                // 🧾 «پڕکردنەوە بۆ ئەندامی تر» — تەنها ئۆردەری نوێ و تەنها بە دەسەڵات (db/166)
+                try { behalfSync(); } catch (e) { }
             }
 
             if (screenId === 'admin-screen' && !isAdminDataLoaded) {
@@ -8980,6 +9029,7 @@
                             ${rewardStampHtml(o)}
                             ${printStampHtml(o)}
                             ${paidStampHtml(o)}
+                            ${behalfStampHtml(o)}
                             ${commentStampHtml(o)}
                             <span class="moc-chip"><i class='bx bx-calendar'></i><span dir="ltr">${explicitDateOnly} · ${explicitTimeOnly}</span></span>
                             <span class="moc-chip"><i class='bx bx-map'></i>${city}</span>
@@ -9648,6 +9698,7 @@
                         ${rewardStampHtml(o)}
                         ${printStampHtml(o)}
                         ${paidStampHtml(o)}
+                        ${behalfStampHtml(o)}
                         ${commentStampHtml(o)}
                         ${rvwFlag ? `<span class="rvw-chip is-flag"><i class='bx bx-flag'></i>کێشەی هەیە</span>` : ''}
                         ${rvwDone ? `<span class="rvw-chip"><i class='bx bx-check-double'></i>پشکنرا</span>` : ''}
@@ -10406,7 +10457,7 @@
                     //   • `permissions` بە تەنها ٨٠٪ی قەبارەکەیە (١٥٢ لە ١٩٠ KB)
                     // بۆیە ئەم لیستە لە هەر بارکردنێکدا ~٨٠٪ سووکتر بووە.
                     const { data: allEmp } = await supabase.from('employees')
-                        .select('code, full_name, role, manager, admin, consultant, creator, date, telegram_status, telegram_id, telegram_username, telegram_name, balance, savings, profit_rate, avatar, receipt_name, postal_code');
+                        .select('code, full_name, role, manager, admin, consultant, creator, date, telegram_status, telegram_id, telegram_username, telegram_name, balance, savings, profit_rate, avatar, receipt_name, postal_code, suspended');
                     if (allEmp) {
                         // نوێکردنەوەی سنووری تیم لە هەمان داتا
                         // ⚠️ manager/admin/consultant پێویستن — `computeMyTeam`
@@ -10424,7 +10475,8 @@
                             admin: String(e.admin || "").trim(),
                             consultant: String(e.consultant || "").trim(),
                             full_name: e.full_name,
-                            role: e.role
+                            role: e.role,
+                            suspended: !!e.suspended
                         }));
                         teamScopeLoaded = true;
                         buildEmpIndex();
@@ -10708,6 +10760,10 @@
             applyPrepaidState(0, '', '');
             applyExchangeState(null);
 
+            // 🧾 هەر فۆڕمێکی نوێ بە ناوی خۆتەوە دەست پێدەکات (db/166) — ئۆردەری دواتر هەرگیز بێدەنگ بۆ کەسی پێشوو نییە
+            behalfToggle(false, true);
+            behalfSync();
+
             cart = [];
             giftCart = [];
             syncGiftSwitch();
@@ -10941,8 +10997,206 @@
             return Math.max(0, Math.round(h.split.bal.ready));
         }
 
+        // ============================================================
+        // 🧾 پڕکردنەوەی ئۆردەر بۆ ئەندامی تر (db/166)
+        // ------------------------------------------------------------
+        // خاوەن (٢٠٢٦-١١-٠٣): بەڕێوەبەر · سەرپەرشت · ڕاوێژکار · پاشا ئۆردەر بۆ سەر ناوی ئەندامانی خوار خۆیان پڕ دەکەنەوە.
+        // ئۆردەرەکە **هی ئەندامەکەیە** (`seller_code` — قازانج، خاڵ، پاشەکەوت، ئامار، کۆین، جزدان)، و سێرڤەر خۆی
+        // `created_by_code` · `created_by_name` · زنجیرە · ناوی سەر وەسڵ · کۆدی پۆستە دادەنێت (`orders_guard`).
+        // ⚠️ ئاوێنەی `order_behalf_owner`: پاشا هەمووان؛ ئەوانی تر `order_for_subordinates` + پلەی **بە توندی**
+        //    خوارتر (`creatableRoles` نا — ئەندام لەوێدا «ئەندام» دروست دەکات) + `isInMyTeam` + ڕانەگیراو. ئەمە تەنها
+        //    لیستەکە پڕ دەکاتەوە — سێرڤەر هەموو یاساکان دووبارە دەپشکنێت.
+        // ⚠️ هەرگیز لە دەستکاری یان گۆڕیندا: دەستکاری خاوەنی هەیە، و گۆڕین خاوەنەکەی لە ئۆردەری ڕەسەنەوە دێت.
+        // ============================================================
+        let behalfState = { on: false, code: '', name: '', role: '', shown: 0 };
+        const BEHALF_PAGE = 60;      // پەڕەکردن، نەک بڕین — «زیاتر» تا کۆتایی
+
+        function behalfRank(r) { return normalizeRole(r) === 'پاشا' ? 5 : roleRank(r); }
+
+        function behalfCanUse() {
+            return !!currentUser && behalfRank(userRole) > 1 && permOn('order_for_subordinates');
+        }
+
+        // کۆدی خاوەنی ئۆردەری نوێ ئەگەر بۆ کەسێکی تر پڕ دەکرێتەوە — ئەگەرنا ''
+        function behalfCode() {
+            return (!editingOrderId && behalfState.on && behalfState.code && !exchangeFormOn()) ? behalfState.code : '';
+        }
+
+        function behalfTargets() {
+            const me = behalfRank(userRole);
+            const myCode = String((currentUser && currentUser.code) || '').trim().toLowerCase();
+            const out = (allEmployeesLite || []).filter(e => {
+                if (!e || !e.code || e.suspended) return false;
+                const c = String(e.code).trim();
+                if (c.toLowerCase() === myCode) return false;
+                const rk = behalfRank(e.role);
+                if (rk < 1 || rk >= me) return false;
+                return userRole === 'پاشا' || isInMyTeam(c);
+            });
+            // پلەی بەرز یەکەم، پاشان ناو — هەمان ڕیزبەندیی «بەپێی پلە»
+            out.sort((a, b) => behalfRank(b.role) - behalfRank(a.role) || cmpName(a.full_name, b.full_name));
+            return out;
+        }
+
+        // دەرخستن / شاردنەوە: تەنها ئۆردەری نوێ، تەنها بە دەسەڵات، و نەک لە کاتی گۆڕیندا
+        function behalfSync() {
+            const box = document.getElementById('obh');
+            if (!box) return;
+            const can = !editingOrderId && behalfCanUse() && !exchangeFormOn();
+            box.style.display = can ? '' : 'none';
+            if (!can && behalfState.on) behalfToggle(false, true);
+        }
+
+        function behalfToggle(on, silent) {
+            const sw = document.getElementById('switch-behalf');
+            if (sw) sw.checked = !!on;
+            behalfState.on = !!on;
+            if (!on) { behalfState.code = ''; behalfState.name = ''; behalfState.role = ''; }
+            _orderDraftCode = null;              // کۆدی ئۆردەر بە کۆدی خاوەنەکە دەست پێدەکات
+            walletReadyState.loaded = false;     // جزدانی کێ گۆڕا
+            const body = document.getElementById('obh-body');
+            if (body) body.style.display = on ? '' : 'none';
+            clearOrderErr('behalf');
+            const q = document.getElementById('obh-q');
+            if (q && !on) q.value = '';
+            behalfRenderPicked();
+            if (on) {
+                if (!teamScopeLoaded && !(allEmployeesLite || []).length) {
+                    const list = document.getElementById('obh-list');
+                    // سکێلێتۆن = خودی ڕیزی `obh-row` (وێنە + ناو + کۆد)، نەک خولاوە. بەرزیی دوو هێڵەکە = بەرزیی دێڕی ناو
+                    // (14px × 1.3) و کۆد (11px × 1.3)، بۆیە لیستەکە بە هاتنی ناوەکان بازی نادات
+                    if (list) list.innerHTML = SK_W1.slice(0, 3).map(w => `<div class="obh-row sk-shim" aria-hidden="true">
+                        <span class="obh-sk-av"></span><span class="obh-row-txt"><span class="sk" style="width:${w}%;height:12px;margin:3px 0"></span>
+                        <span class="sk" style="width:28%;height:10px;margin:2px 0"></span></span></div>`).join('');
+                    loadTeamScope().then(() => { if (behalfState.on && !behalfState.code) behalfRenderList(); });
+                } else behalfRenderList();
+            }
+            if (silent) return;
+            renderWalletPayOption();
+            updateCartUI();
+            if (formPaymentMethod() === 'wallet') ensureWalletReady(true);
+        }
+
+        function behalfRowHtml(e) {
+            const name = e.full_name || e.code;
+            const k = ttRoleKey(e.role);
+            return `<button type="button" class="obh-row" role="option" data-code="${histEsc(e.code)}"
+                    onclick="behalfPick(this.dataset.code)">
+                ${avatarHtml('', name, 32)}
+                <span class="obh-row-txt">
+                    <span class="obh-name rk-${k}" title="${histEsc(TT_ROLE_NAME[k] || '')}">${histEsc(name)}</span>
+                    <bdi class="obh-code" dir="ltr">${histEsc(e.code)}</bdi>
+                </span>
+            </button>`;
+        }
+
+        function behalfRenderList(more) {
+            const list = document.getElementById('obh-list');
+            const cnt = document.getElementById('obh-count');
+            if (!list) return;
+            const qEl = document.getElementById('obh-q');
+            const q = qEl ? qEl.value.trim() : '';
+            const all = behalfTargets();
+            const hits = q ? searchRank(all, q, e => [e.full_name, e.code]) : all;
+            behalfState.shown = more ? behalfState.shown + BEHALF_PAGE : BEHALF_PAGE;
+            const shown = hits.slice(0, behalfState.shown);
+            if (cnt) {
+                cnt.textContent = !all.length ? ''
+                    : (q ? fmtNum(hits.length) + ' لە ' + fmtNum(all.length) + ' کەس' : fmtNum(all.length) + ' کەس');
+            }
+            if (!all.length) {
+                list.innerHTML = `<div class="obh-empty">${teamScopeLoaded
+                    ? 'هیچ ئەندامێکی خوار خۆت لە تیمەکەتدا نییە.'
+                    : 'لیستی ئەندامان نەهات — دووبارە سویچەکە داگیرسێنەوە.'}</div>`;
+                return;
+            }
+            if (!hits.length) {
+                list.innerHTML = `<div class="obh-empty">کەس بەم ناوە یان کۆدە نەدۆزرایەوە.</div>`;
+                return;
+            }
+            const rest = hits.length - shown.length;
+            list.innerHTML = shown.map(behalfRowHtml).join('')
+                + (rest > 0 ? `<button type="button" class="obh-more" onclick="behalfRenderList(true)">
+                    زیاتر پیشان بدە (${fmtNum(rest)} ماوە)</button>` : '');
+        }
+
+        function behalfPick(code) {
+            const e = behalfTargets().find(x => String(x.code) === String(code));
+            if (!e) { showToast("ناتوانیت ئۆردەر بۆ ئەم کەسە پڕ بکەیتەوە", "error"); return; }
+            behalfState.code = String(e.code);
+            behalfState.name = e.full_name || e.code;
+            behalfState.role = normalizeRole(e.role);
+            _orderDraftCode = null;
+            walletReadyState.loaded = false;
+            clearOrderErr('behalf');
+            behalfRenderPicked();
+            renderWalletPayOption();
+            updateCartUI();
+            if (formPaymentMethod() === 'wallet') ensureWalletReady(true);
+        }
+
+        // «گۆڕین» = لیستەکە دەگەڕێتەوە، سویچ داگیرساو دەمێنێت · «لابردن» = هەموو دەکوژێتەوە، هی خۆت دەبێتەوە
+        function behalfChange() {
+            behalfState.code = ''; behalfState.name = ''; behalfState.role = '';
+            _orderDraftCode = null;
+            walletReadyState.loaded = false;
+            behalfRenderPicked();
+            behalfRenderList();
+            renderWalletPayOption();
+            updateCartUI();
+            const q = document.getElementById('obh-q');
+            if (q) q.focus();
+        }
+
+        function behalfRenderPicked() {
+            const pick = document.getElementById('obh-pick');
+            const card = document.getElementById('obh-card');
+            if (!pick || !card) return;
+            const has = behalfState.on && !!behalfState.code;
+            pick.style.display = has ? 'none' : '';
+            card.style.display = has ? '' : 'none';
+            if (!has) { card.innerHTML = ''; return; }
+            const k = ttRoleKey(behalfState.role);
+            const mem = teamMemberOf(behalfState.code);
+            card.innerHTML = `
+                ${avatarHtml(mem ? mem.avatar : '', behalfState.name, 40)}
+                <div class="obh-card-txt">
+                    <span class="obh-card-lbl">ئۆردەر لەسەر حیسابی ئەم کەسە تۆمار دەکرێت</span>
+                    <span class="obh-card-who">
+                        <b class="obh-name rk-${k}" title="${histEsc(TT_ROLE_NAME[k] || '')}">${histEsc(behalfState.name)}</b>
+                        <bdi class="obh-code" dir="ltr">${histEsc(behalfState.code)}</bdi>
+                    </span>
+                </div>
+                <div class="obh-card-acts">
+                    <button type="button" class="obh-act" onclick="behalfChange()"><i class='bx bx-transfer'></i> گۆڕین</button>
+                    <button type="button" class="obh-act is-off" onclick="behalfToggle(false)"><i class='bx bx-x'></i> لابردن</button>
+                </div>`;
+        }
+
+        // چیپی «پڕکراوەتەوە لەلایەن» — ئۆردەرێک کە کەسێکی تر بۆ خاوەنەکەی پڕی کردۆتەوە (کارت · زانیاری)
+        function behalfFilledBy(o) {
+            return !!o && !!o.created_by_code && String(o.created_by_code) !== String(o.seller_code || '');
+        }
+        function behalfStampHtml(o) {
+            if (!behalfFilledBy(o)) return '';
+            const full = String(o.created_by_name || o.created_by_code);
+            const p = empByCode(o.created_by_code);
+            const k = p ? ttRoleKey(p.role) : '';
+            return `<span class="behalf-stamp" title="پڕکراوەتەوە لەلایەن ${histEsc(full)}"><i class='bx bx-edit-alt'></i>`
+                + `<span>پڕکراوەتەوە لەلایەن</span><b${k ? ` class="rk-${k}"` : ''}>${histEsc(firstNameOf(full) || full)}</b></span>`;
+        }
+        function behalfDetailHtml(o) {
+            if (!behalfFilledBy(o)) return '';
+            const p = empByCode(o.created_by_code);
+            const k = p ? ttRoleKey(p.role) : '';
+            return detailRow('bx-edit-alt', 'پڕکراوەتەوە لەلایەن',
+                `<span class="behalf-who"><b${k ? ` class="rk-${k}"` : ''}>${histEsc(o.created_by_name || o.created_by_code)}</b>`
+                + `<bdi dir="ltr">${histEsc(o.created_by_code)}</bdi></span>`, { raw: true });
+        }
+
         // ⭐ جزدانی کێ؟ — هەمیشە خاوەنی ئۆردەرەکە، نەک ئەوەی فۆڕمەکە پڕ
         //    دەکاتەوە. ئۆردەری نوێ = هی خۆم؛ دەستکاری = خاوەنی ئۆردەرەکە.
+        //    🧾 db/166: ئۆردەری نوێ بۆ کەسێکی تر = جزدانی **ئەو** (پارەی ئامادە، خاوەن ٢٠٢٦-١١-٠٣).
         //    خاوەن ٢٠٢٦-١٠-١٠: «پاشا یان بەڕێوبەران، هەر کەسێک کە دەسەڵاتی
         //    دەستکاریکردنی ئۆردەری هەیە، بتوانێت بیخاتە سەر جزدانی ئەو
         //    کەسە». پێشتر تەنها خاوەن دەیتوانی و بۆ ئەوانی تر قوفڵ بوو.
@@ -10952,7 +11206,7 @@
                 const o = allGlobalOrdersData[editingOrderId];
                 return o ? String(o.seller_code || '') : '';
             }
-            return currentUser ? String(currentUser.code) : '';
+            return behalfCode() || (currentUser ? String(currentUser.code) : '');
         }
         function walletPayIsMine() {
             return !!currentUser && walletPayOwnerCode() === String(currentUser.code);
@@ -10968,7 +11222,7 @@
         function walletPayOwnerLabel() {
             const o = editingOrderId ? allGlobalOrdersData[editingOrderId] : null;
             const n = (walletReadyFresh() && walletReadyState.name)
-                || (o && o.seller_name) || walletPayOwnerCode();
+                || (o && o.seller_name) || (behalfCode() ? behalfState.name : '') || walletPayOwnerCode();
             return FD_FSI + String(n || '') + FD_PDI;
         }
 
@@ -10982,6 +11236,17 @@
                 return {
                     ready: Math.max(0, Math.round(parseFloat(data && data.ready) || 0)),
                     name: (data && data.name) ? String(data.name) : ''
+                };
+            }
+            // 🧾 ئۆردەری نوێ بۆ کەسێکی تر: پارەی ئامادەی ئەو (db/166 — هەمان پشکنینی `orders_guard`، بەبێ
+            //    دەسەڵاتی بینینی جزدان). کۆدەکە پێش `await` وەردەگیرێت، بۆیە وەڵامی کەسی پێشوو ناچێتە سەر کەسی نوێ.
+            const bc = behalfCode();
+            if (bc) {
+                const { data, error } = await supabase.rpc('order_behalf_info', { p_member: bc });
+                if (error) throw error;
+                return {
+                    ready: Math.max(0, Math.round(parseFloat(data && data.ready) || 0)),
+                    name: (data && data.name) ? String(data.name) : behalfState.name
                 };
             }
             return { ready: await fetchWalletReady(currentUser.code), name: '' };
@@ -12510,6 +12775,7 @@
 
             b.innerHTML = `
             ${sellerInfoPlaceholder}
+            ${behalfDetailHtml(o)}
             ${schedBoxHtml(o)}
             ${(isDone || isSchedPending(o)) ? '' : orderStepsHtml(o)}
             ${topPrint}
@@ -33499,6 +33765,10 @@
                         : 'ژمارەی مۆبایل تەواو نییە — پێویستە 11 ژمارە بێت (نموونە: 0750 123 4567).'
                 });
             }
+            // 🧾 سویچی «پڕکردنەوە بۆ ئەندامی تر» داگیرساوە بەڵام کەس هەڵنەبژێردراوە — هەرگیز بێدەنگ بە ناوی خۆتەوە نانێردرێت
+            if (!editingOrderId && behalfState.on && !behalfState.code && !exchangeFormOn()) {
+                problems.push({ k: 'behalf', m: 'ئەندامەکە هەڵبژێرە — یان سویچی «پڕکردنەوە بۆ ئەندامی تر» بکوژێنەوە.' });
+            }
             // ⭐ گۆڕین بە سێ جۆر (خاوەن ٢٠٢٦-١٠-٢٢ — «سێ شێوازمان هەیە»): وەرگرتنەوە = کاڵای گەڕاوە ·
             //    ناردن = کاڵای نێردراو · گۆڕین = هەردووکیان (لانیکەم یەک دانە لە هەر بەشێک). سێرڤەر تەنها
             //    «هیچ کاڵا» ڕەت دەکاتەوە (db/143 · `EXCHANGE_ITEMS`)؛ ئەمە هەر جۆرێک بە بەشی خۆی دەپێوێت.
@@ -33720,9 +33990,11 @@
             // خاوەنی جزدانەکە — هەمیشە خاوەنی ئۆردەرەکەیە، نەک ئەوەی
             // دەستکاری دەکات (پاشا / بەڕێوەبەر جزدانی ئەندامەکە دەبڕن،
             // نەک هی خۆیان — db/123)
+            // 🧾 db/166: ئۆردەری نوێ بۆ کەسێکی تر = جزدانی ئەو (`orders_wallet_follow` لە `seller_code`ـەوە دەیبڕێت)
+            const behalfOwner = exOn ? '' : behalfCode();
             const walletOwnerCode = editedOrder
                 ? String(editedOrder.seller_code || '')
-                : String(currentUser.code);
+                : (behalfOwner || String(currentUser.code));
 
             if (prepaidOn) {
                 if (prepaidAmount <= 0) {
@@ -33922,7 +34194,9 @@
                     // ⭐ یەک کۆد بۆ هەر فۆڕمێک (db/162 — `uq_orders_order_code`): هەوڵی دووبارە دوای وەڵامی ونبوو هەمان کۆد
                     //    دەنێرێت، بۆیە سێرڤەر هەرگیز ئۆردەری دووەم دروست ناکات (٣١ـی ئۆکتۆبەر: هەمان ئۆردەر ٩٧ چرکە دواتر
                     //    دووبارە تۆمار کرا و هەردووکیان درانە شۆفێر). کۆدەکە تەنها دوای سەرکەوتن (`resetOrderForm`) دەگۆڕێت.
-                    if (!_orderDraftCode) _orderDraftCode = currentUser.code + "-" + getSecureCode();
+                    // 🧾 کۆدی ئۆردەر بە کۆدی **خاوەنەکەی** دەست پێدەکات — بۆ کەسێکی تر هی ئەو (`behalfToggle` · `behalfPick`
+                    //    کۆدە کۆنەکە فڕێ دەدەن)
+                    if (!_orderDraftCode) _orderDraftCode = (behalfOwner || currentUser.code) + "-" + getSecureCode();
                     let orderCode = _orderDraftCode;
                     // ئۆردەری کاتدارکراو: بەروارەکەی **کاتی داخیلبوونە**،
                     // نەک کاتی نووسین (بڕیاری خاوەن، ٢٠٢٦-٠٨-٢٥). بۆیە
@@ -33931,20 +34205,22 @@
                     let schedAt = pendingSchedule ? new Date(pendingSchedule.getTime()) : null;
                     let fullDateString = schedDbDate(schedAt || new Date());
 
-                    // کۆدی پۆستەی بەڕێوەبەرەکە — وێنەیەکی لەسەر ئۆردەرەکە دەمێنێتەوە
-                    const postalForOrder = await postalCodeForMyOrders();
+                    // کۆدی پۆستەی بەڕێوەبەرەکە — وێنەیەکی لەسەر ئۆردەرەکە دەمێنێتەوە.
+                    // 🧾 بۆ کەسێکی تر سێرڤەر خۆی هی ئەو دادەنێت (`order_behalf_owner`) — هیچ داواکارییەکی زیادە.
+                    const postalForOrder = behalfOwner ? '' : await postalCodeForMyOrders();
 
                     const { data: created, error } = await supabase.from('orders').insert([{
                         date: fullDateString,
-                        seller_name: receiptDisplayName(),
-                        seller_code: currentUser.code,
+                        // 🧾 بۆ کەسێکی تر: ناوی سەر وەسڵ و زنجیرە و `created_by_*` هەموویان لە سێرڤەرەوەن (`orders_guard`)
+                        seller_name: behalfOwner ? null : receiptDisplayName(),
+                        seller_code: behalfOwner || currentUser.code,
                         // وێنەیەکی زنجیرەی دەسەڵات لە کاتی تۆمارکردندا.
                         // ئەگەر دواتر ئەم ئەندامە بگوازرێتەوە بۆ
                         // بەڕێوەبەرێکی تر، ئەم ئۆردەرە هەر لای کۆنەکە
                         // دەمێنێتەوە — مێژووەکەی لەدەست ناچێت. (db/020)
-                        seller_manager: currentUser.manager || null,
-                        seller_admin: currentUser.admin || null,
-                        seller_consultant: currentUser.consultant || null,
+                        seller_manager: behalfOwner ? null : (currentUser.manager || null),
+                        seller_admin: behalfOwner ? null : (currentUser.admin || null),
+                        seller_consultant: behalfOwner ? null : (currentUser.consultant || null),
                         postal_code: postalForOrder || null,
                         address: address,
                         city: city,
@@ -34009,7 +34285,7 @@
 
                     // ⭐ db/160: پارەی جزدان لەناو هەمان INSERTـدا بڕا (تریگەری `orders_wallet_follow`)؛ پارەی ئامادە بەس
                     //    نەبوو → خودی ئۆردەرەکە تۆمار نەکرا (`OVER_READY`، بڕیاری خاوەن ٢٠٢٦-١١-٠٣) — هیچ «بێ پارەدان تۆمار کرا».
-                    if (isWalletPay) invalidateWalletCaches(currentUser.code);
+                    if (isWalletPay) invalidateWalletCaches(walletOwnerCode);
 
                     // ⚠️ ئۆردەری کاتدارکراو بە `schedule` تۆمار دەکرێت،
                     //    نەک `create`. `notify_order_log` (db/015) تەنها
@@ -34017,20 +34293,30 @@
                     //    دەنێرێت، بۆیە لەم ساتەدا هیچ ناچێتە لای
                     //    بەڕێوەبەر. لە ساتی کردنەوەدا جۆبی کرۆن
                     //    ڕیزێکی `create` دادەنێت و ئەوسا دەنێردرێت.
+                    // 🧾 بۆ کەسێکی تر: «بۆ: ناو (کۆد)» لە مێژووی کردارەکاندا — FSI بۆ ئەوەی ناوی لاتینی/کۆد ڕیزبەندیی ڕستەکە نەگۆڕێت
+                    const forWho = behalfOwner
+                        ? FD_FSI + behalfState.name + FD_PDI + ' (' + FD_FSI + behalfOwner + FD_PDI + ')' : '';
                     const walletNote = isWalletPay
-                        ? ` — ${prepaidAmount.toLocaleString()} د.ع لە جزدانی خۆی دا` : '';
+                        ? (behalfOwner
+                            ? ` — ${prepaidAmount.toLocaleString()} د.ع لە جزدانی ${FD_FSI + behalfState.name + FD_PDI} دا`
+                            : ` — ${prepaidAmount.toLocaleString()} د.ع لە جزدانی خۆی دا`) : '';
+                    const whoShort = behalfOwner ? (firstNameOf(behalfState.name) || behalfOwner) : '';
                     if (schedAt) {
                         await logOrderAction(newRow, 'schedule', {
                             to: "ئامادە دەکرێت",
-                            detail: `ئۆردەرەکەی بۆ ${schedWhenText({ scheduled_at: schedAt.toISOString() })} کاتدار کرد` + walletNote
+                            detail: (behalfOwner
+                                ? `ئۆردەرەکەی بۆ ئەندام: ${forWho} بۆ ${schedWhenText({ scheduled_at: schedAt.toISOString() })} کاتدار کرد`
+                                : `ئۆردەرەکەی بۆ ${schedWhenText({ scheduled_at: schedAt.toISOString() })} کاتدار کرد`) + walletNote
                         });
-                        showToast(`چاوەڕوان کرا — ${schedWhenTextFromDate(schedAt)} داخیل دەبێت`, "success");
+                        showToast(behalfOwner
+                            ? `چاوەڕوان کرا بۆ ${whoShort} — ${schedWhenTextFromDate(schedAt)} داخیل دەبێت`
+                            : `چاوەڕوان کرا — ${schedWhenTextFromDate(schedAt)} داخیل دەبێت`, "success");
                     } else {
                         await logOrderAction(newRow, 'create', {
                             to: "ئامادە دەکرێت",
-                            detail: "ئۆردەرەکەی دروستکرد" + walletNote
+                            detail: (behalfOwner ? "ئۆردەرەکەی دروستکرد بۆ ئەندام: " + forWho : "ئۆردەرەکەی دروستکرد") + walletNote
                         });
-                        showToast("بە سەرکەوتوویی تۆمار کرا!", "success");
+                        showToast(behalfOwner ? `بۆ ${whoShort} تۆمار کرا!` : "بە سەرکەوتوویی تۆمار کرا!", "success");
                     }
                 }
 
@@ -37173,7 +37459,9 @@
             // سەبەتەی کاڵای گەڕاوەی گۆڕین — بە چیپەکان پڕ دەبێتەوە، نەک بە نووسین (`exChipToggle`)
             exret: { input: null, label: null, err: 'err-exret' },
             // جۆری گۆڕین — سێ دوگمە (`exSetKind`)
-            exkind: { input: null, label: null, err: 'err-exkind' }
+            exkind: { input: null, label: null, err: 'err-exkind' },
+            // 🧾 پڕکردنەوە بۆ ئەندامی تر — سویچ داگیرساوە بەڵام کەس هەڵنەبژێردراوە (db/166)
+            behalf: { input: 'obh-q', label: null, err: 'err-behalf' }
         };
 
         function setOrderErr(key, msg) {
@@ -48107,6 +48395,9 @@
                 togglePrepaidSection(false);
             }
             if (preGrp) preGrp.style.display = isChecked ? 'none' : '';
+
+            // 🧾 گۆڕین خاوەنەکەی لە ئۆردەری ڕەسەنەوە دێت — «پڕکردنەوە بۆ ئەندامی تر» دەکوژێتەوە و دەشاردرێتەوە (db/166)
+            behalfSync();
 
             exMountCart(isChecked);
 
