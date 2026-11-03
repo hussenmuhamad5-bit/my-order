@@ -13448,9 +13448,9 @@ body.fsheet-open {
 /* ============================================================
    🧾 پڕکردنەوە بۆ ئەندامی تر (db/166) — سویچ · گەڕان · لیست · کارتی هەڵبژێردراو · چیپی «پڕکراوەتەوە لەلایەن»
    ------------------------------------------------------------
-   ناوی کەس بە ڕەنگی پلەکەی (`rk-<k>` → `var(--rk, …)`) — هیچ پیلی پلە. ڕیزی لیست دوگمەیە: `line-height`ـی خۆی
-   هەیە، بۆیە ڕیزی سکێلێتۆن (div) هەمان بەرزیی هەیە. لیستەکە خۆی سکڕۆڵ دەکات و «زیاتر» تا کۆتایی دەڕوات (پەڕەکردن،
-   نەک بڕین). ئایکۆنی ناو `.obh-act` بە قەبارەی خۆی (`button i` = ٢٠px).
+   ناوی کەس بە ڕەنگی پلەکەی (`rk-<k>` → `var(--rk, …)`) — هیچ پیلی پلە. ڕیزی لیست خودی کارتی `.wcard`ـی جزدانەکانە
+   (`font: inherit`، بۆیە سکێلێتۆنی div هەمان بەرزیی هەیە) + زنجیرەی `.tt-chain`. لیستەکە خۆی سکڕۆڵ دەکات و «زیاتر» تا
+   کۆتایی دەڕوات (پەڕەکردن، نەک بڕین). ئایکۆنی ناو `.obh-act` بە قەبارەی خۆی (`button i` = ٢٠px).
    ============================================================ */
 .obh {
   margin: 0 0 14px;
@@ -13510,6 +13510,20 @@ body.fsheet-open {
   font-size: 14px;
 }
 
+/* هەمان درەوشانەوەی `input:focus`ـی هەموو خانەکانی فۆڕمەکە (ناونیشان · مۆبایل) — یاسای سەرەوەی ئەم خانەیە `border`ـی
+   خۆی هەیە و هەمان تایبەتمەندی (0,1,1)، بۆیە دوای ئەو دێت و ڕەنگە گشتییەکەی دادەپۆشی */
+.obh-search input:focus {
+  outline: none;
+  border-color: #2481cc;
+  background: #fff;
+  box-shadow: 0 0 0 4px rgba(36, 129, 204, 0.15);
+}
+
+/* هەڵبژاردنی پلە = هەمان `.segmented-control.role-seg`ـی چاکسازی (ڕەنگ و شێوە لەوێوەن) — لێرە تەنها بۆشایییەکە؛ هیچ سکڕۆڵ */
+.obh .obh-role-seg {
+  margin: 8px 0 0;
+}
+
 .obh-count {
   min-height: 14px;
   margin: 6px 2px 4px;
@@ -13517,46 +13531,26 @@ body.fsheet-open {
   color: #64748b;
 }
 
+/* لیستەکە = کارتی `wcard`ـی جزدانەکان (هەمان پۆل، نەک کۆپی). بۆکسەکە بەرزییەکی سنوورداری هەیە و لەناوەوە سکڕۆڵ دەکات،
+   بەڵام شریتی سکرۆڵ باڕ نابینرێت (خاوەن ٢٠٢٦-١١-٠٣: «سکرۆڵ هەبێت، بەڵام سکرۆڵ بارەکە پیشان نەدات») */
 .obh-list {
-  max-height: 264px;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  border-radius: 10px;
-  background: #fff;
-  border: 1px solid #eef2f6;
-}
-
-.obh-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  width: 100%;
-  min-width: 0;
-  box-sizing: border-box;
-  padding: 8px 10px;
-  border: 0;
-  border-bottom: 1px solid #f1f5f9;
-  background: transparent;
-  text-align: right;
-  font-family: inherit;
-  line-height: 1.3;
-  cursor: pointer;
-}
-
-.obh-row:last-child {
-  border-bottom: 0;
-}
-
-.obh-row:active {
-  background: #f1f5f9;
-}
-
-.obh-row-txt {
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  flex: 1 1 auto;
-  min-width: 0;
+  gap: 6px;
+  max-height: 330px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+  padding: 1px;
+}
+
+.obh-list::-webkit-scrollbar {
+  display: none;
+}
+
+.obh-list .obh-wcard {
+  flex: 0 0 auto;
+  margin-bottom: 0;
 }
 
 .obh-name {
@@ -13574,8 +13568,8 @@ body.fsheet-open {
 
 .obh-sk-av {
   flex: 0 0 auto;
-  width: 32px;
-  height: 32px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
   background: #e2e8f0;
 }

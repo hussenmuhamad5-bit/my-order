@@ -293,9 +293,12 @@
                 <div class="obh-pick" id="obh-pick">
                     <div class="obh-search">
                         <i class='bx bx-search'></i>
-                        <input type="text" id="obh-q" placeholder="ئەندامەکە هەڵبژێرە... (گەڕان بە ناو یان کۆد)"
+                        <input type="text" id="obh-q" placeholder="گەڕان بە کۆد یان بە ناو..."
                             autocomplete="off" oninput="behalfRenderList()" aria-label="گەڕان بە ناو یان کۆدی ئەندام">
                     </div>
+                    <!-- هەڵبژاردنی پلە — هەمان `segmented-control role-seg`ـی چاکسازی (خاوەن ٢٠٢٦-١١-٠٣): «هەموو» + تەنها
+                         پلە خوارەکانی تۆ (`behalfRolesRender`)، بێ سکڕۆڵ -->
+                    <div class="segmented-control role-seg obh-role-seg" id="obh-roles" role="radiogroup" aria-label="فلتەری پلە"></div>
                     <div class="obh-count" id="obh-count"></div>
                     <div class="obh-list" id="obh-list" role="listbox" aria-label="ئەو کەسانەی دەتوانیت ئۆردەریان بۆ پڕ بکەیتەوە"></div>
                 </div>
@@ -10010,7 +10013,11 @@
                 if (schedFilter === 'live' && isSchedPending(o)) return false;
                 let sellerCode = sellerCodeOf(o);
                 let isMyOrder = (sellerCode === myCode);
-                if (!isMyOrder) {
+                // 🧾 db/166: ئۆردەرێک کە خۆم بۆ ئەم کەسەم پڕکردۆتەوە هەمیشە دەیبینم (دروستکەر = خاوەن بۆ بینین) —
+                //    ⚠️ کاشی `_viewOk` بە **فرۆشیار**ە، بۆیە ئەم ئۆردەرە پێش کاشەکە دەپشکنرێت: ئەگەرنا یەکەم ئۆردەری ئەو
+                //    فرۆشیارە بڕیاری هەموویانی دەدا (یان ئەوەی من پڕم کردووە ون دەبوو، یان ئەوانی تری دەکردەوە)
+                let iFilledIt = !!o.created_by_code && String(o.created_by_code).trim().toLowerCase() === myCode;
+                if (!isMyOrder && !iFilledIt) {
                     if (!(sellerCode in _viewOk)) _viewOk[sellerCode] = canActOnOrder(o, 'view');
                     if (!_viewOk[sellerCode]) return false;
                 }
@@ -11008,8 +11015,11 @@
         //    لیستەکە پڕ دەکاتەوە — سێرڤەر هەموو یاساکان دووبارە دەپشکنێت.
         // ⚠️ هەرگیز لە دەستکاری یان گۆڕیندا: دەستکاری خاوەنی هەیە، و گۆڕین خاوەنەکەی لە ئۆردەری ڕەسەنەوە دێت.
         // ============================================================
-        let behalfState = { on: false, code: '', name: '', role: '', shown: 0 };
+        // `rf` = تابی پلەی هەڵبژێردراو ('all' یان ناوی پلە) — جیایە لە `role` (پلەی کەسە هەڵبژێردراوەکە)
+        let behalfState = { on: false, code: '', name: '', role: '', shown: 0, rf: 'all' };
         const BEHALF_PAGE = 60;      // پەڕەکردن، نەک بڕین — «زیاتر» تا کۆتایی
+        // تابەکانی پلە (خاوەن ٢٠٢٦-١١-٠٣): «هەموو» + تەنها ئەو پلانەی بە توندی خوارترن لە هی تۆ، گەورە بۆ بچووک
+        const BEHALF_ROLES = ['بەڕێوەبەر', 'سەرپەرشت', 'ڕاوێژکار', 'ئەندام'];
 
         function behalfRank(r) { return normalizeRole(r) === 'پاشا' ? 5 : roleRank(r); }
 
@@ -11051,7 +11061,7 @@
             const sw = document.getElementById('switch-behalf');
             if (sw) sw.checked = !!on;
             behalfState.on = !!on;
-            if (!on) { behalfState.code = ''; behalfState.name = ''; behalfState.role = ''; }
+            if (!on) { behalfState.code = ''; behalfState.name = ''; behalfState.role = ''; behalfState.rf = 'all'; }
             _orderDraftCode = null;              // کۆدی ئۆردەر بە کۆدی خاوەنەکە دەست پێدەکات
             walletReadyState.loaded = false;     // جزدانی کێ گۆڕا
             const body = document.getElementById('obh-body');
@@ -11061,13 +11071,17 @@
             if (q && !on) q.value = '';
             behalfRenderPicked();
             if (on) {
+                behalfRolesRender();
                 if (!teamScopeLoaded && !(allEmployeesLite || []).length) {
                     const list = document.getElementById('obh-list');
-                    // سکێلێتۆن = خودی ڕیزی `obh-row` (وێنە + ناو + کۆد)، نەک خولاوە. بەرزیی دوو هێڵەکە = بەرزیی دێڕی ناو
-                    // (14px × 1.3) و کۆد (11px × 1.3)، بۆیە لیستەکە بە هاتنی ناوەکان بازی نادات
-                    if (list) list.innerHTML = SK_W1.slice(0, 3).map(w => `<div class="obh-row sk-shim" aria-hidden="true">
-                        <span class="obh-sk-av"></span><span class="obh-row-txt"><span class="sk" style="width:${w}%;height:12px;margin:3px 0"></span>
-                        <span class="sk" style="width:28%;height:10px;margin:2px 0"></span></span></div>`).join('');
+                    // سکێلێتۆن = خودی کارتی `wcard` (وێنە + ناو + کۆد + زنجیرە) بە دەقی نموونەی ڕوون (`sk-w`)، نەک خولاوە —
+                    // بەرزییەکەی هەمان ڕیزی ڕاستەقینەیە لە هەر پانییەک، بۆیە لیستەکە بە هاتنی ناوەکان بازی نادات
+                    if (list) list.innerHTML = [0, 1, 2].map(() => `<div class="wcard obh-wcard sk-shim" aria-hidden="true">
+                        <span class="obh-sk-av"></span>
+                        <span class="wcard-txt"><b class="sk-w">ناوی ئەندامێک</b>
+                            <span class="wcard-sub"><bdi class="sk-w" dir="ltr">ABCDE</bdi></span>
+                            <span class="tt-chain"><span class="cp sk-w">سەرپەرشت</span></span></span>
+                        <i class='bx bx-chevron-left wcard-go'></i></div>`).join('');
                     loadTeamScope().then(() => { if (behalfState.on && !behalfState.code) behalfRenderList(); });
                 } else behalfRenderList();
             }
@@ -11077,16 +11091,56 @@
             if (formPaymentMethod() === 'wallet') ensureWalletReady(true);
         }
 
+        // تابەکانی پلە — «هەموو» + ئەو پلانەی بە توندی خوارترن لە هی تۆ (پاشا ٤ · بەڕێوەبەر ٣ · سەرپەرشت ٢ · ڕاوێژکار ١)
+        function behalfRoles() {
+            const me = behalfRank(userRole);
+            return BEHALF_ROLES.filter(r => behalfRank(r) < me);
+        }
+        // ⭐ هەمان `segmented-control role-seg`ـی چاکسازی (خاوەن ٢٠٢٦-١١-٠٣: «شێوازی هەڵبژاردنی پلەکان ئاوا لێبکە… سکرۆڵ باڕ
+        //    دەرنەکەوێت») — ڕادیۆ + span، ڕەنگی هەر پلەیەک لە `.role-seg input[value=…]`. خانەکان بە ناوەڕۆکیان دابەش دەبن، و بە
+        //    فۆنتی ڕاستەقینە (Noto Kufi، 11px) پێنج خانەی پاشا لە ٣٢٠ ـدا ڕێک پڕ دەکەن (254 = 254px، هەموو یەک دێڕ) — هیچ سکڕۆڵ
+        function behalfRolesRender() {
+            const box = document.getElementById('obh-roles');
+            if (!box) return;
+            const rs = behalfRoles();
+            if (behalfState.rf !== 'all' && rs.indexOf(behalfState.rf) < 0) behalfState.rf = 'all';
+            const opt = (r, label) => `<label><input type="radio" name="obh_role_filter" value="${histEsc(r)}"${behalfState.rf === r ? ' checked' : ''}
+                onchange="behalfSetRole(this.value)"><span>${histEsc(label)}</span></label>`;
+            const html = opt('all', 'هەموو') + rs.map(r => opt(r, r)).join('');
+            if (box.__h !== html) { box.__h = html; box.innerHTML = html; }
+        }
+        function behalfSetRole(r) {
+            behalfState.rf = (r === 'all' || behalfRoles().indexOf(r) >= 0) ? r : 'all';
+            behalfRolesRender();
+            behalfRenderList();
+        }
+
+        // زنجیرەی «لەژێر کێیە» — هەمان دارە و هەمان پیلەکانی جزدانەکان (`ttChainPills`: تەنها ناو بە ڕەنگی پلە، گەورە
+        // بۆ بچووک)، لە ڕەگی منەوە؛ خۆم تێیدا نانووسرێم
+        function behalfChainHtml(code) {
+            const T = ttTreeData();
+            const c = T && (T.emp[code] ? code : T.lower[String(code || '').trim().toLowerCase()]);
+            if (!c) return '';
+            const me = String((currentUser && currentUser.code) || '').trim();
+            const ch = ttChainBetween(T, ttAdminRoot(), c).filter(x => x !== me);
+            return ch.length ? `<span class="tt-chain">${ttChainPills(T, ch)}</span>` : '';
+        }
+
+        // 💳 ڕیزی لیست = کارتی `wcard`ـی جزدانەکان (خاوەن ٢٠٢٦-١١-٠٣): وێنە · ناو بە ڕەنگی پلە (`rk-<k>`، وشەی پلە لە
+        //    `title`) · کۆد · زنجیرە. ⚠️ `avatarHtml` بێ کۆد — کۆد وێنەکە دەکاتە دوگمەی پڕۆفایل و پەنجەدانانەکە دەخوات
         function behalfRowHtml(e) {
             const name = e.full_name || e.code;
             const k = ttRoleKey(e.role);
-            return `<button type="button" class="obh-row" role="option" data-code="${histEsc(e.code)}"
+            const mem = teamMemberOf(e.code);
+            return `<button type="button" class="wcard obh-wcard" role="option" data-code="${histEsc(e.code)}"
                     onclick="behalfPick(this.dataset.code)">
-                ${avatarHtml('', name, 32)}
-                <span class="obh-row-txt">
-                    <span class="obh-name rk-${k}" title="${histEsc(TT_ROLE_NAME[k] || '')}">${histEsc(name)}</span>
-                    <bdi class="obh-code" dir="ltr">${histEsc(e.code)}</bdi>
+                ${avatarHtml(mem ? mem.avatar : '', name, 44)}
+                <span class="wcard-txt">
+                    <b class="rk-${k}" title="${histEsc(TT_ROLE_NAME[k] || '')}">${histEsc(name)}</b>
+                    <span class="wcard-sub"><bdi dir="ltr">${histEsc(e.code)}</bdi></span>
+                    ${behalfChainHtml(e.code)}
                 </span>
+                <i class='bx bx-chevron-left wcard-go'></i>
             </button>`;
         }
 
@@ -11097,12 +11151,15 @@
             const qEl = document.getElementById('obh-q');
             const q = qEl ? qEl.value.trim() : '';
             const all = behalfTargets();
-            const hits = q ? searchRank(all, q, e => [e.full_name, e.code]) : all;
+            // تابی پلە + دەقی گەڕان پێکەوە
+            const rf = behalfState.rf || 'all';
+            const pool = rf === 'all' ? all : all.filter(e => normalizeRole(e.role) === rf);
+            const hits = q ? searchRank(pool, q, e => [e.full_name, e.code]) : pool;
             behalfState.shown = more ? behalfState.shown + BEHALF_PAGE : BEHALF_PAGE;
             const shown = hits.slice(0, behalfState.shown);
             if (cnt) {
                 cnt.textContent = !all.length ? ''
-                    : (q ? fmtNum(hits.length) + ' لە ' + fmtNum(all.length) + ' کەس' : fmtNum(all.length) + ' کەس');
+                    : ((q || rf !== 'all') ? fmtNum(hits.length) + ' لە ' + fmtNum(all.length) + ' کەس' : fmtNum(all.length) + ' کەس');
             }
             if (!all.length) {
                 list.innerHTML = `<div class="obh-empty">${teamScopeLoaded
@@ -11110,8 +11167,12 @@
                     : 'لیستی ئەندامان نەهات — دووبارە سویچەکە داگیرسێنەوە.'}</div>`;
                 return;
             }
+            if (!pool.length) {
+                list.innerHTML = `<div class="obh-empty">هیچ ${histEsc(rf)}ێک لە تیمەکەتدا نییە.</div>`;
+                return;
+            }
             if (!hits.length) {
-                list.innerHTML = `<div class="obh-empty">کەس بەم ناوە یان کۆدە نەدۆزرایەوە.</div>`;
+                list.innerHTML = `<div class="obh-empty">کەس بەم ناوە یان کۆدە نەدۆزرایەوە${rf !== 'all' ? ' لەم پلەیەدا' : ''}.</div>`;
                 return;
             }
             const rest = hits.length - shown.length;
