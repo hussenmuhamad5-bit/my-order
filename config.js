@@ -36,6 +36,8 @@ var SUPABASE_KEY = "sb_publishable_a4_jL7fSgtlcD3j4e9e3sw_75AZBCwz";
 //     فەنکشنێکی نوێ کە دەنووسێت (پارە، ئۆردەر، کۆمێنت…) **هەرگیز**
 //     لێرە زیاد مەکە — ئەگەر داواکارییەکە گەیشتبێت و تەنها وەڵامەکە
 //     ون بووبێت، دووبارەکردنەوە دەبێتە دوو جار نووسین.
+//  ⭐ تا ٢٠٢٦-١١-٠٣ ئەم قسەیە ڕاست نەبوو: ٢٠ لە ٣٢ VOLATILE بوون (پێچەرەکانی db/116). لە db/164ـەوە هەر ٣٢ STABLE ـن
+//     (پشکنراو لە `pg_proc`)، و `check.mjs` ئەم لیستە بەراورد دەکات لەگەڵ db/164 + ئەوانەی پێشتر STABLE بوون.
 // ============================================================
 var SB_RETRY_RPCS = {
     orders_page: 1, orders_status_counts: 1, orders_day_counts: 1, orders_member_counts: 1,
@@ -62,14 +64,49 @@ function _sbCanRetry(url, method) {
     return !!(m && SB_RETRY_RPCS[m[1]]);
 }
 
+// ⭐ کاتی کۆتایی (پشکنینی تۆکمەیی ٢٠٢٦-١١-٠٣): پێشتر هیچ داواکارییەک کاتی کۆتایی نەبوو — یەکێکی گیرخواردوو دوگمەکەی بۆ
+//    هەمیشە قوفڵ دەکرد و هەموو کردارێکی تر کە چاوەڕێی پشکنینی ئەکاونت بوو. ئێستا ٣٠ چرکە (ئەپلۆدی وێنە ١٢٠)، پاشان
+//    `TimeoutError` — ئەپ وەک «وەڵامی ونبوو» دەیخوێنێتەوە (`isLostReply`)، نەک وەک «سەرنەکەوت».
+var SB_TIMEOUT_MS = 30000;
+var SB_TIMEOUT_UPLOAD_MS = 120000;
+function _sbFetchT(input, init, url) {
+    if (typeof AbortController === 'undefined') return fetch(input, init);
+    var ms = /\/storage\/v1\/object/.test(url) ? SB_TIMEOUT_UPLOAD_MS : SB_TIMEOUT_MS;
+    var ctl = new AbortController();
+    var outer = init && init.signal;
+    if (outer) {
+        if (outer.aborted) ctl.abort(outer.reason);
+        else outer.addEventListener('abort', function () { ctl.abort(outer.reason); }, { once: true });
+    }
+    var timer = setTimeout(function () {
+        var e;
+        try { e = new DOMException('timeout', 'TimeoutError'); } catch (x) { e = new Error('timeout'); e.name = 'TimeoutError'; }
+        ctl.abort(e);
+    }, ms);
+    var opts = {};
+    for (var k in (init || {})) opts[k] = init[k];
+    opts.signal = ctl.signal;
+    return fetch(input, opts).then(function (r) { clearTimeout(timer); return _sbGatewayMark(r, url); },
+        function (err) { clearTimeout(timer); throw err; });
+}
+// ⭐ وەڵامی دەروازە (502 · 503 · 504) = «وەڵام نەگەیشت»، نەک ڕەتکردنەوە: supabase-js کۆدی HTTP ناخاتە سەر هەڵەکە، و
+//    دەقی دەروازەکە (HTML) هیچ ناڵێت — بۆیە لێرە بە یەک پەیامی ناسراو دەنووسرێتەوە کە ئەپ دەیناسێت (`isLostReply`).
+function _sbGatewayMark(r, url) {
+    if (!r || (r.status !== 502 && r.status !== 503 && r.status !== 504) || !/\/rest\/v1\//.test(url)) return r;
+    try {
+        return new Response(JSON.stringify({ code: '', message: 'NetworkError: gateway ' + r.status, details: null, hint: null }),
+            { status: r.status, headers: { 'content-type': 'application/json' } });
+    } catch (e) { return r; }
+}
+
 function sbFetch(input, init) {
     var url = typeof input === 'string' ? input : String((input && input.url) || input);
     var method = String((init && init.method) || (input && input.method) || 'GET').toUpperCase();
-    if (!_sbCanRetry(url, method)) return fetch(input, init);
+    if (!_sbCanRetry(url, method)) return _sbFetchT(input, init, url);
 
     var attempt = 0;
     function run() {
-        return fetch(input, init).catch(function (err) {
+        return _sbFetchT(input, init, url).catch(function (err) {
             // AbortError = کۆدەکە خۆی ڕایگرت، نەک تۆڕ — دووبارە مەکەرەوە
             if ((err && err.name === 'AbortError') || attempt >= SB_RETRY_DELAYS.length) throw err;
             var wait = SB_RETRY_DELAYS[attempt++];
@@ -260,7 +297,9 @@ async function staffLoginCall(payload, accessToken) {
         if (i > 0) await new Promise(function (r) { setTimeout(r, SB_RETRY_DELAYS[i - 1]); });
         var res;
         try {
-            res = await fetch(STAFF_LOGIN_URL, { method: 'POST', headers: headers, body: JSON.stringify(payload) });
+            // ⭐ (٢٠٢٦-١١-٠٣) کاتی کۆتایی ٣٠ چرکە (`_sbFetchT`): داواکارییەکی گیرخواردوو ئیتر دوگمەی چوونەژوورەوە بۆ هەمیشە
+            //    قوفڵ ناکات. پاسوۆردی هەڵە وەڵامێکی JSONـە، بۆیە هەرگیز دووبارە نانێردرێت — تەنها هەڵەی تۆڕ.
+            res = await _sbFetchT(STAFF_LOGIN_URL, { method: 'POST', headers: headers, body: JSON.stringify(payload) }, STAFF_LOGIN_URL);
         } catch (e) {
             console.warn('staff-login network', e);
             continue;

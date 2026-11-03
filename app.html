@@ -4040,7 +4040,7 @@
     </div>
 
     <!-- ?v= — config.jsـی نوێ لەگەڵ HTMLـی نوێ؛ هەر کاتێک config.js بە شێوەیەک گۆڕا کە HTMLـی کۆن لەگەڵی کار نەکات، ژمارەکە بگۆڕە (cacheـی وێبگەڕ ١٠ خولەکە) -->
-    <script src="config.js?v=20261020a"></script>
+    <script src="config.js?v=20261103a"></script>
     <script>
 
         // Load Supabase script dynamically
@@ -5401,7 +5401,9 @@
             // db/114 (کلیل) · db/116–118 (ناسنامە، خشتە، ئۆردەر) · db/119 (پاسوۆرد) · db/120 (دابەشکردن)
             // · db/123 (پارەدان لە جزدانی خاوەنی ئۆردەر) · db/125 (ناردنی پارە) · db/127 (API ـی گەیاندن) · db/135 (حاڵەت)
             // · db/142 (گۆڕین هەردوو سەبەتەکەی دەوێت) · db/145 (ناردن لە پاشەکەوت) · db/146 (حاڵەتی پاشا)
-            let x = /\b(?:EXCHANGE_ITEMS|NO_PERM_SAVINGS|BAD_FROM|NOT_KING|BAD_FIELD|BAD_NAME|BAD_NOTE|BAD_MODE|BAD_TIMES|BAD_DELAY|BAD_WINDOW|BAD_RATE|BAD_CAP|BAD_DRIVERS|BAD_LABEL|NAME_TAKEN|DRIVER_TAKEN|NO_API|NO_KEY|TOO_MANY_KEYS|NO_PERM_SEND|BAD_AMOUNT|NOTE_TOO_LONG|NO_RECIPIENT|SELF_TRANSFER|TO_SUSPENDED|KEY_REUSED|BAD_KEY|NOT_STAFF|IDENTITY_LOCKED|SELF_LOCKED|COLUMN_LOCKED|NO_PERM_KEY|NO_PERM_CREATE|NO_PERM_PASSWORD|NO_PERM_DELETE|ONLY_NEW_KEYS|ROLE_NOT_ALLOWED|CHAIN_NOT_ALLOWED|NOT_ALLOWED|NO_PERM_WALLET|NO_PERM_TRASH|ORDER_LOCKED|PRINT_LOCKED|ORDER_SCHEDULED_PENDING|NO_PERM_STATUS|NO_PERM_EDIT|NO_PERM_PRINT|NO_PERM_DISTRIBUTE|BAD_DATE|TOO_MANY|DIST_ROWS|DIST_OVER_TOTAL|DIST_PERM|NO_PERM_ORDER|ORDER_NOT_FOUND|BAD_REASON|BAD_STATUS|WALLET_NOT_OWNER|WALLET_NOT_ON_ORDER|OVER_READY):\s*([^\n]+)/.exec(m);
+            // · db/158 (پارە چوو، حاڵەت نەگۆڕا — دابەشکردن تەنها لەگەڵ «گەیشتووە»)
+            // · db/161 (حاڵەت لەم نێوانەدا گۆڕا)
+            let x = /\b(?:STATUS_CHANGED|EXCHANGE_ITEMS|NO_PERM_SAVINGS|BAD_FROM|NOT_KING|BAD_FIELD|BAD_NAME|BAD_NOTE|BAD_MODE|BAD_TIMES|BAD_DELAY|BAD_WINDOW|BAD_RATE|BAD_CAP|BAD_DRIVERS|BAD_LABEL|NAME_TAKEN|DRIVER_TAKEN|NO_API|NO_KEY|TOO_MANY_KEYS|NO_PERM_SEND|BAD_AMOUNT|NOTE_TOO_LONG|NO_RECIPIENT|SELF_TRANSFER|TO_SUSPENDED|KEY_REUSED|BAD_KEY|NOT_STAFF|IDENTITY_LOCKED|SELF_LOCKED|COLUMN_LOCKED|NO_PERM_KEY|NO_PERM_CREATE|NO_PERM_PASSWORD|NO_PERM_DELETE|ONLY_NEW_KEYS|ROLE_NOT_ALLOWED|CHAIN_NOT_ALLOWED|NOT_ALLOWED|NO_PERM_WALLET|NO_PERM_TRASH|ORDER_LOCKED|PRINT_LOCKED|ORDER_SCHEDULED_PENDING|NO_PERM_STATUS|NO_PERM_EDIT|NO_PERM_PRINT|NO_PERM_DISTRIBUTE|BAD_DATE|TOO_MANY|DIST_ROWS|DIST_OVER_TOTAL|DIST_PERM|NO_PERM_ORDER|ORDER_NOT_FOUND|BAD_REASON|BAD_STATUS|WALLET_NOT_OWNER|WALLET_NOT_ON_ORDER|OVER_READY|NOT_DISTRIBUTED|NEED_UPDATE):\s*([^\n]+)/.exec(m);
             return x ? x[1].trim() : '';
         }
 
@@ -10664,9 +10666,12 @@
             }
         }
 
+        // ⭐ کۆدی ئۆردەری نوێ — یەک جار بۆ هەر فۆڕمێک، هەمان کۆد بۆ هەر هەوڵێکی دووبارە (db/162)؛ فۆڕمێکی پاک = کۆدێکی نوێ
+        let _orderDraftCode = null;
         function resetOrderForm() {
             editingOrderId = null;
             editingOrderWalletPaid = 0;
+            _orderDraftCode = null;
             // ئۆردەری نوێ = جزدانی خۆم؛ ژمارەی ئۆردەری پێشوو بەکارنایەت
             walletReadyState.loaded = false;
             // ⚠️ کاتی داخیلبوون دەبێت لێرە پاک بکرێتەوە — ئەگەرنا
@@ -10877,16 +10882,12 @@
         }
 
         // ============================================================
-        // ئەنجینی پارەدان لە جزدان
+        // پارەی جزدان لەسەر ئۆردەرێک — تەنها خوێندنەوە
         // ------------------------------------------------------------
-        // تاقە شوێن بۆ کەمکردنەوە/گەڕاندنەوەی پارەی جزدان لەسەر ئۆردەرێک.
-        // دووبارە بانگکردنی زیانی نییە (idempotent): هەمیشە سەرەتا ئەوەی
-        // پێشتر لەم ئۆردەرەدا دراوە دەخوێنێتەوە، پاشان تەنها جیاوازییەکە
-        // جێبەجێ دەکات:
-        //     desired = 0  → گەڕاندنەوەی تەواو
-        //     desired = X  → کۆتاییەکەی دەبێتە تەنها X
-        // بۆیە سڕینەوە/گەڕانەوە/دەستکاری هەموویان دەتوانن بانگی بکەن
-        // بەبێ ترسی دووجار بڕین یان دووجار گەڕاندنەوە.
+        // ⭐ (٢٠٢٦-١١-٠٣، db/160) بڕین و گەڕاندنەوەی پارەی پێشوەختی جزدان ئیتر لە کڵاینتەوە نییە: تریگەری
+        // `orders_wallet_follow` لەناو هەمان تڕانزاکشنی نووسینی ئۆردەرەکەدا جزدانەکە بەدوای ئۆردەرەکەدا دەبات (دروستکردن ·
+        // دەستکاری · گەڕانەوە · سڕینەوە · گەڕاندنەوە لە تەنەکە). `syncOrderWalletPayment` (هەنگاوی جیای پێش/دوای نووسین)
+        // لابرا — هێڵێکی پچڕاو لە نێوان دوو هەنگاوەکەدا پارەی بێ ئۆردەر یان ئۆردەری بێ پارەی بەجێدەهێشت.
         // ============================================================
         async function walletPaidOnOrder(orderId, memberCode) {
             const { data, error } = await supabase.from('transactions')
@@ -10895,32 +10896,6 @@
             let paid = 0;
             (data || []).forEach(t => { if (isWalletPayTx(t)) paid -= parseFloat(t.amount || 0); });
             return paid;
-        }
-
-        async function syncOrderWalletPayment(orderId, orderCode, memberCode, desiredAmount) {
-            if (!orderId || !memberCode) return 0;
-            const want = Math.max(0, Math.round(parseFloat(desiredAmount) || 0));
-            const paid = await walletPaidOnOrder(orderId, memberCode);
-            const delta = want - paid;                 // + = بڕینی زیاتر، − = گەڕاندنەوە
-            if (Math.abs(delta) < 0.5) return paid;
-
-            // نوێکردنەوەی باڵانس و تۆمارکردنی جووڵەکە لە ناو یەک ترانزاکشن.
-            // پێشتر سێ هەنگاوی جیاواز بوون (خوێندنەوە ← نووسینەوە ← تۆمار)
-            // و ئەگەر هەنگاوی کۆتایی شکستی دەهێنا، باڵانسەکە بە دەستی
-            // دەگەڕێندرایەوە. ئێستا داتابەیس خۆی هەمووی پێکەوە دەگەڕێنێتەوە.
-            // ⭐ db/110: جووڵەی پارە بە فەنکشنی پشکنراوەوە دەڕوات. سێرڤەر
-            //    خۆی دێلتاکە دەژمێرێت و ناسنامەی ڕاستەقینە بەکاردەهێنێت —
-            //    بۆیە تەنها بڕی مەبەست و کۆدەکان دەنێردرێن.
-            const { error: waErr } = await supabase.rpc('wallet_pay_order', {
-                p_order_id: String(orderId),
-                p_member_code: memberCode,
-                p_desired: want,
-                p_order_code: orderCode || String(orderId)
-            });
-            if (waErr) throw waErr;
-
-            invalidateWalletCaches(memberCode);
-            return want;
         }
 
         // پاککردنەوەی هەموو کاشەکانی جزدان بۆ ئەم کەسە
@@ -12591,6 +12566,7 @@
             if (profitSplitHtml) loadOrderProfitBreakdown(o);
 
             if (distPrefetchCode) distCtxGet(distPrefetchCode).catch(() => { });
+            if (distPrefetchCode) orderProfitStatePrefetch(o.id);   // ⭐ db/158: هەمان شەپۆل
 
             if (showSeller) { if (!sellerHtmlNow) loadSellerInfo(o.seller_code); }
             else if (isOwnerDeleted(o.seller_code)) showOwnerDeletedBanner(o.seller_code);
@@ -14441,13 +14417,18 @@
                     _ocmtEditId = null;
                     _ocmtEditOrig = '';
                 } else {
-                    const { error } = await supabase.rpc('post_order_comment', {
+                    // ⭐ db/162: کلیلی کردار — هەمان کۆمێنت (ئۆردەر + دەق) = هەمان کلیل (`intentKey`)، بۆیە ناردنەوەی دوای
+                    //    وەڵامێکی ونبوو هەرگیز کۆمێنتی دووەم دروست ناکات؛ سێرڤەر هاوشێوەی ١٥ چرکەش دەگرێت (دوو پەنجەدانان)
+                    const cfp = [String(currentUser.code), String(oid), body].join('|');
+                    const { error, status } = await supabase.rpc('post_order_comment', {
                         p_order_id: String(oid),
                         p_body: body,
                         p_user_code: String(currentUser.code),
                         p_user_name: userName || null,
-                        p_order_code: o ? (o.order_code || null) : null
+                        p_order_code: o ? (o.order_code || null) : null,
+                        p_key: intentKey('cmt', cfp)
                     });
+                    if (!(error && isLostReply(error, status))) intentDone('cmt', cfp);
                     if (error) throw error;
                 }
 
@@ -14472,8 +14453,10 @@
                     ocmtGrow(input);
                 }
                 if (editing) { _ocmtEditId = editing; showEditBar(_ocmtEditOrig); }
-                showToast(String(e.message || '').includes('NOT_ALLOWED')
-                    ? "دەسەڵاتت نییە بۆ ئەم پەیامە" : "نەتوانرا پەیامەکە بنێردرێت", "error");
+                showToast(String(e.message || '').includes('NOT_ALLOWED') ? "دەسەڵاتت نییە بۆ ئەم پەیامە"
+                    : isLostReply(e) ? "وەڵام نەگەیشت — دووبارە بینێرەوە؛ پەیامەکە هەرگیز دوو جار نانێردرێت"
+                    : "نەتوانرا پەیامەکە بنێردرێت", "error");
+                if (isLostReply(e)) { delete orderCommentsCache[String(oid)]; loadOrderComments(oid).catch(() => { }); }
             }
         }
 
@@ -19636,16 +19619,23 @@
             if (!s || s.busy) return;
             const chk = fundCheck();
             if (!chk.ok) { s.err = chk.msg; fundPatch(); return; }
+            // ⭐ (٢٠٢٦-١١-٠٣) هێڵ نییە → هیچ نانێردرێت
+            if (netDown()) { s.err = NET_DOWN_MSG; fundPatch(); return; }
             s.busy = true;                                  // ① پێش هەر await
             s.err = '';
             fundPatch();
             const amt = fundAmtNum();
+            // ⭐ کلیل بە مەبەستەکەوە (جۆر · وەرگر · بڕ)، نەک بە شیتەکە: وەڵامێکی ونبوو دوای داخستن و کردنەوەی شیتەکە هەمان کردارە
+            const fp = [currentUser ? currentUser.code : '', s.mode, s.to ? s.to.code : '', amt].join('|');
+            s.key = intentKey('fund', fp);
+            writeBegin();
             try {
                 const rpc = s.mode === 'payout'
                     ? supabase.rpc('shop_fund_payout', { p_member: s.to.code, p_amount: amt,
                                                          p_note: s.note || null, p_key: s.key })
                     : supabase.rpc('shop_fund_settle', { p_amount: amt, p_note: s.note || null, p_key: s.key });
-                const { data, error } = await rpc;
+                const { data, error, status } = await rpc;
+                if (!(error && isLostReply(error, status))) intentDone('fund', fp);
                 if (error) throw error;
                 if (fundState !== s) { fundLoad(true); return; }
                 showToast(s.mode === 'payout'
@@ -19663,6 +19653,8 @@
                       : 'وەڵام نەگەیشت — دووبارە هەوڵ بدەرەوە (دوو جار ناکرێت)';
                 fundPatch();
                 fundLoad(true);
+            } finally {
+                writeEnd();
             }
         }
 
@@ -22773,7 +22765,10 @@
                 // ⚠️ ئەپلۆدەکە سەرەوە ڕوویدا، بۆیە `_cosAdm.imgT`
                 //    ئێستا URLـێکی `https`ـە، نەک `blob:`.
                 cosPartSet('thumb', 'u', okUrl(_cosAdm.imgT));
-                const { data, error } = await supabase.rpc('cosmetic_save', {
+                // ⭐ db/162: دانەی نوێ کلیلێکی هەیە (جۆر + ناو) — وەڵامێکی ونبوو و پاشەکەوتی دووبارە هەرگیز دوو دانە دروست ناکات؛
+                //    دەستکاری هەر بە id ـە (`p_key` بەتاڵ)
+                const kfp = e.id ? '' : [String(currentUser.code), e.kind, String(e.name).trim()].join('|');
+                const { data, error, status } = await supabase.rpc('cosmetic_save', {
                     p_viewer: String(currentUser.code),
                     p_id: e.id || null,
                     p_kind: e.kind,
@@ -22796,8 +22791,10 @@
                     p_place: (e.kind === 'effect' && e.place === 'cover') ? 'cover' : null,
                     // 💳 db/130 — ⚠️ هەردووکیان هەمیشە دەنێردرێن؛ `null` = «وەک خۆی»
                     p_pay: payNow,
-                    p_price_money: Number(e.price_money) || 0
+                    p_price_money: Number(e.price_money) || 0,
+                    p_key: e.id ? null : intentKey('cos', kfp)
                 });
+                if (!e.id && !(error && isLostReply(error, status))) intentDone('cos', kfp);
                 if (error) throw error;
                 const r = data || {};
                 if (!r.ok) { showToast(COS_ERRS[r.error] || 'نەکرا', 'error'); return; }
@@ -23956,29 +23953,40 @@
                 const img = (rk === 'product') ? (_rw.img || null) : null;
                 const timg = (kind === 'product_qty') ? (_rw.timg || null) : null;
                 showToast('پاشەکەوتکردن...', 'loading');
-                const { error } = await supabase.rpc('challenge_save', {
+                const pc = {
+                    id: _rw.editing ? _rw.editing.id : null,
+                    title: title, body: g('rw-ch-body'),
+                    target_kind: kind,
+                    product_match: kind === 'product_qty' ? match : null,
+                    target_value: target,
+                    target_image: timg,
+                    date_from: from, date_to: to,
+                    reward_kind: rk,
+                    reward_amount: rk === 'money' ? ramt : null,
+                    // ⚠️ `reward_product` ناسنامەی خەڵاتەکەیە:
+                    //    کاڵا → ناو ، جوانکاری → `cosmetics.id` (db/076)
+                    reward_product: rk === 'product' ? rprod
+                                  : (rk === 'cosmetic' ? rcos : null),
+                    reward_image: rk === 'product' ? img : null,
+                    active: _rw.editing ? _rw.editing.active : true,
+                    show_before: rwSwitchOn('rw-ch-showbefore'),
+                    show_after: rwSwitchOn('rw-ch-showafter')
+                };
+                // ⭐ db/162: چاڵنجی نوێ کلیلێکی هەیە (`p.key`) — هەمان چاڵنج = هەمان کلیل، بۆیە وەڵامێکی ونبوو و پاشەکەوتی دووبارە
+                //    هەرگیز دوو چاڵنج دروست ناکات. دەستکاری هەر بە id ـە.
+                const cfp = pc.id ? '' : String(currentUser.code) + '|' + JSON.stringify(pc);
+                if (!pc.id) pc.key = intentKey('ch', cfp);
+                const { error, status } = await supabase.rpc('challenge_save', {
                     p_user_code: String(currentUser.code),
-                    p: {
-                        id: _rw.editing ? _rw.editing.id : null,
-                        title: title, body: g('rw-ch-body'),
-                        target_kind: kind,
-                        product_match: kind === 'product_qty' ? match : null,
-                        target_value: target,
-                        target_image: timg,
-                        date_from: from, date_to: to,
-                        reward_kind: rk,
-                        reward_amount: rk === 'money' ? ramt : null,
-                        // ⚠️ `reward_product` ناسنامەی خەڵاتەکەیە:
-                        //    کاڵا → ناو ، جوانکاری → `cosmetics.id` (db/076)
-                        reward_product: rk === 'product' ? rprod
-                                      : (rk === 'cosmetic' ? rcos : null),
-                        reward_image: rk === 'product' ? img : null,
-                        active: _rw.editing ? _rw.editing.active : true,
-                        show_before: rwSwitchOn('rw-ch-showbefore'),
-                        show_after: rwSwitchOn('rw-ch-showafter')
-                    }
+                    p: pc
                 });
-                if (error) { console.error('challenge_save:', error); showToast('پاشەکەوت سەرنەکەوت', 'error'); return; }
+                if (!pc.id && !(error && isLostReply(error, status))) intentDone('ch', cfp);
+                if (error) {
+                    console.error('challenge_save:', error);
+                    showToast(isLostReply(error, status) ? 'وەڵام نەگەیشت — دووبارە پاشەکەوتی بکە؛ هەرگیز دوو جار دروست ناکرێت'
+                        : 'پاشەکەوت سەرنەکەوت', 'error');
+                    return;
+                }
                 rwCloseCreateSheet();
                 showToast(_rw.editing ? 'چاڵنجەکە نوێکرایەوە' : 'چاڵنجەکە دروست کرا و بۆ هەموان دەرکەوت', 'success');
                 loadRewardsHome(true);
@@ -24030,19 +24038,30 @@
             }
             await guardSubmit('rw-create', btn, async () => {
                 showToast('پاشەکەوتکردن...', 'loading');
-                const { data: sid, error } = await supabase.rpc('season_save', {
+                const ps = {
+                    id: (_rw.editing && _rw.editing.id) || null,
+                    // ⚠️ پێشتر هەمیشە `true` بوو، بۆیە هەر پاشەکەوتێک
+                    //    وەرزەکانی تری ڕادەگرت — بێ ئەوەی کەس بزانێت
+                    title: title, date_from: from, date_to: to,
+                    active: rwSwitchOn('rw-se-active'),
+                    show_before: rwSwitchOn('rw-se-showbefore'),
+                    show_after: rwSwitchOn('rw-se-showafter')
+                };
+                // ⭐ db/162: وەرزی نوێ کلیلێکی هەیە — هەوڵی دووبارە (وەڵامی ونبوو، یان پلیکانەکان شکستیان هێنا) هەمان وەرز
+                //    دەگەڕێنێتەوە، نەک وەرزی دووەم؛ کلیلەکە تەنها دوای پاشەکەوتی پلیکانەکان تەواو دەبێت
+                const sfp = ps.id ? '' : String(currentUser.code) + '|' + JSON.stringify(ps);
+                if (!ps.id) ps.key = intentKey('season', sfp);
+                const { data: sid, error, status } = await supabase.rpc('season_save', {
                     p_user_code: String(currentUser.code),
-                    p: {
-                        id: (_rw.editing && _rw.editing.id) || null,
-                        // ⚠️ پێشتر هەمیشە `true` بوو، بۆیە هەر پاشەکەوتێک
-                        //    وەرزەکانی تری ڕادەگرت — بێ ئەوەی کەس بزانێت
-                        title: title, date_from: from, date_to: to,
-                        active: rwSwitchOn('rw-se-active'),
-                        show_before: rwSwitchOn('rw-se-showbefore'),
-                        show_after: rwSwitchOn('rw-se-showafter')
-                    }
+                    p: ps
                 });
-                if (error) { console.error('season_save:', error); showToast('پاشەکەوتی وەرز سەرنەکەوت', 'error'); return; }
+                if (error) {
+                    console.error('season_save:', error);
+                    if (!ps.id && !isLostReply(error, status)) intentDone('season', sfp);
+                    showToast(isLostReply(error, status) ? 'وەڵام نەگەیشت — دووبارە پاشەکەوتی بکە؛ هەرگیز دوو وەرز دروست ناکرێت'
+                        : 'پاشەکەوتی وەرز سەرنەکەوت', 'error');
+                    return;
+                }
                 // ⭐ db/060: هەموو پلیکانەکان بە **یەک** بانگ، بە تەواوی
                 //    یان هیچ. ٥٠ پلیکان پێشتر ٥٠ بانگی بە ڕیزی دەویست، و
                 //    شکانی یەکێکیان وەرزێکی ناتەواوی بەجێدەهێشت.
@@ -24064,8 +24083,10 @@
                         m.indexOf('HAS_CLAIMS') !== -1 ? 'پلیکانێک بردنەوەی لەسەرە — ناسڕدرێتەوە'
                         : m.indexOf('DUP_TIER') !== -1 ? 'دوو پلیکان بە یەک خاڵ'
                         : 'پاشەکەوتی پلیکانەکان سەرنەکەوت', 'error');
+                    // وەرزەکە دروست بوو و پلیکانەکان نا: کلیلەکە دەمێنێت، بۆیە پاشەکەوتی دووبارە هەمان وەرز دەگەڕێنێتەوە
                     return;
                 }
+                if (!ps.id) intentDone('season', sfp);
                 rwCloseCreateSheet();
                 showToast('وەرزەکە پاشەکەوت کرا', 'success');
                 loadRewardsHome(true);
@@ -29418,20 +29439,28 @@
             const t = document.getElementById('anc-text');
             const body = t ? t.value.trim() : '';
             if (!body) return;
-            if (!await ensureAccountActiveFresh()) return;
-
+            // ⭐ (٢٠٢٦-١١-٠٣) قوفڵ پێش هەر await (پێشتر دوای پشکنینی ئەکاونت بوو: دوو پەنجەدانان لەو ماوەیەدا دوو ئاگاداری) ·
+            //    هێڵ نییە → هیچ نانێردرێت
+            if (netDown()) { showToast(NET_DOWN_MSG, 'error'); return; }
             _ancBusy = true;
             const old = btn.innerHTML;
             btn.disabled = true;
             btn.innerHTML = `<i class='bx bx-loader-alt bx-spin'></i> خەریکی ناردنە...`;
+            writeBegin();
 
             try {
+                if (!await ensureAccountActiveFresh()) return;
                 // وێنەکان: کۆمپرێس → ئاپلۆد. هەمان پایپلاینی ئۆردەرەکان.
+                // ⭐ وێنەی ئەپلۆدکراو لەسەر خانەکە دەمێنێت (`up`): هەوڵی دووبارە هەمان لینک دەنێرێت، بۆیە کلیلەکە (db/162) هەمان
+                //    ئاگادارییە و فایلی بێخاوەن دروست نابێت
                 const urls = [];
                 for (let i = 0; i < _ancFiles.length; i++) {
-                    btn.innerHTML = `<i class='bx bx-loader-alt bx-spin'></i> وێنەی ${i + 1} لە ${_ancFiles.length}...`;
-                    const blob = await compressImage(_ancFiles[i].file);
-                    urls.push(await uploadToSupabase(blob, _ancFiles[i].file.name || 'photo.jpg'));
+                    if (!_ancFiles[i].up) {
+                        btn.innerHTML = `<i class='bx bx-loader-alt bx-spin'></i> وێنەی ${i + 1} لە ${_ancFiles.length}...`;
+                        const blob = await compressImage(_ancFiles[i].file);
+                        _ancFiles[i].up = await uploadToSupabase(blob, _ancFiles[i].file.name || 'photo.jpg');
+                    }
+                    urls.push(_ancFiles[i].up);
                 }
 
                 btn.innerHTML = `<i class='bx bx-loader-alt bx-spin'></i> خەریکی ناردنە...`;
@@ -29448,12 +29477,16 @@
                     // کاشەکە دەبێت بسڕدرێتەوە — ئەگەرنا دەقی کۆن دەمێنێتەوە
                     delete announceCache[String(_ancEditId)];
                 } else {
-                    const { error } = await supabase.rpc('post_announcement', {
+                    // ⭐ db/162: هەمان ئاگاداری (دەق + وێنەکان) = هەمان کلیل — وەڵامێکی ونبوو هەرگیز ئاگاداریی دووەم نانێرێت
+                    const afp = [String(currentUser.code), body].concat(urls).join('|');
+                    const { error, status } = await supabase.rpc('post_announcement', {
                         p_author_code: String(currentUser.code),
                         p_body: body,
                         p_images: urls,
-                        p_audience: null          // ⚠️ سێرڤەر خۆی بڕیار دەدات
+                        p_audience: null,         // ⚠️ سێرڤەر خۆی بڕیار دەدات
+                        p_key: intentKey('anc', afp)
                     });
+                    if (!(error && isLostReply(error, status))) intentDone('anc', afp);
                     if (error) throw error;
                 }
 
@@ -29474,9 +29507,11 @@
                 showToast(
                     m.includes('NOT_ALLOWED') ? 'دەسەڵاتت نییە بۆ ناردنی ئاگاداری'
                         : m.includes('TOO_MANY') ? 'ئەوپەڕی 3 وێنە'
-                            : 'نەتوانرا بنێردرێت — دووبارە هەوڵبدەرەوە', 'error');
+                            : isLostReply(e) ? 'وەڵام نەگەیشت — دووبارە بینێرەوە؛ ئاگادارییەکە هەرگیز دوو جار نانێردرێت'
+                                : 'نەتوانرا بنێردرێت — دووبارە هەوڵبدەرەوە', 'error');
             } finally {
                 _ancBusy = false;
+                writeEnd();
                 btn.disabled = false;
                 btn.innerHTML = old;
                 ancOnInput();
@@ -30850,16 +30885,29 @@
             el.classList.toggle('is-on', n > 0);
         }
 
-        async function restoreMyTrash(id, btn, fromModal) {
+        // ⭐ (٢٠٢٦-١١-٠٣) قوفڵ پێش هەر await · `exists` / `expired` ئیتر وەک «گەڕایەوە» پیشان نادرێن (پێشتر تەنها
+        //    «error…» ڕەت دەکرایەوە) · وەڵامی ونبوو → لیستەکە نوێ دەکرێتەوە، هەرگیز «نەتوانرا» بە گومان. پارەی پێشوەختی جزدان
+        //    لەناو هەمان تڕانزاکشندا دووبارە دەبڕدرێت (db/160).
+        function restoreMyTrash(id, btn, fromModal) {
             if (!currentUser || !currentUser.code) return;
             if (!confirm('ئەم ئۆردەرە بگەڕێتەوە بۆ لیستی ئۆردەرەکانت؟')) return;
-            if (btn) { btn.disabled = true; btn.style.opacity = '0.5'; }
+            return guardSubmit('mytrash-restore-' + id, btn, () => restoreMyTrashImpl(id, btn, fromModal));
+        }
+        async function restoreMyTrashImpl(id, btn, fromModal) {
             try {
                 const { data, error } = await supabase.rpc('restore_my_trash', {
                     p_trash_id: id, p_code: String(currentUser.code)
                 });
+                if (error && isLostReply(error)) {
+                    showToast(LOST_REPLY_MSG, 'error');
+                    invalidateMgmtCache(); isDashboardDataLoaded = false; isManagementDataLoaded = false;
+                    try { await loadMyTrash(true); } catch (e) { }
+                    return;
+                }
                 if (error) throw error;
-                if (data && String(data).startsWith('error')) throw new Error(String(data));
+                if (data === 'exists') { showToast('ناتوانرێت بگەڕێتەوە — هەمان کۆد/ناسنامە دووبارە بەکارهاتووە', 'error'); return; }
+                if (data === 'expired') { showToast('ماوەکەی بەسەرچووە', 'error'); try { await loadMyTrash(true); } catch (e) { } return; }
+                if (data !== 'ok') throw new Error(String(data));
 
                 showToast('ئۆردەرەکە گەڕایەوە', 'success');
                 if (fromModal) closeModal(null, 'trash-detail-modal');
@@ -30872,8 +30920,8 @@
                 isManagementDataLoaded = false;
             } catch (e) {
                 console.warn('restoreMyTrash:', e);
-                showToast('نەتوانرا بگەڕێندرێتەوە', 'error');
-                if (btn) { btn.disabled = false; btn.style.opacity = ''; }
+                const m = String((e && e.message) || '');
+                showToast(serverGuardMsg(e) || (m.startsWith('error: ') ? m.slice(7) : 'نەتوانرا بگەڕێندرێتەوە'), 'error');
             }
         }
 
@@ -31990,23 +32038,26 @@
         // ⚡ (٢٠٢٦-١٠-١٦، db/135) گۆڕینی حاڵەتی بێ پارە («لە ڕێگایە» · «گەیشتووە»ـی ئۆردەری خەڵات) + تۆمار بە **یەک**
         //    بانگ و یەک تڕانزاکشن. پێشتر PATCH (URLـی نوێ بۆ هەر ئۆردەرێک → preflight هەموو جارێک) و پاشان POSTـی
         //    تۆمار؛ ئەگەر تۆمار شکستی هێنابا، حاڵەت دەگۆڕا بێ تۆمار. `reason`: `null` = دەستی لێنادرێت (ئۆردەری
-        //    خەڵات). سێرڤەر وەک بەکارهێنەرەکە دەینووسێت (`orders_guard`). ⚠️ فەنکشن نییە (PGRST202) → هەمان دوو
-        //    داواکاریی کۆن.
+        //    خەڵات). سێرڤەر وەک بەکارهێنەرەکە دەینووسێت (`orders_guard`).
+        // ⭐ (٢٠٢٦-١١-٠٣، db/161) `p_expect` = ئەو حاڵەتەی ئەم شاشەیە بینیویەتی: ئەگەر لەم نێوانەدا گۆڕابێت → `STATUS_CHANGED`
+        //    پێش هەر نووسینێک. ڕێگای کۆنی PATCH + تۆمار (PGRST202) لابرا — دوو نووسینی جیا بوو. وەڵامی ونبوو → حاڵەتی ڕاستەقینە
+        //    دەپرسرێت: ئەگەر گەیشتبوو سەرکەوتنە، ئەگەرنا هەڵەکە دەگەڕێتەوە (هەرگیز دووبارەناردنی کوێرانە).
         async function orderSetStatus(o, newStatus, reason, detail) {
             const { error: setErr } = await supabase.rpc('order_set_status', {
                 p_order_id: String(o.id),
                 p_status: newStatus,
                 p_reason: reason,
                 p_created_by: userName,
-                p_detail: detail
+                p_detail: detail,
+                p_expect: o.status || null
             });
-            if (setErr && !rpcMissing(setErr)) throw setErr;
-            if (!setErr) { orderLogBust(o); return; }
-            const patch = { status: newStatus, status_changed_by: userName };
-            if (reason != null) patch.return_reason = reason;
-            const { error: stErr } = await supabase.from('orders').update(patch).eq('id', o.id);
-            if (stErr) throw stErr;
-            await logOrderAction(o, 'status', { from: o.status, to: newStatus, detail: detail });
+            if (setErr && isLostReply(setErr)) {
+                const { data: now } = await supabase.from('orders').select('status').eq('id', o.id).maybeSingle();
+                if (now && String(now.status || '') === String(newStatus)) { orderLogBust(o); return; }
+                throw setErr;
+            }
+            if (setErr) throw setErr;
+            orderLogBust(o);
         }
 
         // ⭐ (٢٠٢٦-١٠-٢٦) «لە ڕێگایە» لێرەوە ئۆردەرەکە نادات بە هیچ شۆفێرێک: ناچێتە هیچ لیستێکی بەڕێکردن، بۆیە
@@ -32066,12 +32117,26 @@
             if (ask && !confirm(ask)) return;
             showToast("خەریکی نوێکردنەوە...", "loading");
             try {
+                // ⭐ db/161: `p_expect` = ئەو حاڵەتەی ژمارەکانی سەرەوە لەسەری حیساب کران — ئەگەر لەم نێوانەدا گۆڕابێت، سێرڤەر
+                //    `STATUS_CHANGED` دەدات پێش هەر نووسینێک (پرسیارەکە ئیتر ڕاست نییە)
                 const { data, error } = await supabase.rpc('order_king_set_status', {
                     p_order_id: String(o.id),
                     p_status: newStatus,
                     p_created_by: userName,
-                    p_detail: `حاڵەتی گۆڕی بۆ «${newStatus}»`
+                    p_detail: `حاڵەتی گۆڕی بۆ «${newStatus}»`,
+                    p_expect: o.status || null
                 });
+                if (error && isLostReply(error)) {
+                    const { data: now } = await supabase.from('orders').select('status').eq('id', o.id).maybeSingle();
+                    if (now && String(now.status || '') === String(newStatus)) {
+                        orderLogBust(o); delete orderProfitCache[o.id];
+                        if (o.seller_code) invalidateWalletCaches(o.seller_code);
+                        showToast('حاڵەت گۆڕدرا (وەڵامەکە دواکەوت)', 'success');
+                        closeModal(null, 'order-details-modal');
+                    } else showToast(now ? 'وەڵام نەگەیشت — حاڵەت نەگۆڕا، دووبارە هەوڵ بدە' : LOST_REPLY_MSG, 'error');
+                    rtPatchOrders([o.id]);
+                    return;
+                }
                 if (error) throw error;
                 orderLogBust(o);
                 delete orderProfitCache[o.id];                 // دابەشکردنەکە گۆڕا
@@ -32087,6 +32152,7 @@
             } catch (e) {
                 console.error('order_king_set_status:', e);
                 showToast(rpcMissing(e) ? 'ئەم گۆڕینە هێشتا لە سێرڤەر ئامادە نییە' : (serverGuardMsg(e) || 'هەڵەیەک ڕوویدا'), 'error');
+                if (String(e && e.message || '').includes('STATUS_CHANGED')) rtPatchOrders([o.id]);
             }
         }
 
@@ -32182,7 +32248,13 @@
             return out;
         }
 
-        async function updateOrderStatus(orderId) {
+        // ⭐ (٢٠٢٦-١١-٠٣) قوفڵ پێش هەر await (`guardSubmit`): دوگمەی «پشتڕاستکردنەوەی گەڕانەوە» هیچ قوفڵێکی نەبوو، بۆیە دوو
+        //    پەنجەدانان دوو بانگی دەنارد (سێرڤەر ئێستا دووەمیان `already` دەکات — db/161). هێڵ نییە → هیچ نانێردرێت.
+        function updateOrderStatus(orderId) {
+            const btn = document.getElementById('status-save-btn');
+            return guardSubmit('status-' + orderId, (btn && btn.offsetParent) ? btn : null, () => updateOrderStatusImpl(orderId));
+        }
+        async function updateOrderStatusImpl(orderId) {
             // پشکنینی ئاسایش: کلیلەکە هەیە
             if (!await ensureAccountActiveFresh()) return;
             let newStatus = document.getElementById('new-order-status').value;
@@ -32264,7 +32336,7 @@
                     showToast("حاڵەت گۆڕدرا!", "success");
                     closeModal(null, 'order-details-modal');
                     rtPatchOrders([orderId]);
-                } catch (e) { showToast(serverGuardMsg(e) || "هەڵەیەک ڕوویدا", "error"); }
+                } catch (e) { statusErrToast(e, orderId); }
                 return;
             }
 
@@ -32284,14 +32356,10 @@
                 closeModal(null, 'order-details-modal');
 
                 try {
-                    // پارەی جزدانی خاوەنەکەی بە تەواوی دەگەڕێتەوە.
-                    // بەجیا لە قازانجەکان دەکرێت، چونکە خۆی تۆمارێکی
-                    // «چەندی دراوە» هەیە و دووبارە گەڕاندنەوە ناکات
-                    let walletBack = 0;
-                    if (orderWalletPaid(o) > 0 && o.seller_code) {
-                        walletBack = await walletPaidOnOrder(o.id, o.seller_code);
-                        await syncOrderWalletPayment(o.id, o.order_code, o.seller_code, 0);
-                    }
+                    // ⭐ db/160 · db/161 (٢٠٢٦-١١-٠٣): پارەی پێشوەختی جزدانی خاوەنەکەی لەناو هەمان تڕانزاکشنی
+                    //    `order_mark_returned`ـدا دەگەڕێتەوە (تریگەری `orders_wallet_follow`)، و سێرڤەر بڕە ڕاستەقینەکە دەڵێت
+                    //    (`refunded`). پێشتر هەنگاوێکی جیا بوو پێش بانگەکە: ئەگەر بانگەکە شکستی هێنابا، پارەکە گەڕابووەوە و
+                    //    ئۆردەرەکە نەگەڕابوو (return-1).
                     // ==========================================================
                     // گەڕاندنەوەی قازانج بە یەک بانگی ئەتۆمی
                     // ----------------------------------------------------------
@@ -32304,45 +32372,48 @@
                     // دەژمێردرا، پاشان دەنووسرایەوە — بۆیە دوو کلیکی خێرا
                     // باڵانسیان یەک جار دەگۆڕی بەڵام دوو ڕیزەیان تۆمار دەکرد.
                     // ==========================================================
-                    const backNote = walletBack > 0
-                        ? ` ${Math.round(walletBack).toLocaleString()} د.ع گەڕایەوە جزدانی خاوەنەکەی.`
-                        : '';
                     const retDesc = `بڕین بەهۆی گەڕانەوەی ئۆردەری ${o.order_code}. هۆکار: ${reason}`;
-                    const retDetail = `ئۆردەرەکەی کردە گەڕاوە و پارەکان بڕدران.${backNote} هۆکار: ${reason}`;
                     // ⚡ (٢٠٢٦-١٠-١٥، db/133) گەڕاندنەوەی قازانج → حاڵەت → تۆمار بە **یەک** بانگ و یەک تڕانزاکشن.
-                    //    پێشتر ئەگەر حاڵەت ڕەت کرابایەوە، قازانجەکە پێشتر گەڕابووەوە. ⚠️ فەنکشن نییە (PGRST202) →
-                    //    هەمان سێ هەنگاوی کۆن.
-                    const { error: fastErr } = await supabase.rpc('order_mark_returned', {
+                    // ⭐ db/161: `p_expect` = ئەو حاڵەتەی ئەم شاشەیە بینیویەتی (`STATUS_CHANGED` پێش هەر نووسینێک)؛ «پێشتر گەڕاوە» =
+                    //    `already` (هیچ نانووسرێت). `p_detail: null` → سێرڤەر تۆمارەکە بە بڕی ڕاستەقینەی گەڕاوە دەنووسێت.
+                    //    ⚠️ ڕێگای سێ هەنگاویی کۆن (PGRST202) لابرا — ئەگەر حاڵەت ڕەت کرابایەوە پارەکە گەڕابووەوە.
+                    const { data: retData, error: fastErr } = await supabase.rpc('order_mark_returned', {
                         p_order_id: String(o.id),
                         p_reason: reason,
                         p_created_by: userName,
                         p_description: retDesc,
-                        p_detail: retDetail
+                        p_detail: null,
+                        p_expect: o.status || null
                     });
-                    if (fastErr && !rpcMissing(fastErr)) throw fastErr;
-                    if (!fastErr) {
-                        orderLogBust(o);
-                    } else {
-                        const { error: retErr } = await supabase.rpc('return_order_profit', {
-                            p_order_id: String(o.id),
-                            p_created_by: userName,
-                            p_description: retDesc
-                        });
-                        if (retErr) throw retErr;
-                        const { error: stErr } = await supabase.from('orders').update({ status: newStatus, return_reason: reason, status_changed_by: userName }).eq('id', orderId);
-                        if (stErr) throw stErr;
-                        await logOrderAction(o, 'status', {
-                            from: o.status, to: newStatus,
-                            detail: retDetail
-                        });
+                    if (fastErr && isLostReply(fastErr)) {
+                        // وەڵام نەگەیشت: لەوانەیە گەڕابێتەوە — حاڵەتی ڕاستەقینە دەپرسرێت، هەرگیز «هەڵە» بە گومان
+                        const { data: now } = await supabase.from('orders').select('status').eq('id', o.id).maybeSingle();
+                        if (now && statusBucket(now.status) === 'ret') {
+                            orderLogBust(o); delete orderProfitCache[o.id];
+                            if (o.seller_code) invalidateWalletCaches(o.seller_code);
+                            showToast("«گەڕاوەتەوە» تۆمار کرا (وەڵامەکە دواکەوت)", "success");
+                        } else {
+                            showToast(now ? "وەڵام نەگەیشت — ئۆردەرەکە هێشتا نەگەڕاوەتەوە، دووبارە هەوڵ بدە؛ هیچ پارەیەک دوو جار ناگەڕێتەوە"
+                                : LOST_REPLY_MSG, "error");
+                        }
+                        rtPatchOrders([o.id]);
+                        return;
                     }
-                    showToast(walletBack > 0
-                        ? `حاڵەت گۆڕدرا — ${Math.round(walletBack).toLocaleString()} د.ع گەڕایەوە جزدان!`
-                        : "حاڵەت گۆڕدرا و پارەکان بڕدران!", "success");
+                    if (fastErr) throw fastErr;
+                    orderLogBust(o);
+                    delete orderProfitCache[o.id];
+                    const rr = retData || {};
+                    const walletBack = Number(rr.refunded) || 0;
+                    if (walletBack > 0 && o.seller_code) invalidateWalletCaches(o.seller_code);
+                    showToast(rr.already ? "ئەم ئۆردەرە پێشتر گەڕاوەتەوە — هیچ پارەیەک دووبارە نەگەڕایەوە"
+                        : walletBack > 0
+                            ? `حاڵەت گۆڕدرا — ${Math.round(walletBack).toLocaleString('en-US')} د.ع گەڕایەوە جزدان!`
+                            : "حاڵەت گۆڕدرا و پارەکان بڕدران!", "success");
                     rtPatchOrders([o.id]);
                 } catch (e) {
                     console.error('return order:', e);
-                    showToast(serverGuardMsg(e) || "هەڵە لە گەڕانەوەدا ڕوویدا", "error");
+                    showToast((serverGuardMsg(e) || "هەڵە لە گەڕانەوەدا ڕوویدا") + " — هیچ شتێک نەگۆڕا", "error");
+                    if (String(e && e.message || '').includes('STATUS_CHANGED')) rtPatchOrders([o.id]);
                 }
                 return;
             }
@@ -32358,10 +32429,23 @@
                 showToast("حاڵەت گۆڕدرا!", "success");
                 closeModal(null, 'order-details-modal');
                 rtPatchOrders([orderId]);
-            } catch (e) { showToast(serverGuardMsg(e) || "هەڵەیەک ڕوویدا", "error"); }
+            } catch (e) { statusErrToast(e, orderId); }
         }
 
-        async function deleteOrder(orderId) {
+        // هەڵەی گۆڕینی حاڵەت: وەڵامی ونبوو ≠ «سەرنەکەوت» (لیستەکە نوێ دەکرێتەوە)؛ `STATUS_CHANGED` → لیستەکە نوێ دەکرێتەوە
+        function statusErrToast(e, orderId) {
+            if (isLostReply(e)) { showToast(LOST_REPLY_MSG, "error"); rtPatchOrders([orderId]); return; }
+            showToast(serverGuardMsg(e) || "هەڵەیەک ڕوویدا", "error");
+            if (String(e && e.message || '').includes('STATUS_CHANGED')) rtPatchOrders([orderId]);
+        }
+
+        // ⭐ (٢٠٢٦-١١-٠٣، db/163) سڕینەوە = یەک بانگ (`order_delete`): پشکنین لەسەر ڕیزی قوفڵکراو · تەنەکە · گەڕاندنەوەی
+        //    پارەی پێشوەخت (db/160) · تۆمار دوای سڕینەوە بە بڕی ڕاستەقینە — هەمووی یان هیچ. پێشتر چوار هەنگاوی جیا بوو
+        //    (پارە → تۆمار → سڕینەوە)، بۆیە هێڵێکی پچڕاو پارەی گەڕاوە یان تۆماری «سڕییەوە»ی بۆ ئۆردەرێکی زیندوو بەجێدەهێشت.
+        function deleteOrder(orderId) {
+            return guardSubmit('delete-' + orderId, null, () => deleteOrderImpl(orderId));
+        }
+        async function deleteOrderImpl(orderId) {
             // پشکنینی ئاسایش: ئایا کلیلەکە هێشتا هەیە؟
             if (!await ensureAccountActiveFresh()) return;
             let ordDel = allGlobalOrdersData[orderId];
@@ -32396,34 +32480,40 @@
             showToast("خەریکی سڕینەوە...", "loading");
 
             try {
-                // ئەگەر لە جزدانەوە پارەی دراوە، پێش سڕینەوە دەگەڕێتەوە —
-                // ئۆردەری سڕاو نابێت پارەی کەسێکی لەگەڵ خۆیدا ببات.
-                // ئەگەر بگەڕێندرێتەوە لە تەنەکەی خۆڵ، دیسان دەبڕدرێت
-                let delWalletBack = 0;
-                if (ordDel && orderWalletPaid(ordDel) > 0 && ordDel.seller_code) {
-                    delWalletBack = await walletPaidOnOrder(orderId, ordDel.seller_code);
-                    await syncOrderWalletPayment(orderId, ordDel.order_code, ordDel.seller_code, 0);
-                }
-
-                // پێش سڕینەوە تۆمار دەکرێت — تا دیار بێت کێ سڕیویەتییەوە
-                await logOrderAction(ordDel || { id: orderId }, 'delete', {
-                    from: ordDel ? ordDel.status : null,
-                    detail: 'ئۆردەرەکەی سڕییەوە'
-                        + (delWalletBack > 0 ? ` — ${Math.round(delWalletBack).toLocaleString()} د.ع گەڕایەوە جزدان` : '')
+                // ئەگەر لە جزدانەوە پارەی دراوە، لەناو هەمان تڕانزاکشندا دەگەڕێتەوە (`refunded`)؛ ئەگەر لە تەنەکەی خۆڵ
+                // بگەڕێندرێتەوە، دیسان دەبڕدرێت. «کێ سڕییەوە» لە دانیشتنەوەیە، نەک لە براوزەر.
+                const { data, error } = await supabase.rpc('order_delete', {
+                    p_order_id: String(orderId),
+                    p_expect: ordDel ? (ordDel.status || null) : null
                 });
+                if (error && isLostReply(error)) {
+                    // وەڵام نەگەیشت: ئایا ئۆردەرەکە هێشتا هەیە؟ — هەرگیز «سڕایەوە» یان «هەڵە» بە گومان
+                    const { data: now, error: nowErr } = await supabase.from('orders').select('id').eq('id', orderId).maybeSingle();
+                    if (!nowErr && !now) {
+                        showToast("چووە تەنەکەی خۆڵی پرۆفایلەکەت (وەڵامەکە دواکەوت)", "success");
+                        if (ordDel && ordDel.seller_code) invalidateWalletCaches(ordDel.seller_code);
+                    } else showToast(nowErr ? LOST_REPLY_MSG : "وەڵام نەگەیشت — ئۆردەرەکە هێشتا هەیە، دووبارە هەوڵ بدە", "error");
+                    rtPatchOrders([orderId]);
+                    return;
+                }
+                if (error) throw error;
+                const r = data || {};
+                const delWalletBack = Number(r.refunded) || 0;
+                if (delWalletBack > 0 && ordDel && ordDel.seller_code) invalidateWalletCaches(ordDel.seller_code);
+                orderLogBust(ordDel || orderId);
 
-                await deleteWithActor('orders', orderId);
-
-                showToast(delWalletBack > 0
-                    ? `چووە تەنەکەی خۆڵ — ${Math.round(delWalletBack).toLocaleString()} د.ع گەڕایەوە جزدانەکەت`
-                    : "چووە تەنەکەی خۆڵی پرۆفایلەکەت — 30 ڕۆژ ماوەی هەیە", "success");
+                showToast(r.already ? "ئەم ئۆردەرە پێشتر سڕاوەتەوە"
+                    : delWalletBack > 0
+                        ? `چووە تەنەکەی خۆڵ — ${Math.round(delWalletBack).toLocaleString('en-US')} د.ع گەڕایەوە جزدانەکەت`
+                        : "چووە تەنەکەی خۆڵی پرۆفایلەکەت — 30 ڕۆژ ماوەی هەیە", "success");
 
                 // ئۆردەرەکە چووەتە تەنەکەی خۆڵ → سێرڤەر هیچی
                 // ناگەڕێنێتەوە → کارتەکەی بێدەنگ لادەبرێت
                 rtPatchOrders([orderId]);
             } catch (err) {
                 console.log(err);
-                showToast("❌ هەڵەیەک ڕوویدا لە سڕینەوەدا", "error");
+                showToast("❌ " + (serverGuardMsg(err) || "هەڵەیەک ڕوویدا لە سڕینەوەدا") + " — هیچ شتێک نەسڕایەوە", "error");
+                if (String(err && err.message || '').includes('STATUS_CHANGED')) rtPatchOrders([orderId]);
             }
         }
 
@@ -32640,29 +32730,115 @@
         // ماوەیەدا ناچالاک/کاڵ دەکرێت. ئەمە بۆ ئەو کردارانەیە کە خۆیان
         // idempotent نین (وەک دروستکردنی ئۆردەر یان جوڵاندنی پارە).
         const _submitLocks = new Set();
+
+        // ⭐ پاراستنی کرداری هەستیار (پشکنینی تۆکمەیی ٢٠٢٦-١١-٠٣): هێڵی پچڕاو · وەڵامی ونبوو · داخستنی ئەپ.
+        //    هیچ شتێک نانێردرێت کاتێک تەلەفۆنەکە خۆی دەڵێت هێڵ نییە؛ وەڵامێکی ونبوو هەرگیز «سەرنەکەوت» نییە (لەوانەیە
+        //    گەیشتبێت — ئەپ دەپرسێت یان بە هەمان کلیل دووبارە دەنێرێت)؛ و تا ناردنێک لە ڕێگادایە تلیگرام پێش داخستن دەپرسێت.
+        const NET_DOWN_MSG = 'هێڵی ئینتەرنێتت پچڕاوە، تکایە دڵنیابەرەوە لە هێڵەکەت';
+        const LOST_REPLY_MSG = 'وەڵام نەگەیشت — نازانرێت تۆمار کرا یان نا. لیستەکە نوێ دەکرێتەوە، پاشان بپشکنە';
+        function netDown() {
+            try { return typeof navigator !== 'undefined' && navigator.onLine === false; } catch (e) { return false; }
+        }
+        // وەڵامی ونبوو: هێڵ پچڕا، کاتی کۆتایی، یان دەروازە (502 · 503 · 504) — نەک ڕەتکردنەوەیەک بە کۆدی سێرڤەر
+        function isLostReply(err, status) {
+            if (!err) return false;
+            const st = Number(status || err.status || 0);
+            if (st === 502 || st === 503 || st === 504) return true;
+            const code = String(err.code || '');
+            if (code && code !== 'TIMEOUT') return false;
+            // supabase-js: هیچ وەڵامێکی HTTP نەهات (status 0) و هیچ کۆدێکی سێرڤەر نییە
+            if (status === 0) return true;
+            const msg = String(err.message || err.details || err || '');
+            return /Failed to fetch|NetworkError|Load failed|network|TimeoutError|AbortError|timed? ?out/i.test(msg);
+        }
+        let _writesInFlight = 0;
+        function writeBegin() {
+            _writesInFlight++;
+            try { const tg = window.Telegram && window.Telegram.WebApp; if (tg && tg.enableClosingConfirmation) tg.enableClosingConfirmation(); } catch (e) { }
+        }
+        function writeEnd() {
+            _writesInFlight = Math.max(0, _writesInFlight - 1);
+            if (_writesInFlight) return;
+            try { const tg = window.Telegram && window.Telegram.WebApp; if (tg && tg.disableClosingConfirmation) tg.disableClosingConfirmation(); } catch (e) { }
+        }
+        // کلیلێکی تاک بۆ «هەمان مەبەست» — هەمان کلیل بۆ هەر هەوڵێکی دووبارە (تەنانەت دوای داخستن و کردنەوەی شیت/ئەپ)،
+        // تا سێرڤەر یەک جار جێبەجێی بکات (db/162). تەنها پەنجەمۆری مەبەستەکە و کلیلەکە هەڵدەگیرێن — هیچ زانیارییەکی کڕیار.
+        const INTENT_TTL_MS = 30 * 60 * 1000;
+        function newUuid() {
+            try { if (window.crypto && crypto.randomUUID) return crypto.randomUUID(); } catch (e) { }
+            const b = new Uint8Array(16);
+            try { crypto.getRandomValues(b); } catch (e) { for (let i = 0; i < 16; i++) b[i] = Math.floor(Math.random() * 256); }
+            b[6] = (b[6] & 15) | 64; b[8] = (b[8] & 63) | 128;
+            const h = Array.from(b, (x) => x.toString(16).padStart(2, '0')).join('');
+            return h.slice(0, 8) + '-' + h.slice(8, 12) + '-' + h.slice(12, 16) + '-' + h.slice(16, 20) + '-' + h.slice(20);
+        }
+        function intentKeyMap() {
+            try { return JSON.parse(localStorage.getItem('mso_intent_keys') || '{}') || {}; } catch (e) { return {}; }
+        }
+        // تەنها هاشێکی پەنجەمۆرەکە لەسەر ئامێر دەمێنێت — هەرگیز دەقی کۆمێنت، هۆکار، کۆدی ئەندام یان بڕ (cyrb53، نەک نهێنی)
+        function intentHash(str) {
+            let h1 = 0xdeadbeef, h2 = 0x41c6ce57;
+            for (let i = 0; i < str.length; i++) {
+                const ch = str.charCodeAt(i);
+                h1 = Math.imul(h1 ^ ch, 2654435761);
+                h2 = Math.imul(h2 ^ ch, 1597334677);
+            }
+            h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+            h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+            return (4294967296 * (2097151 & h2) + (h1 >>> 0)).toString(36);
+        }
+        function intentKey(kind, fingerprint) {
+            const id = kind + '|' + intentHash(String(fingerprint == null ? '' : fingerprint));
+            const map = intentKeyMap(), now = Date.now();
+            Object.keys(map).forEach((k) => { if (!map[k] || now - (map[k].t || 0) > INTENT_TTL_MS) delete map[k]; });
+            if (!map[id]) map[id] = { k: newUuid(), t: now };
+            try { localStorage.setItem('mso_intent_keys', JSON.stringify(map)); } catch (e) { }
+            return map[id].k;
+        }
+        // وەڵامێکی ڕاستەقینە هات (سەرکەوتن یان ڕەتکردنەوە) → کلیلەکە تەواو بوو؛ مەبەستێکی نوێ کلیلێکی نوێ وەردەگرێت
+        function intentDone(kind, fingerprint) {
+            const id = kind + '|' + intentHash(String(fingerprint == null ? '' : fingerprint));
+            const map = intentKeyMap();
+            if (map[id]) { delete map[id]; try { localStorage.setItem('mso_intent_keys', JSON.stringify(map)); } catch (e) { } }
+        }
+
         async function guardSubmit(key, btn, fn) {
             if (_submitLocks.has(key)) return;          // کلیکی دووبارە — پشتگوێ دەخرێت
+            // ⭐ هێڵ نییە → هیچ شتێک نانێردرێت، و بەکارهێنەر دەزانێت بۆچی
+            if (netDown()) { showToast(NET_DOWN_MSG, 'error'); return; }
             _submitLocks.add(key);
+            writeBegin();
             const hadDisabled = btn ? btn.disabled : false;
+            let busyHtml = null;
             if (btn) {
                 btn.disabled = true;
                 btn.dataset.busyOpacity = btn.style.opacity || '';
                 btn.dataset.busyCursor = btn.style.cursor || '';
                 btn.style.opacity = '0.6';
                 btn.style.cursor = 'progress';
+                // سێ خاڵەکەی ئەپ (هەمان دوگمەی «خەریکە…») — دەقەکە دەمێنێت
+                if (!btn.querySelector('.bx-spin')) {
+                    const was = btn.innerHTML;
+                    btn.innerHTML = "<i class='bx bx-loader-alt bx-spin'></i> " + was;
+                    busyHtml = btn.innerHTML;
+                    btn.dataset.busyHtmlWas = was;
+                }
             }
             try {
                 return await fn();
             } finally {
                 _submitLocks.delete(key);
+                writeEnd();
                 // دوگمەکە تەنها ئەگەر هێشتا لەناو پەڕەکەدا بێت چاک دەکرێتەوە
                 // (ئەگەر مۆداڵ داخرابێت یان گەڕابێتینەوە، پێویست ناکات)
                 if (btn && btn.isConnected) {
                     btn.disabled = hadDisabled;
                     btn.style.opacity = btn.dataset.busyOpacity || '';
                     btn.style.cursor = btn.dataset.busyCursor || '';
+                    if (busyHtml !== null && btn.innerHTML === busyHtml) btn.innerHTML = btn.dataset.busyHtmlWas || '';
                     delete btn.dataset.busyOpacity;
                     delete btn.dataset.busyCursor;
+                    delete btn.dataset.busyHtmlWas;
                 }
             }
         }
@@ -33697,48 +33873,21 @@
                     // دۆخی پێش دەستکاری — بۆ زانینی ئەوەی چی گۆڕا
                     const beforeEdit = allGlobalOrdersData[editingOrderId] || null;
 
+                    // ⭐ db/160: پارەی جزدان لەناو هەمان PATCHـدا ڕێک دەخرێت (تریگەری `orders_wallet_follow`) — بڕی زیاتر
+                    //    لە پارەی ئامادە (`OVER_READY`) خودی دەستکارییەکە ڕەت دەکاتەوە، بۆیە هیچ «نوێکرایەوە بەڵام پارەکە نەبڕدرا»
+                    //    و هیچ گەڕاندنەوەیەکی دەستی نییە. دەستکاری idempotentـە: وەڵامی ونبوو → هەمان پاشەکەوت دووبارە سەلامەتە.
                     const { error } = await supabase.from('orders').update(updatedFields).eq('id', editingOrderId);
 
-                    if (error) throw error;
-
-                    // ڕێکخستنەوەی پارەی جزدان: ئەگەر بڕەکە گۆڕابێت جیاوازییەکە
-                    // دەبڕدرێت، و ئەگەر شێوازەکە لە جزدانەوە گۆڕدرابێت،
-                    // هەموو پارەکە دەگەڕێتەوە
-                    if (isWalletPay || editingOrderWalletPaid > 0) {
-                        try {
-                            await syncOrderWalletPayment(
-                                editingOrderId,
-                                (beforeEdit && beforeEdit.order_code) || editingOrderId,
-                                walletOwnerCode,
-                                isWalletPay ? prepaidAmount : 0
-                            );
-                            editingOrderWalletPaid = isWalletPay ? prepaidAmount : 0;
-                        } catch (e) {
-                            console.error('syncOrderWalletPayment (edit):', e);
-                            // ⭐ ڕیزەکە دەبێت هەمان شت بڵێت کە جزدانەکە: ئەگەر
-                            //    بڕینەکە شکستی هێنا (`OVER_READY`…)، زانیاریی
-                            //    پارەدانەکە دەگەڕێتەوە بۆ پێش دەستکاری — ئەگەرنا
-                            //    ئۆردەرێک دەمێنێتەوە کە دەڵێت «لە جزدانەوە
-                            //    دراوە» و هیچ نەبڕدراوە، و شۆفێر کەمتر وەردەگرێت.
-                            //    (هەمان ڕێگای ئۆردەری نوێ.)
-                            let reverted = false;
-                            if (beforeEdit) {
-                                try {
-                                    const { error: rvErr } = await supabase.from('orders').update({
-                                        prepaid_amount: beforeEdit.prepaid_amount,
-                                        payment_method: beforeEdit.payment_method,
-                                        payment_proof_url: beforeEdit.payment_proof_url
-                                    }).eq('id', editingOrderId);
-                                    reverted = !rvErr;
-                                } catch (e2) { console.error(e2); }
-                            }
-                            const why = serverGuardMsg(e);
-                            showToast((reverted
-                                ? "⚠️ ئۆردەرەکە نوێکرایەوە، بەڵام پارەکە لە جزدان نەبڕدرا — پارەدانەکە وەک پێشوو مایەوە."
-                                : "⚠️ ئۆردەرەکە نوێکرایەوە، بەڵام پارەی جزدان ڕێک نەخرا — تکایە دووبارە پاشەکەوتی بکە!")
-                                + (why ? ' ' + why : ''), "error");
+                    if (error) {
+                        if (isLostReply(error)) {
+                            showToast("وەڵام نەگەیشت — دووبارە «پاشەکەوت» بکە؛ هیچ شتێک دوو جار نابێت", "error");
                             return;
                         }
+                        throw error;
+                    }
+                    if (isWalletPay || editingOrderWalletPaid > 0) {
+                        invalidateWalletCaches(walletOwnerCode);
+                        editingOrderWalletPaid = isWalletPay ? prepaidAmount : 0;
                     }
 
                     const changed = diffOrderFields(beforeEdit, updatedFields);
@@ -33770,7 +33919,11 @@
                             : "بە سەرکەوتوویی نوێکرایەوە!"), "success");
 
                 } else {
-                    let orderCode = currentUser.code + "-" + getSecureCode();
+                    // ⭐ یەک کۆد بۆ هەر فۆڕمێک (db/162 — `uq_orders_order_code`): هەوڵی دووبارە دوای وەڵامی ونبوو هەمان کۆد
+                    //    دەنێرێت، بۆیە سێرڤەر هەرگیز ئۆردەری دووەم دروست ناکات (٣١ـی ئۆکتۆبەر: هەمان ئۆردەر ٩٧ چرکە دواتر
+                    //    دووبارە تۆمار کرا و هەردووکیان درانە شۆفێر). کۆدەکە تەنها دوای سەرکەوتن (`resetOrderForm`) دەگۆڕێت.
+                    if (!_orderDraftCode) _orderDraftCode = currentUser.code + "-" + getSecureCode();
+                    let orderCode = _orderDraftCode;
                     // ئۆردەری کاتدارکراو: بەروارەکەی **کاتی داخیلبوونە**،
                     // نەک کاتی نووسین (بڕیاری خاوەن، ٢٠٢٦-٠٨-٢٥). بۆیە
                     // فلتەری ڕۆژ، سەردێڕی ڕۆژ، ئامار و خولی ١٠ ڕۆژەی
@@ -33830,29 +33983,33 @@
                         ...exchangeOwnerColumns(exOn, exData)
                     }]).select('id, order_code');
 
-                    if (error) throw error;
-                    const newRow = (created && created[0]) ? created[0] : { id: null, order_code: orderCode };
-
-                    // بڕینی پارەکە لە جزدان — دوای دروستبوونی ئۆردەرەکە،
-                    // چونکە جووڵەکە بە ناسنامەی ئۆردەرەکەوە دەبەسترێتەوە.
-                    // ئەگەر بڕینەکە سەرکەوتوو نەبوو، پارەدانەکە لەسەر
-                    // ئۆردەرەکە هەڵدەوەشێتەوە تا ئۆردەرێک نەمێنێتەوە کە
-                    // بڵێت پارەی دراوە بەڵام هیچ پارەیەکی نەبڕدرابێت
-                    if (isWalletPay && newRow.id) {
-                        try {
-                            await syncOrderWalletPayment(newRow.id, orderCode, currentUser.code, prepaidAmount);
-                        } catch (e) {
-                            console.error('syncOrderWalletPayment (create):', e);
-                            try {
-                                await supabase.from('orders')
-                                    .update({ prepaid_amount: 0, payment_method: null, payment_proof_url: null })
-                                    .eq('id', newRow.id);
-                            } catch (e2) { console.error(e2); }
-                            const whyC = serverGuardMsg(e);
-                            showToast("⚠️ ئۆردەرەکە تۆمار کرا، بەڵام پارەکە لە جزدان نەبڕدرا — وەک پارە نەدراو تۆمار کرا."
-                                + (whyC ? ' ' + whyC : ''), "error");
-                        }
+                    let newRow = (created && created[0]) ? created[0] : null;
+                    if (error) {
+                        // ⭐ هەمان کۆد پێشتر تۆمار کراوە (23505 — هەوڵی دووبارە دوای وەڵامی ونبوو)، یان وەڵامەکە ون بوو:
+                        //    سێرڤەر دەپرسرێت — ئەگەر ئۆردەرەکە هەیە، ئەوە سەرکەوتنە (هیچ دووبارەیەک)؛ ئەگەرنا هیچ تۆمار نەکراوە.
+                        if (String(error.code || '') === '23505' || isLostReply(error)) {
+                            const { data: had, error: hadErr } = await supabase.from('orders')
+                                .select('id, order_code, phone1, grand_total').eq('order_code', orderCode).maybeSingle();
+                            // هەمان ئۆردەرە؟ (کۆدێکی کۆنی فۆڕمێکی وازلێهێنراو هەرگیز نابێت ئۆردەرێکی نوێ «قووت بدات»)
+                            const sameOrder = had && had.id && String(had.phone1 || '') === String(phone1)
+                                && Math.round(Number(had.grand_total || 0)) === Math.round(Number(grandTotal || 0));
+                            if (had && had.id && !sameOrder) {
+                                _orderDraftCode = null;
+                                showToast("کۆدی ئۆردەرەکە پێشتر بەکارهاتبوو — تکایە دووبارە «ناردن» بکە", "error");
+                                return;
+                            }
+                            if (sameOrder) newRow = { id: had.id, order_code: had.order_code };
+                            else if (isLostReply(error) || isLostReply(hadErr)) {
+                                showToast("وەڵام نەگەیشت — ئۆردەرەکە تۆمار نەکرا. دووبارە «ناردن» بکە؛ هەمان ئۆردەر دوو جار تۆمار نابێت", "error");
+                                return;
+                            } else throw error;
+                        } else throw error;
                     }
+                    if (!newRow) newRow = { id: null, order_code: orderCode };
+
+                    // ⭐ db/160: پارەی جزدان لەناو هەمان INSERTـدا بڕا (تریگەری `orders_wallet_follow`)؛ پارەی ئامادە بەس
+                    //    نەبوو → خودی ئۆردەرەکە تۆمار نەکرا (`OVER_READY`، بڕیاری خاوەن ٢٠٢٦-١١-٠٣) — هیچ «بێ پارەدان تۆمار کرا».
+                    if (isWalletPay) invalidateWalletCaches(currentUser.code);
 
                     // ⚠️ ئۆردەری کاتدارکراو بە `schedule` تۆمار دەکرێت،
                     //    نەک `create`. `notify_order_log` (db/015) تەنها
@@ -39811,6 +39968,9 @@
             }
         }
 
+        // ⭐ (٢٠٢٦-١١-٠٣) فۆڕمەکە تەنها دوای خوێندنەوەیەکی سەرکەوتوو پاشەکەوت دەکرێت: ئەگەر هێنان شکستی هێنا (هێڵ)، خانەکان
+        //    بەتاڵن و پاشەکەوت تۆکن و کەناڵی ڕاستەقینەی بە بەتاڵ دەنووسییەوە
+        let _bkSettingsLoaded = false;
         async function loadBackupSettingsToUI() {
             if (userRole !== 'پاشا') return;
             try {
@@ -39820,6 +39980,7 @@
                     console.error('Error getting backup settings:', error);
                     return;
                 }
+                _bkSettingsLoaded = true;
                 const s = data || {};
                 const autoActive = document.getElementById('bk-auto-active');
                 if (autoActive) autoActive.checked = !!s.is_active;
@@ -39890,7 +40051,14 @@
                 showToast('تەنها پاشا دەسەڵاتی ئەمەی هەیە', 'error');
                 return;
             }
+            if (netDown()) { showToast(NET_DOWN_MSG, 'error'); return; }
+            if (!_bkSettingsLoaded) {
+                showToast('ڕێکخستنەکان هێشتا نەهاتوون — هیچ پاشەکەوت نەکرا (ئەگەرنا تۆکن و کەناڵ بەتاڵ دەبوون). دووبارە هەوڵ دەدرێت…', 'error');
+                loadBackupSettingsToUI();
+                return;
+            }
             const saveBtn = document.getElementById('bk-btn-save-master');
+            if (saveBtn && saveBtn.disabled) return;          // پاشەکەوتێکی تر لە ڕێگادایە
             if (saveBtn) {
                 saveBtn.disabled = true;
                 saveBtn.innerHTML = "<i class='bx bx-loader-alt bx-spin'></i> <span>خەریکی پاشەکەوتکردن و هاوکاتکردنە...</span>";
@@ -41527,6 +41695,8 @@
 
             // 🔒 دوو پەنجەدانان = یەک کلیل: قوفڵ پێش یەکەم `await`ـی دوای پشکنینەکان (هەموو ئەوانەی سەرەوە هاوکاتن)
             if (generateCode._busy) return;
+            // ⭐ (٢٠٢٦-١١-٠٣) هێڵ نییە → هیچ نانێردرێت
+            if (netDown()) { showToast(NET_DOWN_MSG, 'error'); return; }
             generateCode._busy = true;
             // ⚠️ هەمان ناو یان زۆر نزیک → پرسیار پێش دروستکردن (ئاگادارییە، نەک ڕێگری — دوو کەس دەتوانن هەمان ناویان
             //    هەبێت). سێرڤەر لە هەموو کارمەندان دەگەڕێت؛ تیمێکی تر = تەنها «لە تیمێکی تر» (db/152)
@@ -41550,7 +41720,11 @@
             let fullDateString = `${year}-${month}-${day} ${hours}:${minutes}:${seconds} ${ampm}`;
 
             showToast("خەریکی دروستکردنی کۆد...", "loading");
-            let code = getSecureCode();
+            // ⭐ (٢٠٢٦-١١-٠٣) یەک کۆد بۆ هەر فۆڕمێک (هەمان ناو): ئەگەر وەڵامی ناردنێک ون بوو، هەوڵی دووبارە هەمان کۆد دەنێرێت —
+            //    `employees.code` یەکتایە، بۆیە هەرگیز دوو کلیل بۆ هەمان کەس دروست نابێت. کۆدەکە تەنها بە وەڵامێکی ڕاستەقینە نوێ دەبێتەوە.
+            const draft = generateCode._draft;
+            let code = (draft && draft.name === name) ? draft.code : getSecureCode();
+            generateCode._draft = { code, name };
 
             try {
                 // کۆدی پۆستە تەنها بۆ بەڕێوەبەر — پلەکانی تر هی بەڕێوەبەرەکەیان وەردەگرن
@@ -41571,8 +41745,22 @@
                     permissions: sanitizePermsForSave('create', collectPermToggles('create')),
                     date: fullDateString // لێرەدا کاتەکە دەنێرین بۆ داتابەیس
                 };
-                let { error } = await supabase.from('employees').insert([insertData]);
-                if (error) throw error;
+                let { error, status } = await supabase.from('employees').insert([insertData]);
+                if (error && (isLostReply(error, status) || String(error.code) === '23505')) {
+                    // وەڵامی ونبوو (یان کۆدەکە پێشتر هەیە): ئایا ئەم ناردنە خۆی گەیشتووە؟
+                    const { data: got, error: gotErr } = await supabase.from('employees').select('code, full_name').eq('code', code).maybeSingle();
+                    if (got && String(got.full_name || '').trim() === name) {
+                        error = null;                        // گەیشتبوو — سەرکەوتنە، نەک کلیلی دووەم
+                    } else if (String(error.code) === '23505' && !gotErr) {
+                        generateCode._draft = null;          // کۆدەکە هی کەسێکی ترە (زۆر کەم) — هەوڵی دواتر کۆدێکی نوێ
+                        throw new Error('کۆدەکە پێشتر بەکارهاتبوو — دووبارە «دروستکردن» دابگرە');
+                    } else {
+                        showToast("وەڵام نەگەیشت — نازانرێت کلیلەکە دروست بوو یان نا. دووبارە «دروستکردن» دابگرە: هەمان کۆدە و هەرگیز دوو کلیل دروست نابێت", "error");
+                        return;
+                    }
+                }
+                if (error) { generateCode._draft = null; throw error; }
+                generateCode._draft = null;
                 // کلیلی نوێ لە سێرڤەرە (تریگەری `employee_search`) — وەڵامە کاشکراوەکان ئیتر کۆنن
                 _dup.cache.clear();
 
@@ -41593,7 +41781,8 @@
                 document.getElementById('admin-loading-spinner').style.display = 'none';
                 document.getElementById('admin-screen-content').style.display = 'flex';
             } catch (err) {
-                showToast(serverGuardMsg(err) || "کێشەیەک ڕوویدا لە دروستکردندا", "error");
+                const m = String((err && err.message) || '');
+                showToast(serverGuardMsg(err) || (m.startsWith('کۆدەکە') ? m : "کێشەیەک ڕوویدا لە دروستکردندا"), "error");
             } finally {
                 generateCode._busy = false;
             }
@@ -44809,6 +44998,11 @@
         function xferMoney(n) { return Math.round(Number(n) || 0).toLocaleString('en-US'); }
         function xferFirstName(n) { return String(n || '').trim().split(/\s+/)[0] || ''; }
 
+        // پەنجەمۆری ناردنێک: نێرەر · وەرگر · بڕ · سەرچاوە (تێبینی نا — دەستکاریی تێبینی ناردنێکی نوێ نییە)
+        function xferIntentFp(s) {
+            return [currentUser ? currentUser.code : '', s && s.to ? s.to.code : '', Number(s && s.amt) || 0, (s && s.src) || 'balance'].join('|');
+        }
+
         function xferNewKey() {
             try { if (window.crypto && typeof crypto.randomUUID === 'function') return crypto.randomUUID(); } catch (e) { }
             const b = new Uint8Array(16);
@@ -45285,7 +45479,9 @@
                 const chk = xferAmountCheck();
                 if (!chk.ok) { xferShake(); return; }
                 navPush('xfer:review', () => xferGo('amount', true));
-                if (!s.key) s.key = xferNewKey();
+                // ⭐ (٢٠٢٦-١١-٠٣) کلیل بە مەبەستەکەوە بەستراوە (وەرگر · بڕ · سەرچاوە)، نەک بە شیتەکە: ئەگەر وەڵامی ناردنێک ون بوو و
+                //    شیتەکە داخرا و دووبارە کرایەوە، هەمان ناردن هەمان کلیلی هەیە و سێرڤەر یەک جار دەینێرێت (`intentKey`)
+                if (!s.key) s.key = intentKey('xfer', xferIntentFp(s));
             } else if (step === 'amount' && prev === 'review') {
                 if (!fromNav) navDrop('xfer:review');
                 s.key = null;                               // بڕ/وەرگر دەگۆڕێت → ناردنێکی نوێ
@@ -45621,16 +45817,19 @@
                     // 🪙 db/145: پاشەکەوت = دەرگای ٥ ئارگومێنتی؛ پارەی ئامادە هەر دەرگا کۆنەکەیە (پێش و دوای کۆچەکە کار دەکات).
                     //    ⚠️ ناوی کلیلەکان = ناوی ئارگومێنتەکانی SQL (`check.mjs`) — هیچ پاشەکشەیەکی PGRST202 نییە.
                     if (s.src === 'savings') args.p_from = 'savings';
-                    const { data, error } = await supabase.rpc('wallet_transfer_send', args);
+                    const fp = xferIntentFp(s);
+                    const { data, error, status } = await supabase.rpc('wallet_transfer_send', args);
+                    // وەڵام نەگەیشت → کلیلەکە دەمێنێت (هەوڵی دواتر هەمان ناردنە)؛ هەر وەڵامێکی ڕاستەقینە → کلیلەکە تەواو بوو
+                    if (!(error && isLostReply(error, status))) intentDone('xfer', fp);
                     if (error) throw error;
                     done = true;
                     xferAfterSend(s, data);
                 } catch (e) {
                     console.error('wallet_transfer_send:', e);
                     const raw = String((e && (e.message || e)) || '');
-                    s.err = serverGuardMsg(e) || 'پەیوەندی نەبوو. دووبارە ڕایبکێشە — پارەکە دوو جار نانێردرێت.';
+                    s.err = serverGuardMsg(e) || 'وەڵام نەگەیشت — نازانرێت نێردرا یان نا. دووبارە ڕایبکێشە: هەمان ناردنەکەیە و پارەکە دوو جار نانێردرێت.';
                     if (/OVER_READY|NO_PERM_SAVINGS/.test(raw)) xferLoadHome();
-                    if (/KEY_REUSED/.test(raw)) s.key = xferNewKey();
+                    if (/KEY_REUSED/.test(raw)) s.key = intentKey('xfer', xferIntentFp(s));
                     xferHaptic('error');
                 }
             });
@@ -45882,18 +46081,21 @@
         //    ئاگادار دەکرێتەوە بەڵام ڕاناگیرێت (وەک پێشتر).
         // ⭐ چوار قوفڵ: ① `s.busy` پێش هەر `await` · ② `guardSubmit('submit-salary')`
         //    / `guardSubmit('submit-wallet-action')` · ③ ڕاکێشەر `is-busy` →
-        //    `pointer-events: none` · ④ هیچ کام لەو دوو RPCـیە کلیلی دووبارەی
-        //    نییە، بۆیە ئەگەر وەڵام ون بوو (`salUnsure` · `waUnsure`) پێش ناردنەوە
-        //    مێژووی جزدانەکە دەپشکنرێت (`moneyLanded`).
+        //    `pointer-events: none` · ④ کلیلی کردار (db/162 — `p_key`): هەمان مەبەست
+        //    (بینەر · ئەندام · جۆر · بڕ · هۆکار) = هەمان کلیل (`intentKey`، ٣٠ خولەک، تەنانەت
+        //    دوای داخستنی شیت یان ئەپ)، بۆیە ئەگەر وەڵام ون بوو و دووبارە ڕاکێشرا، سێرڤەر
+        //    یەک جار جێبەجێی دەکات (`duplicate`). پێشتر مێژووی جزدان دەپشکنرا (`moneyLanded`) —
+        //    مەزەندە بوو، نەک دڵنیایی.
         // 🔒 وەسڵ پارەی ماوە هەڵناگرێت، و تا شیتەکە کراوەیە ژمارەکانی پشتەوەی
         //    لێڵن (`xfer-veil` — هەمان پەردەی ناردن؛ `salClose` لای دەبات).
         // ============================================================
         let salState = null;
         const SAL_REASON_MAX = 200;
-        // هەوڵێک کە وەڵامەکەی ون بوو، بە کۆدی ئەندام — لە دەرەوەی `salState`ـە
-        // تاکو داخستن و کردنەوەی شیتەکە نەیسڕێتەوە
-        const salUnsure = {};
-        const waUnsure = {};
+        // پەنجەمۆری مەبەستێکی پارە بۆ `intentKey` — هەر شتێک کە دوو کردار لێک جیا دەکاتەوە (بینەر · ئەندام · جۆر · بڕ · هۆکار):
+        // پاداشتێکی ون هەرگیز جێی سزایەک ناگرێتەوە ([[landmines]] ٢٠٧)
+        function salIntentFp(kind, code, parts, reason) {
+            return [currentUser ? currentUser.code : '', code, kind].concat(parts).concat([reason]).join('|');
+        }
 
         // سێ کردار، یەک شیت — دەق و یاسای هەر یەکەیان
         const SAL_MODES = {
@@ -46379,28 +46581,18 @@
             if (!reason) return { err: 'هۆکارەکە بنووسە' };
             if (b > s.ready.bal || v > s.ready.sav) return { err: 'لە پارەی ئامادە زیاترە' };
 
-            // ④ `pay_salary` کلیلی دووبارەی نییە. ئەگەر هەوڵی پێشوو وەڵامی ون
-            //    بوو، پێش ناردنەوە بپشکنە ئایا لە مێژووی جزدانەکەدا هەیە —
-            //    ئەگەر هەیە ئەوە سەرکەوتنە، نەک مووچەی دووەم.
-            const u = salUnsure[code];
-            if (u) {
-                let landed;
-                try { landed = await salLanded(code, u); }
-                catch (e) {
-                    console.warn('salLanded:', e);
-                    return { err: 'پەیوەندی نەبوو — نەتوانرا بپشکنرێت کە مووچەکە پێشتر درابێت. دووبارە ڕایبکێشە.' };
-                }
-                delete salUnsure[code];
-                if (landed) {
-                    salAfterPay(code, u.reason, 'salary');
-                    return { ok: true, landed: true, result: { code, name: s.who.name, b: u.b, v: u.v, reason: u.reason, at: landed, by: userName } };
-                }
-            }
-
-            const sentAt = Date.now();
-            const { error: salErr, status } = await supabase.rpc('pay_salary', {
-                p_code: code, p_balance: b, p_savings: v, p_reason: reason
+            // ④ db/162: کلیلی کردار — هەمان مەبەست = هەمان کلیل، بۆیە ڕاکێشانی دووبارە دوای وەڵامێکی ونبوو هەمان ناردنە
+            //    (سێرڤەر یەک جار دەیدات و دووەمیان `duplicate`ـە). هەرگیز مووچەی دووەم.
+            const fp = salIntentFp('salary', code, [b, v], reason);
+            const key = intentKey('pay_salary', fp);
+            const { data: salData, error: salErr, status } = await supabase.rpc('pay_salary', {
+                p_code: code, p_balance: b, p_savings: v, p_reason: reason, p_key: key
             });
+            // وەڵام نەگەیشت (تۆڕ · کاتی کۆتایی · 502/503/504): کلیلەکە دەمێنێتەوە بۆ هەوڵی دواتر
+            if (salErr && isLostReply(salErr, status)) {
+                return { err: 'وەڵام نەگەیشت — نازانرێت درا یان نا. دووبارە ڕایبکێشە: هەمان ناردنەکەیە و هەرگیز دوو جار نادرێت.' };
+            }
+            intentDone('pay_salary', fp);                    // وەڵامێکی ڕاستەقینە هات (سەرکەوتن یان ڕەتکردنەوە)
             // ⭐ db/112: سێرڤەر خۆی «ئامادە» دەپشکنێت (`OVER_READY`) لەژێر قوفڵی
             //    جزدان؛ پەیامەکە ئامادەی ڕاستەقینە دەڵێت («balance B/RB savings S/RS»)
             if (salErr && /OVER_READY/.test(String(salErr.message || ''))) {
@@ -46416,15 +46608,11 @@
             if (salErr) {
                 const known = salErrText(String(salErr.message || ''));
                 if (known) return { err: known };
-                // وەڵام نەگەیشت (تۆڕ · 5xx) — لەوانەیە سێرڤەر تۆماری کردبێت
-                if (!status || status >= 500 || !salErr.code) {
-                    salUnsure[code] = { at: sentAt, b, v, reason };
-                    return { err: 'پەیوەندی نەبوو. دووبارە ڕایبکێشە — پێش ناردنەوە دەپشکنرێت کە مووچەکە دوو جار نەدرێت.' };
-                }
                 return { err: serverGuardMsg(salErr) || 'کێشەیەک ڕوویدا — مووچەکە نەدرا' };
             }
             salAfterPay(code, reason, 'salary');
-            return { ok: true, result: { code, name: s.who.name, b, v, reason, at: new Date().toISOString(), by: userName } };
+            const dup = !!(salData && salData.duplicate);
+            return { ok: true, landed: dup, result: { code, name: s.who.name, b, v, reason, at: new Date().toISOString(), by: userName } };
         }
 
         // ➕ ➖ پاداشت / سزا لە شیتی مووچەدا (`mode` = add · deduct)
@@ -46468,45 +46656,30 @@
             if (!reason) return { err: 'هۆکارەکە بنووسە' };
             const amount = kind === 'add' ? a : -a;
 
-            // ④ `wallet_admin_apply` کلیلی دووبارەی نییە — وەڵامی ون بوو → پێش
-            //    ناردنەوە لە مێژووی جزدان بپشکنە (هەمان یاسای مووچە).
-            //    ⚠️ جیا بۆ هەر جۆرێک: پاداشتێکی ون نابێت سزایەک ڕابگرێت (یان
-            //    وەسڵی پاداشت بۆ سزا پیشان بدات)، و سزاکە نابێت گومانی پاداشتەکە بسڕێتەوە
-            const uk = userCode + '|' + kind;
-            const u = waUnsure[uk];
-            if (u) {
-                let landed;
-                try { landed = await moneyLanded(userCode, [{ type: u.type, amount: u.amount }], u.reason, u.at); }
-                catch (e) {
-                    console.warn('moneyLanded:', e);
-                    return { err: 'پەیوەندی نەبوو — نەتوانرا بپشکنرێت کە پێشتر تۆمار کرابێت. دووبارە ڕایبکێشە.' };
-                }
-                delete waUnsure[uk];
-                if (landed) {
-                    salAfterPay(userCode, u.reason, u.kind);
-                    return { ok: true, landed: true, result: { code: userCode, name: s.who.name, kind: u.kind, amount: Math.abs(u.amount), reason: u.reason, at: landed, by: userName } };
-                }
-            }
-
-            const sentAt = Date.now();
+            // ④ db/162: کلیلی کردار — جیا بۆ هەر جۆرێک (پاداشتێکی ون هەرگیز جێی سزایەک ناگرێتەوە، و سزاکە هەرگیز کلیلی پاداشتەکە
+            //    ناسڕێتەوە)؛ هەمان مەبەست = هەمان کلیل، بۆیە ڕاکێشانی دووبارە دوای وەڵامێکی ونبوو هەرگیز دووجار تۆمار ناکات.
+            const fp = salIntentFp(kind, userCode, [amount], reason);
+            const key = intentKey('wallet_admin_apply', fp);
             // باڵانس لە داتابەیسدا ژماردن دەکرێت (balance = balance + amount)، نەک لە
             // کڵاینت. ⭐ db/110: بە فەنکشنی پشکنراوەوە (دەسەڵاتی بەڕێوەبردنی جزدان +
             // ناسنامەی ڕاستەقینە)، نەک wallet_applyـی کراوە.
-            const { error: waErr, status } = await supabase.rpc('wallet_admin_apply', {
+            const { data: waData, error: waErr, status } = await supabase.rpc('wallet_admin_apply', {
                 p_rows: [{ user_code: userCode, amount, wallet_type: 'balance', type: m.type, description: reason }],
-                p_lock_key: 'wallet:' + userCode
+                p_lock_key: 'wallet:' + userCode,
+                p_key: key
             });
+            if (waErr && isLostReply(waErr, status)) {
+                return { err: 'وەڵام نەگەیشت — نازانرێت تۆمار کرا یان نا. دووبارە ڕایبکێشە: هەمان ناردنەکەیە و هەرگیز دوو جار تۆمار ناکرێت.' };
+            }
+            intentDone('wallet_admin_apply', fp);
             if (waErr) {
                 const known = salErrText(String(waErr.message || ''));
                 if (known) return { err: known };
-                if (!status || status >= 500 || !waErr.code) {
-                    waUnsure[uk] = { at: sentAt, amount, type: m.type, reason, kind };
-                    return { err: 'پەیوەندی نەبوو. دووبارە ڕایبکێشە — پێش ناردنەوە دەپشکنرێت کە دوو جار تۆمار نەکرێت.' };
-                }
                 return { err: serverGuardMsg(waErr) || 'کێشەیەک ڕوویدا — هیچ تۆمار نەکرا' };
             }
             salAfterPay(userCode, reason, kind);
-            return { ok: true, result: { code: userCode, name: s.who.name, kind, amount: a, reason, at: new Date().toISOString(), by: userName } };
+            const dup = !!(waData && waData.duplicate);
+            return { ok: true, landed: dup, result: { code: userCode, name: s.who.name, kind, amount: a, reason, at: new Date().toISOString(), by: userName } };
         }
 
         // ڕەتکردنەوەکانی `pay_salary` / `wallet_admin_apply` (db/110 · db/112) بێ دەقی کوردی دێن
@@ -46518,31 +46691,6 @@
             if (/EMPLOYEE_NOT_FOUND/.test(raw)) return 'ئەم ئەندامە نەدۆزرایەوە';
             if (/NOT_STAFF/.test(raw)) return 'دانیشتنەکەت بەسەرچووە — دووبارە بچۆ ژوورەوە';
             return '';
-        }
-
-        // جووڵەیەکی هەوڵی پێشوو تۆمار کراوە؟ نوێترین ١٠٠ جووڵەی جزدانەکە
-        // (`wallet_tx_page`): هەمان جۆر · هەمان بڕ (بە نیشانەوە) · هەمان هۆکار ·
-        // ٣٠ خولەکی ڕابردوو. `wants` هەمووی دەبێت هەبن (مووچە دوو ڕیز لە یەک
-        // ترانزاکشندا دەنووسێت). دەگەڕێنێتەوە کاتی تۆمارکردن، یان '' ئەگەر نەدۆزرایەوە.
-        async function moneyLanded(code, wants, reason, at) {
-            const rows = await fetchTxPage(code, null);
-            const since = at - 30 * 60 * 1000;
-            let first = null;
-            for (const w of wants) {
-                const hit = rows.find(x => x && x.type === w.type && Math.round(Number(x.amount)) === w.amount
-                    && String(x.description || '').trim() === reason && (Date.parse(x.created_at) || 0) >= since);
-                if (!hit) return '';
-                first = first || hit;
-            }
-            return (first && first.created_at) || new Date().toISOString();
-        }
-
-        // مووچە: ڕیزی باڵانس (−b) و/یان پاشەکەوت (−v)
-        async function salLanded(code, u) {
-            const wants = [];
-            if (u.b > 0) wants.push({ type: 'پێدانی مووچە', amount: -u.b });
-            if (u.v > 0) wants.push({ type: 'پێدانی مووچە (پاشەکەوت)', amount: -u.v });
-            return moneyLanded(code, wants, u.reason, u.at);
         }
 
         // ✔ ژمارەی کۆن نامێنێتەوە: کاش لادەبرێت و پانێڵی جزدان لە پشتەوە نوێ
@@ -47150,7 +47298,12 @@
             if (addBtn) addBtn.classList.remove('is-blocked');
         }
 
-        async function addCity() {
+        // ⭐ (٢٠٢٦-١١-٠٣) قوفڵ پێش هەر await · هەڵەی ئینسێرت دەخوێندرێتەوە (پێشتر نەدەخوێندرایەوە: «سەرکەوتوو بوو» هەرچی بوایە) ·
+        //    ناوی دووبارە = ئیندێکسی یەکتا `uq_cities_name` (db/162، 23505) · وەڵامی ونبوو → لیستەکە دەپرسرێت
+        function addCity() {
+            return guardSubmit('add-city', document.getElementById('c-add-btn'), addCityImpl);
+        }
+        async function addCityImpl() {
             // پشکنینی ئاسایش: کلیلەکە هەیە + دەسەڵاتی بەڕێوەبردنی شارەکان هەیە
             if (!await ensureAuthorized('manage_cities')) return;
             let name = document.getElementById('c-name').value.trim(); let realP = document.getElementById('c-real').value; let dispP = document.getElementById('c-display').value;
@@ -47169,11 +47322,21 @@
                     return;
                 }
 
-                await supabase.from('cities').insert([{ name: name, real_price: parseFloat(realP), display_price: parseFloat(dispP) }]);
+                const { error, status } = await supabase.from('cities').insert([{ name: name, real_price: parseFloat(realP), display_price: parseFloat(dispP) }]);
+                if (error && (String(error.code) === '23505' || isLostReply(error, status))) {
+                    // هەمان ناو پێشتر هەیە — یان وەڵامی ونبوو: لەوانەیە ئەم ناردنە خۆی گەیشتبێت
+                    await loadDBCities(); renderAdminCities();
+                    const now = findCityByName(name);
+                    if (now && isLostReply(error, status)) { showToast("سەرکەوتوو بوو (وەڵامەکە دواکەوت)", "success"); resetCityForm(); return; }
+                    if (now) { onCityNameInput(); showToast(`«${now.name}» پێشتر تۆمار کراوە — دووبارە زیاد ناکرێت!`, "error"); return; }
+                    showToast(isLostReply(error, status) ? LOST_REPLY_MSG : "هەڵە هەیە", "error");
+                    return;
+                }
+                if (error) throw error;
                 showToast("سەرکەوتوو بوو", "success");
                 resetCityForm();
                 await loadDBCities(); renderAdminCities();
-            } catch (e) { showToast("هەڵە هەیە", "error"); }
+            } catch (e) { console.error('addCity:', e); showToast(serverGuardMsg(e) || "هەڵە هەیە", "error"); }
         }
 
         // ============================================================
@@ -47583,21 +47746,26 @@
             }
         }
 
-        async function restoreTrashItem(trashId, btn, fromModal) {
+        // ⭐ (٢٠٢٦-١١-٠٣) قوفڵ پێش هەر await · وەڵامی ونبوو → لیستەکە نوێ دەکرێتەوە. ئۆردەرێک کە لە جزدانەوە پارەی
+        //    درابوو لەناو هەمان تڕانزاکشنی گەڕاندنەوەدا دووبارە دەبڕدرێت (db/160، تریگەری `orders_wallet_follow`) —
+        //    هەنگاوی جیای کڵاینت (`syncOrderWalletPayment` دوای گەڕاندنەوە) لابرا: ئەگەر هێڵ لەو ساتەدا پچڕابا، ئۆردەرێک
+        //    دەمایەوە کە دەیوت «پارەی دراوە» بەڵام هیچ پارەیەکی نەدرابوو.
+        function restoreTrashItem(trashId, btn, fromModal) {
             if (!can('manage_trash')) { showToast("دەسەڵاتت نییە!", "error"); return; }
             const item = trashCache.find(r => r.id === trashId);
             if (!confirm(`دڵنیایت دەتەوێت «${item ? (item.label || item.record_id) : 'ئەمە'}» بگەڕێنیتەوە؟`)) return;
-
+            return guardSubmit('trash-restore-' + trashId, null, () => restoreTrashItemImpl(trashId, btn, fromModal, item));
+        }
+        async function restoreTrashItemImpl(trashId, btn, fromModal, item) {
             if (btn) { btn.disabled = true; btn.innerHTML = "<i class='bx bx-loader-alt bx-spin'></i>"; }
             try {
-                // payload **پێش** گەڕاندنەوە دەهێنرێت — دوای ئەوە ڕیزەکەی
-                // تەنەکە سڕاوەتەوە و `trash_payload` هیچ ناگەڕێنێتەوە.
-                // بۆ ئۆردەر پێویستە، بۆ ڕێکخستنەوەی پارەی جزدان.
-                if (item && item.source_table === 'orders') {
-                    try { await ensureTrashPayload(item); } catch (e) { console.warn('payload:', e); }
-                }
-
                 const { data, error } = await supabase.rpc('restore_from_trash', { p_trash_id: trashId });
+                if (error && isLostReply(error)) {
+                    showToast(LOST_REPLY_MSG, "error");
+                    invalidateMgmtCache();
+                    try { await loadTrash(true); } catch (e) { }
+                    return;
+                }
                 if (error) throw error;
 
                 if (data === 'ok') {
@@ -47605,21 +47773,10 @@
                     if (fromModal) closeModal(null, 'trash-detail-modal');
                     // شتێک گەڕایەوە ناو خشتەکان → لیستی بەڕێوەبردن کۆن بووە
                     invalidateMgmtCache();
-
-                    // ئۆردەرێک کە لە جزدانەوە پارەی درابوو: لەکاتی سڕینەوەدا
-                    // پارەکەی گەڕێندرایەوە، بۆیە ئێستا کە گەڕاوەتەوە دەبێت
-                    // دیسان ببڕدرێت — ئەگەرنا ئۆردەرێک دەمێنێتەوە کە دەڵێت
-                    // پارەی دراوە بەڵام هیچ پارەیەکی نەدراوە
+                    // ئۆردەرێکی جزدان دووبارە بڕدرا (سێرڤەر) → کاشی جزدانی خاوەنەکەی کۆنە
                     if (item && item.source_table === 'orders') {
                         const p = item.payload || {};
-                        if (orderWalletPaid(p) > 0 && p.seller_code && p.id) {
-                            try {
-                                await syncOrderWalletPayment(p.id, p.order_code, p.seller_code, orderWalletPaid(p));
-                            } catch (e) {
-                                console.error('syncOrderWalletPayment (restore):', e);
-                                showToast("⚠️ ئۆردەرەکە گەڕایەوە، بەڵام پارەکە لە جزدان نەبڕدرایەوە!", "error");
-                            }
-                        }
+                        if (p.seller_code) invalidateWalletCaches(p.seller_code);
                     }
                     // ئەگەر کلیلێک گەڕایەوە، لیستی ئەندامان نوێ بکەرەوە
                     if (item && item.source_table === 'employees') {
@@ -48893,7 +49050,86 @@
             return distCtxLoad(code);
         }
 
+        // ⭐ (٢٠٢٦-١١-٠٢، db/158) «پارە چوو، حاڵەت نەگۆڕا»: ئایا ئەم ئۆردەرە پێشتر قازانجی لەسەر دابەشکراوە؟ سێرڤەر دەیزانێت
+        //    (`order_profit_state` — کۆی پوخت وەک خاوەن، بڕەکە تەنها بۆ پاشا). لەگەڵ ڕیزی خاوەن پێشوەخت دێت (هەمان شەپۆل، یەک
+        //    جار، هەمان کلیل). هەڵە یان فەنکشنی نەبوو (PGRST202) → `null`: پەنجەرەی دابەشکردن وەک پێشوو — سێرڤەر هەر
+        //    بڕیار دەدات (`order_mark_delivered` هەرگیز دوو جار دابەش ناکات).
+        let _paidState = null;        // { id, at, p }
+        function orderProfitStateLoad(orderId) {
+            return (async () => {
+                try {
+                    const { data, error } = await supabase.rpc('order_profit_state', { p_order_id: String(orderId) });
+                    if (error) { if (!rpcMissing(error)) console.warn('order_profit_state:', error); return null; }
+                    return data || null;
+                } catch (e) { console.warn('order_profit_state:', e); return null; }
+            })();
+        }
+        function orderProfitStatePrefetch(orderId) {
+            _paidState = { id: String(orderId), at: Date.now(), p: orderProfitStateLoad(orderId) };
+        }
+        function orderProfitState(orderId) {
+            const id = String(orderId);
+            const hit = _paidState && _paidState.id === id && Date.now() - _paidState.at < DIST_CTX_MS ? _paidState.p : null;
+            _paidState = null;
+            return hit || orderProfitStateLoad(id);
+        }
+
+        // پارەکەی پێشتر دابەشکراوە و حاڵەت نەگۆڕاوە: پەنجەرەی دابەشکردن ناکرێتەوە (دابەشکردنی دووەم نییە). ژمارەکان پێش
+        // پرسیار، پاشان تەنها حاڵەت. `{ keep: true }`: ئەگەر لەم نێوانەدا پارەکە گەڕابێتەوە، سێرڤەر `NOT_DISTRIBUTED` دەڵێت —
+        // هەرگیز «گەیشتووە» بێ پارە. بەروار و ناو دوورگەی FSI…PDI ـن، بەروار بە U+2011 (دەقی `confirm` HTML نییە).
+        async function deliverKeptProfit(o, st) {
+            const FSI = String.fromCharCode(0x2068), PDI = String.fromCharCode(0x2069), NBH = String.fromCharCode(0x2011);
+            const iso = String(st.at || '');
+            let day = iso.slice(0, 10);
+            try { if (iso) day = new Date(iso).toLocaleDateString('en-CA', { timeZone: 'Asia/Baghdad' }); } catch (e) { }
+            const amt = (st.net != null && Number(st.net)) ? ' (' + FSI + Math.round(Number(st.net)).toLocaleString('en-US') + ' د.ع' + PDI + ')' : '';
+            const ask = 'قازانجی ئەم ئۆردەرە' + amt + ' پێشتر'
+                + (day ? ' لە ' + FSI + day.replace(/-/g, NBH) + PDI : '')
+                + (st.by ? ' لەلایەن ' + FSI + st.by + PDI : '')
+                + ' دابەشکراوە، بەڵام حاڵەتەکەی نەگۆڕابوو.\n\n'
+                + 'تەنها حاڵەتەکەی دەکرێت بە «گەیشتووە» — هیچ پارەیەک زیاد ناکرێت و هیچ پارەیەک نابڕدرێت.\n\nدڵنیایت؟';
+            if (!confirm(ask)) return;
+            // ⭐ (٢٠٢٦-١١-٠٣) قوفڵ پێش هەر await · هێڵ · وەڵامی ونبوو → حاڵەتی ڕاستەقینە دەپرسرێت
+            return guardSubmit('dist-keep-' + o.id, null, async () => {
+                if (!await ensureAccountActiveFresh()) return;
+                showToast("خەریکی نوێکردنەوە...", "loading");
+                try {
+                    const { data, error } = await supabase.rpc('order_mark_delivered', {
+                        p_order_id: String(o.id),
+                        p_rows: { keep: true },
+                        p_created_by: userName,
+                        p_driver_fee_paid: null,
+                        p_driver_fee_system: null,
+                        p_detail: null,
+                        p_expect: o.status || null
+                    });
+                    if (error && isLostReply(error)) {
+                        const { data: now } = await supabase.from('orders').select('status').eq('id', o.id).maybeSingle();
+                        if (now && String(now.status || '').includes('گەیشت')) {
+                            showToast("«گەیشتووە» تۆمار کرا (وەڵامەکە دواکەوت)", "success");
+                            orderLogBust(o); delete orderProfitCache[o.id]; rtPatchOrders([o.id]);
+                        } else showToast(now ? "وەڵام نەگەیشت — هێشتا نەگەیشتووە، دووبارە هەوڵ بدە" : LOST_REPLY_MSG, "error");
+                        return;
+                    }
+                    if (error) throw error;
+                    orderLogBust(o);
+                    delete orderProfitCache[o.id];
+                    const r = data || {};
+                    showToast(r.already ? "ئەم ئۆردەرە پێشتر گەیشتووە — هیچ گۆڕانێک نەکرا"
+                        : "حاڵەت کرا بە «گەیشتووە» — پارەکەی پێشتر دابەشکرابوو، هیچ پارەیەک دووبارە نەکرا", "success");
+                    rtPatchOrders([o.id]);
+                } catch (e) {
+                    console.error('order_mark_delivered (kept):', e);
+                    showToast(serverGuardMsg(e) || "هەڵەیەک ڕوویدا — هیچ گۆڕانێک نەکرا", "error");
+                    if (String(e && e.message || '').includes('STATUS_CHANGED')) rtPatchOrders([o.id]);
+                }
+            });
+        }
+
         async function openDistributionModal(orderId) {
+            // ⭐ (٢٠٢٦-١١-٠٣) تا دابەشکردنێک لە ڕێگادایە، پەنجەرەیەکی نوێ ناکرێتەوە — گۆڕاوە گشتییەکان (`distributingOrder` ·
+            //    `distData`) هەرگیز دوو ئۆردەر تێکەڵ ناکەن (deliver-4)
+            if (_submitLocks.has('dist-confirm')) { showToast("دابەشکردنێکی تر لە ڕێگادایە — تکایە چاوەڕێ بکە", "error"); return; }
             closeModal(null, 'order-details-modal');
             distributingOrder = allGlobalOrdersData[orderId]; let o = distributingOrder;
             // ئۆردەری خەڵات: grand_total = 0 → دابەشکردن ڕیزی نێگەتیڤ
@@ -48908,8 +49144,11 @@
             let oldToast = document.getElementById('app-toast');
             if (oldToast) oldToast.remove();
             try {
-                // ⚡ یەک داواکاری (یان هیچ — ئەگەر لە کاتی کردنەوەی ئۆردەرەکەدا پێشوەخت هاتبێت)
-                const distCtx = await distCtxGet(o.seller_code);
+                // ⚡ یەک شەپۆل (یان هیچ — ئەگەر لە کاتی کردنەوەی ئۆردەرەکەدا پێشوەخت هاتبێت): ڕیزی خاوەن + «پارەکەی
+                //    پێشتر دابەشکراوە؟» (db/158)
+                const [distCtx, paidState] = await Promise.all([distCtxGet(o.seller_code), orderProfitState(o.id)]);
+                // ⭐ db/158: پارە چوو بەڵام حاڵەت نەگۆڕا — دابەشکردنی دووەم نییە، تەنها حاڵەت (ژمارەکان پێش پرسیار)
+                if (paidState && paidState.distributed) { await deliverKeptProfit(o, paidState); return; }
                 const memberData = distCtx.member;
                 let uMap = distCtx.byCode;
 
@@ -49359,7 +49598,12 @@
             calcKingProfit();
         }
 
-        async function confirmDistribution() {
+        // ⭐ (٢٠٢٦-١١-٠٣) قوفڵ پێش هەر await (`guardSubmit`): پێشتر دوگمەکە تەنها دوای پشکنینی ئەکاونت دەکوژایەوە، و
+        //    پەنجەرەیەکی تر نەدەتوانرا لەو کاتەدا بکرێتەوە بێ ئەوەی گۆڕاوە گشتییەکان تێکەڵ ببن (deliver-4 · deliver-8).
+        function confirmDistribution() {
+            return guardSubmit('dist-confirm', null, confirmDistributionImpl);
+        }
+        async function confirmDistributionImpl() {
             // پشکنینی ئاسایش: کلیلەکە هەیە
             if (!await ensureAccountActiveFresh()) return;
             // مەودای دابەشکردنی قازانج لەسەر ئەم ئۆردەرە (تیم/هەموان)
@@ -49450,20 +49694,9 @@
                 // دەیخوێندەوە، بۆیە دوو کلیکی خێرا هەردووکیان تێدەپەڕین
                 // و پارەکە دووجار تۆمار دەکرا.
 
-                // دووپاتکردنەوەی پارەی جزدان: ئۆردەرێکی گەڕاوە کە دووبارە
-                // دەکرێتە گەیشتوو، پارەی جزدانەکەی پێشتر گەڕێندراوەتەوە —
-                // بۆیە دەبێت دیسان ببڕدرێت. بۆ ئۆردەری ئاسایی هیچ ناکات،
-                // چونکە پێشتر بڕدراوە
-                if (orderWalletPaid(o) > 0 && o.seller_code) {
-                    try {
-                        await syncOrderWalletPayment(o.id, oCode, o.seller_code, orderWalletPaid(o));
-                    } catch (e) {
-                        console.error('syncOrderWalletPayment (distribute):', e);
-                        showToast("نەتوانرا پارەی جزدانی خاوەنی ئۆردەرەکە ڕێک بخرێت — دووبارە هەوڵبدە", "error");
-                        if (confirmBtn) { confirmBtn.disabled = false; confirmBtn.innerHTML = "<i class='bx bx-check-circle'></i> تەسدیقکردن و تۆمارکردن"; }
-                        return;
-                    }
-                }
+                // ⭐ db/160: ئۆردەرێکی گەڕاوەی جزدان کە دووبارە دەگات، پارەکەی لەناو `order_mark_delivered`ـدا دووبارە
+                //    دەبڕدرێتەوە (هەمان تڕانزاکشن) — هیچ هەنگاوێکی جیا لێرە نییە، بۆیە «گەیشتووە»ی شکستخواردوو هەرگیز ئۆردەرێکی
+                //    گەڕاوەی بڕاو بەجێناهێڵێت (deliver-1).
 
                 let txList = [];
 
@@ -49529,6 +49762,16 @@
 
                 // تۆمارکردنی قازانجی پاشا (ئەوەی دەمێنێتەوە)
                 let kingP = distData.grandTotal - (delivery + managerP + adminP + consultantP + memberP + savingsP);
+                // ⭐ (٢٠٢٦-١١-٠٣) کۆدی پاشا نەهاتبوو (هەڵەی تۆڕ لە کاتی کردنەوە) → بەشی پاشا بێدەنگ ون دەبوو (ئۆردەری 8724،
+                //    13,000). ئێستا دووبارە دەپرسرێت؛ هێشتا نەبوو → هیچ نانێردرێت.
+                if (kingP !== 0 && !globalKingCode) {
+                    try { await fetchKingCode(); } catch (e) { console.warn('fetchKingCode:', e); }
+                    if (!globalKingCode) {
+                        showToast("کۆدی پاشا نەهات — هێڵەکەت بپشکنە و دووبارە هەوڵ بدە (هیچ پارەیەک دابەش نەکرا)", "error");
+                        if (confirmBtn) { confirmBtn.disabled = false; confirmBtn.innerHTML = "<i class='bx bx-check-circle'></i> تەسدیقکردن و تۆمارکردن"; }
+                        return;
+                    }
+                }
                 if (kingP !== 0 && globalKingCode) {
                     addTx(globalKingCode, kingP, "قازانجی ئۆردەر", `قازانجی پاشا لە ئۆردەری ${oCode}`);
                 }
@@ -49551,79 +49794,66 @@
                 //    پێشتر سێ گەڕانەوەی یەک لە دوای یەک بوو (+ preflight)، و ئەگەر حاڵەت ڕەت کرابایەوە پارەکە
                 //    دابەشکرابوو. ئێستا هەڵە = هیچ شتێک نەگۆڕاوە. ⚠️ ئەگەر فەنکشنەکە هێشتا لە سێرڤەردا نەبوو
                 //    (PGRST202)، ڕێگای سێ هەنگاوییەکەی خوارەوە وەک خۆی دەڕوات.
-                const { error: fastErr } = await supabase.rpc('order_mark_delivered', {
+                // ⭐ db/161: `p_expect` = ئەو حاڵەتەی ئەم پەنجەرەیە بینیویەتی — ئەگەر کەسێکی تر لەم ساتەدا گۆڕیبێتی
+                //    (گەڕاندبێتیەوە)، سێرڤەر `STATUS_CHANGED` دەدات پێش هەر نووسینێک. ⚠️ ڕێگای سێ هەنگاویی کۆن (PGRST202) لابرا:
+                //    فەنکشنەکە لە سێرڤەردایە، و ئەو ڕێگایە پارەی بێ حاڵەت بەجێدەهێشت.
+                const { data: fastData, error: fastErr } = await supabase.rpc('order_mark_delivered', {
                     p_order_id: String(o.id),
                     p_rows: txList,
                     p_created_by: userName,
                     p_driver_fee_paid: delivery,
                     p_driver_fee_system: Number(distData.deliveryCost || 0),
-                    p_detail: "ئۆردەرەکەی کردە گەیشتوو و قازانجەکانی دابەشکرد"
+                    p_detail: "ئۆردەرەکەی کردە گەیشتوو و قازانجەکانی دابەشکرد",
+                    p_expect: o.status || null
                 });
-                if (fastErr && !rpcMissing(fastErr)) {
+                if (fastErr && isLostReply(fastErr)) {
+                    // وەڵام نەگەیشت: لەوانەیە گەیشتبێت — حاڵەتی ڕاستەقینە دەپرسرێت، هەرگیز «هیچ پارەیەک دابەش نەکرا» بە گومان
+                    const { data: now } = await supabase.from('orders').select('status').eq('id', o.id).maybeSingle();
+                    if (now && String(now.status || '').includes('گەیشت')) {
+                        orderLogBust(o); delete orderProfitCache[o.id];
+                        showToast("«گەیشتووە» تۆمار کرا (وەڵامەکە دواکەوت)", "success");
+                        closeModal(null, 'profit-distribution-modal');
+                        rtPatchOrders([o.id]);
+                    } else {
+                        showToast(now ? "وەڵام نەگەیشت — ئۆردەرەکە هێشتا نەگەیشتووە. دووبارە «تەسدیق» بکە؛ هیچ پارەیەک دوو جار نابێت"
+                            : LOST_REPLY_MSG, "error");
+                        if (confirmBtn) { confirmBtn.disabled = false; confirmBtn.innerHTML = "<i class='bx bx-check-circle'></i> تەسدیقکردن و تۆمارکردن"; }
+                    }
+                    return;
+                }
+                if (fastErr && String(fastErr.message || '').includes('STATUS_CHANGED')) {
+                    _distCtx = null;
+                    showToast((serverGuardMsg(fastErr) || "حاڵەتی ئەم ئۆردەرە گۆڕاوە") + " — هیچ پارەیەک دابەش نەکرا", "error");
+                    closeModal(null, 'profit-distribution-modal');
+                    rtPatchOrders([o.id]);
+                    return;
+                }
+                if (fastErr) {
                     console.error('order_mark_delivered:', fastErr);
                     // سێرڤەر ڕەتی کردەوە: کاشی پەنجەرەکە فڕێ بدە، بۆ ئەوەی کردنەوەی دواتر ڕیزی نوێی خاوەن و زنجیرەکەی بهێنێت
                     _distCtx = null;
+                    // ⭐ db/158: سێرڤەر ئیتر ALREADY_DISTRIBUTED نادات (`already` / `kept`) — ئەگەر هات، هیچ پارەیەک نەجووڵا
                     const already = String(fastErr.message || '').includes('ALREADY_DISTRIBUTED');
                     showToast(already
-                        ? "ئەم ئۆردەرە پێشتر پارەی بۆ دابەشکراوە! بۆ دابەشکردنەوە، سەرەتا بیکە بە گەڕاوە."
+                        ? "پارەی ئەم ئۆردەرە پێشتر دابەشکراوە — هیچ پارەیەک دووبارە نەکرا"
                         : (serverGuardMsg(fastErr) || "کێشە لە داتابەیس هەیە!") + " — هیچ پارەیەک دابەش نەکرا", "error");
                     if (confirmBtn) { confirmBtn.disabled = false; confirmBtn.innerHTML = "<i class='bx bx-check-circle'></i> تەسدیقکردن و تۆمارکردن"; }
                     return;
                 }
                 if (!fastErr) {
                     orderLogBust(o);              // ئەوەی `logOrderAction` دەیکرد
-                    showToast("بە سەرکەوتوویی دابەشکرا!", "success");
+                    delete orderProfitCache[o.id];
+                    // ⭐ db/158: سێرڤەر دەڵێت چی ڕوویدا — `already` (پێشتر گەیشتبوو) · `kept` (پارەکە پێشتر چووبوو، تەنها حاڵەت)
+                    const fr = fastData || {};
+                    showToast((fr.already ? "ئەم ئۆردەرە پێشتر گەیشتووە — هیچ پارەیەک دووبارە نەکرا"
+                        : fr.kept ? "حاڵەت کرا بە «گەیشتووە» — پارەکەی پێشتر دابەشکرابوو، هیچ پارەیەک دووبارە نەکرا"
+                        : "بە سەرکەوتوویی دابەشکرا!")
+                        + (Number(fr.recharged) > 0 ? ` — ${xferMoney(fr.recharged)} د.ع دووبارە لە جزدانی خاوەنەکەی بڕدرا` : ''), "success");
+                    if (Number(fr.recharged) > 0 && o.seller_code) invalidateWalletCaches(o.seller_code);
                     closeModal(null, 'profit-distribution-modal');
                     rtPatchOrders([o.id]);
                     return;
                 }
-
-                if (txList.length > 0) {
-                    const { error: distErr } = await supabase.rpc('distribute_order_profit', {
-                        p_order_id: String(o.id),
-                        p_rows: txList,
-                        p_created_by: userName
-                    });
-                    if (distErr) {
-                        console.error(distErr);
-                        const already = String(distErr.message || '').includes('ALREADY_DISTRIBUTED');
-                        // ⭐ db/120: سێرڤەر ڕیزەکان دەپشکنێت (کێ، کۆ، `pf_*`) — هۆکارەکەی خۆی دەنووسێت
-                        showToast(already
-                            ? "ئەم ئۆردەرە پێشتر پارەی بۆ دابەشکراوە! بۆ دابەشکردنەوە، سەرەتا بیکە بە گەڕاوە."
-                            : (serverGuardMsg(distErr) || "کێشە لە داتابەیس هەیە!"), "error");
-                        if (confirmBtn) { confirmBtn.disabled = false; confirmBtn.innerHTML = "<i class='bx bx-check-circle'></i> تەسدیقکردن و تۆمارکردن"; }
-                        return;
-                    }
-                }
-
-                // پارەی شۆفێر تۆمار دەکرێت — پێشتر هەرگیز نەدەنووسرا و
-                // تەنها بە کەمکردنەوە لە قازانجی پاشا دەردەهات، بۆیە
-                // جیاوازی نێوان ئەوەی درا و نرخی ڕاستەی سیستەم
-                // شاراوە دەمایەوە (db/022)
-                const { error: stErr } = await supabase.from('orders').update({
-                    status: "گەیشتووە",
-                    status_changed_by: userName,
-                    driver_fee_paid: delivery,
-                    driver_fee_system: Number(distData.deliveryCost || 0)
-                }).eq('id', o.id);
-                // پارەکە دابەشکراوە بەڵام حاڵەت نەگۆڕا (db/118 ڕەتی کردەوە) — دیاری بکە
-                if (stErr) {
-                    console.error('distribute status:', stErr);
-                    showToast("پارەکە دابەشکرا، بەڵام حاڵەت نەگۆڕا: " + (serverGuardMsg(stErr) || "کێشە لە داتابەیس هەیە!"), "error");
-                    rtPatchOrders([o.id]);
-                    if (confirmBtn) { confirmBtn.disabled = false; confirmBtn.innerHTML = "<i class='bx bx-check-circle'></i> تەسدیقکردن و تۆمارکردن"; }
-                    return;
-                }
-                await logOrderAction(o, 'distribute', {
-                    from: o.status, to: "گەیشتووە",
-                    detail: "ئۆردەرەکەی کردە گەیشتوو و قازانجەکانی دابەشکرد"
-                });
-
-                showToast("بە سەرکەوتوویی دابەشکرا!", "success");
-                closeModal(null, 'profit-distribution-modal');
-
-                // تەنها ئەم ئۆردەرە — نەک نەخشاندنەوەی لیستەکە
-                rtPatchOrders([o.id]);
 
             } catch (e) {
                 console.error(e);
