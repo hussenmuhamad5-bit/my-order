@@ -5130,6 +5130,13 @@ h2 i,
   border-color: rgba(245, 158, 11, 0.3);
 }
 
+/* 💵 ئۆردەری ڕاکێشانی پارە (db/167) — شۆفێر پارە دەدات، نەک وەری دەگرێت */
+.paid-stamp.is-cashout {
+  background: rgba(124, 58, 237, 0.1);
+  color: #6d28d9;
+  border-color: rgba(124, 58, 237, 0.28);
+}
+
 /* ئەوەی شۆفێر وەریدەگرێت — گرنگترین ژمارەیە بۆ ئەوەی وەسڵ چاپ دەکات */
 .prepaid-cod {
   display: flex;
@@ -5151,6 +5158,12 @@ h2 i,
   background: rgba(16, 185, 129, 0.1);
   border-color: rgba(16, 185, 129, 0.28);
   color: #047857;
+}
+
+.prepaid-cod.is-pay {
+  background: rgba(124, 58, 237, 0.08);
+  border-color: rgba(124, 58, 237, 0.26);
+  color: #6d28d9;
 }
 
 .prepaid-cod-amt {
@@ -28823,6 +28836,203 @@ body.sx-wide {
 .wx-act.is-send .wx-act-ico {
   background: rgba(255, 255, 255, .2);
   color: #fff;
+}
+
+/* ============================================================
+   💵 ڕاکێشانی پارە (db/167) — دوگمەی سێیەم + شیتی `#cashout-sheet`
+   سێ دوگمە لە ٣٢٠px ≈ ٨٨px هەریەکە: ئایکۆن لە سەرەوە، دەق لە ژێرەوە
+   (دوو دێڕ ڕێگەپێدراوە — هیچ شتێک نابڕدرێت). شیتەکە پارچەکانی «ناردنی
+   پارە» بەکاردەهێنێت (`.xfer-*`)؛ تەنها سەبەتە و پوختە لێرەن.
+   ============================================================ */
+.wx-actions.is-3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.wx-actions.is-3 .wx-act {
+  flex-direction: column;
+  gap: 4px;
+  height: auto;
+  min-height: 62px;
+  padding: 8px 4px;
+  font-size: 12px;
+  line-height: 1.35;
+  text-align: center;
+}
+
+.wx-act.is-cashout .wx-act-ico {
+  background: rgba(124, 58, 237, .1);
+  color: #6d28d9;
+}
+
+.co-preview {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border: 1px solid #fed7aa;
+  border-radius: var(--r-md);
+  background: #fff7ed;
+  color: #9a3412;
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+.co-preview i {
+  flex: none;
+  margin-top: 2px;
+  font-size: 16px;
+}
+
+.co-switch {
+  margin: 2px 0 10px;
+}
+
+/* 🛒 سەبەتەی کاڵا = خودی سەبەتەی فۆڕمی ئۆردەر (`.cart-wrapper` · `.cart-row-flex` · `.qty-input-group` · `.cart-list .cart-row`،
+   خاوەن ٢٠٢٦-١١-٠٤: «بە هەمان شێوە») — لێرە تەنها بۆشایی و ڕیزی کۆی نرخی کاڵاکان. */
+.co-items {
+  margin-bottom: 4px;
+}
+
+.co-items[hidden] {
+  display: none;
+}
+
+.co-items .cart-wrapper {
+  margin-bottom: 12px;
+}
+
+.co-items .cart-list {
+  margin-bottom: 10px;
+}
+
+.co-items-total {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 0 0 14px;
+  padding: 10px 12px;
+  border-radius: var(--r-sm);
+  background: #ecfdf5;
+  color: #065f46;
+  font-size: 13px;
+}
+
+.co-items-total[hidden] {
+  display: none;
+}
+
+.co-items-total b {
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+/* هەمان خانەی تێبینیی فۆڕمی ئۆردەر: بەپێی نووسین گەورە و بچووک دەبێت (`coNoteFit`)، بە پەنجە ناگۆڕدرێت */
+.co-note {
+  display: block;
+  min-height: 45px;
+  resize: none;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.co-sum {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 14px 0 6px;
+  padding: 12px;
+  border: 1px solid #bbf7d0;
+  border-radius: var(--r-md);
+  background: #f0fdf4;
+}
+
+.co-sum.is-bad {
+  border-color: #fecaca;
+  background: #fef2f2;
+}
+
+.co-sum-row,
+.co-sum-total {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  color: #334155;
+  font-size: 13px;
+}
+
+.co-sum-row > span,
+.co-sum-total > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.co-sum-row i,
+.co-sum-total i {
+  flex: none;
+  color: #64748b;
+  font-size: 16px;
+}
+
+.co-sum-row b,
+.co-sum-total b {
+  flex: none;
+  color: #0f172a;
+  font-weight: 800;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.co-sum-total {
+  padding-top: 8px;
+  border-top: 1px dashed #86efac;
+  font-size: 13.5px;
+}
+
+.co-sum-total b {
+  color: #047857;
+  font-size: 18px;
+}
+
+.co-sum.is-bad .co-sum-total b {
+  color: #dc2626;
+}
+
+.co-sum-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  color: #166534;
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+.co-sum.is-bad .co-sum-note {
+  color: #b91c1c;
+}
+
+.co-sum-note i {
+  flex: none;
+  margin-top: 1px;
+  font-size: 16px;
+}
+
+.co-review-cap {
+  margin-bottom: 2px;
+  color: #64748b;
+  font-size: 12px;
+  text-align: center;
+}
+
+.co-edit-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
 }
 
 /* ڕیزی مێژوو — «وەسڵ» */
