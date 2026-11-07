@@ -823,6 +823,10 @@
                     <button class="magic-tab" id="tab-api" title="API ـی گەیاندن" aria-label="API ـی گەیاندن"
                         onclick="switchAdminTab('api', this)" style="display:none;"><i
                             class='bx bx-plug'></i><span class="mt-lbl">API</span></button>
+                    <!-- 🛡️ سزای گەڕاوەکان (db/176) — تەنها پاشا (دوگمە **و** بەش، `adminTabsSync`) -->
+                    <button class="magic-tab" id="tab-penalty" title="سزای گەڕاوەکان" aria-label="سزای گەڕاوەکان"
+                        onclick="switchAdminTab('penalty', this)" style="display:none;"><i
+                            class='bx bx-shield-quarter'></i><span class="mt-lbl">سزاکان</span></button>
                 </div>
             </div>
 
@@ -2136,6 +2140,65 @@
                     </button>
                 </div>
             </div>
+
+            <!-- 🛡️ سزای گەڕاوەکان (db/176، خاوەن ٢٠٢٦-١١-٠٧) — تەنها پاشا. کارتی ڕێکخستن (`penRenderSettings`) + لیستی
+                 ئەندامان وەک «جزدانەکان» (پلە · تیم · گەڕان، `filterPenaltyUsers`) + شیتی سزای تایبەت (`#pen-sheet`). -->
+            <div id="section-penalty" style="display: none;">
+                <div class="container" id="penalty-container">
+                    <!-- دوو بەش، هەر یەکە سکڕۆڵەری خۆی: ڕێکخستن (`#pen-settings`) · ئەندامان (فلتەر + `#pen-users-list`، وەک «جزدانەکان»).
+                         ⚠️ لیستەکە دەبێت خۆی سکڕۆڵ بکات — `winRender` بە سکڕۆڵی خودی لیستەکە بەش بە بەش دەنەخشێنێت.
+                         ⚠️ تەنها لیستەکە شاردنەوەی سەرەوەی هەیە (`registerScrollHide`): ناوچەکە دەبێت ڕاستەوخۆ پێش سکڕۆڵەرەکەی بێت و
+                            هیچ ناوچەیەک بە دوو تۆمار نەدرێت — بۆیە دوگمەی گۆڕینی بەش دوو کۆپییە (`pen_view` · `pen_view_b`). -->
+                    <div id="pen-head">
+                        <div class="segmented-control pen-view" id="pen-view">
+                            <label><input type="radio" name="pen_view" value="settings" checked
+                                    onchange="penSetView(this.value)"><span><i class='bx bx-cog'></i> ڕێکخستن</span></label>
+                            <label><input type="radio" name="pen_view" value="people"
+                                    onchange="penSetView(this.value)"><span><i class='bx bx-group'></i> ئەندامان</span></label>
+                        </div>
+                    </div>
+                    <div id="pen-settings"></div>
+                    <div class="sh-collapse" id="pen-filters-collapse" style="display: none;">
+                        <div class="segmented-control pen-view" id="pen-view-b">
+                            <label><input type="radio" name="pen_view_b" value="settings"
+                                    onchange="penSetView(this.value)"><span><i class='bx bx-cog'></i> ڕێکخستن</span></label>
+                            <label><input type="radio" name="pen_view_b" value="people" checked
+                                    onchange="penSetView(this.value)"><span><i class='bx bx-group'></i> ئەندامان</span></label>
+                        </div>
+                        <div class="segmented-control role-seg" style="margin-bottom: 15px;" id="pen-role-tabs">
+                            <label><input type="radio" name="pen_role_filter" value="all" checked
+                                    onchange="filterPenaltyUsers()"><span>هەموو</span></label>
+                            <label><input type="radio" name="pen_role_filter" value="بەڕێوەبەر"
+                                    onchange="filterPenaltyUsers()"><span>بەڕێوەبەر</span></label>
+                            <label><input type="radio" name="pen_role_filter" value="سەرپەرشت"
+                                    onchange="filterPenaltyUsers()"><span>سەرپەرشت</span></label>
+                            <label><input type="radio" name="pen_role_filter" value="ڕاوێژکار"
+                                    onchange="filterPenaltyUsers()"><span>ڕاوێژکار</span></label>
+                            <label><input type="radio" name="pen_role_filter" value="ئەندام"
+                                    onchange="filterPenaltyUsers()"><span>ئەندام</span></label>
+                        </div>
+                        <!-- 🌳 هەڵبژاردنی تیم بە هەڕەم — هی ئەم لیستە بۆ خۆی (`ttScopeSync('penalty')`) -->
+                        <div class="tt-scope-row" id="tt-scope-penalty">
+                            <button type="button" class="tt-scope" onclick="ttScopeOpen('penalty')"><i class='bx bx-sitemap'></i><span class="tt-scope-t">تیم: <em>هەموو</em></span><i class='bx bx-chevron-down'></i></button>
+                        </div>
+                        <div class="search-row">
+                            <div class="search-group" id="pen-search-container">
+                                <input class="search-input" type="search" id="search-pen-input"
+                                    placeholder="گەڕان بە ناو یان کۆد..." oninput="debouncedPenaltyUsers()"
+                                    autocomplete="off" />
+                                <svg viewBox="0 0 24 24" aria-hidden="true" class="search-icon">
+                                    <g>
+                                        <path
+                                            d="M21.53 20.47l-3.66-3.66C19.195 15.24 20 13.214 20 11c0-4.97-4.03-9-9-9s-9 4.03-9 9 4.03 9 9 9c2.215 0 4.24-.804 5.808-2.13l3.66 3.66c.147.146.34.22.53.22s.385-.073.53-.22c.295-.293.295-.767.002-1.06zM3.5 11c0-4.135 3.365-7.5 7.5-7.5s7.5 3.365 7.5 7.5-3.365 7.5-7.5 7.5-7.5-3.365-7.5-7.5z">
+                                        </path>
+                                    </g>
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="pen-users-list" style="display: none;"></div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -3164,6 +3227,22 @@
          ئەندام؛ دوگمەی خوارەوە لیستەکە بۆ ئەو تیمە دەپاڵێوێت. هەر لیستێک
          هەڵبژاردنی خۆی هەیە (`ttScopes`). ⚠️ لە `SHEET_CLOSERS`دا تۆمارکراوە.
          ============================================================ -->
+    <!-- 🛡️ سزای تایبەت (db/176) — کەسێک / تیمەکەی (`penalty_override_set`) یان کەسێک لەسەر ئۆردەرێک
+         (`set_order_penalty_custom`). ناوەڕۆک لە `penSheetRender`. ⚠️ لە `SHEET_CLOSERS`دا تۆمارکراوە. -->
+    <div id="pen-sheet" class="fsheet" role="dialog" aria-modal="true" aria-label="سزای تایبەت">
+        <div class="fsheet-scrim" onclick="penSheetClose()"></div>
+        <div class="fsheet-panel">
+            <div class="fsheet-head">
+                <button type="button" class="fsheet-x" onclick="penSheetClose()" aria-label="داخستن">
+                    <i class='bx bx-x'></i>
+                </button>
+                <span class="fsheet-title" id="pen-sheet-title">سزای تایبەت</span>
+            </div>
+            <div class="fsheet-body" id="pen-sheet-body"></div>
+            <div class="fsheet-foot" id="pen-sheet-foot"></div>
+        </div>
+    </div>
+
     <div id="tt-sheet" class="fsheet" role="dialog" aria-modal="true" aria-label="هەڵبژاردنی تیم">
         <div class="fsheet-scrim" onclick="ttSheetClose()"></div>
         <div class="fsheet-panel">
@@ -6586,7 +6665,7 @@
             return ADMIN_TABS.find(t => t.tab === tab) || null;
         }
         function adminTabAllowed(tab) {
-            if (tab === 'backup' || tab === 'storage' || tab === 'api') return userRole === 'پاشا';
+            if (tab === 'backup' || tab === 'storage' || tab === 'api' || tab === 'penalty') return userRole === 'پاشا';
             const d = adminTabDef(tab);
             return !!d && can(d.perm);
         }
@@ -6597,6 +6676,8 @@
                 list.push({ tab: 'storage', btn: 'tab-storage', sec: 'section-storage', perm: 'manage_storage', show: 'flex' });
                 // 🔌 API ـی گەیاندن (db/127) — تەنها پاشا؛ سێرڤەریش هەمان شت دەپشکنێت
                 list.push({ tab: 'api', btn: 'tab-api', sec: 'section-api', perm: 'manage_courier_api', show: 'flex' });
+                // 🛡️ سزای گەڕاوەکان (db/176) — تەنها پاشا؛ هەموو RPC ـەکانیش `NOT_KING`
+                list.push({ tab: 'penalty', btn: 'tab-penalty', sec: 'section-penalty', perm: 'manage_penalties', show: 'flex' });
             }
             return list;
         }
@@ -6646,12 +6727,23 @@
                 capiForget();
             }
 
+            // 🛡️ تابی سزای گەڕاوەکان — تەنها بۆ پاشا (دوگمە **و** بەش)
+            const pnBtn = document.getElementById('tab-penalty');
+            if (pnBtn) pnBtn.style.display = (userRole === 'پاشا') ? 'inline-block' : 'none';
+            if (userRole !== 'پاشا') {
+                const pnSec = document.getElementById('section-penalty');
+                if (pnSec) pnSec.style.display = 'none';
+                if (pnBtn) pnBtn.classList.remove('active');
+                penForget();
+            }
+
             if (!allowed.length) return;
 
             // ئەگەر باکئەپ، ستۆریج یان API چالاک بێت و بەکارهێنەر پاشا بێت، مەیگۆڕە
             if ((bkBtn && bkBtn.classList.contains('active') && userRole === 'پاشا') ||
                 (stBtn && stBtn.classList.contains('active') && userRole === 'پاشا') ||
-                (apBtn && apBtn.classList.contains('active') && userRole === 'پاشا')) return;
+                (apBtn && apBtn.classList.contains('active') && userRole === 'پاشا') ||
+                (pnBtn && pnBtn.classList.contains('active') && userRole === 'پاشا')) return;
 
             // تابی چالاکی ئێستا هێشتا ڕێگەی پێدراوە؟ ئەگەرنا، یەکەم
             // تابێک کە ڕێگەی پێدراوە.
@@ -8098,7 +8190,7 @@
         let _ttCounts = null;        // ژمارەی ئۆردەری هەموو تیمەکە بۆ دارەکە — {key, map, t}
         let _ttLevel = {};           // کۆد → {sub, chip}: گەڕانەوە هەمان تاب و خانەی ئەو پەڕەیە دەدۆزێتەوە
         // هەڵبژاردنی تیم لە لیستەکانی ئەدمین — هەر لیستێک بۆ خۆی (خاوەن ٢٠٢٦-١٠-٢٥: «تەواو جیاواز بێت»)
-        let ttScopes = { wallet: null, profit: null, edit: null };
+        let ttScopes = { wallet: null, profit: null, edit: null, penalty: null };
         let ttSheetCtx = null, ttSheetPath = [];
 
         // ============================================================
@@ -10627,7 +10719,7 @@
             // پەڕەی ئەدمین چەند تابێکی هەیە — ئەوەی دەبینرێت هەڵدەبژێردرێت
             if (screenId === 'admin-screen') {
                 const tabs = ['edit-users-list', 'profit-users-list', 'wallet-users-list',
-                    'admin-cities-list', 'trash-container'];
+                    'admin-cities-list', 'trash-container', 'pen-settings', 'pen-users-list'];
                 for (const id of tabs) {
                     let el = document.getElementById(id);
                     if (el && el.offsetParent !== null) return id;
@@ -11462,6 +11554,11 @@
         //    هەموو کەسێکی تر هەمان «جزدان»ی پێشوو دەبینێت (سەرچاوە هەرگیز بۆ کەسێک کە نایبینێت — db/145).
         function prepaidSrcLabel(o) {
             if (o && o.cashout_wallet === 'savings' && (userRole === 'پاشا' || permOn('view_savings'))) return 'پاشەکەوت';
+            // 🪙 db/175: هەردوو جزدان — هەمان یاسا: تەنها ئەوەی پاشەکەوت دەبینێت، هەموو کەسێکی تر «جزدان»
+            if (o && o.cashout_wallet === 'both' && (userRole === 'پاشا' || permOn('view_savings'))) {
+                const sv = Math.round(Number(o.cashout_sav) || 0), all = Math.round(Number(o.prepaid_amount) || 0);
+                return 'جزدان ' + xferMoney(all - sv) + ' + پاشەکەوت ' + xferMoney(sv);
+            }
             return paymentMethodLabel(o && o.payment_method);
         }
 
@@ -12922,6 +13019,7 @@
             ${detailRow('bx-time-five', 'کاتی داواکاری',
                 formatDateTimeKurdish(o.date || o.created_at), { dir: 'ltr' })}
             ${orderMoneyBoxHtml(o, detailProfit)}
+            ${penaltyBoxHtml(o)}
             ${profitSplitHtml}
             ${changerInfoHtml}
             ${statusChangerHtml}
@@ -12958,6 +13056,8 @@
             else loadOrderLogs(o.id, o);
 
             if (profitSplitHtml) loadOrderProfitBreakdown(o);
+            // 🛡️ سزای گەڕانەوە (db/176) — تەنها ئۆردەری گەڕاوە؛ سێرڤەر دەڵێت کێ چی دەبینێت
+            if (penaltyBoxOn(o)) loadOrderPenalty(o);
 
             if (distPrefetchCode) distCtxGet(distPrefetchCode).catch(() => { });
             if (distPrefetchCode) orderProfitStatePrefetch(o.id);   // ⭐ db/158: هەمان شەپۆل
@@ -15138,7 +15238,7 @@
             // ئاگاداریی دەستی — لە پێشەوە، چونکە گرنگترینە
             { k: 'announce', t: 'ئاگاداری', kinds: ['announce'], ownOnly: true },
             { k: 'create', t: 'ئۆردەری نوێ', kinds: ['create'] },
-            { k: 'status', t: 'گۆڕانی حاڵەت', kinds: ['status', 'distribute'] },
+            { k: 'status', t: 'گۆڕانی حاڵەت', kinds: ['status', 'distribute', 'penalty'] },
             { k: 'wallet', t: 'پارە', kinds: ['wallet'] },
             { k: 'challenge', t: 'چاڵنج', kinds: ['challenge'] },
             { k: 'edit', t: 'دەستکاری', kinds: ['edit'] },
@@ -15175,7 +15275,9 @@
             wallet: { icon: 'bx-wallet', color: '#10b981' },
             comment: { icon: 'bx-message-rounded-dots', color: '#2481cc' },
             announce: { icon: 'bx-broadcast', color: '#e11d48' },
-            challenge: { icon: 'bx-trophy', color: '#f59e0b' }
+            challenge: { icon: 'bx-trophy', color: '#f59e0b' },
+            // 🛡️ سزای گەڕانەوە (db/176) — کارەبایی/زەردی هێمن، نەک سوور
+            penalty: { icon: 'bx-shield-quarter', color: '#b45309' }
         };
 
         // ئەندامی ئاسایی کەسی ژێردەست نییە → تابی تیمی بۆ نییە
@@ -15503,6 +15605,8 @@
             { k: 'edit', icon: 'bx-edit-alt', color: '#f39c12', t: 'دەستکاری', go: 'log' },
             { k: 'status', icon: 'bx-transfer', color: '#8b5cf6', t: 'گۆڕانی حاڵەت', go: 'log' },
             { k: 'return', icon: 'bx-undo', color: '#dc2626', t: 'گەڕانەوە', go: 'log' },
+            // 🛡️ سزای گەڕانەوە (db/176): پەنجە → زانیاریی ئۆردەر، کارتی «سزای گەڕانەوە» (بڕ + هۆکار)
+            { k: 'penalty', icon: 'bx-shield-quarter', color: '#b45309', t: 'سزای گەڕانەوە', go: 'info' },
             { k: 'distribute', icon: 'bx-check-circle', color: '#10b981', t: 'دابەشکردنی قازانج', go: 'profit' },
             // ⚠️ دەمێنێتەوە بۆ ئەوەی «جۆری نەناسراو» نەبێت؛ وەک ئایکۆن پیشان
             //    نادرێت — بڕەکان دێڕی خۆیان هەیە (`notifMoneyLinesHtml`)
@@ -32502,10 +32606,10 @@
                 catch (e) { console.warn('kingSetStatus: wallet paid', e); }
                 if (due > 0) {
                     // 🪙 db/172: ڕاکێشان لە پاشەکەوت — سێرڤەر لە پاشەکەوتەوە دەیبڕێتەوە (تەنها پاشا ئەم پرسیارە دەبینێت)
-                    const sv = o.cashout_wallet === 'savings';
+                    const sv = o.cashout_wallet === 'savings', both = o.cashout_wallet === 'both';   // db/175: هەر بەشێک بۆ جزدانی خۆی
                     ask = '⚠️ ئەم ئۆردەرە گەڕاوەتەوە و ' + due.toLocaleString('en-US')
-                        + ' د.ع پارەی پێشوەخت گەڕایەوە ' + (sv ? 'پاشەکەوتی' : 'جزدانی') + ' خاوەنەکەی (' + (o.seller_name || o.seller_code) + ').\n\n'
-                        + 'بە گۆڕینی بۆ «' + newStatus + '»، ئەو پارەیە دووبارە لە ' + (sv ? 'پاشەکەوتەکەی' : 'جزدانەکەی') + ' دەبڕدرێت.\n\nدڵنیایت؟';
+                        + ' د.ع پارەی پێشوەخت گەڕایەوە ' + (both ? 'جزدان و پاشەکەوتی' : sv ? 'پاشەکەوتی' : 'جزدانی') + ' خاوەنەکەی (' + (o.seller_name || o.seller_code) + ').\n\n'
+                        + 'بە گۆڕینی بۆ «' + newStatus + '»، ئەو پارەیە دووبارە لە ' + (both ? 'جزدان و پاشەکەوتەکەی' : sv ? 'پاشەکەوتەکەی' : 'جزدانەکەی') + ' دەبڕدرێت.\n\nدڵنیایت؟';
                 }
             }
             // «لە ڕێگایە»ی دەستی (ONWAY_NO_DRIVER_WARN) — یەک پرسیار، نەک دوو
@@ -35421,10 +35525,11 @@
             if (box.__tt !== html) { box.__tt = html; box.innerHTML = html; }
         }
         function ttRefilter(ctx) {
-            const ids = { wallet: 'wallet-users-list', profit: 'profit-users-list', edit: 'edit-users-list' };
+            const ids = { wallet: 'wallet-users-list', profit: 'profit-users-list', edit: 'edit-users-list', penalty: 'pen-users-list' };
             if (ctx === 'wallet') filterWalletUsers();
             else if (ctx === 'profit') filterProfitUsers();
             else if (ctx === 'edit') filterEditUsers();
+            else if (ctx === 'penalty') filterPenaltyUsers();
             const l = document.getElementById(ids[ctx]);
             if (l) l.scrollTop = 0;
         }
@@ -35878,7 +35983,8 @@
             'capi-edit-sheet': () => capiCloseEditor(),
             'capi-key-sheet': () => capiCloseKey(),
             'capi-log-sheet': () => capiCloseLog(),
-            'txf-sheet': () => txfSheetClose()
+            'txf-sheet': () => txfSheetClose(),
+            'pen-sheet': () => penSheetClose()
         };
 
         function navWatchOverlays() {
@@ -36349,6 +36455,8 @@
             registerScrollHide({ scroller: 'wallet-users-list', hideEls: ['admin-magic-tabs', 'wallet-filters-collapse'] });
             registerScrollHide({ scroller: 'admin-cities-list', hideEls: ['admin-magic-tabs', 'cities-add-collapse'] });
             registerScrollHide({ scroller: 'trash-container', hideEls: ['admin-magic-tabs', 'trash-head'] });
+            // 🛡️ سزاکان: تەنها لیستی ئەندامان (ڕێکخستن فۆڕمێکە، سکڕۆڵی خۆی هەیە بێ شاردنەوە — یەک تۆمار بۆ هەر بەشێک)
+            registerScrollHide({ scroller: 'pen-users-list', hideEls: ['admin-magic-tabs', 'pen-filters-collapse'] });
         }
 
         if (document.readyState === 'loading') {
@@ -38576,6 +38684,716 @@
         let capiLog = null;       // دۆخی شیتی تۆمار
         let capiKeyPlain = null;  // کلیلی نوێ — تەنها تا شیتەکە کراوەیە
 
+        // ============================================================
+        // 🛡️ سزای گەڕاوەکان (db/176، خاوەن ٢٠٢٦-١١-٠٧) — تەنها پاشا
+        // ------------------------------------------------------------
+        // کارتی ڕێکخستن (سویچی سەرەکی · سێ دەرگا · چوار شوێنی زنجیرە · کاڵای زیادە · وشە بەخشراوەکان) + لیستی
+        // ئەندامان (پلە · تیم · گەڕان — هەمان شێوەی «جزدانەکان»، کارتی `.wcard`) + شیتی سزای تایبەت (`#pen-sheet`) +
+        // کارتی «سزای گەڕانەوە» لە زانیاریی ئۆردەر (`penaltyBoxHtml` · `loadOrderPenalty`).
+        // ⭐ هیچ «کرا»یەکی پێشوەخت (یاسای پارە و کۆین): هەر کردارێک `guardSubmit` + سێ خاڵ، پاشان وەڵامی سێرڤەر.
+        // ⭐ خانەی ژمارە لە کاتی نووسیندا دەستی لێنادرێت — تەنها `penDraft` دەگۆڕێت؛ سنوور لە `blur`.
+        // ⭐ سێرڤەر خۆی بڕیار دەدات (پاشا بە پلە، `NOT_KING`)؛ ئەم شاشەیە تەنها دەیخوێنێتەوە و دەینێرێت.
+        // ============================================================
+        let penHome = null;       // { settings, overrides: {code: {e, p, c}}, stats } — `penalty_admin_home`
+        let penDraft = null;      // ڕێکخستنەکان لە کاتی دەستکاری (پاشەکەوت بە دوگمەکە)
+        let _penTok = 0;
+        let penSheet = null;      // { mode: 'person' | 'order', ... }
+        const _penOdInfo = {};    // ئۆردەر → وەڵامی `order_penalty_info`
+        const PEN_SLOTS = [
+            { k: 'mem', t: 'ئەندام', sub: 'خاوەنی ئۆردەر', rk: 'mem' },
+            { k: 'con', t: 'ڕاوێژکار', sub: 'سەرووی خاوەن', rk: 'con' },
+            { k: 'sup', t: 'سەرپەرشت', sub: 'سەرووی خاوەن', rk: 'sup' },
+            { k: 'mgr', t: 'بەڕێوەبەر', sub: 'سەرووی خاوەن', rk: 'mgr' }
+        ];
+        const PEN_DOORS = [
+            { k: 'trigger_onway', t: 'لە ڕێگایە', ico: 'bx-cycling' },
+            { k: 'trigger_delivered', t: 'گەیشتووە', ico: 'bx-check-circle' },
+            { k: 'trigger_prep', t: 'ئامادە دەکرێت', ico: 'bx-package' }
+        ];
+        const PEN_NUM_KEYS = ['mem_pts', 'mem_coins', 'con_pts', 'con_coins', 'sup_pts', 'sup_coins', 'mgr_pts', 'mgr_coins',
+            'extra_item_pts', 'extra_item_coins'];
+        const PEN_SLOT_NAME = { owner: 'خاوەنی ئۆردەر', consultant: 'ڕاوێژکار', supervisor: 'سەرپەرشت', manager: 'بەڕێوەبەر' };
+        const PEN_PLUS = `<svg class="qty-icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 18 18"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 1v16M1 9h16"></path></svg>`;
+        const PEN_MINUS = `<svg class="qty-icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 18 18"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M1 9h16"></path></svg>`;
+
+        function penMax(key) { return /coins$/.test(key) ? 100000 : 10000; }
+        function penStepOf(key) { return /coins$/.test(key) ? 5 : 1; }
+        function penInt(v) {
+            const s = String(toEnglishDigits(String(v == null ? '' : v))).replace(/[^0-9]/g, '');
+            return s ? Math.min(1000000, parseInt(s, 10)) : 0;
+        }
+        // ژمارەی نیشانەدار لەناو دەقی کوردی = دوورگەیەکی ltr (یاسای بیدی)
+        function penNeg(n, unit) { return `<span class="pen-amt"><bdi dir="ltr">−${fmtNum(n)}</bdi> ${unit}</span>`; }
+        function penAmtHtml(coins, pts) {
+            const a = [];
+            if (Number(coins) > 0) a.push(penNeg(Number(coins), 'کۆین'));
+            if (Number(pts) > 0) a.push(penNeg(Number(pts), 'خاڵ'));
+            return a.length ? a.join(' <span class="pen-dot" aria-hidden="true">·</span> ') : '<span class="pen-amt">0</span>';
+        }
+        function penErrMsg(e) {
+            const raw = String((e && (e.message || e.details)) || e || '');
+            if (/NOT_KING/.test(raw)) return 'تەنها پاشا دەتوانێت ئەمە بکات.';
+            if (/NOT_STAFF/.test(raw)) return 'دانیشتنەکەت بەسەرچووە — دووبارە بچۆ ژوورەوە.';
+            if (/BAD_INPUT/.test(raw)) return 'ژمارەیەک یان وشەیەک نادروستە — بیپشکنە و دووبارە هەوڵ بدە.';
+            if (/NOT_FOUND/.test(raw)) return 'نەدۆزرایەوە — لەوانەیە گۆڕابێت. پەڕەکە نوێ بکەرەوە.';
+            if (/PGRST202|Could not find the function/i.test(raw) || String((e && e.code) || '') === 'PGRST202') {
+                return 'سێرڤەر هێشتا ئامادە نییە بۆ سزاکان (db/176).';
+            }
+            if (typeof isLostReply === 'function' && isLostReply(e)) {
+                return 'وەڵام نەگەیشت — پەڕەکە نوێ بکەرەوە بۆ ئەوەی بزانیت پاشەکەوت بوو یان نا.';
+            }
+            return (typeof serverGuardMsg === 'function' && serverGuardMsg(e)) || 'پەیوەندی نەبوو — دووبارە هەوڵ بدە.';
+        }
+
+        let penView = 'settings';
+        function initPenaltySection() {
+            if (userRole !== 'پاشا') return;
+            penSetView(penView, true);
+            penRenderSettings();
+            penLoad();
+        }
+        // ڕێکخستن ↔ ئەندامان — هەر یەکە سکڕۆڵەری خۆی؛ لیستەکە تەنها کاتێک دەبینرێت دەنەخشێنرێت
+        function penSetView(v, quiet) {
+            penView = v === 'people' ? 'people' : 'settings';
+            const people = penView === 'people';
+            const show = (id, on) => { const el = document.getElementById(id); if (el) el.style.display = on ? '' : 'none'; };
+            show('pen-head', !people);
+            show('pen-settings', !people);
+            show('pen-filters-collapse', people);
+            show('pen-users-list', people);
+            ['pen_view', 'pen_view_b'].forEach(nm => {
+                const r = document.querySelector('input[name="' + nm + '"][value="' + penView + '"]');
+                if (r && !r.checked) r.checked = true;
+            });
+            if (people) filterPenaltyUsers();
+            if (!quiet && typeof resetAllScrollHide === 'function') resetAllScrollHide();
+        }
+        // دەرچوون یان لەدەستدانی پاشایەتی → هیچ شتێک لە بیرگەدا نامێنێت
+        function penForget() {
+            penHome = null;
+            penDraft = null;
+            penSheetClose();
+        }
+        async function penLoad() {
+            if (userRole !== 'پاشا') return;
+            const tok = ++_penTok;
+            try {
+                const { data, error } = await supabase.rpc('penalty_admin_home');
+                if (error) throw error;
+                if (tok !== _penTok) return;
+                penApplyHome(data, true);
+            } catch (e) {
+                if (tok !== _penTok) return;
+                console.error('penalty_admin_home:', e);
+                const box = document.getElementById('pen-settings');
+                if (box && !penHome) {
+                    box.innerHTML = `<div class="pen-note is-err"><i class='bx bx-error-circle'></i><span>${histEsc(penErrMsg(e))}</span>`
+                        + `<button type="button" class="pen-retry" onclick="penLoad()">دووبارە</button></div>`;
+                }
+            }
+        }
+        // `resetDraft` = هەموو دەستکارییەکی پاشەکەوتنەکراو فڕێ دەدرێت (بارکردن · پاشەکەوت)؛ ئەگەرنا تەنها سویچی سەرەکی
+        function penApplyHome(h, resetDraft) {
+            penHome = h || { settings: null, overrides: {}, stats: null };
+            if (!penHome.overrides) penHome.overrides = {};
+            if (resetDraft || !penDraft) penDraft = JSON.parse(JSON.stringify(penHome.settings || {}));
+            else penDraft.enabled = !!(penHome.settings && penHome.settings.enabled);
+            penRenderSettings();
+            if (penView === 'people') filterPenaltyUsers();
+        }
+
+        // ---- کارتی ڕێکخستن ----
+        function penDirtyKeys() {
+            const s = (penHome && penHome.settings) || {}, d = penDraft || {};
+            const out = {};
+            PEN_DOORS.forEach(x => { if (!!d[x.k] !== !!s[x.k]) out[x.k] = !!d[x.k]; });
+            PEN_NUM_KEYS.forEach(k => {
+                const v = Math.min(penMax(k), Math.max(0, penInt(d[k])));
+                if (v !== Number(s[k] || 0)) out[k] = v;
+            });
+            if (JSON.stringify(s.exempt_words || []) !== JSON.stringify(d.exempt_words || [])) out.exempt_words = (d.exempt_words || []).slice();
+            return out;
+        }
+        // `scope`: 'set' = کارتی ڕێکخستن (`penDraft`) · 'sh' = شیتەکە (`penSheet`) — هەندلەری ناوی جێگیر (پشکنەری onclick)
+        function penStepHtml(key, label, src, scope) {
+            const v = src ? penInt(src[key]) : 0;
+            const sc = scope === 'sh' ? 'sh' : 'set';
+            const id = (sc === 'sh' ? 'pen-sh-' : 'pen-n-') + key;
+            return `<div class="pen-step">
+                <span class="pen-step-l">${label}</span>
+                <div class="qty-input-group pen-qty">
+                    <button type="button" class="qty-btn plus-btn" onclick="penStepAt('${sc}', '${key}', 1)" aria-label="زیادکردنی ${label}">${PEN_PLUS}</button>
+                    <input type="text" inputmode="numeric" class="qty-input" id="${id}" value="${v}" aria-label="${label}"
+                        oninput="penNumAt('${sc}', '${key}', this)" onblur="penBlurAt('${sc}', '${key}', this)" onfocus="this.select()">
+                    <button type="button" class="qty-btn minus-btn" onclick="penStepAt('${sc}', '${key}', -1)" aria-label="کەمکردنەوەی ${label}">${PEN_MINUS}</button>
+                </div>
+            </div>`;
+        }
+        function penStepAt(sc, key, d) { if (sc === 'sh') penShStep(key, d); else penStep(key, d); }
+        function penNumAt(sc, key, el) { if (sc === 'sh') penShNumInput(key, el); else penNumInput(key, el); }
+        function penBlurAt(sc, key, el) { if (sc === 'sh') penShNumBlur(key, el); else penNumBlur(key, el); }
+        function penWordsHtml() {
+            const w = (penDraft && penDraft.exempt_words) || [];
+            return w.map((x, i) => `<span class="pen-word"><span>${histEsc(x)}</span>`
+                + `<button type="button" onclick="penWordDel(${i})" aria-label="لابردنی ${histEsc(x)}"><i class='bx bx-x'></i></button></span>`).join('')
+                + `<span class="pen-word-add"><input type="text" id="pen-word-in" maxlength="40" placeholder="وشەیەکی نوێ…" autocomplete="off"`
+                + ` onkeydown="if (event.key === 'Enter') { event.preventDefault(); penWordAdd(); }">`
+                + `<button type="button" onclick="penWordAdd()" aria-label="زیادکردنی وشە"><i class='bx bx-plus'></i></button></span>`;
+        }
+        // ✨ سکێلێتۆن = خودی کارتەکە (سەردێڕ + چوار خانە)، نەک خولاوە
+        function penSettingsSkel() {
+            const sk = (w, h) => `<span class="sk" style="width:${w}px;height:${h || 12}px"></span>`;
+            const slot = `<div class="pen-slot">${sk(70)}${sk(140, 34)}${sk(140, 34)}</div>`;
+            return `<div class="pen-card sk-shim" aria-hidden="true">
+                <div class="pen-head"><span class="pen-head-ico"></span><span class="pen-head-txt">${sk(150, 14)}${sk(190, 10)}</span>${sk(46, 24)}</div>
+                <div class="pen-grid">${slot}${slot}${slot}${slot}</div></div>`;
+        }
+        function penRenderSettings() {
+            const box = document.getElementById('pen-settings');
+            if (!box) return;
+            if (!penHome || !penHome.settings || !penDraft) {
+                if (!box.querySelector('.pen-card')) box.innerHTML = penSettingsSkel();
+                return;
+            }
+            const d = penDraft, on = !!penHome.settings.enabled, st = penHome.stats || {};
+            const slots = PEN_SLOTS.map(s => `<div class="pen-slot">
+                    <div class="pen-slot-h"><b class="rk-${s.rk}">${s.t}</b><small>${s.sub}</small></div>
+                    ${penStepHtml(s.k + '_pts', 'خاڵ', d)}
+                    ${penStepHtml(s.k + '_coins', 'کۆین', d)}
+                </div>`).join('');
+            const doors = PEN_DOORS.map(x => `<button type="button" class="pen-door" id="pen-door-${x.k}"`
+                + ` aria-pressed="${d[x.k] ? 'true' : 'false'}" onclick="penDoor('${x.k}')">`
+                + `<i class='bx ${x.ico}'></i><span>${x.t}</span><i class='bx bx-left-arrow-alt pen-door-arr' aria-hidden="true"></i>`
+                + `<span>گەڕاوە</span><i class='bx bx-check pen-door-on' aria-hidden="true"></i></button>`).join('');
+            const stats = `<div class="pen-stats"><i class='bx bx-bar-chart-alt-2'></i><span>${fmtNum(30)} ڕۆژی ڕابردوو:
+                <b>${fmtNum(st.orders || 0)}</b> ئۆردەر · <b>${fmtNum(st.people || 0)}</b> کەس · ${penAmtHtml(st.coins || 0, st.pts || 0)}
+                · <b>${fmtNum(st.waived || 0)}</b> لێخۆشبوون</span></div>`;
+            box.innerHTML = `<div class="pen-card${on ? ' is-on' : ''}">
+                <div class="pen-head">
+                    <span class="pen-head-ico"><i class='bx bx-shield-quarter'></i></span>
+                    <span class="pen-head-txt"><b>سزای ئۆردەری گەڕاوە</b>
+                        <span>${on ? 'چالاکە — هەر گەڕانەوەیەکی نوێ بەپێی ئەم ڕێکخستنانە.' : 'کوژاوەیە — هیچ سزایەک نادرێت.'}</span></span>
+                    <label class="switch pen-master" title="داگیرساندن / کوژاندنەوە"><input type="checkbox" id="pen-enabled"${on ? ' checked' : ''}
+                        onchange="penMasterToggle(this)" aria-label="سیستەمی سزا">${_switchSvg}</label>
+                </div>
+                ${stats}
+                <div class="pen-sec-t">کەی سزا دەدرێت؟<small>کاتێک ئۆردەرێک لەم دۆخانەوە دەبێتە «گەڕاوە»</small></div>
+                <div class="pen-doors">${doors}</div>
+                <div class="pen-sec-t">سزای هەر ئۆردەرێکی گەڕاوە<small>بۆ هەر کەسێکی زنجیرەکە — پاشا هەرگیز</small></div>
+                <div class="pen-grid">${slots}</div>
+                <div class="pen-sec-t">بۆ هەر کاڵایەکی زیاتر لە یەکەم<small>دەچێتە سەر هەموو کەسێکی زنجیرەکە</small></div>
+                <div class="pen-extra">${penStepHtml('extra_item_pts', 'خاڵ', d)}${penStepHtml('extra_item_coins', 'کۆین', d)}</div>
+                <div class="pen-sec-t">هۆکارە بەخشراوەکان<small>گەڕانەوەیەک کە هۆکارەکەی یەکێک لەم وشانەی تێدابێت، سزای نییە</small></div>
+                <div class="pen-words" id="pen-words">${penWordsHtml()}</div>
+                <div class="pen-note"><i class='bx bx-info-circle'></i><span>ئۆردەری خەڵات و ڕاکێشانی پارە هەرگیز سزایان نییە.
+                    ئەگەر ئۆردەرەکە دواتر بگات، هەموو سزاکە دەگەڕێتەوە. گۆڕینی ژمارەکان تەنها گەڕانەوەکانی داهاتوو دەگرێتەوە.</span></div>
+                <button type="button" class="pen-save" id="pen-save" onclick="penSave(this)">پاشەکەوتکردنی ڕێکخستنەکان</button>
+            </div>`;
+            penDirtySync();
+        }
+        // دوگمەی کوژاوە خۆی دەڵێت بۆچی (یاسای پڕۆژە)
+        function penDirtySync() {
+            const b = document.getElementById('pen-save');
+            if (!b || (b.disabled && b.querySelector('.bx-spin'))) return;
+            const n = Object.keys(penDirtyKeys()).length;
+            b.disabled = n === 0;
+            b.textContent = n ? 'پاشەکەوتکردنی ڕێکخستنەکان' : 'هیچ گۆڕانێک نییە';
+        }
+        function penStep(key, d) {
+            if (!penDraft) return;
+            const v = Math.min(penMax(key), Math.max(0, penInt(penDraft[key]) + d * penStepOf(key)));
+            penDraft[key] = v;
+            const el = document.getElementById('pen-n-' + key);
+            if (el) el.value = String(v);
+            penDirtySync();
+        }
+        function penNumInput(key, el) {
+            if (!penDraft) return;
+            penDraft[key] = penInt(el.value);
+            penDirtySync();
+        }
+        function penNumBlur(key, el) {
+            if (!penDraft) return;
+            const v = Math.min(penMax(key), Math.max(0, penInt(el.value)));
+            penDraft[key] = v;
+            if (el.value !== String(v)) el.value = String(v);
+            penDirtySync();
+        }
+        function penDoor(k) {
+            if (!penDraft) return;
+            penDraft[k] = !penDraft[k];
+            const b = document.getElementById('pen-door-' + k);
+            if (b) b.setAttribute('aria-pressed', penDraft[k] ? 'true' : 'false');
+            penDirtySync();
+        }
+        function penWordAdd() {
+            const inp = document.getElementById('pen-word-in');
+            if (!inp || !penDraft) return;
+            const w = String(inp.value || '').replace(/\s+/g, ' ').trim();
+            if (!w) return;
+            const list = penDraft.exempt_words = (penDraft.exempt_words || []).slice();
+            if (list.length >= 40) { showToast('زۆرترین 40 وشە', 'error'); return; }
+            if (list.indexOf(w) === -1) list.push(w);
+            penWordsRepaint(true);
+        }
+        function penWordDel(i) {
+            if (!penDraft) return;
+            const list = penDraft.exempt_words = (penDraft.exempt_words || []).slice();
+            list.splice(i, 1);
+            penWordsRepaint(false);
+        }
+        function penWordsRepaint(focus) {
+            const box = document.getElementById('pen-words');
+            if (box) box.innerHTML = penWordsHtml();
+            if (focus) { const inp = document.getElementById('pen-word-in'); if (inp) inp.focus(); }
+            penDirtySync();
+        }
+        async function penSave(btn) {
+            const p = penDirtyKeys();
+            if (!Object.keys(p).length) return;
+            let res = null, err = null;
+            try {
+                res = await guardSubmit('pen-save', btn, async () => {
+                    if (!await ensureAccountActiveFresh()) return null;
+                    const { data, error } = await supabase.rpc('penalty_settings_save', { p });
+                    if (error) throw error;
+                    return data;
+                });
+            } catch (e) { err = e; }
+            if (err) {
+                console.error('penalty_settings_save:', err);
+                showToast(penErrMsg(err), 'error');
+                penDirtySync();
+                return;
+            }
+            if (!res) { penDirtySync(); return; }
+            penApplyHome(res, true);
+            showToast('ڕێکخستنەکانی سزا پاشەکەوت کران', 'success');
+        }
+        // سویچی سەرەکی یەکسەر دەنێردرێت (بە پرسیار)؛ تا وەڵامی سێرڤەر وەک خۆی دەمێنێت
+        async function penMasterToggle(inp) {
+            const want = !!inp.checked;
+            inp.checked = !want;
+            const ask = want
+                ? 'سیستەمی سزا دابگیرسێنرێت؟\n\nلەمەودوا هەر ئۆردەرێک کە دەگەڕێتەوە، بەپێی ئەم ڕێکخستنانە کۆین و خاڵ لە خاوەنەکەی و سەرەوەکانی دەبڕێت و ئاگادار دەکرێنەوە. ئەگەر ئۆردەرەکە دواتر بگات، دەگەڕێتەوە. ئۆردەرە کۆنەکان دەستیان لێنادرێت.'
+                : 'سیستەمی سزا بکوژێنرێتەوە؟\n\nهیچ سزایەکی نوێ نادرێت. ئەو سزایانەی ئێستا لە کاردان دەمێنن، تا ئۆردەرەکە دەگات یان لێیان خۆش دەبیت.';
+            if (!confirm(ask)) return;
+            const sw = inp.closest('.switch');
+            inp.disabled = true;
+            if (sw) sw.classList.add('is-busy');
+            let res = null, err = null;
+            try {
+                res = await guardSubmit('pen-master', null, async () => {
+                    if (!await ensureAccountActiveFresh()) return null;
+                    const { data, error } = await supabase.rpc('penalty_settings_save', { p: { enabled: want } });
+                    if (error) throw error;
+                    return data;
+                });
+            } catch (e) { err = e; }
+            finally {
+                if (inp.isConnected) inp.disabled = false;
+                if (sw) sw.classList.remove('is-busy');
+            }
+            if (err) { console.error('penalty_settings_save:', err); showToast(penErrMsg(err), 'error'); return; }
+            if (!res) return;
+            penApplyHome(res, false);
+            showToast(want ? 'سیستەمی سزا داگیرسا' : 'سیستەمی سزا کوژایەوە', 'success');
+        }
+
+        // ---- لیستی ئەندامان (وەک «جزدانەکان») ----
+        function debouncedPenaltyUsers() { _debAdminSearch(filterPenaltyUsers); }
+        function penOvOf(code) { return (penHome && penHome.overrides && penHome.overrides[code]) || null; }
+        function penRoleSlotKey(role) {
+            const r = normalizeRole(role);
+            return r === 'بەڕێوەبەر' ? 'mgr' : r === 'سەرپەرشت' ? 'sup' : r === 'ڕاوێژکار' ? 'con' : 'mem';
+        }
+        function penStateOf(o) {
+            if (o && o.e) return { cls: 'is-ex', ico: 'bx-shield-alt-2', t: 'پارێزراو' };
+            if (o && (o.p != null || o.c != null)) {
+                const parts = [];
+                if (o.c != null) parts.push(fmtNum(o.c) + ' کۆین');
+                if (o.p != null) parts.push(fmtNum(o.p) + ' خاڵ');
+                return { cls: 'is-cu', ico: 'bx-slider-alt', t: 'تایبەت: ' + parts.join(' · ') };
+            }
+            return { cls: 'is-def', ico: 'bx-check-shield', t: 'سزای گشتی' };
+        }
+        function penCardHtml(u) {
+            const o = penOvOf(u.code), st = penStateOf(o), rk = ttRoleKey(u.data.role);
+            const code = histEsc(u.code), nm = histEsc(u.name);
+            const pill = penHome ? `<span class="pen-st ${st.cls}"><i class='bx ${st.ico}'></i>${histEsc(st.t)}</span>` : skelInline(72);
+            return `<div class="wcard pen-u${o && o.e ? ' is-ex' : ''}" data-pen="${code}">
+                    ${avatarHtml(u.data.avatar, u.name, 44, u.code)}
+                    <span class="wcard-txt">
+                        <b class="rk-${rk}" title="${TT_ROLE_NAME[rk]}">${nm}</b>
+                        <span class="wcard-sub"><bdi dir="ltr">${code}</bdi>${pill}</span>
+                        ${ttListChainHtml('penalty', u.code)}
+                    </span>
+                    <span class="pen-acts">
+                        <span class="pen-ex"><label class="switch sm" aria-label="پارێزراو لە سزا — ${nm}"><input type="checkbox"${o && o.e ? ' checked' : ''}${penHome ? '' : ' disabled'}
+                            onchange="penExemptToggle('${code}', this)">${_switchSvg}</label><small>پارێزراو</small></span>
+                        <button type="button" class="pen-edit" onclick="penOpenPerson('${code}')"${penHome ? '' : ' disabled'}
+                            aria-label="دەستکاریی سزای تایبەت — ${nm}"><i class='bx bx-slider-alt'></i></button>
+                    </span>
+                </div>`;
+        }
+        function filterPenaltyUsers() {
+            const list = document.getElementById('pen-users-list');
+            if (!list) return;
+            const roleEl = document.querySelector('input[name="pen_role_filter"]:checked');
+            const roleFilter = roleEl ? roleEl.value : 'all';
+            const sEl = document.getElementById('search-pen-input');
+            const sv = sEl ? sEl.value.trim().toLowerCase() : '';
+            const q = sv ? searchQ(sv) : null;
+            const tsc = ttScopeOf('penalty');
+            ttScopeSync('penalty');
+            const ov = (penHome && penHome.overrides) || {};
+            // تایبەت و پارێزراوەکان لە سەرەوە — پاشا یەکسەر دەبینێت کێ جیاوازە
+            const rank = u => { const o = ov[u.code]; return o ? (o.e ? 2 : 1) : 0; };
+            const users = (allEditableUsers || []).filter(u => {
+                const r = normalizeRole(u.data.role);
+                if (r === 'پاشا') return false;
+                if (tsc && !tsc.has(u.code)) return false;
+                if (roleFilter !== 'all' && r !== roleFilter) return false;
+                return !sv || memberSearchTier(u, q) > 0;
+            });
+            users.sort(memberSearchSort((a, b) => (rank(b) - rank(a)) || cmpName(a.name, b.name), q));
+            if (!users.length) {
+                if (list.__winIO) { list.__winIO.disconnect(); list.__winIO = null; }
+                list.innerHTML = `<p style="text-align:center; color:#94a3b8; font-size:13px; margin-top:20px;">هیچ کەسێک نەدۆزرایەوە.</p>`;
+                return;
+            }
+            winRender(list, users, penCardHtml, 30);
+        }
+        // بیرگەی ناوخۆیی بە هەمان یاسای سێرڤەر (ڕیزێکی بەتاڵ نامێنێت) → تەنها کارتەکانی ئەو کەسانە دەنەخشێنرێنەوە
+        function penOvPatch(codes, ch, clear) {
+            if (!penHome) return;
+            const ov = penHome.overrides = penHome.overrides || {};
+            codes.forEach(c => {
+                if (clear) { delete ov[c]; return; }
+                const o = Object.assign({}, ov[c] || {});
+                if ('e' in ch) { if (ch.e) o.e = true; else delete o.e; }
+                if ('p' in ch) { if (ch.p == null) delete o.p; else o.p = ch.p; }
+                if ('c' in ch) { if (ch.c == null) delete o.c; else o.c = ch.c; }
+                if (!o.e && o.p == null && o.c == null) delete ov[c]; else ov[c] = o;
+            });
+            const list = document.getElementById('pen-users-list');
+            if (!list) return;
+            codes.forEach(c => {
+                const el = list.querySelector('[data-pen="' + CSS.escape(c) + '"]');
+                const u = el && (allEditableUsers || []).find(x => x.code === c);
+                if (el && u) el.outerHTML = penCardHtml(u);
+            });
+        }
+        async function penExemptToggle(code, inp) {
+            const want = !!inp.checked;
+            inp.checked = !want;          // ڕاستی تا وەڵامی سێرڤەر
+            const sw = inp.closest('.switch');
+            inp.disabled = true;
+            if (sw) sw.classList.add('is-busy');
+            let res = null, err = null;
+            try {
+                res = await guardSubmit('pen-ex:' + code, null, async () => {
+                    if (!await ensureAccountActiveFresh()) return null;
+                    const { data, error } = await supabase.rpc('penalty_override_set', { p_codes: [code], p: { exempt: want } });
+                    if (error) throw error;
+                    return data || { ok: true };
+                });
+            } catch (e) { err = e; }
+            finally {
+                if (inp.isConnected) inp.disabled = false;
+                if (sw) sw.classList.remove('is-busy');
+            }
+            if (err) { console.error('penalty_override_set:', err); showToast(penErrMsg(err), 'error'); return; }
+            if (!res) return;
+            penOvPatch([code], { e: want });
+            showToast(want ? 'پارێزراو کرا — لە گەڕانەوەکانی داهاتوو سزا نادرێت' : 'پارێزراو لابرا — سزای گشتی', 'success');
+        }
+
+        // ---- شیتی سزای تایبەت: کەسێک / تیمەکەی، یان کەسێک لەسەر ئۆردەرێک ----
+        function penTeamCodes(code) {
+            const byLower = new Map((allEditableUsers || []).map(x => [String(x.code).toLowerCase(), x]));
+            const out = [code], seen = new Set([code]);
+            const V = ttAdminView('penalty');
+            if (V && V.vis && V.vis[code]) {
+                let sub = [];
+                try { sub = ttSubtree(V, code, true); } catch (e) { sub = []; }
+                sub.forEach(c => {
+                    const u = byLower.get(String(c).toLowerCase());
+                    if (u && !seen.has(u.code) && normalizeRole(u.data.role) !== 'پاشا') { seen.add(u.code); out.push(u.code); }
+                });
+            }
+            return out;
+        }
+        function penOpenPerson(code) {
+            if (userRole !== 'پاشا' || !penHome) return;
+            const u = (allEditableUsers || []).find(x => x.code === code);
+            if (!u) return;
+            const o = penOvOf(code) || {}, s = penHome.settings || {}, k = penRoleSlotKey(u.data.role);
+            penSheet = {
+                mode: 'person', code, name: u.name, role: u.data.role, avatar: u.data.avatar,
+                pts: o.p != null ? o.p : Number(s[k + '_pts'] || 0), coins: o.c != null ? o.c : Number(s[k + '_coins'] || 0),
+                exempt: !!o.e, team: false, teamCodes: penTeamCodes(code), had: !!penOvOf(code)
+            };
+            penSheetOpen();
+        }
+        function penOpenOrderRow(orderId, code) {
+            const info = _penOdInfo[String(orderId)];
+            const r = info && (info.rows || []).find(x => x.code === code);
+            if (!r || !info.king) return;
+            penSheet = {
+                mode: 'order', orderId: String(orderId), code, name: r.name || code, role: r.role, avatar: r.avatar,
+                slot: r.slot, pts: Number(r.pts || 0), coins: Number(r.coins || 0), waived: !!r.waived
+            };
+            penSheetOpen();
+        }
+        function penSheetOpen() {
+            const sh = document.getElementById('pen-sheet');
+            if (!sh) return;
+            penSheetRender();
+            sh.classList.add('show');
+        }
+        function penSheetClose() {
+            const sh = document.getElementById('pen-sheet');
+            if (sh) sh.classList.remove('show');
+            penSheet = null;
+        }
+        function penSheetRender() {
+            const s = penSheet;
+            if (!s) return;
+            const body = document.getElementById('pen-sheet-body'), foot = document.getElementById('pen-sheet-foot');
+            const ttl = document.getElementById('pen-sheet-title');
+            if (!body || !foot) return;
+            const rk = ttRoleKey(s.role);
+            if (ttl) ttl.textContent = s.mode === 'order' ? 'سزای ئەم ئۆردەرە' : 'سزای تایبەت';
+            const sub = s.mode === 'order' ? (PEN_SLOT_NAME[s.slot] || '') + (s.waived ? ' · لێخۆشبوونی بۆ کراوە' : '') : '';
+            const who = `<div class="pen-sh-who">${avatarHtml(s.avatar, s.name, 40, '', { noTap: true })}`
+                + `<span><b class="rk-${rk}" title="${TT_ROLE_NAME[rk]}">${histEsc(s.name)}</b>`
+                + `<small><bdi dir="ltr">${histEsc(s.code)}</bdi>${sub ? ' · ' + histEsc(sub) : ''}</small></span></div>`;
+            const steps = `<div class="pen-sh-steps" id="pen-sh-steps">${penStepHtml('coins', 'کۆین', s, 'sh')}${penStepHtml('pts', 'خاڵ', s, 'sh')}</div>`;
+            let extra;
+            if (s.mode === 'person') {
+                extra = `<div class="pen-sh-row"><span><i class='bx bx-shield-alt-2'></i> پارێزراو لە سزا<small>هیچ سزایەکی گەڕانەوەی نادرێت</small></span>`
+                    + `<label class="switch sm"><input type="checkbox" id="pen-sh-ex"${s.exempt ? ' checked' : ''} onchange="penShExempt(this.checked)">${_switchSvg}</label></div>`
+                    + (s.teamCodes.length > 1 ? `<label class="pen-sh-team"><input type="checkbox" id="pen-sh-team"${s.team ? ' checked' : ''}`
+                        + ` onchange="penShTeam(this.checked)"><span>جێبەجێکردن لەسەر تەواوی تیمەکەی <b>(${fmtNum(s.teamCodes.length)} کەس)</b></span></label>` : '')
+                    + `<div class="pen-note"><i class='bx bx-info-circle'></i><span>ئەم ژمارانە لەبری سزای گشتیی پلەکەی دادەنرێن، لە هەر شوێنێکی
+                        زنجیرەکە بێت؛ سزای کاڵای زیادە هەر زیاد دەکرێت. تەنها گەڕانەوەکانی داهاتوو دەگرێتەوە.</span></div>`;
+            } else {
+                extra = `<div class="pen-note"><i class='bx bx-info-circle'></i><span>تەنها ئەم ئۆردەرە دەگۆڕێت. ئەگەر ئۆردەرەکە هێشتا
+                    گەڕاوەیە، جیاوازییەکە یەکسەر دەبڕدرێت یان دەگەڕێتەوە، و ئاگادار دەکرێتەوە.</span></div>`;
+            }
+            body.innerHTML = who + steps + extra;
+            foot.innerHTML = s.mode === 'person'
+                ? `<button type="button" class="fsheet-reset" id="pen-sh-clear" onclick="penSheetClear(this)"></button>`
+                  + `<button type="button" class="fsheet-apply" id="pen-sh-save" onclick="penSheetSave(this)"></button>`
+                : `<button type="button" class="fsheet-apply" id="pen-sh-save" onclick="penSheetSave(this)">جێبەجێکردن لەسەر ئەم ئۆردەرە</button>`;
+            penSheetSync();
+        }
+        // تەنها دەق و دۆخی دوگمەکان — هیچ نەخشاندنەوەیەک (خانەکان فۆکەس و نووسینیان دەمێنێت)
+        function penSheetSync() {
+            const s = penSheet;
+            if (!s) return;
+            const steps = document.getElementById('pen-sh-steps');
+            if (steps) steps.classList.toggle('is-off', s.mode === 'person' && s.exempt);
+            if (s.mode !== 'person') return;
+            const n = s.team ? s.teamCodes.length : 1;
+            const save = document.getElementById('pen-sh-save'), clr = document.getElementById('pen-sh-clear');
+            if (save && !save.querySelector('.bx-spin')) save.textContent = n > 1 ? `پاشەکەوت بۆ ${fmtNum(n)} کەس` : 'پاشەکەوت';
+            if (clr && !clr.querySelector('.bx-spin')) {
+                const any = s.team ? s.teamCodes.some(c => penOvOf(c)) : s.had;
+                clr.disabled = !any;
+                clr.textContent = any ? (n > 1 ? `گەڕانەوە بۆ گشتی (${fmtNum(n)} کەس)` : 'گەڕانەوە بۆ سزای گشتی') : 'هێشتا سزای گشتییە';
+            }
+        }
+        function penShExempt(v) { if (penSheet) { penSheet.exempt = !!v; penSheetSync(); } }
+        function penShTeam(v) { if (penSheet) { penSheet.team = !!v; penSheetSync(); } }
+        function penShStep(key, d) {
+            if (!penSheet) return;
+            const v = Math.min(penMax(key), Math.max(0, penInt(penSheet[key]) + d * penStepOf(key)));
+            penSheet[key] = v;
+            const el = document.getElementById('pen-sh-' + key);
+            if (el) el.value = String(v);
+        }
+        function penShNumInput(key, el) { if (penSheet) penSheet[key] = penInt(el.value); }
+        function penShNumBlur(key, el) {
+            if (!penSheet) return;
+            const v = Math.min(penMax(key), Math.max(0, penInt(el.value)));
+            penSheet[key] = v;
+            if (el.value !== String(v)) el.value = String(v);
+        }
+        async function penSheetSave(btn) {
+            const s = penSheet;
+            if (!s) return;
+            const pts = Math.min(10000, Math.max(0, penInt(s.pts))), coins = Math.min(100000, Math.max(0, penInt(s.coins)));
+            let res = null, err = null;
+            if (s.mode === 'person') {
+                const codes = s.team ? s.teamCodes.slice() : [s.code];
+                if (codes.length > 1 && !confirm(`ئەم سزایە بۆ ${fmtNum(codes.length)} کەس دادەنرێت (${s.name} و تیمەکەی)؟\n\nتەنها گەڕانەوەکانی داهاتوو دەگرێتەوە.`)) return;
+                const p = s.exempt ? { exempt: true } : { exempt: false, pts, coins };
+                try {
+                    res = await guardSubmit('pen-sheet', btn, async () => {
+                        if (!await ensureAccountActiveFresh()) return null;
+                        const { data, error } = await supabase.rpc('penalty_override_set', { p_codes: codes, p });
+                        if (error) throw error;
+                        return data || { ok: true };
+                    });
+                } catch (e) { err = e; }
+                if (err) { console.error('penalty_override_set:', err); showToast(penErrMsg(err), 'error'); return; }
+                if (!res) return;
+                penOvPatch(codes, s.exempt ? { e: true } : { e: false, p: pts, c: coins });
+                penSheetClose();
+                showToast(s.exempt ? 'پارێزراو کرا' : 'سزای تایبەت پاشەکەوت کرا', 'success');
+                return;
+            }
+            try {
+                res = await guardSubmit('pen-sheet', btn, async () => {
+                    if (!await ensureAccountActiveFresh()) return null;
+                    const { data, error } = await supabase.rpc('set_order_penalty_custom',
+                        { p_order_id: s.orderId, p_target_code: s.code, p_pts: pts, p_coins: coins });
+                    if (error) throw error;
+                    return data;
+                });
+            } catch (e) { err = e; }
+            if (err) { console.error('set_order_penalty_custom:', err); showToast(penErrMsg(err), 'error'); return; }
+            if (!res) return;
+            _penOdInfo[s.orderId] = res;
+            penOdRender(s.orderId);
+            penSheetClose();
+            showToast(res.changed ? 'سزای ئەم ئۆردەرە گۆڕا' : 'هیچ نەگۆڕا', 'success');
+        }
+        async function penSheetClear(btn) {
+            const s = penSheet;
+            if (!s || s.mode !== 'person') return;
+            const codes = s.team ? s.teamCodes.slice() : [s.code];
+            if (codes.length > 1 && !confirm(`${fmtNum(codes.length)} کەس دەگەڕێنەوە بۆ سزای گشتی (پارێزراوەکانیش)؟`)) return;
+            let res = null, err = null;
+            try {
+                res = await guardSubmit('pen-sheet', btn, async () => {
+                    if (!await ensureAccountActiveFresh()) return null;
+                    const { data, error } = await supabase.rpc('penalty_override_set', { p_codes: codes, p: { clear: true } });
+                    if (error) throw error;
+                    return data || { ok: true };
+                });
+            } catch (e) { err = e; }
+            if (err) { console.error('penalty_override_set:', err); showToast(penErrMsg(err), 'error'); return; }
+            if (!res) return;
+            penOvPatch(codes, {}, true);
+            penSheetClose();
+            showToast('گەڕایەوە بۆ سزای گشتی', 'success');
+        }
+
+        // ---- کارتی «سزای گەڕانەوە» لە زانیاریی ئۆردەر ----
+        // پاشا: هەموو زنجیرەکە + لێخۆشبوون / گۆڕینی بڕ؛ هەر کەسێکی تر: تەنها ڕیزی خۆی (سێرڤەر دەیپاڵێوێت).
+        // ⚠️ بۆ ئەوانی تر شوێنەکە شاراوەیە تا وەڵام دێت — زۆربەیان ڕیزیان نییە، و هیچ بازدانێک نابێت.
+        function penaltyBoxOn(o) {
+            return !!o && /گەڕا/.test(String(o.status || '')) && !o.reward_claim_id && !o.cashout;
+        }
+        function penOdSkel() {
+            return [62, 48].map(w => `<div class="pen-od-r sk-shim" aria-hidden="true"><span class="sk" style="width:32px;height:32px;border-radius:50%"></span>`
+                + `<span class="pen-od-who"><span class="sk sk-s" style="width:${w}%"></span><span class="sk" style="width:70px;height:9px"></span></span>`
+                + `<span class="pen-od-val"><span class="sk" style="width:84px"></span></span></div>`).join('');
+        }
+        function penaltyBoxHtml(o) {
+            if (!penaltyBoxOn(o)) return '';
+            const king = userRole === 'پاشا';
+            return `<div class="detail-row pen-od-row" id="pen-od-row"${king ? '' : ' hidden'}>
+                <span class="detail-label pen-od-lbl"><i class='bx bx-shield-quarter'></i> سزای گەڕانەوە</span>
+                <div id="pen-od" class="pen-od" data-order="${histEsc(String(o.id))}">${king ? penOdSkel() : ''}</div>
+            </div>`;
+        }
+        async function loadOrderPenalty(o) {
+            const box = document.getElementById('pen-od');
+            if (!box || !o) return;
+            const id = String(o.id);
+            try {
+                const { data, error } = await supabase.rpc('order_penalty_info', { p_order_id: id });
+                if (error) throw error;
+                if (document.getElementById('pen-od') !== box || !box.isConnected) return;
+                _penOdInfo[id] = data;
+                penOdRender(id);
+            } catch (e) {
+                if (document.getElementById('pen-od') !== box) return;
+                const raw = String((e && (e.message || e.code)) || '');
+                const row = document.getElementById('pen-od-row');
+                const notReady = /PGRST202|Could not find the function/i.test(raw) || String((e && e.code) || '') === 'PGRST202';
+                if (userRole === 'پاشا' && !notReady) {
+                    box.innerHTML = `<div class="pen-note is-err"><i class='bx bx-error-circle'></i><span>نەتوانرا سزاکە بهێنرێت</span></div>`;
+                } else if (row) {
+                    row.hidden = true;
+                }
+            }
+        }
+        function penOdRowHtml(id, r, king) {
+            const rk = ttRoleKey(r.role), code = histEsc(r.code);
+            const state = r.waived ? `<span class="pen-badge is-ok"><i class='bx bx-check'></i> لێخۆشبوونی بۆ کراوە</span>`
+                : !r.active ? `<span class="pen-badge is-off"><i class='bx bx-undo'></i> هەڵگیراوە</span>`
+                : penAmtHtml(r.coins, r.pts);
+            let acts = '';
+            if (king && r.active) {
+                acts = `<span class="pen-od-acts"><button type="button" class="pen-od-btn" onclick="penOpenOrderRow('${id}', '${code}')"><i class='bx bx-edit-alt'></i> گۆڕینی بڕ</button>`
+                    + `<button type="button" class="pen-od-btn is-waive" onclick="penOdWaive('${id}', '${code}', this)"><i class='bx bx-heart'></i> لێخۆشبوون</button></span>`;
+            } else if (king && r.waived) {
+                acts = `<span class="pen-od-acts"><button type="button" class="pen-od-btn" onclick="penOpenOrderRow('${id}', '${code}')"><i class='bx bx-revision'></i> دانانەوەی سزا</button></span>`;
+            }
+            const who = king
+                ? `<b class="rk-${rk}" title="${TT_ROLE_NAME[rk]}">${histEsc(r.name || r.code)}</b><small>${PEN_SLOT_NAME[r.slot] || ''}${r.custom ? ' · تایبەت' : ''}</small>`
+                : `<b>سزای تۆ</b><small>${PEN_SLOT_NAME[r.slot] || ''}</small>`;
+            const ico = king ? avatarHtml(r.avatar, r.name || r.code, 32, '', { noTap: true })
+                : `<span class="pen-od-ico"><i class='bx bx-shield-quarter'></i></span>`;
+            return `<div class="pen-od-r${r.waived ? ' is-waived' : ''}">${ico}<span class="pen-od-who">${who}</span><span class="pen-od-val">${state}</span>${acts}</div>`;
+        }
+        function penOdRender(id) {
+            const box = document.getElementById('pen-od'), row = document.getElementById('pen-od-row');
+            const d = _penOdInfo[id];
+            if (!box || !d || box.dataset.order !== id) return;
+            const rows = d.rows || [], king = !!d.king;
+            if (!rows.length) {
+                if (!king) { if (row) row.hidden = true; return; }
+                const why = d.excluded ? 'ئەم جۆرە ئۆردەرە سزای نییە.'
+                    : d.enabled === false ? 'سیستەمی سزا کوژاوەیە — ئەم گەڕانەوەیە سزای نییە.'
+                    : d.reason_exempt ? 'هۆکاری گەڕانەوەکە بەخشراوە — سزای نییە.'
+                    : 'ئەم گەڕانەوەیە سزای نییە (پێش داگیرساندن بوو، لەو دۆخەوە سزا نییە، یان کەسەکان پارێزراون).';
+                box.innerHTML = `<div class="pen-note"><i class='bx bx-info-circle'></i><span>${why}</span></div>`;
+                if (row) row.hidden = false;
+                return;
+            }
+            const act = rows.filter(r => r.active);
+            let head = '';
+            if (king) {
+                const c = act.reduce((t, r) => t + Number(r.coins || 0), 0), p = act.reduce((t, r) => t + Number(r.pts || 0), 0);
+                head = `<div class="pen-od-top"><span>${act.length ? `${fmtNum(act.length)} کەس · ${penAmtHtml(c, p)}` : 'هیچ سزایەک لە کاردا نییە'}</span>`
+                    + (act.length > 1 ? `<button type="button" class="pen-od-all" onclick="penOdWaive('${id}', null, this)"><i class='bx bx-heart'></i> لێخۆشبوون لە هەمووان</button>` : '')
+                    + `</div>`;
+            }
+            const note = (!king && rows[0] && rows[0].active)
+                ? `<div class="pen-note"><i class='bx bx-info-circle'></i><span>ئەم ئۆردەرە گەڕایەوە، بۆیە ئەم بڕە لێت بڕدرا. ئەگەر ئۆردەرەکە بگات، دەگەڕێتەوە.</span></div>` : '';
+            box.innerHTML = head + rows.map(r => penOdRowHtml(id, r, king)).join('') + note;
+            if (row) row.hidden = false;
+        }
+        async function penOdWaive(id, code, btn) {
+            const d = _penOdInfo[id];
+            if (!d || !d.king) return;
+            if (code === null) {
+                const act = (d.rows || []).filter(r => r.active);
+                const c = act.reduce((t, r) => t + Number(r.coins || 0), 0), p = act.reduce((t, r) => t + Number(r.pts || 0), 0);
+                if (!confirm(`لێخۆشبوون لە ${fmtNum(act.length)} کەس؟\n\n${fmtNum(c)} کۆین و ${fmtNum(p)} خاڵ دەگەڕێتەوە بۆیان، و ئاگادار دەکرێنەوە.`)) return;
+            }
+            let res = null, err = null;
+            try {
+                res = await guardSubmit('pen-waive:' + id + ':' + (code || '*'), btn, async () => {
+                    if (!await ensureAccountActiveFresh()) return null;
+                    const { data, error } = await supabase.rpc('waive_order_penalty', { p_order_id: id, p_target_code: code });
+                    if (error) throw error;
+                    return data;
+                });
+            } catch (e) { err = e; }
+            if (err) { console.error('waive_order_penalty:', err); showToast(penErrMsg(err), 'error'); return; }
+            if (!res) return;
+            _penOdInfo[id] = res;
+            penOdRender(id);
+            showToast(res.changed ? 'لێخۆشبوون کرا — کۆین و خاڵەکە گەڕانەوە' : 'پێشتر لێخۆشبوونی بۆ کرابوو', 'success');
+        }
+
         function initApiSection() {
             if (userRole !== 'پاشا') return;
             capiRender();
@@ -39101,6 +39919,8 @@
             if (secStorage) secStorage.style.display = 'none';
             const secApi = document.getElementById('section-api');
             if (secApi) secApi.style.display = 'none';
+            const secPen = document.getElementById('section-penalty');
+            if (secPen) secPen.style.display = 'none';
 
             // ⚠️ **گۆڕینی بەشەکە یەکسەرە، نەخشاندنی لیستەکە یەک فرەیم
             //    دوادەخرێت.** پێشتر هەردووکیان لە هەمان تاسکدا بوون کە
@@ -39157,6 +39977,9 @@
             } else if (tabName === 'api') {
                 if (secApi) secApi.style.display = 'flex';
                 paint(initApiSection);
+            } else if (tabName === 'penalty') {
+                if (secPen) secPen.style.display = 'flex';
+                paint(initPenaltySection);
             }
 
             // دوای دەرکەوتنی بەشەکە پێوانە دەکرێت — پێشتر ناتوانرێت،
@@ -46536,6 +47359,8 @@
             const cached = (coHomeCache && coHomeCache.code === currentUser.code) ? coHomeCache.data : null;
             coState = {
                 step: 'amount', home: null, homeErr: false, tok: 0, amt: '', src: 'balance', withItems: false,
+                // 🪙 db/175: دوو گیرفان (پارەی ئامادە · پاشەکەوت) تەنها بۆ خاوەنی «بینینی پاشەکەوت» — `amt` = کۆی هەردووکیان
+                split: false, pk: { balance: '', savings: '' },
                 items: [], edit: null, inName: '', inPrice: '', inQty: '1',
                 // 🎁🖼️ db/173: کاڵای دیاری + وێنەی کاڵاکان (هەمان بەشەکانی فۆڕمی ئۆردەر)
                 withGifts: false, gifts: [], gInName: '', gInPrice: '', gInQty: '1', images: [], imgPending: [],
@@ -46544,6 +47369,7 @@
             };
             coFill(cached);
             coState.home = cached;
+            coSplitSync();
             if (!Array.isArray(dbCitiesList) || !dbCitiesList.length) loadDBCities().then(() => coPatchDetails());
             const sh = document.getElementById('cashout-sheet');
             if (!sh) return;
@@ -46591,12 +47417,8 @@
                 s.homeErr = false;
                 coHomeCache = { code: me, data: s.home };
                 coFill(s.home);
-                // دەسەڵاتی پاشەکەوت لابرا (یان سێرڤەری کۆن) → دەگەڕێتەوە بۆ پارەی ئامادە
-                if (s.src === 'savings' && !coCanSav()) {
-                    s.src = 'balance';
-                    if (s.step === 'review') coGo('amount');         // سەرچاوەکە گۆڕا — بڕەکە دووبارە ببینێت
-                    else s.key = null;
-                }
+                // 🪙 دەسەڵاتی پاشەکەوت هات یان لابرا (یان سێرڤەری کۆن) → گیرفانەکان ڕێک دەخرێنەوە
+                coSplitSync();
             } catch (e) {
                 console.warn('cashout_home:', e);
                 if (coState !== s || s.tok !== tok) return;
@@ -46619,8 +47441,53 @@
             const v = src === 'savings' ? (h.can_savings === true ? h.sav_ready : 0) : h.ready;
             return Math.max(0, Math.floor(Number(v) || 0));
         }
-        // ئامادەی ئەو سەرچاوەیەی هەڵبژێردراوە
+        // ئامادەی ئەو سەرچاوەیەی هەڵبژێردراوە (دوو گیرفان: ئەوەی چالاکە — تەختەی ژمارە لەوێ دەنووسێت)
         function coReady() { return coReadyOf(coState && coState.src); }
+
+        // 🪙 db/175: دوو گیرفان — هەمان شێوەی «پێدانی مووچە» (`.sal-pk`): هەر گیرفانێک بڕی خۆی، یەکێکیان یان هەردووکیان، سفریش.
+        //    `s.amt` هەمیشە کۆکەیە (کرێ · کاش · ڕاکێشەر · وەسڵ وەک پێشوو)؛ سێرڤەر هەر بەشێک لە ئامادەی خۆی دەپشکنێت (`cashout_request`).
+        function coSplitSync() {
+            const s = coState;
+            if (!s) return;
+            const on = coCanSav();
+            if (on === s.split) return;
+            if (on) {
+                s.split = true;
+                s.pk = { balance: s.amt || '', savings: '' };
+                // هیچ پارەی ئامادەی جزدانی نییە → گیرفانی پاشەکەوت چالاک دەبێت (هەمان مووچە)
+                s.src = (!s.pk.balance && !(coReadyOf('balance') >= 1) && coReadyOf('savings') >= 1) ? 'savings' : 'balance';
+            } else {
+                // دەسەڵاتەکە لابرا → تەنها جزدان؛ بەشی پاشەکەوت دەسڕێتەوە و بڕەکە دووبارە دەبینرێت
+                const had = !!s.pk.savings;
+                s.split = false;
+                s.amt = s.pk.balance || '';
+                s.pk = { balance: '', savings: '' };
+                s.src = 'balance';
+                if (had && (s.step === 'details' || s.step === 'review')) { coGo('amount'); return; }
+            }
+            s.key = null;
+        }
+        function coVal() { const s = coState; return s.split ? s.pk[s.src] : s.amt; }
+        function coSetVal(a) {
+            const s = coState;
+            if (!s.split) { s.amt = a; return; }
+            s.pk[s.src] = a;
+            const t = (Number(s.pk.balance) || 0) + (Number(s.pk.savings) || 0);
+            s.amt = t ? String(t) : '';
+        }
+        // بەشی هەر جزدانێک (بێ گیرفان: هەمووی لە جزدان)
+        function coParts() {
+            const s = coState;
+            if (!s.split) return { b: Number(s.amt) || 0, v: 0 };
+            return { b: Number(s.pk.balance) || 0, v: Number(s.pk.savings) || 0 };
+        }
+        // ئەوەی دەنێردرێت: یەک بەش سفر = هەمان داواکاریی پێشوو (جزدان یان `from: 'savings'`، هەمان کلیل)
+        function coSrcReq() {
+            const p = coParts();
+            if (p.v > 0 && p.b > 0) return { from: 'both', sav: p.v };
+            if (p.v > 0) return { from: 'savings' };
+            return {};
+        }
         function coFeeOf(city) {
             const n = String(city || '').trim();
             const c = (Array.isArray(dbCitiesList) ? dbCitiesList : []).find(x => String(x.name || '').trim() === n);
@@ -46653,6 +47520,7 @@
             const sav = s.src === 'savings';
             const mine = sav ? 'پاشەکەوتی ئامادەت' : 'پارەی ئامادەت';
             if (s.home && s.home.can === false) return { ok: false, bad: true, msg: 'ڕاکێشانی پارە بۆ ئەکاونتەکەت داخراوە' };
+            if (s.split) return coSplitCheck();
             if (!n) return { ok: false, bad: false, msg: ready == null && s.homeErr ? 'پارەی ئامادە نەزانراوە' : '' };
             if (ready == null) return { ok: false, bad: false, msg: s.homeErr ? 'پارەی ئامادە نەزانراوە' : 'حیسابکردنی پارەی ئامادە…' };
             if (n > ready) {
@@ -46663,6 +47531,29 @@
             const minFee = coMinFee();
             if (n <= minFee) return { ok: false, bad: true, msg: 'دەبێت لە کرێی گەیاندن (' + xferMoney(minFee) + ' د.ع) زیاتر بێت' };
             return { ok: true, bad: false, msg: 'دوای ڕاکێشان ' + xferMoney(ready - n) + ' د.ع ' + (sav ? 'پاشەکەوتی ئامادەت' : 'ئامادەت') + ' دەمێنێت' };
+        }
+
+        // 🪙 db/175: دوو گیرفان — هەر گیرفانێک تا ئامادەی خۆی (هەمان `salAmountCheck`)، کۆکە لە کرێ زیاتر
+        function coSplitCheck() {
+            const s = coState;
+            const { b, v } = coParts();
+            const n = b + v;
+            const rb = coReadyOf('balance'), rv = coReadyOf('savings');
+            const base = { ok: false, bad: false, overB: false, overV: false };
+            if (!n) return { ...base, msg: rb == null && s.homeErr ? 'پارەی ئامادە نەزانراوە' : '' };
+            if (rb == null) return { ...base, msg: s.homeErr ? 'پارەی ئامادە نەزانراوە' : 'حیسابکردنی پارەی ئامادە…' };
+            const overB = b > rb, overV = v > rv;
+            if (overB || overV) {
+                const sv = (overB && overV) ? s.src === 'savings' : overV;
+                const r = sv ? rv : rb;
+                const mine = sv ? 'پاشەکەوتی ئامادەت' : 'پارەی ئامادەت';
+                return { ...base, bad: true, overB, overV, msg: r > 0
+                    ? 'لە ' + mine + ' زیاترە — زۆرترین ' + xferMoney(r) + ' د.ع'
+                    : 'هێشتا ' + mine + ' نییە بۆ ڕاکێشان' };
+            }
+            const minFee = coMinFee();
+            if (n <= minFee) return { ...base, bad: true, msg: 'کۆی ڕاکێشان دەبێت لە کرێی گەیاندن (' + xferMoney(minFee) + ' د.ع) زیاتر بێت' };
+            return { ...base, ok: true, msg: 'دوای ڕاکێشان ' + xferMoney(rb - b) + ' د.ع ئامادە و ' + xferMoney(rv - v) + ' د.ع پاشەکەوتی ئامادەت دەمێنێت' };
         }
 
         // ٢٥/٥٠/٧٥٪ بە هەزارەی تەواو بەرەو خوار (شۆفێر وردە پارەی ناوێت)؛ «هەمووی» = هەموو ئامادە
@@ -46679,15 +47570,24 @@
                     : `<div class="xfer-ready is-load" role="status" aria-label="حیسابکردنی پارەی ئامادە…">${skelInline(150)}</div>`;
             }
             const h = s.home;
-            const src = s.src === 'savings' && coCanSav() ? 'savings' : 'balance';
+            const src = s.src === 'savings' && s.split ? 'savings' : 'balance';
             let html;
-            if (coCanSav()) {
-                // 🪙 دوو سەرچاوە — هەمان دوگمەکانی «ناردنی پارە» (`.xfer-src`)؛ ٪ · «هەمووی» · ➕ · سنوور هی ئەوەی هەڵبژێردراوە
-                const opt = (v, ic, t) => {
-                    const on = src === v;
-                    return `<button type="button" class="xfer-src-btn${on ? ' is-on' : ''}" role="radio" aria-checked="${on}" data-src="${v}" onclick="coPickSrc('${v}')"><i class='bx ${ic}'></i><span class="xfer-src-t"><small>${t}</small><b>${xferMoney(coReadyOf(v))} د.ع</b></span></button>`;
+            if (s.split) {
+                // 🪙 db/175: دوو گیرفان — هەمان `.sal-pk`ـی «پێدانی مووچە»: پەنجە لە گیرفانێک → تەختەی ژمارە · ٪ · «هەمووی» · ➖ ➕ لەوێ
+                //    دەنووسن؛ ✕ ئەو گیرفانە سفر دەکاتەوە. ⚠️ ئەم HTMLـە تەنها بە ئامادەکان دەگۆڕێت — ژمارە و پۆلەکان `coPatchAmount` پاتچیان دەکات.
+                const pk = (v, ic, t) => {
+                    const r = coReadyOf(v), off = !(r >= 1);
+                    return `<div class="co-pk">
+                                <button type="button" class="sal-pk" id="co-pk-${v}" onclick="coPickSrc('${v}')" aria-pressed="false"${off ? ' disabled' : ''}>
+                                    <span class="sal-pk-l"><i class='bx ${ic}'></i>${t}</span>
+                                    <span class="sal-pk-n"><span id="co-pkn-${v}" dir="ltr">0</span></span>
+                                    <span class="sal-pk-r">${off ? 'ئامادە نییە' : 'ئامادە ' + xferMoney(r)}</span>
+                                </button>
+                                <button type="button" class="co-pk-x" id="co-pkx-${v}" onclick="coPkClear('${v}')" aria-label="سفرکردنەوەی ${t}" hidden><i class='bx bx-x'></i></button>
+                            </div>`;
                 };
-                html = `<div class="xfer-src" role="radiogroup" aria-label="لە کام پارە ڕادەکێشیت؟">${opt('balance', 'bx-wallet', 'پارەی ئامادە')}${opt('savings', 'bx-coin-stack', 'پاشەکەوت')}</div>`;
+                html = `<div class="sal-src co-src" role="group" aria-label="لە کام پارە ڕادەکێشیت؟">${pk('balance', 'bx-wallet', 'پارەی ئامادە')}${pk('savings', 'bx-coin-stack', 'پاشەکەوت')}</div>
+                        <div class="co-src-tip"><i class='bx bx-info-circle'></i><span>پەنجە لە گیرفانێک بنێ و بڕەکەی بنووسە — لە هەردووکیان یان تەنها لە یەکێکیان</span></div>`;
             } else {
                 html = `<div class="xfer-ready"><span>پارەی ئامادە:</span> <b>${xferMoney(coReady())} د.ع</b></div>`;
             }
@@ -46703,14 +47603,23 @@
             return `<div class="xfer-pend"><i class='bx bx-time-five'></i><span>${sav ? 'پاشەکەوتی ' : ''}<b>${xferMoney(pend)} د.ع</b> لە خولی ${fmtNum(PAYOUT_HOLD_DAYS)} ڕۆژەدایە — دوای تەواوبوونی دەتوانیت ڕایبکێشیت${due ? ' · نزیکترین: ' + histEsc(wholdLeftText(due)) : ''}</span></div>`;
         }
 
+        // گیرفانی چالاک — تەنها ئەوەی ئامادەی هەیە (هەمان `salPick`)
         function coPickSrc(src) {
             const s = coState;
-            if (!s || s.busy || s.step !== 'amount') return;
+            if (!s || s.busy || s.step !== 'amount' || !s.split) return;
             if (src !== 'balance' && src !== 'savings') return;
-            if (src === 'savings' && !coCanSav()) return;
-            if (s.src === src) return;
+            if (!(coReadyOf(src) >= 1)) return;
+            if (s.src !== src) { s.src = src; xferHaptic('select'); }
+            coPatchAmount();
+        }
+        // ✕ — ئەو گیرفانە سفر دەکاتەوە (ئەوی تر وەک خۆی)؛ ئەگەر ئامادەی هەیە، دەبێتە چالاک بۆ بڕێکی نوێ
+        function coPkClear(src) {
+            const s = coState;
+            if (!s || s.busy || s.step !== 'amount' || !s.split || !s.pk[src]) return;
+            const cur = s.src;
             s.src = src;
-            s.key = null;                                   // سەرچاوەی نوێ = داواکارییەکی نوێ (سێرڤەر `KEY_REUSED`)
+            coSetVal('');
+            if (!(coReadyOf(src) >= 1)) s.src = cur;
             coPatchAmount();
             xferHaptic('select');
         }
@@ -46740,26 +47649,44 @@
             if (n) n.textContent = s.amt ? xferMoney(s.amt) : '0';
             if (box) { box.classList.toggle('is-empty', !s.amt); box.classList.toggle('is-bad', chk.bad); }
             moneyFitAmt(box);
-            moneyStepSync(box, s.amt, coStepMax());
+            moneyStepSync(box, coVal(), coStepMax());
             if (hint) { hint.textContent = chk.msg; hint.classList.toggle('is-bad', chk.bad); hint.classList.toggle('is-ok', chk.ok); }
             if (btn) btn.disabled = !chk.ok;
             if (rd) {
                 const html = coReadyHtml();
                 if (rd._last !== html) { rd._last = html; rd.innerHTML = html; }
             }
-            const ready = coReady();
+            // 🪙 db/175: ژمارە و دۆخی هەر گیرفانێک — دوای HTMLـەکە، چونکە ئەو تەنها بە ئامادەکان نوێ دەبێتەوە
+            if (s.split) {
+                ['balance', 'savings'].forEach(src => {
+                    const a = s.pk[src];
+                    const nn = document.getElementById('co-pkn-' + src);
+                    const pk = document.getElementById('co-pk-' + src);
+                    const x = document.getElementById('co-pkx-' + src);
+                    if (nn) nn.textContent = a ? xferMoney(a) : '0';
+                    if (x) x.hidden = !a;
+                    if (!pk) return;
+                    const on = s.src === src;
+                    pk.classList.toggle('is-on', on);
+                    pk.setAttribute('aria-pressed', on ? 'true' : 'false');
+                    pk.classList.toggle('is-empty', !a);
+                    pk.classList.toggle('is-bad', src === 'balance' ? !!chk.overB : !!chk.overV);
+                });
+            }
+            // چیپی هەڵبژێردراو = بڕی گیرفانی چالاک
+            const ready = coReady(), cur = Number(coVal()) || 0;
             document.querySelectorAll('#co-body .co-pct .xfer-chip').forEach(c => {
                 const v = coPctVal(Number(c.getAttribute('data-p')), ready);
-                c.classList.toggle('is-on', !!s.amt && v != null && Number(s.amt) === v);
+                c.classList.toggle('is-on', cur > 0 && v != null && cur === v);
             });
         }
 
         function coKey(k) {
             const s = coState;
             if (!s || s.step !== 'amount') return;
-            const a = moneyKeyNext(s.amt, k, XFER_MAX);
+            const a = moneyKeyNext(coVal(), k, XFER_MAX);
             if (a === null) { coShake(); return; }
-            s.amt = a;
+            coSetVal(a);
             coPatchAmount();
             xferHaptic('select');
         }
@@ -46771,26 +47698,34 @@
         function coStep(dir) {
             const s = coState;
             if (!s || s.step !== 'amount') return false;
-            const a = moneyStepNext(s.amt, dir, coStepMax());
+            const a = moneyStepNext(coVal(), dir, coStepMax());
             if (a === null) { coShake(); return false; }
-            s.amt = a;
+            coSetVal(a);
             coPatchAmount();
             xferHaptic('select');
             return true;
         }
 
+        // ٪ · «هەمووی» = گیرفانی چالاک. ⭐ دوو گیرفان: «هەمووی» ئەم گیرفانە پڕ دەکات و دەچێتە سەر ئەوی تر ئەگەر بەتاڵ بێت و ئامادەی
+        //    هەبێت — «هەمووی، هەمووی» = هەموو پارەی ئامادە + هەموو پاشەکەوتی ئامادە (هەمان `salChip`)
         function coPct(el) {
             const s = coState;
             if (!s || s.step !== 'amount' || !el) return;
-            const v = coPctVal(Number(el.getAttribute('data-p')), coReady());
+            const p = Number(el.getAttribute('data-p'));
+            const v = coPctVal(p, coReady());
             if (!v) { coShake(); return; }                // ئامادەی سفر یان نەزانراو
-            s.amt = String(Math.min(v, XFER_MAX));
+            coSetVal(String(Math.min(v, XFER_MAX)));
+            if (s.split && p >= 100) {
+                const o = s.src === 'balance' ? 'savings' : 'balance';
+                if (!s.pk[o] && coReadyOf(o) >= 1) s.src = o;
+            }
             coPatchAmount();
             xferHaptic('select');
         }
 
         function coShake() {
-            const box = document.getElementById(coState && coState.step === 'amount' ? 'co-amt' : 'co-err');
+            const s = coState;
+            const box = document.getElementById(s && s.step === 'amount' ? (s.split ? 'co-pk-' + s.src : 'co-amt') : 'co-err');
             if (box) { box.classList.remove('shake'); void box.offsetWidth; box.classList.add('shake'); }
             xferHaptic('error');
         }
@@ -46973,7 +47908,7 @@
             const s = coState, c = coCalc();
             const amt = (v) => v == null ? '—' : `<bdi dir="ltr">${xferMoney(v)}</bdi> د.ع`;
             const row = (ic, label, val) => `<div class="co-sum-row"><span><i class='bx ${ic}'></i>${label}</span><b>${val}</b></div>`;
-            let rows = row('bx-wallet', 'بڕی ڕاکێشراو لە جزدان', amt(c.amt))
+            let rows = row('bx-wallet', coParts().v > 0 ? 'بڕی ڕاکێشراو' : 'بڕی ڕاکێشراو لە جزدان', amt(c.amt))
                 + row('bxs-truck', 'کرێی گەیاندن (لەسەر خۆتە)', c.fee == null ? '<small>شار هەڵبژێرە</small>' : amt(c.fee));
             if (s.withItems) rows += row('bx-package', 'نرخی کاڵاکان', amt(c.items));
             if (s.withGifts) rows += row('bx-gift', 'کاڵای دیاری', amt(c.gifts));
@@ -47357,8 +48292,8 @@
                 name: String(s.name || '').trim(), phone: toEnglishDigits(String(s.phone || '')).replace(/\D/g, ''),
                 note: String(s.note || '').trim(),
                 items: c.lines.map(it => ({ name: String(it.name || '').trim(), qty: parseInt(it.qty, 10) || 1, unit: Number(it.unitPrice) || 0 })),
-                // 🪙 db/172: تەنها پاشەکەوت دەنێردرێت — جزدان وەک پێشوو (هەمان داواکاری، هەمان کلیل)
-                ...(s.src === 'savings' ? { from: 'savings' } : {}),
+                // 🪙 db/172 · db/175: جزدان وەک پێشوو (هیچ) · تەنها پاشەکەوت `from: 'savings'` · هەردووکیان `from: 'both'` + `sav`
+                ...coSrcReq(),
                 // 🎁🖼️ db/173: تەنها کاتێک هەن — داواکارییەکی بێ ئەوان بایت بە بایت وەک پێشوو
                 ...(c.glines.length ? { gifts: c.glines.map(g => ({ name: String(g.name || '').trim(), qty: parseInt(g.qty, 10) || 1, unit: Number(g.unitPrice) || 0 })) } : {}),
                 ...(s.images.length ? { images: s.images.slice() } : {})
@@ -47402,7 +48337,6 @@
         // ---------------- هەنگاوی ٣: پێداچوونەوە + ڕاکێشان ----------------
         function coReviewHtml() {
             const s = coState, c = coCalc();
-            const ready = coReady();
             const items = c.lines.map(it => `<bdi>${histEsc(String(it.name).trim())}</bdi> <bdi dir="ltr">×${fmtNum(parseInt(it.qty, 10) || 1)}</bdi>`).join('، ');
             const rows = [
                 ['وەرگر', `<bdi>${histEsc(String(s.name).trim())}</bdi>`],
@@ -47414,9 +48348,14 @@
             if (gifts) rows.push(['کاڵای دیاری', gifts]);
             if (s.images.length) rows.push(['وێنەکان', fmtNum(s.images.length) + ' وێنە']);
             if (String(s.note || '').trim()) rows.push(['تێبینی', `<bdi>${histEsc(String(s.note).trim())}</bdi>`]);
-            const sav = s.src === 'savings';
-            if (sav) rows.push(['سەرچاوە', 'پاشەکەوت']);
-            if (ready != null) rows.push([sav ? 'دوای ڕاکێشان پاشەکەوتی ئامادەت' : 'دوای ڕاکێشان ئامادەت', `<bdi dir="ltr">${xferMoney(Math.max(0, ready - c.amt))}</bdi> د.ع`]);
+            // 🪙 db/175: هەردووکیان → بڕی هەر جزدانێک · تەنها پاشەکەوت → «سەرچاوە: پاشەکەوت» (وەک db/172)؛ پاشان ئەوەی لە هەر یەکێک دەمێنێت
+            const { b, v } = coParts();
+            const money = (x) => `<bdi dir="ltr">${xferMoney(x)}</bdi> د.ع`;
+            if (b > 0 && v > 0) { rows.push(['لە پارەی ئامادە', money(b)]); rows.push(['لە پاشەکەوت', money(v)]); }
+            else if (v > 0) rows.push(['سەرچاوە', 'پاشەکەوت']);
+            const rb = coReadyOf('balance'), rv = coReadyOf('savings');
+            if (b > 0 && rb != null) rows.push(['دوای ڕاکێشان ئامادەت', money(Math.max(0, rb - b))]);
+            if (v > 0 && rv != null) rows.push(['دوای ڕاکێشان پاشەکەوتی ئامادەت', money(Math.max(0, rv - v))]);
             return `<div class="xfer-card co-review">
                         <div class="co-review-cap">کاشی پاکتاوکراو کە لە بەردەرگا پێت دەگات</div>
                         <div class="xfer-big"><span dir="ltr">${xferMoney(c.cash)}</span><small>د.ع</small></div>
@@ -47527,6 +48466,7 @@
             if (Number(r.images) > 0) rows.push(['وێنەکان', fmtNum(Number(r.images)) + ' وێنە']);
             // سەرچاوە وشەیەکە، نەک بڕ — هەمان «سەرچاوە: پاشەکەوت»ی وەسڵی ناردن (هیچ پارەی ئامادەیەک)
             if (r.from === 'savings') rows.push(['سەرچاوە', 'پاشەکەوت']);
+            else if (r.from === 'both') rows.push(['سەرچاوە', 'پارەی ئامادە + پاشەکەوت']);     // db/175 — هەر وشە، نەک بڕ
             return `<div class="xfer-done">
                         <div class="xfer-tick"><i class='bx bx-check'></i></div>
                         <div class="xfer-done-amt"><span dir="ltr">${xferMoney(r.cash)}</span><small>د.ع</small></div>
