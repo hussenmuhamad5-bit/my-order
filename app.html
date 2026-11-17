@@ -5279,10 +5279,8 @@
         function canActOnOrder(o, action) {
             if (!o) return false;
             if (userRole === 'پاشا') return true;
-            // 💵 db/169 (خاوەن ٢٠٢٦-١١-٠٤): ئۆردەری ڕاکێشانی پارە تەنها پاشا دەیسڕێتەوە — بە پلە، هیچ دەسەڵاتێک.
-            //    ⭐ db/179 (خاوەن ٢٠٢٦-١١-٠٧): جگە لە دروستکەرەکەی تا پرێنت نەکراوە (`cashoutOwnOpen`). پێش پشکنینی خاوەن،
-            //    چونکە خاوەن هەمیشە «سڕینەوە»ی هەیە. سێرڤەر ئاوێنەکەیە (`CASHOUT_KING_ONLY`).
-            if (o.cashout && action === 'delete') return cashoutOwnOpen(o);
+            // 💵 db/181 (خاوەن ٢٠٢٦-١١-٠٨): ئۆردەری ڕاکێشانی پارە وەک ئۆردەری ئاسایی — هیچ یاسایەکی تایبەت لێرە نییە. سڕینەوە هەر
+            //    تەنها «ئامادە دەکرێت» (هەموو شوێنێک)؛ دوای ئەوە تەنها پاشا (`cashoutKingDelete` · `orders_cashout_guard`).
             let myCode = currentUser ? currentUser.code : '';
             // 🧾 db/166: ئەوەی ئۆردەرەکەی بۆ کەسێکی تر پڕکردەوە (`created_by_code`) وەک خاوەنەکەیەتی بۆ ئەم سێ
             //    کردارە — ئاوێنەی `p2_can_order`ـی سێرڤەر. حاڵەت و دابەشکردن هەر بە دەسەڵاتەکانی خۆی.
@@ -5322,11 +5320,21 @@
             return !!o.printed_at && !o.print_scanned_at;
         }
 
-        // 💵 db/179: دروستکەری ئۆردەری ڕاکێشان (= خاوەنەکەی؛ ڕاکێشان هەمیشە لە جزدانی خۆتە) تا «ئامادە دەکرێت»ـە و پرێنت نەکراوە
-        //    دەستکاری دەکات و دەیسڕێتەوە — ڕێک یاسای سێرڤەر (`cashout_request` · `orders_cashout_guard`): `printed_at` بەتاڵ، نەک قوفڵی پرێنت
-        function cashoutOwnOpen(o) {
-            return !!(o && o.cashout && currentUser && o.seller_code === currentUser.code
-                && statusBucketOf(o.status) === 'prep' && !o.printed_at);
+        // 💵 db/181 (خاوەن ٢٠٢٦-١١-٠٨: «وەکو ئۆردەرێکی ئاسایی»): ئۆردەری ڕاکێشان بە یاسای دەستکاریی ئاسایی دەستکاری دەکرێت
+        //    (`canActOnOrder … 'edit'` + `canEditInStatus` — قوفڵی پرێنت · ed_prep · ed_onway · پاشا هەر حاڵەتێک)، لە شیتی ڕاکێشانەوە،
+        //    پارە لە جزدانی خاوەنی ئۆردەرەکە. ڕاکێشانێکی پاشەکەوت تەنها بۆ بینەری پاشەکەوت — سەرچاوەکە بۆ ئەوانی تر شاراوەیە
+        //    (`prepaidSrcLabel`). ئاوێنەی `cashout_edit_denied`ـی سێرڤەر؛ سێرڤەر خۆی دووبارە دەیپشکنێتەوە.
+        function cashoutSavHidden(o) {
+            return !!(o && o.cashout && o.cashout_wallet && o.cashout_wallet !== 'balance'
+                && !(userRole === 'پاشا' || permOn('view_savings')));
+        }
+        function cashoutCanEdit(o) {
+            return !!(o && o.cashout) && canActOnOrder(o, 'edit') && canEditInStatus(o) && !cashoutSavHidden(o);
+        }
+        // 💵 db/181: پاشا ڕاکێشانی «لە ڕێگایە» · «گەیشتوو» · «گەڕاوە» دەسڕێتەوە (هەموو کەسێکی تر تەنها «ئامادە»، وەک ئاسایی)؛ قوفڵی
+        //    پرێنت وەک ئاسایی. ئاوێنەی `order_delete`؛ حاڵەت بە دەق (هەمان سێرڤەر)
+        function cashoutKingDelete(o) {
+            return !!(o && o.cashout) && userRole === 'پاشا' && !String(o.status || '').includes('ئامادە') && !isPrintLocked(o);
         }
 
         // ئایا ئەم بەکارهێنەرە دەتوانێت ئەم ئۆردەرە نیشانە بکات وەک پرێنتکراو
@@ -5506,8 +5514,7 @@
             if (userRole === 'پاشا') return true;
             if (isSchedPending(o)) return false;
             let cur = (o && o.status) ? o.status : 'ئامادە دەکرێت';
-            // 💵 db/169: ئۆردەری ڕاکێشانی پارە تەنها پاشا دەیکات بە «گەڕاوە» (پارەکە دەگەڕێتەوە جزدان) — هیچ دەسەڵاتێک
-            if (o && o.cashout && String(newStatus).includes('گەڕا')) return false;
+            // 💵 db/181: ئۆردەری ڕاکێشان وەک ئاسایی (db/169ـی «تەنها پاشا بیکات بە گەڕاوە» لابرا — خاوەن ٢٠٢٦-١١-٠٨)
             let curDelivered = cur.includes('گەیشت');
             let curReturned = cur.includes('گەڕا') || cur.includes('کەنسەڵ');
             let toDelivered = String(newStatus).includes('گەیشت');
@@ -12909,9 +12916,10 @@
             let isOnWay = (o.status || "").includes("ڕێگا");
             let printLocked = isPrintLocked(o);
             let actionButtonsHtml = "";
-            let canEditOrder = canActOnOrder(o, 'edit') && canEditInStatus(o);
-            let canDeleteOrder = canActOnOrder(o, 'delete') && isPreparing && !printLocked
-                && canActOnPending(o);
+            let canEditOrder = canActOnOrder(o, 'edit') && canEditInStatus(o) && !cashoutSavHidden(o);
+            // 💵 db/181: پاشا ڕاکێشانی دوای «ئامادە»ش دەسڕێتەوە (`cashoutKingDelete`)
+            let canDeleteOrder = (canActOnOrder(o, 'delete') && isPreparing && !printLocked
+                && canActOnPending(o)) || cashoutKingDelete(o);
             if (canEditOrder || canDeleteOrder) {
                 let editBtn = canEditOrder ? `<button class="btn" style="background:#ffc107; color:#000; flex:1; font-size:14px; padding:10px;" onclick="editOrder('${o.id}')"><i class='bx bx-edit'></i> دەستکاریکردن</button>` : '';
                 let delBtn = canDeleteOrder ? `<button class="btn" style="background:#dc3545; flex:1; font-size:14px; padding:10px;" onclick="deleteOrder('${o.id}')"><i class='bx bx-trash'></i> سڕینەوە</button>` : '';
@@ -33055,6 +33063,34 @@
         function deleteOrder(orderId) {
             return guardSubmit('delete-' + orderId, null, () => deleteOrderImpl(orderId));
         }
+
+        // 💵 db/181: پرسیاری سڕینەوەی پاشا بۆ ڕاکێشانی «لە ڕێگایە» · «گەیشتوو» · «گەڕاوە» — ژمارەکان پێش پرسیار (یاسای کرداری
+        //    وێرانکەر). «گەیشتوو» → قازانجی دابەشکراو لە `order_profit_state` (بڕ تەنها بۆ پاشا)؛ پارەی جزدان = ئەوەی ئۆردەرەکە
+        //    دەیبات (گەڕاوە ٠ — `order_wallet_want`). سێرڤەر هەمان شت دەکات و ژمارە ڕاستەقینەکان دەگەڕێنێتەوە (`refunded` · `reversed`).
+        async function cashoutKingDeleteConfirm(o) {
+            const st = String(o.status || '');
+            const ret = st.includes('گەڕا') || st.includes('کەنسەڵ');
+            const deliv = st.includes('گەیشت');
+            const back = ret ? 0 : Math.round(Number(o.prepaid_amount) || 0);
+            const who = o.seller_name || o.seller_code || '';
+            let profit = null;
+            if (deliv) {
+                try {
+                    const { data, error } = await supabase.rpc('order_profit_state', { p_order_id: String(o.id) });
+                    if (!error && data && data.distributed && data.net != null) profit = Math.round(Number(data.net) || 0);
+                    else if (!error && data && data.distributed === false) profit = 0;
+                } catch (e) { }
+            }
+            const lines = [];
+            if (deliv) lines.push(profit == null ? '• قازانجی دابەشکراو دەگەڕێتەوە'
+                : profit > 0 ? '• قازانجی دابەشکراو (' + profit.toLocaleString('en-US') + ' د.ع) دەگەڕێتەوە' : '• هیچ قازانجێکی دابەشکراوی نییە');
+            lines.push(back > 0 ? '• ' + back.toLocaleString('en-US') + ' د.ع دەگەڕێتەوە جزدانی ' + who
+                : '• هیچ پارەیەک ناجووڵێت — پارەکەی پێشتر گەڕاوەتەوە');
+            lines.push(ret ? '• دەچێتە تەنەکەی خۆڵ' : '• دەگەڕێتەوە «ئامادە دەکرێت» و دەچێتە تەنەکەی خۆڵ');
+            return confirm('⚠️ سڕینەوەی ڕاکێشانێکی «' + st + '»\n\n' + lines.join('\n')
+                + (ret ? '' : '\n\n⚠️ ئەگەر شۆفێر کاشەکەی داوە بە وەرگر، ئەم ' + back.toLocaleString('en-US') + ' د.ع دووجار دەگاتە ئەندامەکە.')
+                + '\n\nدڵنیایت؟');
+        }
         async function deleteOrderImpl(orderId) {
             // پشکنینی ئاسایش: ئایا کلیلەکە هێشتا هەیە؟
             if (!await ensureAccountActiveFresh()) return;
@@ -33068,11 +33104,16 @@
             if (!canActOnPending(ordDel)) { schedLockToast(); return; }
             // وەسڵەکەی پرێنت کراوە و لە دەستی بەشی گەیاندنە — نابێت بسڕدرێتەوە
             if (isPrintLocked(ordDel)) { printLockToast(ordDel); return; }
+            // 💵 db/181: پاشا ڕاکێشانی «لە ڕێگایە» · «گەیشتوو» · «گەڕاوە» دەسڕێتەوە — ژمارەکان پێش پرسیار
+            const kingCo = cashoutKingDelete(ordDel);
             // سڕینەوە تەنها لە حاڵەتی «ئامادە دەکرێت»
-            if (ordDel && !((ordDel.status || "").includes("ئامادە"))) {
-                showToast("تەنها ئۆردەری لە حاڵەتی «ئامادە دەکرێت» دەسڕێتەوە!", "error");
+            if (ordDel && !kingCo && !((ordDel.status || "").includes("ئامادە"))) {
+                showToast(ordDel.cashout
+                    ? "دوای «ئامادە دەکرێت» تەنها پاشا دەتوانێت ئۆردەری ڕاکێشانی پارە بسڕێتەوە!"
+                    : "تەنها ئۆردەری لە حاڵەتی «ئامادە دەکرێت» دەسڕێتەوە!", "error");
                 return;
             }
+            if (kingCo && !(await cashoutKingDeleteConfirm(ordDel))) return;
             // ئۆردەری خەڵات: ئەندامەکە بردوویەتیەوە و چاوەڕوانی کاڵاکەیەتی —
             // ئاگادارییەکی تایبەت پێش سڕینەوە
             if (ordDel && ordDel.reward_claim_id) {
@@ -33081,7 +33122,7 @@
                     + "سڕینەوەی واتای ئەوەیە خەڵاتەکەی پێ نەگات.\n\n"
                     + "دڵنیایت لە سڕینەوە؟")) return;
             }
-            if (!confirm("⚠️ دڵنیایت دەتەوێت ئەم داواکارییە بسڕیتەوە؟\n\n"
+            if (!kingCo && !confirm("⚠️ دڵنیایت دەتەوێت ئەم داواکارییە بسڕیتەوە؟\n\n"
                 + "ئۆردەرەکە دەچێتە بەشی «تەنەکەی خۆڵ»ی پرۆفایلەکەت و دەتوانیت "
                 + "لەوێوە بیگەڕێنیتەوە.\n"
                 + "دوای 30 ڕۆژ بە تەواوی دەسڕدرێتەوە و ناگەڕێتەوە.")) return;
@@ -33113,6 +33154,11 @@
                 orderLogBust(ordDel || orderId);
 
                 showToast(r.already ? "ئەم ئۆردەرە پێشتر سڕاوەتەوە"
+                    // 💵 db/181: سڕینەوەی پاشا بۆ ڕاکێشانی دوای «ئامادە» — قازانج و پارە بۆ جزدانی خاوەنەکەی
+                    : kingCo
+                        ? 'چووە تەنەکەی خۆڵ' + (Number(r.reversed) > 0 ? ' — قازانجی دابەشکراو گەڕایەوە' : '')
+                          + (delWalletBack > 0 ? ' — ' + Math.round(delWalletBack).toLocaleString('en-US') + ' د.ع گەڕایەوە جزدانی '
+                             + (ordDel.seller_name || ordDel.seller_code || '') : '')
                     : delWalletBack > 0
                         ? `چووە تەنەکەی خۆڵ — ${Math.round(delWalletBack).toLocaleString('en-US')} د.ع گەڕایەوە جزدانەکەت`
                         : "چووە تەنەکەی خۆڵی پرۆفایلەکەت — 30 ڕۆژ ماوەی هەیە", "success");
@@ -33175,20 +33221,6 @@
             if (!await ensureAccountActiveFresh()) return;
             let o = allGlobalOrdersData[orderId];
             if (!o) return;
-            // 💵 db/179: ئۆردەری ڕاکێشان بە شیتی ڕاکێشان دەستکاری دەکرێت (پڕکراوە) — تەنها دروستکەرەکەی، تا پرێنت نەکراوە؛ سێرڤەر
-            //    هەمان ڕیز دەگۆڕێت و جیاوازیی پارە دەجووڵێنێت (`cashout_request` + `edit`). فۆڕمی ئۆردەر هەرگیز (`ORDER_LOCKED`).
-            if (o.cashout) {
-                if (cashoutOwnOpen(o)) {
-                    closeModal(null, 'order-details-modal');
-                    coOpenEdit(o);
-                    return;
-                }
-                showToast(o.seller_code === (currentUser && currentUser.code)
-                    ? "ئەم ڕاکێشانە پرێنت کراوە یان حاڵەتەکەی گۆڕاوە — چیتر دەستکاری ناکرێت"
-                    : "تەنها ئەو کەسەی ئەم ڕاکێشانەی کردووە دەتوانێت دەستکاری بکات", "error");
-                return;
-            }
-
             // مەودای دەستکاری لەسەر ئەم ئۆردەرە (تیم/هەموان/خۆی)
             if (!canActOnOrder(o, 'edit')) {
                 showToast("دەسەڵاتت نییە بۆ دەستکاریکردنی ئەم ئۆردەرە!", "error");
@@ -33202,6 +33234,15 @@
                 showToast(stEdit.includes("ڕێگا")
                     ? "دەسەڵاتت نییە بۆ دەستکاریکردنی ئۆردەری «لە ڕێگایە»!"
                     : "ئەم ئۆردەرە لەم حاڵەتەدا دەستکاری ناکرێت!", "error");
+                return;
+            }
+            // 💵 db/179 · db/181: ئۆردەری ڕاکێشان بە شیتی ڕاکێشان دەستکاری دەکرێت (پڕکراوە) — هەمان یاسای سەرەوەی ئۆردەری ئاسایی
+            //    (خاوەن ٢٠٢٦-١١-٠٨)؛ سێرڤەر هەمان ڕیز دەگۆڕێت و جیاوازیی پارە لە جزدانی خاوەنی ئۆردەرەکە دەجووڵێنێت (`cashout_request`
+            //    + `edit` · `cashout_edit_denied`). فۆڕمی ئۆردەر هەرگیز (`ORDER_LOCKED`).
+            if (o.cashout) {
+                if (cashoutSavHidden(o)) { showToast("دەسەڵاتت نییە بۆ دەستکاریکردنی ئەم ڕاکێشانە!", "error"); return; }
+                closeModal(null, 'order-details-modal');
+                coOpenEdit(o);
                 return;
             }
 
@@ -47473,10 +47514,12 @@
             handleMultipleImages({ files: keep, set value(v) { input.value = v; } }, CO_IMG);
         }
 
-        function coOpen() {
+        // ✏️ db/181: `edit` = ئەو ئۆردەرەی دەستکاری دەکرێت (لە `coOpenEdit`) — دەسەڵاتی «ڕاکێشانی پارە» تەنها بۆ داواکاریی نوێیە، و
+        //    پارەی ئامادە هی خاوەنی ئۆردەرەکەیە (`cashout_edit_home`)، نەک کاشی «من»
+        function coOpen(edit) {
             if (!currentUser) return;
-            if (!cashoutOn()) { showToast('ڕاکێشانی پارە بۆ ئەکاونتەکەت داخراوە', 'error'); return; }
-            const cached = (coHomeCache && coHomeCache.code === currentUser.code) ? coHomeCache.data : null;
+            if (!edit && !cashoutOn()) { showToast('ڕاکێشانی پارە بۆ ئەکاونتەکەت داخراوە', 'error'); return; }
+            const cached = (!edit && coHomeCache && coHomeCache.code === currentUser.code) ? coHomeCache.data : null;
             coState = {
                 step: 'amount', home: null, homeErr: false, tok: 0, amt: '', src: 'balance', withItems: false,
                 // 🪙 db/175: دوو گیرفان (پارەی ئامادە · پاشەکەوت) تەنها بۆ خاوەنی «بینینی پاشەکەوت» — `amt` = کۆی هەردووکیان
@@ -47486,8 +47529,9 @@
                 withGifts: false, gifts: [], gInName: '', gInPrice: '', gInQty: '1', images: [], imgPending: [],
                 name: '', phone: '07', city: '', detail: '', note: '', sug: [],
                 filled: false, key: null, busy: false, err: '', result: null,
-                // ✏️ db/179: دەستکاری — {id, code, bal, sav} = ئەو ئۆردەرەی دەگۆڕدرێت و ئەوەی ئێستا لە هەر جزدانێک بردوویەتی
-                editOf: null
+                // ✏️ db/179 · db/181: دەستکاری — {id, code, owner, ownerName, pb, ps, bal, sav}: pb/ps = بەشی هەر جزدانێک لە
+                //    ئۆردەرەکەوە (گیرفانەکان)، bal/sav = ئەوەی بە ڕاستی بردوویەتی (لە سێرڤەرەوە — ڕاکێشانی گەڕاوە ٠)
+                editOf: edit || null
             };
             coFill(cached);
             coState.home = cached;
@@ -47510,9 +47554,14 @@
         // ✏️ db/179: دەستکاریی ڕاکێشانێکی خۆم کە هێشتا پرێنت نەکراوە — هەمان شیت، پڕکراوە لە ئۆردەرەکەوە. سێرڤەر هەمان ڕیز دەگۆڕێت
         //    (هەمان کۆد) و تەنها جیاوازیی پارە دەجووڵێنێت؛ پارەی خودی ئەم ئۆردەرە لە هەر جزدانێک دیسان بەردەستە (`coReadyOf`)
         function coOpenEdit(o) {
-            coOpen();
+            if (!o) return;
+            const all0 = Math.round(Number(o.prepaid_amount) || 0);
+            const sav0 = o.cashout_wallet === 'savings' ? all0 : (o.cashout_wallet === 'both' ? Math.round(Number(o.cashout_sav) || 0) : 0);
+            // ✏️ db/181: هی کەسێکی تریش دەبێت (بەڕێوەبەر · پاشا) — پارە هی خاوەنی ئۆردەرەکەیە؛ bal/sav لە سێرڤەرەوە دێن (`coLoadHome`)
+            coOpen({ id: o.id, code: o.order_code || '', owner: o.seller_code || '', ownerName: o.seller_name || o.seller_code || '',
+                     pb: all0 - sav0, ps: sav0, bal: 0, sav: 0 });
             const s = coState;
-            if (!s || !o) return;
+            if (!s || !s.editOf) return;
             const lines = v => String(v == null ? '' : v).split('\n');
             // دێڕەکان: ناو · بڕ · نرخی دێڕ (= بڕ × نرخی دانە، هەمان شێوەی `cashout_request`)
             const parse = (names, qtys, prices) => {
@@ -47526,10 +47575,7 @@
                 });
                 return out;
             };
-            const all = Math.round(Number(o.prepaid_amount) || 0);
-            const sav = o.cashout_wallet === 'savings' ? all : (o.cashout_wallet === 'both' ? Math.round(Number(o.cashout_sav) || 0) : 0);
-            s.editOf = { id: o.id, code: o.order_code || '', bal: all - sav, sav: sav };
-            s.amt = all ? String(all) : '';
+            s.amt = all0 ? String(all0) : '';
             s.items = parse(o.item_names, o.item_qtys, o.item_prices);
             s.withItems = s.items.length > 0;
             s.gifts = parse(o.gift_names, o.gift_qtys, o.gift_prices);
@@ -47579,19 +47625,32 @@
             if (!s || !currentUser) return;
             const me = currentUser.code;
             const tok = ++s.tok;                             // کلیلی پێشبڕکێ **پێش** await
+            const ed = s.editOf;
             try {
-                const { data, error } = await supabase.rpc('cashout_home');
+                // ✏️ db/181: دەستکاری → پارەی ئامادەی خاوەنی ئۆردەرەکە + ئەوەی ئەم ئۆردەرە بە ڕاستی بردوویەتی (هەمان یاسای سێرڤەر)
+                const { data, error } = ed ? await supabase.rpc('cashout_edit_home', { p_order_id: String(ed.id) })
+                                           : await supabase.rpc('cashout_home');
                 if (error) throw error;
                 if (coState !== s || s.tok !== tok) return;
                 s.home = data || {};
                 s.homeErr = false;
-                coHomeCache = { code: me, data: s.home };
+                if (ed) {
+                    ed.bal = Math.max(0, Math.round(Number(s.home.own_bal) || 0));
+                    ed.sav = Math.max(0, Math.round(Number(s.home.own_sav) || 0));
+                    if (s.home.owner_name) ed.ownerName = String(s.home.owner_name);
+                } else coHomeCache = { code: me, data: s.home };
                 coFill(s.home);
                 // 🪙 دەسەڵاتی پاشەکەوت هات یان لابرا (یان سێرڤەری کۆن) → گیرفانەکان ڕێک دەخرێنەوە
                 coSplitSync();
             } catch (e) {
                 console.warn('cashout_home:', e);
                 if (coState !== s || s.tok !== tok) return;
+                // ✏️ db/181: سێرڤەر دەڵێت ئەم کەسە ئەم ڕاکێشانە دەستکاری ناکات (قوفڵی پرێنت · حاڵەت · دەسەڵات) → هۆکارەکەی و داخستن
+                if (ed && !isLostReply(e) && /NO_PERM_EDIT|ORDER_LOCKED|PRINT_LOCKED|ORDER_NOT_FOUND/.test(String(e && e.message || ''))) {
+                    showToast(serverGuardMsg(e) || 'ئەم ڕاکێشانە دەستکاری ناکرێت', 'error');
+                    coClose();
+                    return;
+                }
                 if (!s.home) s.homeErr = true;           // ژمارەی کاشکراو دەمێنێتەوە
             }
             coPatchAmount();
@@ -47614,6 +47673,22 @@
             const own = e ? (src === 'savings' ? e.sav : e.bal) : 0;
             return Math.max(0, Math.floor(Number(v) || 0)) + own;
         }
+        // ✏️ db/181: ڕاکێشانێکی «گەڕاوە» (پاشا دەستکاری دەکات) — هیچ پارەیەک ناجووڵێت، بۆیە سنووری ئامادە نییە (هەمان سێرڤەر)
+        function coNoMoney() {
+            const s = coState;
+            return !!(s && s.editOf && s.home && s.home.money === false);
+        }
+        // ناوی خاوەنی ئەو ڕاکێشانەی دەستکاری دەکرێت ئەگەر هی کەسێکی ترە، ئەگەرنا ''
+        function coOtherName() {
+            const e = coState && coState.editOf;
+            return (e && e.owner && currentUser && e.owner !== currentUser.code) ? String(e.ownerName || e.owner) : '';
+        }
+        // «پارەی ئامادەت» · «پارەی ئامادەی <ناو>» — دەستکاریی ڕاکێشانی کەسێکی تر دەڵێت پارەکە هی کێیە
+        function coMine(sav) {
+            const e = coState && coState.editOf;
+            const other = !!(e && e.owner && currentUser && e.owner !== currentUser.code);
+            return (sav ? 'پاشەکەوتی ئامادە' : 'پارەی ئامادە') + (other ? 'ی ' + (e.ownerName || 'خاوەنەکەی') : 'ت');
+        }
         // ئامادەی ئەو سەرچاوەیەی هەڵبژێردراوە (دوو گیرفان: ئەوەی چالاکە — تەختەی ژمارە لەوێ دەنووسێت)
         function coReady() { return coReadyOf(coState && coState.src); }
 
@@ -47627,10 +47702,10 @@
             if (on) {
                 s.split = true;
                 const e = s.editOf;
-                // ✏️ db/179: دەستکاری → هەر گیرفانێک بەشی خۆی لە ئۆردەرەکەوە
-                s.pk = e ? { balance: e.bal ? String(e.bal) : '', savings: e.sav ? String(e.sav) : '' } : { balance: s.amt || '', savings: '' };
+                // ✏️ db/179: دەستکاری → هەر گیرفانێک بەشی خۆی لە ئۆردەرەکەوە (db/181: ستوونەکان، نەک ئەوەی دراوە)
+                s.pk = e ? { balance: e.pb ? String(e.pb) : '', savings: e.ps ? String(e.ps) : '' } : { balance: s.amt || '', savings: '' };
                 // هیچ پارەی ئامادەی جزدانی نییە → گیرفانی پاشەکەوت چالاک دەبێت (هەمان مووچە)
-                s.src = (e && e.sav && !e.bal) ? 'savings'
+                s.src = (e && e.ps && !e.pb) ? 'savings'
                     : (!s.pk.balance && !(coReadyOf('balance') >= 1) && coReadyOf('savings') >= 1) ? 'savings' : 'balance';
             } else {
                 // دەسەڵاتەکە لابرا → تەنها جزدان؛ بەشی پاشەکەوت دەسڕێتەوە و بڕەکە دووبارە دەبینرێت
@@ -47694,8 +47769,15 @@
             const ready = coReady();
             // «پارەی ئامادەت» · «پاشەکەوتی ئامادەت» — هەمان ڕستە، سەرچاوەکەی خۆی
             const sav = s.src === 'savings';
-            const mine = sav ? 'پاشەکەوتی ئامادەت' : 'پارەی ئامادەت';
+            const mine = coMine(sav);
             if (s.home && s.home.can === false) return { ok: false, bad: true, msg: 'ڕاکێشانی پارە بۆ ئەکاونتەکەت داخراوە' };
+            // ✏️ db/181: ڕاکێشانی گەڕاوە — هیچ پارەیەک ناجووڵێت، تەنها کرێی گەیاندن
+            if (coNoMoney()) {
+                const nm = s.split ? coParts().b + coParts().v : n, mf = coMinFee();
+                if (!nm) return { ok: false, bad: false, msg: '' };
+                if (nm <= mf) return { ok: false, bad: true, msg: 'دەبێت لە کرێی گەیاندن (' + xferMoney(mf) + ' د.ع) زیاتر بێت' };
+                return { ok: true, bad: false, msg: 'ئەم ڕاکێشانە گەڕاوەتەوە — هیچ پارەیەک ناجووڵێت' };
+            }
             if (s.split) return coSplitCheck();
             if (!n) return { ok: false, bad: false, msg: ready == null && s.homeErr ? 'پارەی ئامادە نەزانراوە' : '' };
             if (ready == null) return { ok: false, bad: false, msg: s.homeErr ? 'پارەی ئامادە نەزانراوە' : 'حیسابکردنی پارەی ئامادە…' };
@@ -47706,7 +47788,8 @@
             }
             const minFee = coMinFee();
             if (n <= minFee) return { ok: false, bad: true, msg: 'دەبێت لە کرێی گەیاندن (' + xferMoney(minFee) + ' د.ع) زیاتر بێت' };
-            return { ok: true, bad: false, msg: 'دوای ڕاکێشان ' + xferMoney(ready - n) + ' د.ع ' + (sav ? 'پاشەکەوتی ئامادەت' : 'ئامادەت') + ' دەمێنێت' };
+            return { ok: true, bad: false, msg: 'دوای ڕاکێشان ' + xferMoney(ready - n) + ' د.ع '
+                + (coMine(sav).endsWith('ت') ? (sav ? 'پاشەکەوتی ئامادەت' : 'ئامادەت') : coMine(sav)) + ' دەمێنێت' };
         }
 
         // 🪙 db/175: دوو گیرفان — هەر گیرفانێک تا ئامادەی خۆی (هەمان `salAmountCheck`)، کۆکە لە کرێ زیاتر
@@ -47722,14 +47805,15 @@
             if (overB || overV) {
                 const sv = (overB && overV) ? s.src === 'savings' : overV;
                 const r = sv ? rv : rb;
-                const mine = sv ? 'پاشەکەوتی ئامادەت' : 'پارەی ئامادەت';
+                const mine = coMine(sv);
                 return { ...base, bad: true, overB, overV, msg: r > 0
                     ? 'لە ' + mine + ' زیاترە — زۆرترین ' + xferMoney(r) + ' د.ع'
                     : 'هێشتا ' + mine + ' نییە بۆ ڕاکێشان' };
             }
             const minFee = coMinFee();
             if (n <= minFee) return { ...base, bad: true, msg: 'کۆی ڕاکێشان دەبێت لە کرێی گەیاندن (' + xferMoney(minFee) + ' د.ع) زیاتر بێت' };
-            return { ...base, ok: true, msg: 'دوای ڕاکێشان ' + xferMoney(rb - b) + ' د.ع ئامادە و ' + xferMoney(rv - v) + ' د.ع پاشەکەوتی ئامادەت دەمێنێت' };
+            return { ...base, ok: true, msg: 'دوای ڕاکێشان ' + xferMoney(rb - b) + ' د.ع ئامادە و ' + xferMoney(rv - v) + ' د.ع '
+                + coMine(true) + ' دەمێنێت' };
         }
 
         // ٢٥/٥٠/٧٥٪ بە هەزارەی تەواو بەرەو خوار (شۆفێر وردە پارەی ناوێت)؛ «هەمووی» = هەموو ئامادە
@@ -47766,6 +47850,11 @@
                         <div class="co-src-tip"><i class='bx bx-info-circle'></i><span>پەنجە لە گیرفانێک بنێ و بڕەکەی بنووسە — لە هەردووکیان یان تەنها لە یەکێکیان</span></div>`;
             } else {
                 html = `<div class="xfer-ready"><span>پارەی ئامادە:</span> <b>${xferMoney(coReady())} د.ع</b></div>`;
+            }
+            // ✏️ db/181: ڕاکێشانی گەڕاوە — هیچ پارەیەک ناجووڵێت (پارەی ئامادە پەیوەندی نییە)
+            if (coNoMoney()) {
+                const note = `<div class="xfer-ready"><span>ئەم ڕاکێشانە گەڕاوەتەوە — هیچ پارەیەک ناجووڵێت</span></div>`;
+                return s.split ? note + html : note;
             }
             // «X د.ع لە خولی ١٠ ڕۆژەدایە» — بۆچی ناتوانیت ڕابکێشیت (تەنها کاتێک ئامادە بەس نییە بۆ هیچ ڕاکێشانێک)
             if (coReadyOf(src) <= coMinFee() && Number(src === 'savings' ? h.sav_pending : h.pending) > 0) html += coPendNoteHtml(h, src);
@@ -47868,6 +47957,7 @@
         }
 
         function coStepMax() {
+            if (coNoMoney()) return XFER_MAX;
             const ready = coReady();
             return ready == null ? XFER_MAX : Math.min(ready, XFER_MAX);
         }
@@ -48654,6 +48744,8 @@
             xferHomeCache = null;
             try {
                 if (currentUser) { delete walletHoldCache[currentUser.code]; delete walletTxCache[currentUser.code]; }
+                // ✏️ db/181: دەستکاریی ڕاکێشانی کەسێکی تر — پارەکە لە جزدانی ئەو جووڵا
+                if (s.editOf && s.editOf.owner) invalidateWalletCaches(s.editOf.owner);
             } catch (e) { }
             if (activeScreenId() === 'wallet-screen') loadMyWalletData();
             else isWalletDataLoaded = false;
@@ -48694,7 +48786,9 @@
             return `<div class="xfer-done">
                         <div class="xfer-tick"><i class='bx bx-check'></i></div>
                         <div class="xfer-done-amt"><span dir="ltr">${xferMoney(r.cash)}</span><small>د.ع</small></div>
-                        <div class="xfer-done-to">${s.editOf ? 'ڕاکێشانەکەت دەستکاری کرا' : 'داواکارییەکەت نێردرا'} — شۆفێری گەیاندن ئەم بڕە کاشە دەدات بە دەستت</div>
+                        <div class="xfer-done-to">${coOtherName()
+                            ? 'ڕاکێشانەکەی ' + histEsc(coOtherName()) + ' دەستکاری کرا — شۆفێری گەیاندن ئەم بڕە کاشە دەدات بە دەستی'
+                            : (s.editOf ? 'ڕاکێشانەکەت دەستکاری کرا' : 'داواکارییەکەت نێردرا') + ' — شۆفێری گەیاندن ئەم بڕە کاشە دەدات بە دەستت'}</div>
                     </div>
                     <div class="xfer-receipt">${rows.map(x => `<div class="xfer-row"><span>${x[0]}</span><b>${x[1]}</b></div>`).join('')}</div>`;
         }
@@ -48707,7 +48801,9 @@
             const ttl = document.getElementById('co-title');
             const sh = document.getElementById('cashout-sheet');
             if (!body || !foot || !sh) return;
-            const T = { amount: 'چەند ڕادەکێشیت؟', details: 'کاڵا و ناونیشان', review: 'پێداچوونەوە', done: s.editOf ? 'دەستکاری کرا' : 'نێردرا' };
+            // ✏️ db/181: ڕاکێشانی کەسێکی تر — سەردێڕ دەڵێت هی کێیە
+            const T = { amount: coOtherName() ? 'ڕاکێشانی ' + coOtherName() : 'چەند ڕادەکێشیت؟', details: 'کاڵا و ناونیشان',
+                        review: 'پێداچوونەوە', done: s.editOf ? 'دەستکاری کرا' : 'نێردرا' };
             if (ttl) ttl.textContent = T[s.step] || 'ڕاکێشانی پارە';
             sh.setAttribute('data-step', s.step);
             let b = '', f = '';
